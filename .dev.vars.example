@@ -1,0 +1,2 @@
+# Copy to .dev.vars (gitignored) for local development.
+SESSION_SECRET="a-long-random-string-for-local-only"

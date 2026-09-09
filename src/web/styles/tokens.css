@@ -1,0 +1,35 @@
+/*
+ * Placeholder clubhouse palette. The real design pass is M7 — this exists so
+ * M0-M6 are built on the eventual ground colour instead of on white, and so
+ * the first screenshot of anything is not a shock.
+ */
+:root {
+  --felt: #14231c;
+  --felt-raised: #1b2f26;
+  --wood: #4a3427;
+  --wood-light: #6b4c39;
+  --ink: #ece3d4;
+  --ink-dim: #9aa79c;
+  --accent: #d8a657;
+  --line: #2b4136;
+
+  --radius: 10px;
+  --gap: 1rem;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--felt);
+  color: var(--ink);
+  font:
+    16px/1.55 system-ui,
+    -apple-system,
+    Segoe UI,
+    sans-serif;
+}

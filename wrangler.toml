@@ -1,0 +1,41 @@
+# dads.marcportal.com — Cloudflare Worker
+# Account selected at deploy time via CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN.
+name = "dads"
+main = "src/worker/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+routes = [{ pattern = "dads.marcportal.com", custom_domain = true }]
+
+# Opt-in, sampled at 1. This is a handful of dads: total log volume is a few
+# lines per session. A sampled-away error during the one week someone says
+# "the room didn't load" is a false economy.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[assets]
+binding = "ASSETS"
+directory = "dist"
+not_found_handling = "single-page-application"
+# The SPA fallback would otherwise serve index.html (200) for browser-navigated
+# API GETs. Force the Worker to answer its own routes first; everything else
+# still hits static assets.
+run_worker_first = ["/api/*", "/ws/*"]
+
+[durable_objects]
+bindings = [{ name = "ROOM", class_name = "RoomDO" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDO"]
+
+# D1 holds everything that must outlive a DO eviction: check-ins, commitments,
+# prompts, message archive. database_id is filled in at M8 by
+# `wrangler d1 create dads`.
+[[d1_databases]]
+binding = "DB"
+database_name = "dads"
+database_id = "PLACEHOLDER_SET_AT_M8"
+migrations_dir = "migrations"
