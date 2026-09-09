@@ -1,5 +1,6 @@
 import type { Env } from './env';
-import { join, leave, me } from './routes/auth';
+import { IDENTITY_HEADERS } from './RoomDO';
+import { currentSession, join, leave, me } from './routes/auth';
 
 export { RoomDO } from './RoomDO';
 
@@ -11,15 +12,15 @@ export { RoomDO } from './RoomDO';
  *             which only sees the request because run_worker_first excludes it)
  */
 export default {
-  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
       return handleApi(request, env, url);
     }
 
-    if (url.pathname.startsWith('/ws/')) {
-      return handleWs(request, env, url);
+    if (url.pathname === '/ws' || url.pathname.startsWith('/ws/')) {
+      return handleWs(request, env, url, ctx);
     }
 
     return env.ASSETS.fetch(request);
@@ -67,12 +68,41 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
   return Response.json({ error: 'not_found' }, { status: 404 });
 }
 
-async function handleWs(request: Request, env: Env, url: URL): Promise<Response> {
-  // /ws/:groupSlug
-  const slug = url.pathname.slice('/ws/'.length);
-  if (!slug) return new Response('missing group', { status: 400 });
+/**
+ * /ws — the cookie decides the room, not the URL. A dad cannot pick a group
+ * he is not a member of by editing an address, and there is nothing in the
+ * address to get wrong.
+ */
+async function handleWs(
+  request: Request,
+  env: Env,
+  url: URL,
+  ctx: ExecutionContext,
+): Promise<Response> {
+  if (url.pathname !== '/ws') return new Response('not found', { status: 404 });
+  if (request.headers.get('Upgrade') !== 'websocket') {
+    return new Response('expected websocket', { status: 426 });
+  }
 
-  // idFromName keyed on the slug: one DO per group, stable across deploys.
-  const stub = env.ROOM.get(env.ROOM.idFromName(slug));
-  return stub.fetch(request);
+  const session = await currentSession(request, env, isProduction(env));
+  if (!session) return new Response('unauthorized', { status: 401 });
+
+  ctx.waitUntil(
+    env.DB.prepare('UPDATE members SET last_seen = ? WHERE id = ?')
+      .bind(Date.now(), session.member.id)
+      .run(),
+  );
+
+  // Identity travels as headers the DO trusts, because only this Worker can
+  // reach it. The cookie itself is stripped: the DO has no use for it.
+  const headers = new Headers(request.headers);
+  headers.delete('Cookie');
+  headers.set(IDENTITY_HEADERS.groupId, session.group.id);
+  headers.set(IDENTITY_HEADERS.memberId, session.member.id);
+  headers.set(IDENTITY_HEADERS.name, session.member.displayName);
+
+  // Keyed on the group id, not the slug: renaming a group must not move its
+  // room.
+  const stub = env.ROOM.get(env.ROOM.idFromName(session.group.id));
+  return stub.fetch(new Request(request, { headers }));
 }

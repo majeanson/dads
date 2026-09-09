@@ -29,7 +29,7 @@ not_found_handling = "single-page-application"
 # The SPA fallback would otherwise serve index.html (200) for browser-navigated
 # API GETs. Force the Worker to answer its own routes first; everything else
 # still hits static assets.
-run_worker_first = ["/api/*", "/ws/*"]
+run_worker_first = ["/api/*", "/ws", "/ws/*"]
 
 [durable_objects]
 bindings = [{ name = "ROOM", class_name = "RoomDO" }]

@@ -35,17 +35,16 @@ describe('M0 skeleton', () => {
     }
   });
 
-  it('routes a websocket path to that group’s Durable Object', async () => {
-    // M2 replaces the 501; what M0 proves is that the slug reaches a live DO.
-    const res = await worker.fetch('https://dads.test/ws/the-dads', {
+  it('refuses a websocket without a session', async () => {
+    const res = await worker.fetch('https://dads.test/ws', {
       headers: { Upgrade: 'websocket' },
     });
-    expect(res.status).toBe(501);
+    expect(res.status).toBe(401);
   });
 
-  it('rejects a websocket path with no group', async () => {
-    const res = await worker.fetch('https://dads.test/ws/');
-    expect(res.status).toBe(400);
+  it('refuses a plain GET on the websocket path', async () => {
+    const res = await worker.fetch('https://dads.test/ws');
+    expect(res.status).toBe(426);
   });
 
   it('gives each group slug its own Durable Object', async () => {

@@ -48,13 +48,35 @@ weakening `sessionSecret()`.
   A success clears the bucket. Only the IP's HMAC is stored.
 - `scripts/create-group.ts` is the only way a group comes to exist.
 
+## The room (M2)
+
+- `/ws` takes the group from the **cookie**, never the URL. The Worker
+  resolves the session, strips the cookie, and forwards identity in
+  `X-Dads-*` headers that the DO trusts because only the Worker can reach it.
+  The DO is keyed on `group.id`, so renaming a group does not move its room.
+- The DO keeps a capped `tail` (500 rows) in its own SQLite for backfill, and
+  writes every line to D1 `messages` as the uncapped archive. Fan-out happens
+  **before** the archive write — a dad never waits on D1 to see his own line.
+- Clients reconnect with `?after=<last seq>` and get only what they missed.
+  `seq` is the DO's autoincrement and is the dedupe key on the client.
+- Leaving is on a 15s grace timer backed by one alarm (`leaving` table), so a
+  phone switching wifi→LTE does not print "left"/"came in". Returning inside
+  the window cancels the row *and* reschedules the alarm.
+- Ping/pong is `setWebSocketAutoResponse`, which never wakes a hibernating
+  object. Do not replace it with a handled message.
+
 ## Test layout
 
 - vitest storage is per **file**, not per test. Tests that seed groups call
   `resetTables()` in `beforeEach`; seeded codes are unique by default.
-- e2e `global-setup.ts` migrates the local D1, resets the `e2e-dads` group and
-  recreates it with a known code. On Windows it verifies migrations via
-  `migrations list` because wrangler has crashed in teardown after a
-  successful apply.
+- e2e `global-setup.ts` migrates the local D1, then drops and recreates one
+  group **per spec file** with a known code. They cannot share: a roster is
+  global to its group, so a dad from another file would show up in a
+  "2 here" assertion. Tests within a file that share a group are `serial`.
+  On Windows it verifies migrations via `migrations list` because wrangler has
+  crashed in teardown after a successful apply.
+- DO alarm tests fake only `Date` (`vi.useFakeTimers({ toFake: ['Date'] })`).
+  The DO shares the test isolate, so this moves its clock too; faking timers
+  wholesale would hang the frame-wait helpers.
 - Anything that shells out goes through `scripts/run.ts`, which quotes
   arguments on Windows. `execFileSync` with `shell: true` does not.

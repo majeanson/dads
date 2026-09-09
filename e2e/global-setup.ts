@@ -3,8 +3,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { run } from '../scripts/run';
 
-/** The one group the e2e suite knows. Created fresh on every run. */
+/**
+ * One group per spec file, created fresh on every run.
+ *
+ * They cannot share: a room's roster is global to its group, so a dad joining
+ * for the join spec would appear in the room spec's "2 here" and vice versa.
+ * Files run in parallel; tests within a file that share a group run serially.
+ */
 export const E2E_GROUP = { slug: 'e2e-dads', name: 'The E2E Dads', code: 'maple otter cedar fern' };
+export const E2E_ROOM_GROUP = {
+  slug: 'e2e-room',
+  name: 'The E2E Room',
+  code: 'birch comet quill sage',
+};
+const GROUPS = [E2E_GROUP, E2E_ROOM_GROUP];
 
 function wrangler(...args: string[]): string {
   return run('npx', ['wrangler', ...args]);
@@ -38,25 +50,28 @@ export default function globalSetup(): void {
 
   // Via a file, not --command: a semicolon-separated statement list is not
   // something to trust to shell quoting on any platform.
+  const slugs = GROUPS.map((g) => `'${g.slug}'`).join(', ');
   const reset = join(mkdtempSync(join(tmpdir(), 'dads-e2e-')), 'reset.sql');
   writeFileSync(
     reset,
-    `DELETE FROM groups WHERE slug = '${E2E_GROUP.slug}';\nDELETE FROM join_attempts;\n`,
+    `DELETE FROM groups WHERE slug IN (${slugs});\nDELETE FROM join_attempts;\n`,
   );
   wrangler('d1', 'execute', 'dads', '--local', '-y', '--file', reset);
 
-  run(
-    'npx',
-    [
-      'tsx',
-      'scripts/create-group.ts',
-      '--slug',
-      E2E_GROUP.slug,
-      '--name',
-      E2E_GROUP.name,
-      '--code',
-      E2E_GROUP.code,
-    ],
-    'inherit',
-  );
+  for (const group of GROUPS) {
+    run(
+      'npx',
+      [
+        'tsx',
+        'scripts/create-group.ts',
+        '--slug',
+        group.slug,
+        '--name',
+        group.name,
+        '--code',
+        group.code,
+      ],
+      'inherit',
+    );
+  }
 }

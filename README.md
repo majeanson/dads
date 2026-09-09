@@ -39,8 +39,10 @@ npm run lint
 
 ```
 src/worker/     Worker entry, router, RoomDO
+src/shared/     The websocket protocol, shared by worker and client
 src/web/        React client
 migrations/     D1 schema, applied in tests and in production
+scripts/        group:create and friends
 test/           vitest, running inside workerd via vitest-plugin
 e2e/            Playwright, against the built stack
 ```
