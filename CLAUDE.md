@@ -61,7 +61,7 @@ weakening `sessionSecret()`.
   `seq` is the DO's autoincrement and is the dedupe key on the client.
 - Leaving is on a 15s grace timer backed by one alarm (`leaving` table), so a
   phone switching wifi→LTE does not print "left"/"came in". Returning inside
-  the window cancels the row *and* reschedules the alarm.
+  the window cancels the row _and_ reschedules the alarm.
 - Ping/pong is `setWebSocketAutoResponse`, which never wakes a hibernating
   object. Do not replace it with a handled message.
 
