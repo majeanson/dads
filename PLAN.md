@@ -1,26 +1,28 @@
 # dads.marcportal.com — Plan
 
 ## What it is
+
 A private, invite-coded clubhouse for a small group of dads who already know each other.
 One purpose: show up, talk honestly about being a dad, get better at it — and play Jaffre
 at the table while you do.
 
 ## Locked decisions
-| Question | Decision |
-|---|---|
-| Entry | Invite code / passphrase per group. Name on first entry, remembered per device. |
-| Core loop | Live room (presence + chat) + daily prompt + play-while-you-talk. |
-| Growth engine | Weekly check-in (1–5 + one line) **and** weekly commitments, both group-visible. |
-| Co-presence | Scheduled dad night (recurring slot, countdown, reminders). |
-| Rooms | Multi-group from day one, keyed by roomId. |
-| Stack | Cloudflare Workers + Durable Objects + D1 + React/Vite. |
-| Storage | DO = live (presence, chat, ws). D1 = durable (check-ins, commitments, prompts, history). |
-| Jaffre | Iframe the deployed jaffre + postMessage bridge. No changes to jaffre internals. |
-| Prompts | Curated JSON starter set + dads can submit into their group's pool. |
-| Repo | `~/Documents/WebApp/dads`, own git repo. Never touches the WebApp parent repo. |
-| Docs | No life-as-code. Plain repo + CLAUDE.md. |
-| Design | Card-night clubhouse: dark, felt green + wood, the table is the centrepiece. |
-| v1 scope | Everything, Jaffre embed included. |
+
+| Question      | Decision                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| Entry         | Invite code / passphrase per group. Name on first entry, remembered per device.          |
+| Core loop     | Live room (presence + chat) + daily prompt + play-while-you-talk.                        |
+| Growth engine | Weekly check-in (1–5 + one line) **and** weekly commitments, both group-visible.         |
+| Co-presence   | Scheduled dad night (recurring slot, countdown, reminders).                              |
+| Rooms         | Multi-group from day one, keyed by roomId.                                               |
+| Stack         | Cloudflare Workers + Durable Objects + D1 + React/Vite.                                  |
+| Storage       | DO = live (presence, chat, ws). D1 = durable (check-ins, commitments, prompts, history). |
+| Jaffre        | Iframe the deployed jaffre + postMessage bridge. No changes to jaffre internals.         |
+| Prompts       | Curated JSON starter set + dads can submit into their group's pool.                      |
+| Repo          | `~/Documents/WebApp/dads`, own git repo. Never touches the WebApp parent repo.           |
+| Docs          | No life-as-code. Plain repo + CLAUDE.md.                                                 |
+| Design        | Card-night clubhouse: dark, felt green + wood, the table is the centrepiece.             |
+| v1 scope      | Everything, Jaffre embed included.                                                       |
 
 ## Architecture
 
@@ -46,11 +48,12 @@ naturally one-per-group; D1 holds everything that must survive a DO eviction and
 eventually want to query across weeks (streaks, follow-through, history).
 
 ## Data model (D1)
+
 - `groups` — id, slug, name, invite_code_hash, dad_night (weekday + time + tz), created_at
 - `members` — id, group_id, display_name, device_token_hash, joined_at, last_seen
 - `messages` — id, group_id, member_id, body, kind(chat|system|prompt_answer), created_at
 - `prompts` — id, group_id NULL=global, body, author_member_id, active
-- `prompt_days` — group_id, date, prompt_id  (deterministic pick, recorded so it never changes)
+- `prompt_days` — group_id, date, prompt_id (deterministic pick, recorded so it never changes)
 - `check_ins` — id, group_id, member_id, week (ISO), rating 1–5, note, created_at
 - `commitments` — id, group_id, member_id, week, body, outcome(pending|done|missed), reflected_at
 
@@ -100,6 +103,7 @@ Worker + D1 to production, `dads.marcportal.com` DNS + custom domain, secrets, s
 group, invite the actual dads.
 
 ## Testing posture
+
 - Unit/integration on the Worker + DO with `vitest-plugin` (real DO, real D1 migrations).
 - Behavioural Playwright e2e only — join with code, two browsers see each other, message
   arrives, check-in appears for both. No UI-detail assertions during the design phase.
@@ -107,6 +111,7 @@ group, invite the actual dads.
   never breaks the dads suite.
 
 ## Risks
+
 1. **Nobody shows up.** Mitigated only by the scheduled night; the whole product depends on it
    being a real commitment between real friends. Nothing technical fixes this.
 2. **Jaffre iframe fights us** — third-party cookie / storage partitioning may break jaffre's

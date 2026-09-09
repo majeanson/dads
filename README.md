@@ -16,9 +16,15 @@ Vite client, all in one Worker.
 ```bash
 npm install
 npm run migrate:local      # apply D1 migrations to the local database
+npm run group:create -- --slug the-dads --name "The Dads" --night thu:21:00
+                           # prints the invite code once; add --remote for production
+npm run build              # wrangler serves dist/, so build before dev
 npm run dev                # wrangler on :8787 — API, websockets, built assets
 npm run dev:web            # vite on :5173 with HMR, proxying to :8787
 ```
+
+There is no create-a-group button: the door is `group:create`. Dads land on
+the root, type the code and a name, and are remembered on that device.
 
 ## Checks
 

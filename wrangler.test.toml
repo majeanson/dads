@@ -6,6 +6,11 @@ main = "src/worker/index.ts"
 compatibility_date = "2026-06-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Tests are not production: SESSION_SECRET may be absent and the identity
+# cookie must not be marked Secure, because the suite speaks plain http.
+[vars]
+ENVIRONMENT = "test"
+
 [durable_objects]
 bindings = [{ name = "ROOM", class_name = "RoomDO" }]
 

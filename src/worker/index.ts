@@ -1,4 +1,5 @@
 import type { Env } from './env';
+import { join, leave, me } from './routes/auth';
 
 export { RoomDO } from './RoomDO';
 
@@ -10,11 +11,11 @@ export { RoomDO } from './RoomDO';
  *             which only sees the request because run_worker_first excludes it)
  */
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
-      return handleApi(request, env, url, ctx);
+      return handleApi(request, env, url);
     }
 
     if (url.pathname.startsWith('/ws/')) {
@@ -25,23 +26,42 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
-async function handleApi(
-  request: Request,
-  env: Env,
-  url: URL,
-  _ctx: ExecutionContext,
-): Promise<Response> {
-  // Liveness AND readiness: a Worker that boots but cannot reach D1 is not
-  // healthy in any sense that matters, and finding that out from a deploy
-  // check beats finding it out from a dad who cannot join.
-  if (url.pathname === '/api/health' && request.method === 'GET') {
-    try {
-      await env.DB.prepare('SELECT 1').first();
-    } catch (err) {
-      console.error('health: D1 unreachable', err);
-      return Response.json({ ok: false, db: false }, { status: 503 });
+/**
+ * Production is declared by a var in wrangler.toml, never inferred from the
+ * hostname: a preview deployment on workers.dev is not production, and the
+ * difference decides whether a missing SESSION_SECRET is fatal and whether the
+ * identity cookie is marked Secure.
+ */
+function isProduction(env: Env): boolean {
+  return env.ENVIRONMENT === 'production';
+}
+
+async function handleApi(request: Request, env: Env, url: URL): Promise<Response> {
+  const prod = isProduction(env);
+  const route = `${request.method} ${url.pathname}`;
+
+  switch (route) {
+    // Liveness AND readiness: a Worker that boots but cannot reach D1 is not
+    // healthy in any sense that matters, and finding that out from a deploy
+    // check beats finding it out from a dad who cannot join.
+    case 'GET /api/health': {
+      try {
+        await env.DB.prepare('SELECT 1').first();
+      } catch (err) {
+        console.error('health: D1 unreachable', err);
+        return Response.json({ ok: false, db: false }, { status: 503 });
+      }
+      return Response.json({ ok: true, db: true });
     }
-    return Response.json({ ok: true, db: true });
+
+    case 'POST /api/join':
+      return join(request, env, prod);
+
+    case 'GET /api/me':
+      return me(request, env, prod);
+
+    case 'POST /api/leave':
+      return leave(prod);
   }
 
   return Response.json({ error: 'not_found' }, { status: 404 });

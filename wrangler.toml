@@ -8,6 +8,13 @@ workers_dev = true
 
 routes = [{ pattern = "dads.marcportal.com", custom_domain = true }]
 
+# Declares production explicitly. Never inferred from the hostname: a preview on
+# workers.dev is not production, and this flag decides whether a missing
+# SESSION_SECRET is fatal and whether the identity cookie is marked Secure.
+[vars]
+ENVIRONMENT = "production"
+
+
 # Opt-in, sampled at 1. This is a handful of dads: total log volume is a few
 # lines per session. A sampled-away error during the one week someone says
 # "the room didn't load" is a false economy.

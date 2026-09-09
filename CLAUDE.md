@@ -24,9 +24,37 @@ list; do not relitigate a decision recorded there without asking.
   script that kills whatever holds the port.
 - **No life-as-code here.** This repo is a plain repo by decision.
 
-## Secrets
+## Secrets and environment
 
 `SESSION_SECRET` signs the identity cookie and hashes device tokens.
 `wrangler secret put SESSION_SECRET` in production, `.dev.vars` locally.
 `sessionSecret()` throws rather than falling back to the dev value in
 production.
+
+"Production" is `ENVIRONMENT = "production"` in `wrangler.toml`, never the
+hostname. `wrangler dev` reads that same file, so `npm run dev` and the e2e
+webServer pass `--var ENVIRONMENT:development`. If a local run 500s with
+"SESSION_SECRET is not set", that override is missing — do not fix it by
+weakening `sessionSecret()`.
+
+## Identity model
+
+- One invite code per group, PBKDF2-hashed with a per-group salt. Codes are
+  normalized (case, whitespace) before hashing; never compare them raw.
+- The signed cookie names `{groupId, memberId}`. A device token in
+  localStorage, HMAC-hashed in `members.device_token_hash`, lets a returning
+  browser rejoin as the same member if the cookie is gone.
+- Failed joins are throttled per IP in `join_attempts` (10 per 10 minutes).
+  A success clears the bucket. Only the IP's HMAC is stored.
+- `scripts/create-group.ts` is the only way a group comes to exist.
+
+## Test layout
+
+- vitest storage is per **file**, not per test. Tests that seed groups call
+  `resetTables()` in `beforeEach`; seeded codes are unique by default.
+- e2e `global-setup.ts` migrates the local D1, resets the `e2e-dads` group and
+  recreates it with a known code. On Windows it verifies migrations via
+  `migrations list` because wrangler has crashed in teardown after a
+  successful apply.
+- Anything that shells out goes through `scripts/run.ts`, which quotes
+  arguments on Windows. `execFileSync` with `shell: true` does not.

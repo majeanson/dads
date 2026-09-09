@@ -1,0 +1,184 @@
+import { hashDeviceToken, randomToken, verifyInviteCode } from '../crypto';
+import type { Env } from '../env';
+import { sessionSecret } from '../env';
+import {
+  clearedIdentityCookie,
+  COOKIE_NAME,
+  identityCookie,
+  newId,
+  readCookie,
+  signIdentity,
+  verifyIdentity,
+} from '../identity';
+import { checkJoinThrottle, clearJoinFailures, recordJoinFailure } from '../throttle';
+
+export const MAX_NAME_LENGTH = 32;
+
+/** How many groups a single wrong code will be tested against. v1 has one; the
+ * cap exists so that a hundredth group cannot turn a join into a hundred
+ * PBKDF2 derivations. */
+const GROUP_SCAN_LIMIT = 50;
+
+interface GroupRow {
+  id: string;
+  slug: string;
+  name: string;
+  invite_code_salt: string;
+  invite_code_hash: string;
+}
+
+export interface Session {
+  group: { id: string; slug: string; name: string };
+  member: { id: string; displayName: string };
+}
+
+/**
+ * POST /api/join — { code, displayName, deviceToken? }
+ *
+ * The code alone decides which group you land in: dads.marcportal.com has no
+ * group picker, because "the dads" is the only thing the people using it know
+ * about. That means a wrong code cannot be told apart from a wrong group, and
+ * the error says so.
+ */
+export async function join(request: Request, env: Env, isProduction: boolean): Promise<Response> {
+  const throttle = await checkJoinThrottle(env, request, isProduction);
+  if (!throttle.allowed) {
+    return Response.json(
+      { error: 'too_many_attempts', retryAfterSeconds: throttle.retryAfterSeconds },
+      { status: 429, headers: { 'Retry-After': String(throttle.retryAfterSeconds) } },
+    );
+  }
+
+  let body: { code?: unknown; displayName?: unknown; deviceToken?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+
+  const code = typeof body.code === 'string' ? body.code : '';
+  const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
+
+  if (!code.trim()) return Response.json({ error: 'missing_code' }, { status: 400 });
+  if (!displayName) return Response.json({ error: 'missing_name' }, { status: 400 });
+  if ([...displayName].length > MAX_NAME_LENGTH) {
+    return Response.json({ error: 'name_too_long' }, { status: 400 });
+  }
+
+  const { results } = await env.DB.prepare(
+    'SELECT id, slug, name, invite_code_salt, invite_code_hash FROM groups LIMIT ?',
+  )
+    .bind(GROUP_SCAN_LIMIT)
+    .all<GroupRow>();
+
+  let group: GroupRow | undefined;
+  for (const candidate of results) {
+    if (await verifyInviteCode(code, candidate.invite_code_salt, candidate.invite_code_hash)) {
+      group = candidate;
+      break;
+    }
+  }
+
+  if (!group) {
+    await recordJoinFailure(env, request, isProduction);
+    return Response.json({ error: 'bad_code' }, { status: 401 });
+  }
+
+  // A token the browser keeps in localStorage as well as in the cookie. If the
+  // cookie is lost — a cleared jar, a browser update — the token still
+  // identifies the device, so a dad comes back as himself instead of as a
+  // second member with the same name.
+  const deviceToken =
+    typeof body.deviceToken === 'string' && body.deviceToken ? body.deviceToken : randomToken();
+  const deviceHash = await hashDeviceToken(sessionSecret(env, isProduction), deviceToken);
+  const now = Date.now();
+
+  const existing = await env.DB.prepare(
+    'SELECT id FROM members WHERE group_id = ? AND device_token_hash = ?',
+  )
+    .bind(group.id, deviceHash)
+    .first<{ id: string }>();
+
+  let memberId: string;
+  if (existing) {
+    memberId = existing.id;
+    // Rejoining with a different name is a rename, not a new dad.
+    await env.DB.prepare('UPDATE members SET display_name = ?, last_seen = ? WHERE id = ?')
+      .bind(displayName, now, memberId)
+      .run();
+  } else {
+    memberId = newId('mem');
+    await env.DB.prepare(
+      `INSERT INTO members (id, group_id, display_name, device_token_hash, joined_at, last_seen)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(memberId, group.id, displayName, deviceHash, now, now)
+      .run();
+  }
+
+  await clearJoinFailures(env, request, isProduction);
+
+  const cookie = await signIdentity(env, { groupId: group.id, memberId }, isProduction);
+  const session: Session = {
+    group: { id: group.id, slug: group.slug, name: group.name },
+    member: { id: memberId, displayName },
+  };
+
+  return Response.json(
+    { ...session, deviceToken },
+    { headers: { 'Set-Cookie': identityCookie(cookie, isProduction) } },
+  );
+}
+
+/**
+ * GET /api/me — who the browser is, if anyone. 204 rather than 401: not being
+ * signed in is the normal state of a first visit, not a failure.
+ */
+export async function me(request: Request, env: Env, isProduction: boolean): Promise<Response> {
+  const session = await currentSession(request, env, isProduction);
+  if (!session) return new Response(null, { status: 204 });
+  return Response.json(session);
+}
+
+/** POST /api/leave — drop the cookie. The member row stays: his messages,
+ * check-ins and commitments are the group's history, not a login session. */
+export function leave(isProduction: boolean): Response {
+  return new Response(null, {
+    status: 204,
+    headers: { 'Set-Cookie': clearedIdentityCookie(isProduction) },
+  });
+}
+
+/**
+ * Resolves the signed cookie against the database. A valid signature is not
+ * enough: the member must still exist and must still belong to the group the
+ * cookie names, so removing a member actually removes him.
+ */
+export async function currentSession(
+  request: Request,
+  env: Env,
+  isProduction: boolean,
+): Promise<Session | null> {
+  const identity = await verifyIdentity(env, readCookie(request, COOKIE_NAME), isProduction);
+  if (!identity) return null;
+
+  const row = await env.DB.prepare(
+    `SELECT m.id AS member_id, m.display_name, g.id AS group_id, g.slug, g.name
+       FROM members m JOIN groups g ON g.id = m.group_id
+      WHERE m.id = ? AND m.group_id = ?`,
+  )
+    .bind(identity.memberId, identity.groupId)
+    .first<{
+      member_id: string;
+      display_name: string;
+      group_id: string;
+      slug: string;
+      name: string;
+    }>();
+
+  if (!row) return null;
+  return {
+    group: { id: row.group_id, slug: row.slug, name: row.name },
+    member: { id: row.member_id, displayName: row.display_name },
+  };
+}

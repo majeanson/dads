@@ -33,3 +33,82 @@ body {
     Segoe UI,
     sans-serif;
 }
+
+/* Enough shape to use the thing. The real design pass is M7. */
+main {
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: 3rem 1.25rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  margin: 0 0 2rem;
+  color: var(--ink-dim);
+}
+
+.quiet {
+  color: var(--ink-dim);
+}
+
+form {
+  display: grid;
+  gap: 0.4rem;
+}
+
+label {
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+input {
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--felt-raised);
+  color: var(--ink);
+  font: inherit;
+}
+
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button[type='submit'] {
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--wood-light);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.link {
+  margin-top: 2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-dim);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.error {
+  margin-top: 1rem;
+  color: #f0a8a0;
+}
