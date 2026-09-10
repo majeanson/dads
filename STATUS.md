@@ -34,8 +34,8 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 168, in workerd against the real migrations
-npm run e2e           # 20, against the built stack
+npm test              # 181, in workerd against the real migrations
+npm run e2e           # 32, against the built stack
 npm run audit:contrast  # 24 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 ```
@@ -61,6 +61,13 @@ Honest list. Everything else in here has a test standing behind it.
    `turn:` and `turns:` servers alongside the STUN ones.
 3. **A dad night actually completing.** The open and close lines are tested
    with a faked clock; no real Thursday has passed yet.
+4. **A reminder actually arriving on a phone.** The endpoint mints a key, the
+   subscribe and unsubscribe round trip is tested, and the send is jaffre's
+   proven code — but no notification has yet gone from this Worker to a real
+   lock screen. To try it: add dads to the home screen, open the menu, press
+   "Tell me when the table opens", then set dad night to a few minutes from
+   now. Headless Chrome cannot answer this: it reports notifications as
+   blocked, which is the path it exercises instead.
 
 ## The last review
 
