@@ -62,6 +62,24 @@ Honest list. Everything else in here has a test standing behind it.
 4. **A dad night actually completing.** The open and close lines are tested
    with a faked clock; no real Thursday has passed yet.
 
+## The last review
+
+A fresh adversarial review found eleven defects; all eleven are fixed and
+four now have tests pinning them. Three mattered:
+
+- **Stored XSS on our own origin** — an uploaded `text/html` or
+  `image/svg+xml` was served back with the type the uploader declared. Types
+  are an allowlist now, everything else downloads instead of rendering.
+- **The backfill's `IN (…)` was unbounded** — past D1's parameter ceiling it
+  would have thrown while building the hello frame, locking that dad into a
+  reconnect loop.
+- **The camera toggle reached nobody** — the mesh only let one side offer, so
+  adding a track never renegotiated. It uses perfect negotiation now.
+
+The review confirmed clean: group isolation, SQL parameterisation, the React
+XSS surface, the WebRTC relay's spoofing resistance, the postMessage bridge,
+the identity cookie, and the week and DST arithmetic.
+
 ## Notes
 
 - There is a member called `abc` in production from a live test. Signing in
