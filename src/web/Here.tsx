@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { fetchPresence, type PresenceEvent } from './api';
 import { useT } from './i18n';
 
+/** Long enough to be free, short enough that a leave lands while you look. */
+const REFRESH_MS = 5_000;
+
 function when(ts: number, locale: string): string {
   const day = new Date(ts);
   const today = new Date();
@@ -26,13 +29,23 @@ export function Here({ roster }: { roster: { memberId: string; name: string; you
   const locale = lang === 'fr' ? 'fr-CA' : 'en-CA';
   const [events, setEvents] = useState<PresenceEvent[] | null | 'loading'>('loading');
 
+  // Read again while it is open, because this is the one view whose whole
+  // subject is people arriving and going. A dad leaves the room the moment his
+  // socket does, but the row saying so is written when the 15-second grace
+  // runs out — so a list fetched once is a list that misses the leave you were
+  // watching for.
   useEffect(() => {
     let cancelled = false;
-    fetchPresence()
-      .then((e) => !cancelled && setEvents(e))
-      .catch(() => !cancelled && setEvents(null));
+    const read = () =>
+      fetchPresence()
+        .then((e) => !cancelled && setEvents(e))
+        .catch(() => !cancelled && setEvents((prev) => (prev === 'loading' ? null : prev)));
+
+    void read();
+    const timer = setInterval(() => void read(), REFRESH_MS);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
   }, []);
 

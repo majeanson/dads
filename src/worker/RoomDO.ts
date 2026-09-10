@@ -335,10 +335,17 @@ export class RoomDO extends DurableObject<Env> {
     // The closing socket is still in getWebSockets() until the handshake
     // completes; exclude it explicitly when deciding whether the dad is gone.
     // Whether or not the dad is wholly gone, that socket's microphone is.
-    if (who.inCall === true) this.broadcastCallRoster();
+    if (who.inCall === true) this.broadcastCallRoster(ws);
     if (this.isPresent(who.memberId, ws)) return;
     await this.scheduleLeave(who);
-    this.broadcastRoster();
+    this.broadcastRoster(ws);
+
+    // The others were talking to him. Tell them to tear the connection down
+    // now rather than leave it to a timeout: he did not press Leave, his
+    // phone went into a tunnel, and the mesh should not wait to find out.
+    if (who.inCall === true) {
+      this.broadcast({ t: 'rtc', from: who.memberId, name: who.name, payload: { hangup: true } });
+    }
   }
 
   async webSocketError(ws: WebSocket): Promise<void> {
@@ -487,23 +494,36 @@ export class RoomDO extends DurableObject<Env> {
     return this.ctx.getWebSockets(memberId).some((ws) => ws !== except);
   }
 
-  private roster(): RosterEntry[] {
+  /**
+   * Who is in the room.
+   *
+   * `except` is the socket that is on its way out: a closing socket is STILL in
+   * getWebSockets() while webSocketClose runs, so without this the roster
+   * broadcast announcing that a dad left counted him as present — and nothing
+   * else ever corrected it. Everyone went on seeing "2 here" for a dad who had
+   * shut his laptop, until some unrelated event happened to rebuild it.
+   */
+  private roster(except?: WebSocket): RosterEntry[] {
     const seen = new Map<string, RosterEntry>();
     for (const ws of this.ctx.getWebSockets()) {
+      if (ws === except) continue;
       const who = ws.deserializeAttachment() as SocketIdentity | null;
       if (who && !seen.has(who.memberId)) seen.set(who.memberId, { ...who });
     }
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  private broadcastRoster(): void {
-    this.broadcast({ t: 'roster', roster: this.roster() });
+  private broadcastRoster(except?: WebSocket): void {
+    this.broadcast({ t: 'roster', roster: this.roster(except) });
   }
 
-  /** Who has a microphone in the room, deduped by dad. */
-  private callRoster(): RosterEntry[] {
+  /** Who has a microphone in the room, deduped by dad. Same exclusion, and for
+   * the same reason: a dropped dad who stays on the list is a dad everyone
+   * else is still holding a dead peer connection to. */
+  private callRoster(except?: WebSocket): RosterEntry[] {
     const seen = new Map<string, RosterEntry>();
     for (const ws of this.ctx.getWebSockets()) {
+      if (ws === except) continue;
       const who = ws.deserializeAttachment() as SocketIdentity | null;
       if (who?.inCall === true && !seen.has(who.memberId)) {
         seen.set(who.memberId, { memberId: who.memberId, name: who.name });
@@ -512,8 +532,8 @@ export class RoomDO extends DurableObject<Env> {
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  private broadcastCallRoster(): void {
-    this.broadcast({ t: 'call-roster', members: this.callRoster() });
+  private broadcastCallRoster(except?: WebSocket): void {
+    this.broadcast({ t: 'call-roster', members: this.callRoster(except) });
   }
 
   private async scheduleLeave(who: SocketIdentity): Promise<void> {
