@@ -7,7 +7,7 @@ import {
   type PoolEntry,
   type PromptAnswer,
 } from './api';
-import { plural, useT, type Key } from './i18n';
+import { plural, promptText, useT, type Key } from './i18n';
 
 const ADD_ERRORS: Record<string, Key> = {
   empty: 'q.add_empty',
@@ -25,7 +25,7 @@ const ADD_ERRORS: Record<string, Key> = {
  * this group has actually said, and the door to add one of your own.
  */
 export function PromptList() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'error' }
@@ -74,7 +74,7 @@ export function PromptList() {
               <PromptRow
                 key={`${h.day}-${h.promptId}`}
                 id={h.promptId}
-                body={h.body}
+                body={promptText(lang, h)}
                 answers={h.answers}
               />
             ))}
@@ -91,7 +91,7 @@ export function PromptList() {
               <PromptRow
                 key={p.id}
                 id={p.id}
-                body={p.body}
+                body={promptText(lang, p)}
                 meta={p.authorName ? t('q.by', { name: p.authorName }) : t('q.yours')}
                 answers={p.answers}
               />

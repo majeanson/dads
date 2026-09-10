@@ -175,8 +175,15 @@ describe('GET /api/prompt', () => {
     const cookie = await cookieFor(group);
     const res = await get('/api/prompt', cookie);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { prompt: { body: string }; answered: boolean };
+    const body = (await res.json()) as {
+      prompt: { body: string; bodyFr: string | null };
+      answered: boolean;
+    };
     expect(body.prompt.body.length).toBeGreaterThan(10);
+    // The curated hundred come in both, so a dad reading in French gets the
+    // same question as everyone else rather than an English one.
+    expect(body.prompt.bodyFr?.length ?? 0).toBeGreaterThan(10);
+    expect(body.prompt.bodyFr).not.toBe(body.prompt.body);
     expect(body.answered).toBe(false);
   });
 });

@@ -120,6 +120,7 @@ export async function addPrompt(
     prompt: {
       id,
       body,
+      bodyFr: null,
       groupId: session.group.id,
       authorName: session.member.displayName,
       timesAsked: 0,

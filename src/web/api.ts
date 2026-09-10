@@ -90,6 +90,8 @@ export async function setNight(night: NightInput | null): Promise<void> {
 }
 
 export interface Prompt {
+  /** The French of it, or null for one a dad wrote himself. */
+  bodyFr?: string | null;
   id: string;
   body: string;
   groupId: string | null;
@@ -103,6 +105,7 @@ export interface PoolEntry extends Prompt {
 }
 
 export interface HistoryEntry {
+  bodyFr?: string | null;
   day: string;
   promptId: string;
   body: string;

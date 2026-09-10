@@ -160,6 +160,37 @@ weakening `sessionSecret()`.
 - jaffre's half lives in `jaffre/apps/web/src/embed.ts`, on `main` and
   deployed. The two sides share a vocabulary but no code.
 
+## Two languages
+
+- **FR and EN, chosen per dad and remembered per device.** Not per group: two
+  dads read the same conversation in different words. What a dad TYPED is never
+  translated — only the app's own voice.
+- `src/shared/dictionary.ts` holds every string in both, keyed. It is pure and
+  React-free so the worker-pool test can import it; `src/web/i18n.tsx` is the
+  context around it. `test/i18n.test.ts` holds the two sides level — same keys,
+  same placeholders, nothing left in English on the French side.
+- **The room's own lines are facts, not sentences.** `src/shared/said.ts` has
+  the `Said` union; `messages.meta` (migration 0007) carries it and `body`
+  keeps the English. A row with no meta — everything written before 0007 —
+  renders its English body, which is the right answer for it.
+- **The curated hundred carry both texts** (`prompts.body_fr`, migration 0008).
+  One pool, one deterministic pick, two texts: a dad reading in French answers
+  the same question as everyone else. A prompt a dad writes himself has only
+  what he typed, and `promptText()` falls back to it.
+- Anything with a count needs both plural forms (`plural(lang, n)`): French
+  keeps the singular for zero, English does not.
+
+## Light and dark
+
+- The OS is still the default. `[data-theme]` on the root element is an
+  explicit override — a laptop that never flips to dark left a dad no way to
+  ask, and "change your OS setting" is not an answer to give a friend.
+- The two override blocks repeat the palettes because CSS cannot alias one to
+  another. **`npm run audit:contrast` fails if they drift** from the base and
+  the media-query block, so the duplication is policed rather than trusted.
+- Theme and language are stamped on `<html>` by a script in `index.html`,
+  before the first paint. React only keeps them in step afterwards.
+
 ## Look and feel (M7)
 
 - **Plain is the brief, and empty is plainer.** No webfont, no gradient, no
@@ -167,8 +198,8 @@ weakening `sessionSecret()`.
   where the words alone do the job. One system font stack, seven colours,
   hairline rules, and the browser's own defaults wherever they are already
   right. If a change adds decoration, it is going the wrong way.
-- Light and dark both ship, following the OS via `prefers-color-scheme`.
-  There is **no toggle** on purpose — the OS already holds that preference.
+- Light and dark both ship, following the OS via `prefers-color-scheme` —
+  see **Light and dark** above for the override a dad can ask for.
 - `npm run audit:contrast` checks every rendered pair **in both themes** and
   exits non-zero on a failure. Run it after touching a colour.
 - `border` separates rows that read fine without it and is not gated;

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { fetchTodaysPrompt, type TodaysPrompt } from './api';
-import { plural, useT } from './i18n';
+import { plural, promptText, useT } from './i18n';
 import type { RoomMessage } from '../shared/protocol';
 
 /**
@@ -58,7 +58,7 @@ export function PromptCard({
   return (
     <section className="prompt-card" data-testid="prompt-card">
       <p className="prompt-body" data-testid="prompt-body">
-        {today.prompt.body}
+        {promptText(lang, today.prompt)}
       </p>
 
       <p className="prompt-meta">

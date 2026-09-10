@@ -59,3 +59,14 @@ export function LangProvider({ children }: { children: ReactNode }) {
 export function useT(): Ctx {
   return useContext(LangContext);
 }
+
+/**
+ * A question, in the language being read.
+ *
+ * The curated hundred carry both. One a dad wrote himself carries only what he
+ * typed, and that is what everybody sees — his words, whichever language they
+ * came in.
+ */
+export function promptText(lang: Lang, prompt: { body: string; bodyFr?: string | null }): string {
+  return lang === 'fr' ? (prompt.bodyFr ?? prompt.body) : prompt.body;
+}

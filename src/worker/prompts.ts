@@ -16,6 +16,12 @@ const HISTORY_DAYS = 60;
 export interface Prompt {
   id: string;
   body: string;
+  /**
+   * The same question in French, for a dad reading in French. Null for one a
+   * dad wrote himself: he asked it in his own words, and translating a man's
+   * question for him is not this app's business.
+   */
+  bodyFr: string | null;
   /** null for the curated library, the group's id for one a dad wrote. */
   groupId: string | null;
   authorName: string | null;
@@ -40,14 +46,26 @@ async function groupTimeZone(env: Env, groupId: string): Promise<string> {
  */
 async function promptById(env: Env, groupId: string, id: string): Promise<Prompt | null> {
   const row = await env.DB.prepare(
-    `SELECT p.id, p.body, p.group_id, m.display_name AS author_name
+    `SELECT p.id, p.body, p.body_fr, p.group_id, m.display_name AS author_name
        FROM prompts p LEFT JOIN members m ON m.id = p.author_member_id
       WHERE p.id = ? AND (p.group_id IS NULL OR p.group_id = ?)`,
   )
     .bind(id, groupId)
-    .first<{ id: string; body: string; group_id: string | null; author_name: string | null }>();
+    .first<{
+      id: string;
+      body: string;
+      body_fr: string | null;
+      group_id: string | null;
+      author_name: string | null;
+    }>();
   if (!row) return null;
-  return { id: row.id, body: row.body, groupId: row.group_id, authorName: row.author_name };
+  return {
+    id: row.id,
+    body: row.body,
+    bodyFr: row.body_fr,
+    groupId: row.group_id,
+    authorName: row.author_name,
+  };
 }
 
 /**
@@ -111,7 +129,7 @@ export interface PoolEntry extends Prompt {
 /** Everything the group can be asked, with what it has done with each. */
 export async function promptPool(env: Env, groupId: string): Promise<PoolEntry[]> {
   const { results } = await env.DB.prepare(
-    `SELECT p.id, p.body, p.group_id, m.display_name AS author_name,
+    `SELECT p.id, p.body, p.body_fr, p.group_id, m.display_name AS author_name,
             (SELECT COUNT(*) FROM prompt_days d
               WHERE d.prompt_id = p.id AND d.group_id = ?1) AS times_asked,
             (SELECT MAX(d.day) FROM prompt_days d
@@ -127,6 +145,7 @@ export async function promptPool(env: Env, groupId: string): Promise<PoolEntry[]
     .all<{
       id: string;
       body: string;
+      body_fr: string | null;
       group_id: string | null;
       author_name: string | null;
       times_asked: number;
@@ -137,6 +156,7 @@ export async function promptPool(env: Env, groupId: string): Promise<PoolEntry[]
   return results.map((r) => ({
     id: r.id,
     body: r.body,
+    bodyFr: r.body_fr,
     groupId: r.group_id,
     authorName: r.author_name,
     timesAsked: r.times_asked,
@@ -149,13 +169,14 @@ export interface HistoryEntry {
   day: string;
   promptId: string;
   body: string;
+  bodyFr: string | null;
   answers: number;
 }
 
 /** What the group was asked recently, newest first. */
 export async function promptHistory(env: Env, groupId: string): Promise<HistoryEntry[]> {
   const { results } = await env.DB.prepare(
-    `SELECT d.day, d.prompt_id, p.body,
+    `SELECT d.day, d.prompt_id, p.body, p.body_fr,
             (SELECT COUNT(*) FROM messages msg
               WHERE msg.prompt_id = d.prompt_id AND msg.group_id = ?1) AS answers
        FROM prompt_days d JOIN prompts p ON p.id = d.prompt_id
@@ -164,12 +185,19 @@ export async function promptHistory(env: Env, groupId: string): Promise<HistoryE
       LIMIT ?2`,
   )
     .bind(groupId, HISTORY_DAYS)
-    .all<{ day: string; prompt_id: string; body: string; answers: number }>();
+    .all<{
+      day: string;
+      prompt_id: string;
+      body: string;
+      body_fr: string | null;
+      answers: number;
+    }>();
 
   return results.map((r) => ({
     day: r.day,
     promptId: r.prompt_id,
     body: r.body,
+    bodyFr: r.body_fr,
     answers: r.answers,
   }));
 }

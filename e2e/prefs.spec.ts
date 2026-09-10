@@ -108,3 +108,28 @@ test('what the room says about itself is read in each dad’s own language', asy
   await fr.close();
   await en.close();
 });
+
+test('the day’s question is asked in the language it is read in', async ({ page }) => {
+  await comeIn(page, 'Dave');
+
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page
+    .getByRole('navigation', { name: 'Rooms' })
+    .getByRole('button', { name: /^Questions/ })
+    .click();
+  const english = await page.getByTestId('prompt-body').textContent();
+
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await page
+    .getByRole('navigation', { name: 'Rooms' })
+    .getByRole('button', { name: /^Les questions/ })
+    .click();
+  const french = await page.getByTestId('prompt-body').textContent();
+
+  // The same question, and not the same words: one pool, one pick, two texts,
+  // so a dad reading in French answers the question the others answered.
+  expect(french).not.toBe(english);
+  expect(french!.length).toBeGreaterThan(10);
+});
