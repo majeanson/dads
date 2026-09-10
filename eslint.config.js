@@ -18,4 +18,20 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    // Build-time scripts run in Node, not in a Worker or a browser. Declared
+    // by hand rather than pulling in the `globals` package for six names.
+    files: ['scripts/**/*.{js,mjs,ts}', 'e2e/**/*.ts', '*.config.{js,ts}'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        crypto: 'readonly',
+      },
+    },
+  },
 );

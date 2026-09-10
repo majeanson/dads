@@ -153,6 +153,22 @@ weakening `sessionSecret()`.
 - jaffre's half lives in `jaffre/apps/web/src/embed.ts` (branch
   `feat/dads-embed-bridge`). The two sides share a vocabulary but no code.
 
+## Look and feel (M7)
+
+- **Plain is the brief.** No webfont, no gradient, no shadow, no pill, no
+  uppercase label. One system font stack, seven colours, hairline rules, and
+  the browser's own defaults wherever they are already right. If a change adds
+  decoration, it is going the wrong way.
+- Light and dark both ship, following the OS via `prefers-color-scheme`.
+  There is **no toggle** on purpose — the OS already holds that preference.
+- `npm run audit:contrast` checks every rendered pair **in both themes** and
+  exits non-zero on a failure. Run it after touching a colour.
+- `border` separates rows that read fine without it and is not gated;
+  `border-strong` is what makes a control findable and is held to WCAG 1.4.11.
+  Keep that distinction — it is why buttons and inputs use the stronger one.
+- Nothing in `tokens.css` is per-component colour: every rule reads a token,
+  so a palette change is one block, not a search.
+
 ## Test layout
 
 - vitest storage is per **file**, not per test. Tests that seed groups call
