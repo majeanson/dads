@@ -120,9 +120,10 @@ weakening `sessionSecret()`.
   `(group_id, member_id, week)` unique index. Changing a commitment mid-week
   resets its outcome — a new promise has not been kept yet.
 - Everything on the board is **group-visible by design**, including your own
-  row, which renders in the list as well as in the editor. Every member gets a
-  row whether or not he filled it in; a board that only shows the dads who
-  turned up is a board that flatters.
+  row, which renders in the list as well as in the editor. Nobody is left out —
+  a board that only shows the dads who turned up is a board that flatters — but
+  the men with nothing down yet share ONE line ("Nothing yet: Sam, Dave")
+  rather than each getting a row of the same three words.
 - `pending` scans back through the shown weeks, not just the one behind, so a
   fortnight away does not lose the question. A dad can only close his own
   commitment — the update is keyed on his member id.
