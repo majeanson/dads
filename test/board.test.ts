@@ -416,6 +416,6 @@ describe('the room hears about it', () => {
     await put('/api/commitment-outcome', marc.cookie, { week, outcome: 'missed', reflection: '' });
     await settle(120);
 
-    expect(sam.lines()).toContain('Marc did not manage it: Read at bedtime');
+    expect(sam.lines()).toContain('Marc didn’t manage: Read at bedtime');
   });
 });

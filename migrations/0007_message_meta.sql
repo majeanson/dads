@@ -1,0 +1,11 @@
+-- What the room said, as facts rather than as a sentence.
+--
+-- `body` stays exactly as it was: the English, which is what anyone reading
+-- this table by hand sees and what a row written before today still has.
+-- `meta` is the JSON behind it — {"k":"night_set","by":"Marc",…} — so a dad
+-- reading in French gets "Marc a mis la soirée de gars les jeudis à 21:00."
+-- from the same row.
+--
+-- Only ever set on the lines the ROOM writes. A line a dad typed is his, in
+-- his words, and nothing here touches it.
+ALTER TABLE messages ADD COLUMN meta TEXT;

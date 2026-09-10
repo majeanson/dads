@@ -2,12 +2,13 @@ import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   deriveTableCode,
-  describeTableEvent,
   isValidTableCode,
   JAFFRE_ORIGIN,
   parseTableEvent,
   tableLink,
+  tableSaid,
 } from '../src/shared/jaffre';
+import { englishOf } from '../src/shared/said';
 import { parseClientFrame, type ServerFrame } from '../src/shared/protocol';
 import { tableCodeFor } from '../src/worker/table';
 import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
@@ -122,14 +123,20 @@ describe('the bridge vocabulary', () => {
     expect((parsed as { name: string }).name).toHaveLength(120);
   });
 
-  it('turns events into lines, and says nothing about plumbing', () => {
-    expect(describeTableEvent({ v: 1, t: 'seated', name: 'Marc' })).toBe(
+  it('turns events into facts, and says nothing about plumbing', () => {
+    expect(tableSaid({ v: 1, t: 'seated', name: 'Marc' })).toEqual({
+      k: 'table_seated',
+      name: 'Marc',
+    });
+    // The English of the fact is what the archive keeps.
+    expect(englishOf(tableSaid({ v: 1, t: 'seated', name: 'Marc' })!)).toBe(
       'Marc sat down at the table.',
     );
-    expect(describeTableEvent({ v: 1, t: 'game-over', summary: '41-37' })).toBe(
+    expect(englishOf(tableSaid({ v: 1, t: 'game-over', summary: '41-37' })!)).toBe(
       'Game over — 41-37',
     );
-    expect(describeTableEvent({ v: 1, t: 'ready' })).toBeNull();
+    // 'ready' is the frame proving the table is alive; nobody needs telling.
+    expect(tableSaid({ v: 1, t: 'ready' })).toBeNull();
   });
 
   it('validates the event when it arrives as a client frame', () => {

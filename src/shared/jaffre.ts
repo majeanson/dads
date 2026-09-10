@@ -1,3 +1,5 @@
+import type { Said } from './said';
+
 /**
  * The link between the two products.
  *
@@ -109,17 +111,21 @@ export function parseTableEvent(data: unknown): TableEvent | null {
   }
 }
 
-/** How a table event reads as a line in the room, or null if it is plumbing. */
-export function describeTableEvent(event: TableEvent): string | null {
+/**
+ * What a table event IS, for the room to say in whatever language is reading.
+ * Null for the plumbing: 'ready' is the frame proving it is alive, and nobody
+ * needs to be told that.
+ */
+export function tableSaid(event: TableEvent): Said | null {
   switch (event.t) {
     case 'seated':
-      return `${event.name} sat down at the table.`;
+      return { k: 'table_seated', name: event.name };
     case 'left':
-      return `${event.name} left the table.`;
+      return { k: 'table_left', name: event.name };
     case 'game-started':
-      return 'A game started at the table.';
+      return { k: 'table_started' };
     case 'game-over':
-      return `Game over — ${event.summary}`;
+      return { k: 'table_over', summary: event.summary };
     case 'ready':
       return null;
   }

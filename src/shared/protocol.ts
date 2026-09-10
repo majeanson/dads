@@ -1,5 +1,6 @@
 import type { DadNight } from './dadNight';
 import { parseTableEvent, type TableEvent } from './jaffre';
+import type { Said } from './said';
 
 /**
  * The wire between a dad's browser and his group's RoomDO. Shared by both so
@@ -36,6 +37,12 @@ export interface RoomMessage {
   /** A photo or file attached to the line. The bytes live behind
    * /api/media?id=…, never in the frame. */
   media?: Attachment | null;
+  /**
+   * Set on the lines the ROOM writes, never on a line a dad typed: what
+   * happened, so each reader's own language can say it. `body` is the English
+   * of the same thing, and is what a row from before this existed still has.
+   */
+  said?: Said | null;
 }
 
 export interface RosterEntry {

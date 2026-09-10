@@ -211,12 +211,12 @@ describe('the night itself', () => {
     // The alarm is armed, but for a few days' time.
     expect(await fireAlarm(group)).toBe(true);
     await settle();
-    expect(marc.lines()).not.toContain("Dad night. The table's open.");
+    expect(marc.lines()).not.toContain('Dad night. The table’s open.');
 
     clockAt(start + 1000);
     expect(await fireAlarm(group)).toBe(true);
     await settle();
-    expect(marc.lines()).toContain("Dad night. The table's open.");
+    expect(marc.lines()).toContain('Dad night. The table’s open.');
   });
 
   it('closes the night with what the group actually did', async () => {
@@ -239,7 +239,7 @@ describe('the night itself', () => {
     expect(await fireAlarm(group)).toBe(true);
     await settle();
 
-    expect(marc.lines()).toContain('Dad night done — 2 dads, 3 lines.');
+    expect(marc.lines()).toContain('Dad night done — 2 dads turned up, 3 lines.');
   });
 
   it('says plainly when nobody came', async () => {
@@ -275,7 +275,7 @@ describe('the night itself', () => {
     expect(await fireAlarm(group)).toBe(true);
     await settle();
 
-    expect(marc.lines().filter((b) => b === "Dad night. The table's open.")).toHaveLength(2);
+    expect(marc.lines().filter((b) => b === 'Dad night. The table’s open.')).toHaveLength(2);
   });
 
   it('does nothing at all for a group with no night set', async () => {

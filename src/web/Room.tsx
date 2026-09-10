@@ -5,6 +5,7 @@ import { Board } from './Board';
 import { CallBar } from './CallBar';
 import { Here } from './Here';
 import { useT } from './i18n';
+import { describeSaid } from '../shared/said';
 import { nightItem, nightSoon, NightEditor } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { toRows } from './messageGroups';
@@ -220,7 +221,15 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                       <time className="when">{clock(row.message.createdAt)}</time>
                     </>
                   ) : (
-                    <span className="body">{row.message.body}</span>
+                    // The room talking. It carries what happened, not a
+                    // sentence, so it can be read in either language — and
+                    // falls back to the English body for a line written
+                    // before that was true.
+                    <span className="body">
+                      {row.message.said
+                        ? describeSaid(t, lang, row.message.said)
+                        : row.message.body}
+                    </span>
                   )}
                 </li>
               ),

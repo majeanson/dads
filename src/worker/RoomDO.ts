@@ -5,7 +5,6 @@ import {
   nextStart,
   NIGHT_DURATION_MS,
   previousStart,
-  WEEKDAY_NAMES,
   type DadNight,
 } from '../shared/dadNight';
 import {
@@ -16,7 +15,8 @@ import {
   type RosterEntry,
   type ServerFrame,
 } from '../shared/protocol';
-import { describeTableEvent } from '../shared/jaffre';
+import { tableSaid } from '../shared/jaffre';
+import { englishOf, parseSaid, type Said } from '../shared/said';
 import type { Env } from './env';
 import { newId } from './identity';
 import { mediaFor } from './media';
@@ -86,6 +86,7 @@ type TailRow = {
   created_at: number;
   prompt_id: string | null;
   media_id: string | null;
+  meta: string | null;
 };
 
 export class RoomDO extends DurableObject<Env> {
@@ -105,7 +106,8 @@ export class RoomDO extends DurableObject<Env> {
           body       TEXT NOT NULL,
           created_at INTEGER NOT NULL,
           prompt_id  TEXT,
-          media_id   TEXT
+          media_id   TEXT,
+          meta       TEXT
         );
         CREATE TABLE IF NOT EXISTS leaving (
           member_id TEXT PRIMARY KEY,
@@ -133,6 +135,9 @@ export class RoomDO extends DurableObject<Env> {
       if (!columns.includes('media_id')) {
         ctx.storage.sql.exec('ALTER TABLE tail ADD COLUMN media_id TEXT');
       }
+      if (!columns.includes('meta')) {
+        ctx.storage.sql.exec('ALTER TABLE tail ADD COLUMN meta TEXT');
+      }
     });
   }
 
@@ -154,7 +159,7 @@ export class RoomDO extends DurableObject<Env> {
       };
       this.applyNight(night);
       this.broadcast({ t: 'night', night });
-      await this.post('system', null, byName, describeNightChange(byName, night));
+      await this.say(byName, nightChange(byName, night));
       await this.rescheduleAlarm();
       return new Response(null, { status: 204 });
     }
@@ -164,8 +169,10 @@ export class RoomDO extends DurableObject<Env> {
     // this. The board is where the detail lives; this is what makes anyone
     // look at the board.
     if (url.pathname === '/announce' && request.method === 'POST') {
-      const { name, body } = (await request.json()) as { name: string; body: string };
-      await this.post('system', null, name, body);
+      const { name, said } = (await request.json()) as { name: string; said: unknown };
+      const parsed = parseSaid(typeof said === 'string' ? said : JSON.stringify(said));
+      if (parsed === null) return new Response('bad said', { status: 400 });
+      await this.say(name, parsed);
       return new Response(null, { status: 204 });
     }
 
@@ -273,9 +280,12 @@ export class RoomDO extends DurableObject<Env> {
     }
 
     if (frame.t === 'table') {
-      const line = describeTableEvent(frame.event);
-      if (line && !this.recentlySaid(line)) {
-        await this.post('table', null, who.name, line);
+      const said = tableSaid(frame.event);
+      // Every framed dad relays the same event, so the room drops one it has
+      // just printed. Compared on the English, which is what the tail holds
+      // whatever anyone is reading.
+      if (said && !this.recentlySaid(englishOf(said))) {
+        await this.say(who.name, said, 'table');
       }
       return;
     }
@@ -430,7 +440,7 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   private async openDadNight(now: number): Promise<void> {
-    await this.post('system', null, 'dad night', "Dad night. The table's open.");
+    await this.say('dad night', { k: 'night_open' });
     const night = this.storedNight();
     const window = night ? currentWindow(night, now) : null;
     // If the alarm ran so late that the window already closed, there is
@@ -468,11 +478,7 @@ export class RoomDO extends DurableObject<Env> {
       return;
     }
 
-    const body =
-      dads === 0
-        ? 'Dad night done. Nobody made it this week.'
-        : `Dad night done — ${dads} dad${dads === 1 ? '' : 's'}, ${lines} line${lines === 1 ? '' : 's'}.`;
-    await this.post('system', null, 'dad night', body);
+    await this.say('dad night', { k: 'night_done', dads, lines });
   }
 
   // -------------------------------------------------------------- presence
@@ -547,6 +553,17 @@ export class RoomDO extends DurableObject<Env> {
 
   // -------------------------------------------------------------- messages
 
+  /**
+   * The room, saying something about itself.
+   *
+   * Both halves go down: the English in `body`, because that is what the
+   * archive reads like and what an old client shows, and the fact in `meta`,
+   * because that is what lets a dad read it in French.
+   */
+  private async say(name: string, said: Said, kind: 'system' | 'table' = 'system'): Promise<void> {
+    await this.post(kind, null, name, englishOf(said), null, null, said);
+  }
+
   private async post(
     kind: RoomMessage['kind'],
     memberId: string | null,
@@ -554,14 +571,16 @@ export class RoomDO extends DurableObject<Env> {
     body: string,
     promptId: string | null = null,
     media: Attachment | null = null,
+    said: Said | null = null,
   ): Promise<void> {
     const id = newId('msg');
     const createdAt = Date.now();
 
+    const meta = said === null ? null : JSON.stringify(said);
     const seq = this.ctx.storage.sql
       .exec<{ seq: number }>(
-        `INSERT INTO tail (id, kind, member_id, name, body, created_at, prompt_id, media_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING seq`,
+        `INSERT INTO tail (id, kind, member_id, name, body, created_at, prompt_id, media_id, meta)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING seq`,
         id,
         kind,
         memberId,
@@ -570,6 +589,7 @@ export class RoomDO extends DurableObject<Env> {
         createdAt,
         promptId,
         media?.id ?? null,
+        meta,
       )
       .one().seq;
     this.ctx.storage.sql.exec(
@@ -587,6 +607,7 @@ export class RoomDO extends DurableObject<Env> {
       createdAt,
       promptId,
       media,
+      said,
     };
     // Fan out before the archive write: a dad should not wait on D1 to see
     // his own line appear.
@@ -646,8 +667,9 @@ export class RoomDO extends DurableObject<Env> {
     if (!groupId) return;
     try {
       await this.env.DB.prepare(
-        `INSERT INTO messages (id, group_id, member_id, kind, body, created_at, prompt_id, media_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO messages
+           (id, group_id, member_id, kind, body, created_at, prompt_id, media_id, meta)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           message.id,
@@ -658,6 +680,7 @@ export class RoomDO extends DurableObject<Env> {
           message.createdAt,
           message.promptId ?? null,
           message.media?.id ?? null,
+          message.said === null || message.said === undefined ? null : JSON.stringify(message.said),
         )
         .run();
     } catch (err) {
@@ -697,6 +720,9 @@ export class RoomDO extends DurableObject<Env> {
       createdAt: r.created_at,
       promptId: r.prompt_id,
       media: r.media_id === null ? null : (attachments.get(r.media_id) ?? null),
+      // A line from before the room knew how to say things twice has no meta,
+      // and its English body is what it keeps.
+      said: parseSaid(r.meta),
     }));
   }
 
@@ -764,8 +790,8 @@ export class RoomDO extends DurableObject<Env> {
   }
 }
 
-function describeNightChange(byName: string, night: DadNight | null): string {
+function nightChange(byName: string, night: DadNight | null): Said {
   return night
-    ? `${byName} set dad night to ${WEEKDAY_NAMES[night.weekday]}s at ${night.time}.`
-    : `${byName} cleared dad night.`;
+    ? { k: 'night_set', by: byName, weekday: night.weekday, time: night.time }
+    : { k: 'night_cleared', by: byName };
 }

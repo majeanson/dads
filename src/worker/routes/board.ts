@@ -7,6 +7,7 @@ import {
   type Outcome,
 } from '../board';
 import type { Env } from '../env';
+import type { Said } from '../../shared/said';
 import { newId } from '../identity';
 import { IDENTITY_HEADERS } from '../RoomDO';
 import { currentSession, type Session } from './auth';
@@ -24,7 +25,7 @@ async function requireSession(
  * Tells the room. The board is where this lives, but a line in the room is
  * what makes anyone look at the board — and being seen is the point.
  */
-async function announce(env: Env, session: Session, body: string): Promise<void> {
+async function announce(env: Env, session: Session, said: Said): Promise<void> {
   const stub = env.ROOM.get(env.ROOM.idFromName(session.group.id));
   await stub.fetch('https://room/announce', {
     method: 'POST',
@@ -32,7 +33,7 @@ async function announce(env: Env, session: Session, body: string): Promise<void>
       'Content-Type': 'application/json',
       [IDENTITY_HEADERS.groupId]: session.group.id,
     },
-    body: JSON.stringify({ name: session.member.displayName, body }),
+    body: JSON.stringify({ name: session.member.displayName, said }),
   });
 }
 
@@ -90,13 +91,12 @@ export async function putCheckIn(
     .bind(newId('chk'), session.group.id, session.member.id, week, rating, note, now)
     .run();
 
-  await announce(
-    env,
-    session,
-    note
-      ? `${session.member.displayName} checked in — ${rating}/5. ${note}`
-      : `${session.member.displayName} checked in — ${rating}/5.`,
-  );
+  await announce(env, session, {
+    k: 'check_in',
+    name: session.member.displayName,
+    rating,
+    note,
+  });
 
   return Response.json({ week, rating, note });
 }
@@ -139,7 +139,7 @@ export async function putCommitment(
     .bind(newId('cmt'), session.group.id, session.member.id, week, body, Date.now())
     .run();
 
-  await announce(env, session, `${session.member.displayName} is trying this week: ${body}`);
+  await announce(env, session, { k: 'commitment', name: session.member.displayName, body });
   return Response.json({ week, body, outcome: 'pending' });
 }
 
@@ -190,14 +190,13 @@ export async function putCommitmentOutcome(
     .bind(outcome, reflection, Date.now(), session.group.id, session.member.id, week)
     .run();
 
-  const verdict = outcome === 'done' ? 'did it' : 'did not manage it';
-  await announce(
-    env,
-    session,
-    reflection
-      ? `${session.member.displayName} ${verdict}: ${existing.body} — ${reflection}`
-      : `${session.member.displayName} ${verdict}: ${existing.body}`,
-  );
+  await announce(env, session, {
+    k: 'outcome',
+    name: session.member.displayName,
+    body: existing.body,
+    note: reflection,
+    done: outcome === 'done',
+  });
 
   return Response.json({ week, outcome, reflection });
 }

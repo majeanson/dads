@@ -67,3 +67,44 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   await page.getByRole('button', { name: 'Follow the phone' }).click();
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
 });
+
+test('what the room says about itself is read in each dad’s own language', async ({ browser }) => {
+  // Two dads, same room, different languages — the point of translating the
+  // room's own lines rather than archiving a sentence.
+  const fr = await browser.newContext();
+  const en = await browser.newContext();
+  const marc = await fr.newPage();
+  const sam = await en.newPage();
+
+  await comeIn(marc, 'Marc');
+  await comeIn(sam, 'Sam');
+
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await marc.getByRole('button', { name: 'FR', exact: true }).click();
+
+  // Marc sets the night, in French.
+  await marc.getByRole('button', { name: /^Mets une soirée/ }).click();
+  await marc.getByLabel('Jour').selectOption('4');
+  await marc.getByLabel('Heure').fill('21:00');
+  // Saving closes the sheet on its own; there is nothing left to shut.
+  await marc.getByRole('button', { name: 'Enregistre' }).click();
+
+  // The same event, two rooms, two languages.
+  await expect(
+    marc.getByTestId('line').filter({ hasText: 'a mis la soirée de gars les jeudis à 21:00' }),
+  ).toBeVisible();
+  await expect(
+    sam.getByTestId('line').filter({ hasText: 'set dad night to Thursdays at 21:00' }),
+  ).toBeVisible();
+
+  // And Sam switching over re-reads the line he already has.
+  await sam.getByRole('button', { name: 'Menu' }).click();
+  await sam.getByRole('button', { name: 'FR', exact: true }).click();
+  await sam.getByRole('button', { name: 'Ferme', exact: true }).click();
+  await expect(
+    sam.getByTestId('line').filter({ hasText: 'a mis la soirée de gars les jeudis à 21:00' }),
+  ).toBeVisible();
+
+  await fr.close();
+  await en.close();
+});
