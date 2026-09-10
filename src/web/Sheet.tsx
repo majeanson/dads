@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useT } from './i18n';
 
 /**
  * A thing you open, look at, and close again.
@@ -17,6 +18,7 @@ export function Sheet({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const { t } = useT();
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export function Sheet({
       <header className="sheet-head">
         <h2>{title}</h2>
         <button type="button" className="link" onClick={() => dialog.current?.close()}>
-          Close
+          {t('sheet.close')}
         </button>
       </header>
       <div className="sheet-body">{children}</div>

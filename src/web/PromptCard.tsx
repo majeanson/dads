@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { fetchTodaysPrompt, type TodaysPrompt } from './api';
+import { plural, useT } from './i18n';
 import type { RoomMessage } from '../shared/protocol';
 
 /**
@@ -20,6 +21,7 @@ export function PromptCard({
   onAnswer: (body: string) => boolean;
   canAnswer: boolean;
 }) {
+  const { t, lang } = useT();
   const [today, setToday] = useState<TodaysPrompt | null | 'loading'>('loading');
   const [draft, setDraft] = useState('');
   const [open, setOpen] = useState(false);
@@ -61,36 +63,36 @@ export function PromptCard({
 
       <p className="prompt-meta">
         {answered
-          ? 'You’ve answered.'
+          ? t('q.you_answered')
           : answersToday.length === 0
-            ? 'Nobody has answered yet.'
-            : `${answersToday.length} answer${answersToday.length === 1 ? '' : 's'}.`}
+            ? t('q.nobody_answered')
+            : t(`q.answers_${plural(lang, answersToday.length)}`, { n: answersToday.length })}
       </p>
 
       {open ? (
         <form className="prompt-answer" onSubmit={submit}>
           <label htmlFor="answer" className="sr-only">
-            Your answer
+            {t('q.your_answer')}
           </label>
           <textarea
             id="answer"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={3}
-            placeholder="Take your time."
+            placeholder={t('q.take_your_time')}
           />
           <div className="prompt-actions">
             <button type="submit" disabled={!canAnswer || !draft.trim()}>
-              Answer
+              {t('q.answer')}
             </button>
             <button type="button" className="link" onClick={() => setOpen(false)}>
-              Not now
+              {t('q.not_now')}
             </button>
           </div>
         </form>
       ) : (
         <button type="button" className="prompt-open" onClick={() => setOpen(true)}>
-          {answered ? 'Say more' : 'Answer'}
+          {answered ? t('q.say_more') : t('q.answer')}
         </button>
       )}
     </section>

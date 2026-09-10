@@ -7,12 +7,13 @@ import {
   type PoolEntry,
   type PromptAnswer,
 } from './api';
+import { plural, useT, type Key } from './i18n';
 
-const ADD_ERRORS: Record<string, string> = {
-  empty: 'Write the question first.',
-  too_long: 'That’s long for a question — 240 characters or fewer.',
-  already_asked: 'That one is already in the list.',
-  unknown: 'Couldn’t add that. Try again.',
+const ADD_ERRORS: Record<string, Key> = {
+  empty: 'q.add_empty',
+  too_long: 'q.add_too_long',
+  already_asked: 'q.add_already',
+  unknown: 'q.add_unknown',
 };
 
 /**
@@ -24,6 +25,7 @@ const ADD_ERRORS: Record<string, string> = {
  * this group has actually said, and the door to add one of your own.
  */
 export function PromptList() {
+  const { t } = useT();
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'error' }
@@ -51,8 +53,8 @@ export function PromptList() {
     };
   }, []);
 
-  if (state.status === 'loading') return <p className="quiet">Fetching the list…</p>;
-  if (state.status === 'error') return <p className="quiet">Couldn’t load the prompts.</p>;
+  if (state.status === 'loading') return <p className="quiet">{t('q.loading')}</p>;
+  if (state.status === 'error') return <p className="quiet">{t('q.failed')}</p>;
 
   const { mine, history } = state;
 
@@ -63,9 +65,9 @@ export function PromptList() {
   return (
     <div className="prompt-list" data-testid="prompt-list">
       <section>
-        <h2>Asked before</h2>
+        <h2>{t('q.asked_before')}</h2>
         {history.length === 0 ? (
-          <p className="quiet">Nothing yet. The first question lands tomorrow.</p>
+          <p className="quiet">{t('q.first_tomorrow')}</p>
         ) : (
           <ol className="prompts">
             {history.map((h) => (
@@ -81,7 +83,7 @@ export function PromptList() {
       </section>
 
       <section>
-        <h2>Add a question</h2>
+        <h2>{t('q.add')}</h2>
         <AddPromptForm onAdded={added} />
         {mine.length === 0 ? null : (
           <ol className="prompts">
@@ -90,7 +92,7 @@ export function PromptList() {
                 key={p.id}
                 id={p.id}
                 body={p.body}
-                meta={p.authorName ? `by ${p.authorName}` : 'yours'}
+                meta={p.authorName ? t('q.by', { name: p.authorName }) : t('q.yours')}
                 answers={p.answers}
               />
             ))}
@@ -114,6 +116,7 @@ function PromptRow({
   meta?: string;
   answers: number;
 }) {
+  const { t, lang } = useT();
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState<PromptAnswer[] | null>(null);
 
@@ -142,7 +145,7 @@ function PromptRow({
           {meta ? <span>{meta}</span> : null}
           {answers > 0 ? (
             <span className="is-answered">
-              {answers} answer{answers === 1 ? '' : 's'}
+              {t(`q.n_answers_${plural(lang, answers)}`, { n: answers })}
             </span>
           ) : null}
         </span>
@@ -166,6 +169,7 @@ function PromptRow({
 }
 
 function AddPromptForm({ onAdded }: { onAdded: (entry: PoolEntry) => void }) {
+  const { t } = useT();
   const [body, setBody] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -180,24 +184,24 @@ function AddPromptForm({ onAdded }: { onAdded: (entry: PoolEntry) => void }) {
       onAdded(result.prompt);
       setBody('');
     } else {
-      setError(ADD_ERRORS[result.error] ?? ADD_ERRORS.unknown!);
+      setError(t(ADD_ERRORS[result.error] ?? 'q.add_unknown'));
     }
   }
 
   return (
     <form className="add-prompt" onSubmit={submit}>
       <label htmlFor="new-prompt" className="sr-only">
-        A question for the group
+        {t('q.add_label')}
       </label>
       <input
         id="new-prompt"
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        placeholder="Add a question for the group"
+        placeholder={t('q.add_placeholder')}
         maxLength={240}
       />
       <button type="submit" disabled={busy || !body.trim()}>
-        Add
+        {t('q.add_button')}
       </button>
       {error ? (
         <p className="error" role="alert">

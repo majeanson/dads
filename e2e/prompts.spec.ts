@@ -10,10 +10,10 @@ test.describe.configure({ mode: 'serial' });
  * Scoped to the menu because Playwright matches accessible names by substring,
  * and one curated prompt ends "...with no phone in the room?". Anchored regex
  * rather than an exact name: an item with something waiting is called
- * "Board — something waiting", which is exactly what a screen reader should
+ * "The week — something waiting", which is exactly what a screen reader should
  * hear, and the label is the prefix.
  */
-async function open(page: Page, name: 'Prompts' | 'Board' | 'Open the table' | 'Dad night') {
+async function open(page: Page, name: 'Questions' | 'The week' | 'Open the table' | 'Dad night') {
   await page.getByRole('button', { name: 'Menu' }).click();
   await page
     .getByRole('navigation', { name: 'Rooms' })
@@ -45,8 +45,8 @@ test('the day’s question is asked, answered, and seen by the others', async ({
   // which carries a mark until you have answered it.
   await expect(marc.getByTestId('prompt-card')).toHaveCount(0);
   await expect(marc.getByTestId('mark-menu')).toBeVisible();
-  await open(marc, 'Prompts');
-  await open(sam, 'Prompts');
+  await open(marc, 'Questions');
+  await open(sam, 'Questions');
 
   // Both dads get the same question — it is the group's, not the browser's.
   const question = await marc.getByTestId('prompt-body').textContent();
@@ -71,7 +71,7 @@ test('the day’s question is asked, answered, and seen by the others', async ({
 test('what the group was asked before is readable, and a dad can add one', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
 
-  await open(marc, 'Prompts');
+  await open(marc, 'Questions');
   await expect(marc.getByTestId('prompt-list')).toBeVisible();
 
   // What the group has actually been asked — not the curated hundred, which
@@ -95,7 +95,7 @@ test('what the group was asked before is readable, and a dad can add one', async
 
   // It survives a reload, and going back to the room still works.
   await marc.reload();
-  await open(marc, 'Prompts');
+  await open(marc, 'Questions');
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await close(marc);
   await expect(marc.getByRole('button', { name: 'Send' })).toBeVisible();

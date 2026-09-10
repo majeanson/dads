@@ -224,19 +224,28 @@ export function formatNight(night: DadNight): string {
 }
 
 /**
+ * How long, in the largest unit that is still true.
+ *
  * Rounded down, deliberately: "in 2 hours" at 1h59m is a small lie in the
  * direction that gets a dad to the table late.
+ *
+ * Parts rather than a sentence, because the sentence has to be written twice —
+ * once in each language — and the arithmetic must not be.
  */
+export function countdownParts(ms: number): {
+  unit: 'now' | 'minutes' | 'hours' | 'days';
+  n: number;
+} {
+  if (ms <= MINUTE) return { unit: 'now', n: 0 };
+  if (ms < HOUR) return { unit: 'minutes', n: Math.floor(ms / MINUTE) };
+  if (ms < DAY) return { unit: 'hours', n: Math.floor(ms / HOUR) };
+  return { unit: 'days', n: Math.floor(ms / DAY) };
+}
+
+/** The English of the above, for the line the room archives. */
 export function countdown(ms: number): string {
-  if (ms <= MINUTE) return 'any moment';
-  if (ms < HOUR) {
-    const minutes = Math.floor(ms / MINUTE);
-    return `in ${minutes} minute${minutes === 1 ? '' : 's'}`;
-  }
-  if (ms < DAY) {
-    const hours = Math.floor(ms / HOUR);
-    return `in ${hours} hour${hours === 1 ? '' : 's'}`;
-  }
-  const days = Math.floor(ms / DAY);
-  return `in ${days} day${days === 1 ? '' : 's'}`;
+  const { unit, n } = countdownParts(ms);
+  if (unit === 'now') return 'any moment';
+  const word = unit.slice(0, -1);
+  return `in ${n} ${word}${n === 1 ? '' : 's'}`;
 }

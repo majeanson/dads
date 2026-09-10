@@ -4,6 +4,7 @@ import { Attachment } from './Attachment';
 import { Board } from './Board';
 import { CallBar } from './CallBar';
 import { Here } from './Here';
+import { useT } from './i18n';
 import { nightItem, nightSoon, NightEditor } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { toRows } from './messageGroups';
@@ -11,6 +12,7 @@ import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
 import { Sheet } from './Sheet';
 import { TableColumn } from './TableColumn';
+import { Toggles } from './Toggles';
 import { useCall } from './useCall';
 import { useRoom } from './useRoom';
 
@@ -43,6 +45,7 @@ type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night';
  * on a phone.
  */
 export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
+  const { t, lang } = useT();
   const room = useRoom(true, session.group.dadNight);
   const [sheet, setSheet] = useState<Sheets | null>(null);
   const [tableOpen, setTableOpen] = useState(false);
@@ -121,9 +124,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
     if (!result.ok) {
       setUploadError(
-        result.error === 'too_large'
-          ? 'That file is too big — 10 MB is the limit.'
-          : 'Couldn’t send that. Try again.',
+        result.error === 'too_large' ? t('composer.too_large') : t('composer.upload_failed'),
       );
       return;
     }
@@ -139,7 +140,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     .map(([, name]) => name);
 
   const waiting = todo.prompt || todo.board;
-  const soon = nightSoon(room.night, now);
+  const soon = nightSoon(t, lang, room.night, now);
+  const days = {
+    today: t('day.today'),
+    yesterday: t('day.yesterday'),
+    locale: lang === 'fr' ? 'fr-CA' : 'en-CA',
+  };
 
   return (
     <main className="room" data-table={tableOpen ? 'open' : 'closed'}>
@@ -157,18 +163,18 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               onClick={() => setSheet('here')}
             >
               {room.connection === 'open'
-                ? `${room.roster.length} here`
+                ? t('room.here', { n: room.roster.length })
                 : room.connection === 'connecting'
-                  ? 'Opening the door…'
-                  : 'Reconnecting…'}
+                  ? t('room.opening')
+                  : t('room.reconnecting')}
             </button>
             {soon === null ? null : ` · ${soon}`}
           </p>
         </div>
         <button type="button" className="menu-open" onClick={() => setSheet('menu')}>
-          Menu
+          {t('room.menu')}
           {waiting ? <span className="mark" data-testid="mark-menu" aria-hidden="true" /> : null}
-          {waiting ? <span className="sr-only"> — something waiting</span> : null}
+          {waiting ? <span className="sr-only">{t('room.waiting')}</span> : null}
         </button>
       </header>
 
@@ -186,11 +192,11 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             onToggleCamera={() => void call.toggleCamera()}
           />
 
-          <ol className="lines" aria-label="Messages">
+          <ol className="lines" aria-label={t('room.messages')}>
             {room.messages.length === 0 ? (
-              <li className="lines-empty quiet">Nobody has said anything yet.</li>
+              <li className="lines-empty quiet">{t('room.empty')}</li>
             ) : null}
-            {toRows(room.messages).map((row) =>
+            {toRows(room.messages, Date.now(), days).map((row) =>
               row.kind === 'day' ? (
                 <li key={`day-${row.key}`} className="day" data-testid="day">
                   <span>{row.label}</span>
@@ -206,7 +212,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                       <span className="who">{row.showName ? row.message.name : ''}</span>
                       <span className="body">
                         {row.message.kind === 'prompt' ? (
-                          <span className="answer-tag">answered</span>
+                          <span className="answer-tag">{t('line.answered')}</span>
                         ) : null}
                         {row.message.body}
                         {row.message.media ? <Attachment media={row.message.media} /> : null}
@@ -223,7 +229,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           </ol>
 
           <p className="typing" aria-live="polite">
-            {typingNames.length > 0 ? `${typingNames.join(', ')} typing…` : ' '}
+            {typingNames.length > 0 ? t('room.typing', { names: typingNames.join(', ') }) : ' '}
           </p>
 
           <form className="composer" onSubmit={submit}>
@@ -240,7 +246,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                     if (picker.current !== null) picker.current.value = '';
                   }}
                 >
-                  Remove
+                  {t('composer.remove')}
                 </button>
               </p>
             ) : null}
@@ -253,7 +259,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
             <label htmlFor="attach" className="attach">
               <span aria-hidden="true">＋</span>
-              <span className="sr-only">Attach a photo or file</span>
+              <span className="sr-only">{t('composer.attach')}</span>
             </label>
             <input
               ref={picker}
@@ -265,7 +271,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             />
 
             <label htmlFor="say" className="sr-only">
-              Say something
+              {t('composer.say')}
             </label>
             <input
               id="say"
@@ -274,7 +280,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 setDraft(e.target.value);
                 room.sendTyping();
               }}
-              placeholder={pending === null ? 'Say something' : 'Add a caption, or just send it'}
+              placeholder={pending === null ? t('composer.say') : t('composer.caption')}
               autoComplete="off"
               disabled={room.connection !== 'open'}
             />
@@ -284,7 +290,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 room.connection !== 'open' || sending || (!draft.trim() && pending === null)
               }
             >
-              {sending ? 'Sending…' : 'Send'}
+              {sending ? t('composer.sending') : t('composer.send')}
             </button>
           </form>
         </div>
@@ -296,22 +302,22 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       </div>
 
       {sheet === 'menu' ? (
-        <Sheet title="Menu" onClose={() => setSheet(null)}>
+        <Sheet title={t('menu.title')} onClose={() => setSheet(null)}>
           <nav className="menu" aria-label="Rooms">
             <button type="button" onClick={() => setSheet('prompts')}>
-              Prompts
+              {t('menu.questions')}
               {todo.prompt ? (
                 <span className="mark" data-testid="mark-prompts" aria-hidden="true" />
               ) : null}
-              {todo.prompt ? <span className="sr-only"> — something waiting</span> : null}
+              {todo.prompt ? <span className="sr-only">{t('room.waiting')}</span> : null}
             </button>
 
             <button type="button" onClick={() => setSheet('board')}>
-              Board
+              {t('menu.week')}
               {todo.board ? (
                 <span className="mark" data-testid="mark-board" aria-hidden="true" />
               ) : null}
-              {todo.board ? <span className="sr-only"> — something waiting</span> : null}
+              {todo.board ? <span className="sr-only">{t('room.waiting')}</span> : null}
             </button>
 
             <button
@@ -321,22 +327,24 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 setSheet(null);
               }}
             >
-              {tableOpen ? 'Close the table' : 'Open the table'}
+              {tableOpen ? t('menu.close_table') : t('menu.open_table')}
             </button>
 
             <button type="button" data-testid="dad-night" onClick={() => setSheet('night')}>
-              {nightItem(room.night, now)}
+              {nightItem(t, lang, room.night, now)}
             </button>
 
             <button type="button" onClick={onSignOut}>
-              Sign out
+              {t('menu.sign_out')}
             </button>
+
+            <Toggles />
           </nav>
         </Sheet>
       ) : null}
 
       {sheet === 'here' ? (
-        <Sheet title="Who’s here" onClose={() => setSheet(null)}>
+        <Sheet title={t('here.title')} onClose={() => setSheet(null)}>
           <Here
             roster={room.roster.map((m) => ({
               memberId: m.memberId,
@@ -350,7 +358,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       {/* Each sheet mounts when it opens, so it reads fresh data every time
           rather than showing what was true when the page loaded. */}
       {sheet === 'prompts' ? (
-        <Sheet title="Questions" onClose={() => setSheet(null)}>
+        <Sheet title={t('q.title')} onClose={() => setSheet(null)}>
           <PromptCard
             messages={room.messages}
             onAnswer={room.answerPrompt}
@@ -361,13 +369,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       ) : null}
 
       {sheet === 'board' ? (
-        <Sheet title="The week" onClose={() => setSheet(null)}>
+        <Sheet title={t('b.title')} onClose={() => setSheet(null)}>
           <Board onChanged={refreshTodo} />
         </Sheet>
       ) : null}
 
       {sheet === 'night' ? (
-        <Sheet title="Dad night" onClose={() => setSheet(null)}>
+        <Sheet title={t('n.title')} onClose={() => setSheet(null)}>
           <NightEditor night={room.night} onDone={() => setSheet(null)} />
         </Sheet>
       ) : null}

@@ -41,6 +41,11 @@ export const E2E_CALL_GROUP = {
   name: 'The E2E Call',
   code: 'lantern spruce heron opal',
 };
+export const E2E_PREFS_GROUP = {
+  slug: 'e2e-prefs',
+  name: 'The E2E Prefs',
+  code: 'meadow tinder copper wren',
+};
 const GROUPS = [
   E2E_CALL_GROUP,
   E2E_GROUP,
@@ -49,6 +54,7 @@ const GROUPS = [
   E2E_PROMPT_GROUP,
   E2E_BOARD_GROUP,
   E2E_TABLE_GROUP,
+  E2E_PREFS_GROUP,
 ];
 
 function wrangler(...args: string[]): string {

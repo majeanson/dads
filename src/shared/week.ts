@@ -90,13 +90,25 @@ export function recentWeeks(week: string, count: number): string[] {
   return weeks;
 }
 
+/**
+ * "7 Sep" / "7 sept" — the Monday, in the reader's language.
+ *
+ * The words around it ("week of", "semaine du") belong to whoever is reading
+ * and live in the dictionary; this is only the date.
+ */
+export function weekDate(week: string, lang: 'en' | 'fr' = 'en'): string {
+  const monday = mondayOf(week);
+  if (monday === null) return week;
+  return new Intl.DateTimeFormat(lang === 'fr' ? 'fr-CA' : 'en-GB', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date(monday));
+}
+
 /** "week of 7 Sep" — how a dad would refer to it, not "2026-W37". */
 export function weekLabel(week: string): string {
   const monday = mondayOf(week);
   if (monday === null) return week;
-  return `week of ${new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'UTC',
-    day: 'numeric',
-    month: 'short',
-  }).format(new Date(monday))}`;
+  return `week of ${weekDate(week)}`;
 }

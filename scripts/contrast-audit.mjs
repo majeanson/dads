@@ -90,8 +90,44 @@ export function auditTheme(tokens) {
   });
 }
 
-const themes = parseThemes(readFileSync(TOKENS, 'utf8'));
+const css = readFileSync(TOKENS, 'utf8');
+const themes = parseThemes(css);
 let failures = 0;
+
+/**
+ * The explicit override blocks must say exactly what the two above them say.
+ *
+ * They exist because a dad can ask for light or dark outright instead of
+ * following his phone, and CSS gives no way to alias one palette to another —
+ * so the duplication is real. This is what keeps it honest: drift in either
+ * direction fails the audit rather than shipping a theme nobody checked.
+ */
+const COLOURS = [
+  'bg',
+  'bg-soft',
+  'text',
+  'muted',
+  'border',
+  'border-strong',
+  'accent',
+  'on-accent',
+  'danger',
+];
+
+for (const name of ['light', 'dark']) {
+  const explicit = block(css, new RegExp(`:root\\[data-theme='${name}'\\]\\s*\\{([\\s\\S]*?)\\}`));
+  for (const token of COLOURS) {
+    const expected = themes[name].get(token);
+    const got = explicit.get(token);
+    if (got !== expected) {
+      console.error(
+        `[data-theme='${name}'] --${token} is ${got ?? 'missing'}, ` +
+          `but the ${name} palette says ${expected}`,
+      );
+      failures += 1;
+    }
+  }
+}
 
 for (const [name, tokens] of Object.entries(themes)) {
   const results = auditTheme(tokens);

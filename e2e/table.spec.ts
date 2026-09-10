@@ -33,10 +33,10 @@ const MUTE_TABLE = '<!doctype html><meta charset="utf-8"><h1>a table that says n
  * Scoped to the menu because Playwright matches accessible names by substring,
  * and one curated prompt ends "...with no phone in the room?". Anchored regex
  * rather than an exact name: an item with something waiting is called
- * "Board — something waiting", which is exactly what a screen reader should
+ * "The week — something waiting", which is exactly what a screen reader should
  * hear, and the label is the prefix.
  */
-async function open(page: Page, name: 'Prompts' | 'Board' | 'Open the table' | 'Dad night') {
+async function open(page: Page, name: 'Questions' | 'The week' | 'Open the table' | 'Dad night') {
   await page.getByRole('button', { name: 'Menu' }).click();
   await page
     .getByRole('navigation', { name: 'Rooms' })

@@ -7,6 +7,21 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
     <title>dads</title>
+    <script>
+      // Before the first paint, not after React mounts: a dad who asked for
+      // dark should never get a white flash on his way into the room, and the
+      // language belongs on <html> for anything reading the page aloud.
+      try {
+        var theme = localStorage.getItem('dads.theme');
+        if (theme === 'light' || theme === 'dark') {
+          document.documentElement.dataset.theme = theme;
+        }
+        var lang = localStorage.getItem('dads.lang');
+        if (lang === 'en' || lang === 'fr') document.documentElement.lang = lang;
+      } catch (e) {
+        // Storage refused. The phone's own setting still applies.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

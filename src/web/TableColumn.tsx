@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { JAFFRE_ORIGIN, parseTableEvent, type TableEvent } from '../shared/jaffre';
 import { fetchTable, type TableInfo } from './api';
+import { useT } from './i18n';
 
 /**
  * How long to wait for the table to say anything before offering a way out.
@@ -24,6 +25,7 @@ export function TableColumn({
   onEvent: (event: TableEvent) => void;
   onClose: () => void;
 }) {
+  const { t } = useT();
   const [table, setTable] = useState<TableInfo | null | 'loading'>('loading');
   const [blocked, setBlocked] = useState(false);
   /**
@@ -93,12 +95,12 @@ export function TableColumn({
     return (
       <section className="table-frame">
         <div className="table-head">
-          <h2>The table</h2>
+          <h2>{t('t.title')}</h2>
           <button type="button" className="link" onClick={onClose}>
-            Close the table
+            {t('t.close')}
           </button>
         </div>
-        <p className="table-fallback quiet">Setting the table…</p>
+        <p className="table-fallback quiet">{t('t.setting')}</p>
       </section>
     );
   }
@@ -107,13 +109,13 @@ export function TableColumn({
     return (
       <section className="table-frame" data-testid="table">
         <div className="table-head">
-          <h2>The table</h2>
+          <h2>{t('t.title')}</h2>
           <button type="button" className="link" onClick={onClose}>
-            Close the table
+            {t('t.close')}
           </button>
         </div>
         <div className="table-fallback">
-          <p className="quiet">Couldn’t reach the table.</p>
+          <p className="quiet">{t('t.unreachable')}</p>
         </div>
       </section>
     );
@@ -122,13 +124,13 @@ export function TableColumn({
   return (
     <section className="table-frame" data-testid="table">
       <div className="table-head">
-        <h2>The table</h2>
+        <h2>{t('t.title')}</h2>
         <span className="table-head-actions">
           <a href={table.shareUrl} target="_blank" rel="noopener noreferrer">
-            Open in its own tab ↗
+            {t('t.own_tab')}
           </a>
           <button type="button" className="link" onClick={onClose}>
-            Close the table
+            {t('t.close')}
           </button>
         </span>
       </div>
@@ -137,22 +139,22 @@ export function TableColumn({
         // If the frame will not load — an extension, a locked-down browser —
         // the column stops pretending and hands over a link that will.
         <div className="table-fallback" data-testid="table-fallback">
-          <p className="quiet">The table won’t open in here.</p>
+          <p className="quiet">{t('t.blocked')}</p>
           <a href={table.shareUrl} target="_blank" rel="noopener noreferrer">
-            Play Jaffre
+            {t('t.play')}
           </a>
         </div>
       ) : (
         <>
           {silent ? (
             <p className="table-silent" data-testid="table-silent">
-              The table isn’t answering in here.{' '}
+              {t('t.silent')}{' '}
               <a href={table.shareUrl} target="_blank" rel="noopener noreferrer">
-                Open it in its own tab
+                {t('t.silent_link')}
               </a>{' '}
-              or{' '}
+              {t('t.silent_or')}{' '}
               <button type="button" className="link" onClick={retry}>
-                try again
+                {t('t.try_again')}
               </button>
               .
             </p>

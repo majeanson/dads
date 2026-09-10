@@ -1,16 +1,17 @@
 import { useState, type FormEvent } from 'react';
-import {
-  countdown,
-  formatNight,
-  parseTime,
-  phaseOf,
-  WEEKDAY_NAMES,
-  type DadNight,
-} from '../shared/dadNight';
+import { countdownParts, parseTime, phaseOf, type DadNight } from '../shared/dadNight';
 import { setNight as saveNight } from './api';
+import { nightWhen, plural, useT, weekdayNames, type Lang, type T } from './i18n';
 
 /** Inside this, the night is close enough to belong on the room's header. */
 const SOON_MS = 24 * 60 * 60 * 1000;
+
+/** "in 2 hours" / "dans 2 heures", from the parts the shared clock gives us. */
+function countdownIn(t: T, lang: Lang, ms: number): string {
+  const { unit, n } = countdownParts(ms);
+  if (unit === 'now') return t('n.countdown_now');
+  return t(`n.countdown_${unit}_${plural(lang, n)}`, { n });
+}
 
 /**
  * The standing appointment, in as few words as it can be said.
@@ -20,22 +21,24 @@ const SOON_MS = 24 * 60 * 60 * 1000;
  * `nightItem` is the menu's, where a dad has gone looking for it and the full
  * answer is what he wants.
  */
-export function nightSoon(night: DadNight | null, now: number): string | null {
+export function nightSoon(t: T, lang: Lang, night: DadNight | null, now: number): string | null {
   const phase = night ? phaseOf(night, now) : null;
-  if (phase?.kind === 'live') return 'dad night — the table’s open';
+  if (phase?.kind === 'live') return t('n.soon_live');
   if (phase?.kind === 'upcoming' && phase.startsIn <= SOON_MS) {
-    return `dad night ${countdown(phase.startsIn)}`;
+    return t('n.soon', { countdown: countdownIn(t, lang, phase.startsIn) });
   }
   return null;
 }
 
-export function nightItem(night: DadNight | null, now: number): string {
-  if (night === null) return 'Set dad night';
+export function nightItem(t: T, lang: Lang, night: DadNight | null, now: number): string {
+  if (night === null) return t('n.set');
   const phase = phaseOf(night, now);
-  const when = formatNight(night).toLowerCase();
-  if (phase?.kind === 'live') return `Dad night ${when} — the table’s open`;
-  if (phase?.kind === 'upcoming') return `Dad night ${when} — ${countdown(phase.startsIn)}`;
-  return `Dad night ${when}`;
+  const when = nightWhen(lang, night);
+  if (phase?.kind === 'live') return t('n.item_live', { when });
+  if (phase?.kind === 'upcoming') {
+    return t('n.item', { when, countdown: countdownIn(t, lang, phase.startsIn) });
+  }
+  return t('n.item_plain', { when });
 }
 
 /**
@@ -43,6 +46,7 @@ export function nightItem(night: DadNight | null, now: number): string {
  * announced in the room by name, which is the whole social mechanism.
  */
 export function NightEditor({ night, onDone }: { night: DadNight | null; onDone: () => void }) {
+  const { t, lang } = useT();
   const [weekday, setWeekday] = useState(String(night?.weekday ?? 4));
   const [time, setTime] = useState(night?.time ?? '21:00');
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +55,7 @@ export function NightEditor({ night, onDone }: { night: DadNight | null; onDone:
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!parseTime(time)) {
-      setError('Time needs to look like 21:00.');
+      setError(t('n.bad_time'));
       return;
     }
     setBusy(true);
@@ -71,7 +75,7 @@ export function NightEditor({ night, onDone }: { night: DadNight | null; onDone:
       });
       onDone();
     } catch {
-      setError('Couldn’t save that. Try again.');
+      setError(t('n.save_failed'));
     } finally {
       setBusy(false);
     }
@@ -83,7 +87,7 @@ export function NightEditor({ night, onDone }: { night: DadNight | null; onDone:
       await saveNight(null);
       onDone();
     } catch {
-      setError('Couldn’t save that. Try again.');
+      setError(t('n.save_failed'));
     } finally {
       setBusy(false);
     }
@@ -92,39 +96,39 @@ export function NightEditor({ night, onDone }: { night: DadNight | null; onDone:
   return (
     <form className="night-editor" onSubmit={submit}>
       <label htmlFor="night-weekday" className="sr-only">
-        Day
+        {t('n.day')}
       </label>
       <select
         id="night-weekday"
         value={weekday}
         onChange={(e) => setWeekday(e.target.value)}
-        aria-label="Day"
+        aria-label={t('n.day')}
       >
-        {WEEKDAY_NAMES.map((name, index) => (
+        {weekdayNames(lang).map((name, index) => (
           <option key={name} value={index}>
-            {name}s
+            {name}
           </option>
         ))}
       </select>
 
       <label htmlFor="night-time" className="sr-only">
-        Time
+        {t('n.time')}
       </label>
       <input
         id="night-time"
         type="time"
         value={time}
         onChange={(e) => setTime(e.target.value)}
-        aria-label="Time"
+        aria-label={t('n.time')}
         required
       />
 
       <button type="submit" disabled={busy}>
-        Save
+        {t('n.save')}
       </button>
       {night ? (
         <button type="button" className="link" onClick={() => void clear()} disabled={busy}>
-          Clear
+          {t('n.clear')}
         </button>
       ) : null}
 

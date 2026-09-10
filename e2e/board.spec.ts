@@ -10,10 +10,10 @@ test.describe.configure({ mode: 'serial' });
  * Scoped to the menu because Playwright matches accessible names by substring,
  * and one curated prompt ends "...with no phone in the room?". Anchored regex
  * rather than an exact name: an item with something waiting is called
- * "Board — something waiting", which is exactly what a screen reader should
+ * "The week — something waiting", which is exactly what a screen reader should
  * hear, and the label is the prefix.
  */
-async function open(page: Page, name: 'Prompts' | 'Board' | 'Open the table' | 'Dad night') {
+async function open(page: Page, name: 'Questions' | 'The week' | 'Open the table' | 'Dad night') {
   await page.getByRole('button', { name: 'Menu' }).click();
   await page
     .getByRole('navigation', { name: 'Rooms' })
@@ -50,7 +50,7 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   await expect(marc.getByTestId('mark-board')).toBeVisible();
   await marc
     .getByRole('navigation', { name: 'Rooms' })
-    .getByRole('button', { name: /^Board/ })
+    .getByRole('button', { name: /^The week/ })
     .click();
   await expect(marc.getByTestId('your-week')).toBeVisible();
 
@@ -83,7 +83,7 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   ).toBeVisible();
 
   // And Sam's board shows Marc's week.
-  await open(sam, 'Board');
+  await open(sam, 'The week');
   const marcRow = sam.getByTestId('board-row').filter({ hasText: 'Marc' }).first();
   await expect(marcRow).toContainText('2/5');
   await expect(marcRow).toContainText('Phone in the drawer at six');
@@ -97,7 +97,7 @@ test('a check-in survives a reload, and the menu still works', async ({ browser 
   // A fresh context is a fresh device, so this is a different dad from the
   // one above — hence a name of his own.
   const dave = await comeIn(browser, 'Dave');
-  await open(dave, 'Board');
+  await open(dave, 'The week');
 
   await dave.getByRole('radio', { name: '5 — great' }).check();
   await dave.getByLabel('One line about your week').fill('Good week, for once.');
@@ -107,7 +107,7 @@ test('a check-in survives a reload, and the menu still works', async ({ browser 
   await expect(daveRow).toContainText('5/5');
 
   await dave.reload();
-  await open(dave, 'Board');
+  await open(dave, 'The week');
   await expect(
     dave.getByTestId('board-row').filter({ hasText: 'Dave (you)' }).first(),
   ).toContainText('Good week, for once.');

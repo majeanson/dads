@@ -6,11 +6,15 @@
  * more thing between them and that. One font stack, seven colours, hairline
  * rules, and the browser's own defaults wherever they are already right.
  *
- * Light and dark both ship, following the operating system. There is no
- * toggle, deliberately — a switch is a preference the OS already holds.
+ * Light and dark both ship and the operating system is the default, which is
+ * the right answer for nearly everyone. A dad can still ask for one outright —
+ * `[data-theme]` on the root element — because a laptop that never flips to
+ * dark leaves him no other way to ask, and "change your OS setting" is not an
+ * answer to give a friend.
  *
  * Every colour pair the app renders is checked in BOTH themes by
- * scripts/contrast-audit.mjs. Change a value and run `npm run audit:contrast`.
+ * scripts/contrast-audit.mjs, which also checks the two override blocks
+ * against the two above them. Change a value and run `npm run audit:contrast`.
  */
 
 :root {
@@ -45,6 +49,38 @@
     --on-accent: #131211;
     --danger: #f2b8b5;
   }
+}
+
+/* Asked for outright, and it beats whatever the phone says. The values are
+   repeated rather than aliased — CSS has no way to point one palette at
+   another — so `audit:contrast` checks these two blocks against the two
+   above and fails on any drift. The duplication is policed, not trusted. */
+:root[data-theme='light'] {
+  --bg: #fffefc;
+  --bg-soft: #f4f2ee;
+  --text: #1c1a17;
+  --muted: #5a564f;
+  --border: #ddd8d0;
+  --border-strong: #747069;
+  --accent: #0b57d0;
+  --on-accent: #ffffff;
+  --danger: #b3261e;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #131211;
+  --bg-soft: #1d1b19;
+  --text: #e9e6e1;
+  --muted: #a39e97;
+  --border: #302d2a;
+  --border-strong: #8b8680;
+  --accent: #8ab4f8;
+  --on-accent: #131211;
+  --danger: #f2b8b5;
+
+  color-scheme: dark;
 }
 
 * {
@@ -984,4 +1020,40 @@ main.room {
   color: var(--muted);
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
+}
+
+/* --- language and theme ------------------------------------------------
+ *
+ * Four things a dad might ever change, all visible at once at the bottom of
+ * the menu, and the one that is on says so. Not a settings screen, not a
+ * select: two rows of small buttons.
+ */
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.toggle {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* Narrower than an ordinary button, and square for the glyphs: these are
+   markers of a state, not calls to action. */
+.menu .toggle button {
+  width: auto;
+  min-width: 2.4rem;
+  padding: 0.2rem 0.5rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.menu .toggle button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
 }

@@ -1,25 +1,27 @@
 import { useState, type FormEvent } from 'react';
 import { join, type JoinFailure, type Session } from './api';
+import { plural, useT, type Key, type T } from './i18n';
 
-const MESSAGES: Record<string, string> = {
-  // One message for a wrong code and for a code that belongs to no group: the
-  // door must not tell a stranger whether he is close.
-  bad_code: "That code doesn't open anything. Ask whoever sent you.",
-  missing_code: 'Enter the code.',
-  missing_name: 'Enter your name.',
-  name_too_long: "That's a long name — 32 characters or fewer.",
-  unknown: 'Something went wrong. Try again.',
+// One message for a wrong code and for a code that belongs to no group: the
+// door must not tell a stranger whether he is close.
+const MESSAGES: Record<string, Key> = {
+  bad_code: 'join.bad_code',
+  missing_code: 'join.missing_code',
+  missing_name: 'join.missing_name',
+  name_too_long: 'join.name_too_long',
+  unknown: 'join.unknown',
 };
 
-function message(failure: JoinFailure): string {
+function message(t: T, lang: 'en' | 'fr', failure: JoinFailure): string {
   if (failure.error === 'too_many_attempts') {
     const minutes = Math.max(1, Math.ceil((failure.retryAfterSeconds ?? 60) / 60));
-    return `Too many tries. Give it ${minutes} minute${minutes === 1 ? '' : 's'}.`;
+    return t(`join.too_many_${plural(lang, minutes)}`, { n: minutes });
   }
-  return MESSAGES[failure.error] ?? MESSAGES.unknown!;
+  return t(MESSAGES[failure.error] ?? 'join.unknown');
 }
 
 export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void }) {
+  const { t, lang } = useT();
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +34,9 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
     try {
       const result = await join(code, name);
       if (result.ok) onJoined(result.session);
-      else setError(message(result.failure));
+      else setError(message(t, lang, result.failure));
     } catch {
-      setError(MESSAGES.unknown!);
+      setError(t('join.unknown'));
     } finally {
       setBusy(false);
     }
@@ -43,10 +45,10 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
   return (
     <main className="join">
       <h1>dads</h1>
-      <p className="lede">Somewhere to talk about it, and a table to sit at while you do.</p>
+      <p className="lede">{t('join.lede')}</p>
 
       <form onSubmit={submit}>
-        <label htmlFor="code">Code</label>
+        <label htmlFor="code">{t('join.code')}</label>
         <input
           id="code"
           name="code"
@@ -59,7 +61,7 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
           autoFocus
         />
 
-        <label htmlFor="name">Your name</label>
+        <label htmlFor="name">{t('join.name')}</label>
         <input
           id="name"
           name="name"
@@ -70,7 +72,7 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
         />
 
         <button type="submit" disabled={busy}>
-          {busy ? 'Opening…' : 'Come in'}
+          {busy ? t('join.opening') : t('join.come_in')}
         </button>
       </form>
 

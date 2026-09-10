@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useT } from './i18n';
 import type { Peer } from './useCall';
 
 /**
@@ -29,11 +30,13 @@ export function CallBar({
   onToggleMute: () => void;
   onToggleCamera: () => void;
 }) {
+  const { t } = useT();
+
   if (state === 'out' || state === 'joining') {
     return (
       <div className="call call-out">
         <button type="button" onClick={onJoin} disabled={state === 'joining'}>
-          {state === 'joining' ? 'Opening the mic…' : 'Join the call'}
+          {state === 'joining' ? t('call.opening') : t('call.join')}
         </button>
       </div>
     );
@@ -43,12 +46,10 @@ export function CallBar({
     return (
       <div className="call call-out">
         <p className="quiet" role="alert">
-          {state === 'denied'
-            ? 'The browser wouldn’t give up the microphone. Allow it and try again.'
-            : 'Couldn’t open the microphone.'}
+          {state === 'denied' ? t('call.denied') : t('call.failed')}
         </p>
         <button type="button" onClick={onJoin}>
-          Try again
+          {t('call.retry')}
         </button>
       </div>
     );
@@ -61,22 +62,24 @@ export function CallBar({
     <div className="call" data-testid="call">
       <div className="call-actions">
         <button type="button" aria-pressed={muted} onClick={onToggleMute}>
-          {muted ? 'Unmute' : 'Mute'}
+          {muted ? t('call.unmute') : t('call.mute')}
         </button>
         <button type="button" aria-pressed={camera} onClick={onToggleCamera}>
-          {camera ? 'Camera off' : 'Camera'}
+          {camera ? t('call.camera_off') : t('call.camera_on')}
         </button>
         <button type="button" className="link" onClick={onLeave}>
-          Leave
+          {t('call.leave')}
         </button>
         <span className="quiet call-count">
-          {peers.length === 0 ? 'just you so far' : `${peers.length + 1} on the call`}
+          {peers.length === 0 ? t('call.alone') : t('call.count', { n: peers.length + 1 })}
         </span>
       </div>
 
       {showing.length > 0 || camera ? (
         <div className="call-tiles">
-          {camera && localStream !== null ? <Tile stream={localStream} name="You" muted /> : null}
+          {camera && localStream !== null ? (
+            <Tile stream={localStream} name={t('call.you')} muted />
+          ) : null}
           {/* Silent: every dad's sound comes from the <audio> elements
               below, so a camera going on or off never interrupts what you can
               hear — and nobody is played twice. */}

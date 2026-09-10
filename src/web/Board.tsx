@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { weekLabel } from '../shared/week';
+import { weekDate } from '../shared/week';
 import {
   fetchBoard,
   saveCheckIn,
@@ -8,11 +8,23 @@ import {
   type BoardData,
   type BoardRow,
 } from './api';
+import { useT, type Key, type T } from './i18n';
 
-const RATING_WORDS = ['', 'rough', 'hard', 'alright', 'good', 'great'];
+const RATING: Key[] = [
+  'b.rating_1',
+  'b.rating_1',
+  'b.rating_2',
+  'b.rating_3',
+  'b.rating_4',
+  'b.rating_5',
+];
 
-function outcomeWord(outcome: 'pending' | 'done' | 'missed'): string {
-  return outcome === 'done' ? 'kept' : outcome === 'missed' ? 'missed' : 'trying';
+function ratingWord(t: T, rating: number): string {
+  return t(RATING[rating] ?? 'b.rating_3');
+}
+
+function outcomeWord(t: T, outcome: 'pending' | 'done' | 'missed'): string {
+  return t(outcome === 'done' ? 'b.kept' : outcome === 'missed' ? 'b.missed' : 'b.trying');
 }
 
 /**
@@ -20,6 +32,7 @@ function outcomeWord(outcome: 'pending' | 'done' | 'missed'): string {
  * a board that only shows the dads who turned up is a board that flatters.
  */
 export function Board({ onChanged }: { onChanged?: () => void } = {}) {
+  const { t, lang } = useT();
   const [data, setData] = useState<BoardData | null | 'loading'>('loading');
   const reload = useCallback(() => {
     fetchBoard()
@@ -33,8 +46,8 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
 
   useEffect(reload, [reload]);
 
-  if (data === 'loading') return <p className="quiet">Fetching the board…</p>;
-  if (!data) return <p className="quiet">Couldn’t load the board.</p>;
+  if (data === 'loading') return <p className="quiet">{t('b.loading')}</p>;
+  if (!data) return <p className="quiet">{t('b.failed')}</p>;
 
   const [thisWeek, ...before] = data.weeks;
   const mine = thisWeek?.rows.find((r) => r.memberId === data.you) ?? null;
@@ -44,7 +57,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
       {data.pending ? <HowDidItGo pending={data.pending} onSaved={reload} /> : null}
 
       <section>
-        <h2>This week</h2>
+        <h2>{t('b.this_week')}</h2>
         <YourWeek row={mine} onSaved={reload} />
         {/* Your own row stays in the list, not just in the editor above it:
             the whole feature is group-visible by design, and you should be
@@ -68,8 +81,8 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
               {/* The follow-through number is the whole point of the week
                 behind you, so it stays — as words, not a badge. */}
               <h2>
-                {weekLabel(w.week)}
-                {promised > 0 ? ` · ${kept}/${promised} kept` : ''}
+                {t('b.week_of', { date: weekDate(w.week, lang) })}
+                {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
               </h2>
               <ul className="board-rows">
                 {w.rows.map((row) => (
@@ -85,26 +98,27 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
 
 /** One dad's week, read-only. */
 function BoardEntry({ row, isYou = false }: { row: BoardRow; isYou?: boolean }) {
+  const { t } = useT();
   const empty = !row.checkIn && !row.commitment;
   return (
     <li className="board-row" data-testid="board-row">
       <span className="board-who">
         {row.name}
-        {isYou ? ' (you)' : ''}
+        {isYou ? t('here.you') : ''}
       </span>
       {empty ? (
-        <span className="quiet">— nothing yet</span>
+        <span className="quiet">{t('b.nothing_yet')}</span>
       ) : (
         <span className="board-detail">
           {row.checkIn ? (
             <span className="board-rating" data-testid="board-rating">
-              <strong>{row.checkIn.rating}/5</strong> {RATING_WORDS[row.checkIn.rating]}
+              <strong>{row.checkIn.rating}/5</strong> {ratingWord(t, row.checkIn.rating)}
               {row.checkIn.note ? ` — ${row.checkIn.note}` : ''}
             </span>
           ) : null}
           {row.commitment ? (
             <span className={`board-commitment is-${row.commitment.outcome}`}>
-              {outcomeWord(row.commitment.outcome)}: {row.commitment.body}
+              {outcomeWord(t, row.commitment.outcome)}: {row.commitment.body}
               {row.commitment.reflection ? ` — ${row.commitment.reflection}` : ''}
             </span>
           ) : null}
@@ -122,6 +136,7 @@ function BoardEntry({ row, isYou = false }: { row: BoardRow; isYou?: boolean }) 
  * yet; a dad correcting a typo in his note must not quietly un-keep it.
  */
 function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void }) {
+  const { t } = useT();
   const savedRating = row?.checkIn?.rating ?? 0;
   const savedNote = row?.checkIn?.note ?? '';
   const savedCommitment = row?.commitment?.body ?? '';
@@ -154,7 +169,7 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
   return (
     <form className="your-week" data-testid="your-week" onSubmit={submit}>
       <fieldset className="rating">
-        <legend>How was your week?</legend>
+        <legend>{t('b.how_was')}</legend>
         {[1, 2, 3, 4, 5].map((n) => (
           <label key={n} className={rating === n ? 'is-picked' : ''}>
             <input
@@ -166,34 +181,34 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
             />
             <span aria-hidden="true">{n}</span>
             <span className="sr-only">
-              {n} — {RATING_WORDS[n]}
+              {n} — {ratingWord(t, n)}
             </span>
           </label>
         ))}
       </fieldset>
 
       <label htmlFor="note" className="sr-only">
-        One line about your week
+        {t('b.note_label')}
       </label>
       <input
         id="note"
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="One line — the honest version"
+        placeholder={t('b.note_placeholder')}
         maxLength={280}
       />
 
-      <label htmlFor="commitment">One thing to try this week</label>
+      <label htmlFor="commitment">{t('b.commit_label')}</label>
       <input
         id="commitment"
         value={commitment}
         onChange={(e) => setCommitment(e.target.value)}
-        placeholder="Something small and concrete"
+        placeholder={t('b.commit_placeholder')}
         maxLength={200}
       />
 
       <button type="submit" disabled={busy || (!checkInChanged && !commitmentChanged)}>
-        Save
+        {t('b.save')}
       </button>
     </form>
   );
@@ -207,6 +222,7 @@ function HowDidItGo({
   pending: { week: string; body: string };
   onSaved: () => void;
 }) {
+  const { t, lang } = useT();
   const [reflection, setReflection] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -220,21 +236,24 @@ function HowDidItGo({
   return (
     <section className="how-did-it-go" data-testid="how-did-it-go">
       <p className="prompt-body">
-        {weekLabel(pending.week)} — you said you’d try: {pending.body}
+        {t('b.you_said', {
+          week: t('b.week_of', { date: weekDate(pending.week, lang) }),
+          body: pending.body,
+        })}
       </p>
       <label htmlFor="reflection" className="sr-only">
-        How did it go?
+        {t('b.how_did_it_go')}
       </label>
       <input
         id="reflection"
         value={reflection}
         onChange={(e) => setReflection(e.target.value)}
-        placeholder="How did it go?"
+        placeholder={t('b.how_did_it_go')}
         maxLength={280}
       />
       <div className="prompt-actions">
         <button type="button" onClick={() => void answer('done')} disabled={busy}>
-          I did it
+          {t('b.did_it')}
         </button>
         <button
           type="button"
@@ -242,7 +261,7 @@ function HowDidItGo({
           onClick={() => void answer('missed')}
           disabled={busy}
         >
-          I didn’t
+          {t('b.didnt')}
         </button>
       </div>
     </section>

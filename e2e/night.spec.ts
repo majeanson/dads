@@ -35,9 +35,9 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   // Marc sees the countdown; Sam, whose menu is still open, gets it pushed
   // without reloading.
   await marc.getByRole('button', { name: 'Menu' }).click();
-  await expect(marc.getByTestId('dad-night')).toContainText('thursdays at 21:00');
+  await expect(marc.getByTestId('dad-night')).toContainText('Thursdays at 21:00');
   await expect(marc.getByTestId('dad-night')).toContainText(/in \d+ (day|hour|minute)/);
-  await expect(sam.getByTestId('dad-night')).toContainText('thursdays at 21:00');
+  await expect(sam.getByTestId('dad-night')).toContainText('Thursdays at 21:00');
   await expect(
     sam.getByTestId('line').filter({ hasText: 'Marc set dad night to Thursdays at 21:00.' }),
   ).toBeVisible();
@@ -45,7 +45,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   // It survives a reload, because it lives in D1 and not in the tab.
   await marc.reload();
   await marc.getByRole('button', { name: 'Menu' }).click();
-  await expect(marc.getByTestId('dad-night')).toContainText('thursdays at 21:00');
+  await expect(marc.getByTestId('dad-night')).toContainText('Thursdays at 21:00');
 
   await marcCtx.close();
   await samCtx.close();
