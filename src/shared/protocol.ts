@@ -1,4 +1,5 @@
 import type { DadNight } from './dadNight';
+import { parseTableEvent, type TableEvent } from './jaffre';
 
 /**
  * The wire between a dad's browser and his group's RoomDO. Shared by both so
@@ -30,7 +31,10 @@ export interface RosterEntry {
 }
 
 export type ClientFrame =
-  { t: 'chat'; body: string } | { t: 'prompt'; body: string } | { t: 'typing' };
+  | { t: 'chat'; body: string }
+  | { t: 'prompt'; body: string }
+  | { t: 'table'; event: TableEvent }
+  | { t: 'typing' };
 
 export type ServerFrame =
   | {
@@ -60,5 +64,10 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   if (frame.t === 'chat' && typeof frame.body === 'string') return { t: 'chat', body: frame.body };
   if (frame.t === 'prompt' && typeof frame.body === 'string')
     return { t: 'prompt', body: frame.body };
+  if (frame.t === 'table') {
+    // Validated by the jaffre module, which owns that vocabulary.
+    const event = parseTableEvent((value as { event?: unknown }).event);
+    return event ? { t: 'table', event } : null;
+  }
   return null;
 }

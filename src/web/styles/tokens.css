@@ -117,7 +117,7 @@ button[type='submit']:disabled {
 main.room {
   max-width: 44rem;
   display: grid;
-  grid-template-rows: auto auto auto auto auto 1fr auto auto;
+  grid-template-rows: auto auto auto 1fr;
   min-height: 100dvh;
   padding-block: 1.25rem;
   gap: 0.5rem;
@@ -657,4 +657,130 @@ main.room {
   color: var(--ink);
   font: inherit;
   cursor: pointer;
+}
+
+/* ---- the stage: talk beside the table (M6) ----
+ *
+ * Wide screens get what a card night actually looks like — the table on the
+ * right, the talking on the left. Narrow screens get one at a time, picked
+ * from the nav. Every panel stays mounted and is hidden with display, never
+ * unmounted: pulling the iframe out of the DOM would restart the game every
+ * time someone glanced at the board.
+ */
+.stage {
+  display: grid;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.col-talk,
+.col-table,
+.panel {
+  display: none;
+  min-height: 0;
+}
+
+.room[data-view='room'] .col-talk {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.room[data-view='table'] .col-table,
+.room[data-view='prompts'] .panel-prompts,
+.room[data-view='board'] .panel-board {
+  display: block;
+}
+
+.panel-prompts,
+.panel-board {
+  overflow-y: auto;
+}
+
+@media (min-width: 64rem) {
+  main.room {
+    max-width: 78rem;
+  }
+
+  .room[data-view='room'] .stage {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 28rem);
+  }
+
+  .room[data-view='room'] .col-table {
+    display: block;
+  }
+}
+
+.table-frame {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  min-height: 24rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--felt-raised);
+  overflow: hidden;
+}
+
+.table-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.table-head h2 {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.table-frame iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 22rem;
+  border: 0;
+  display: block;
+}
+
+.table-fallback {
+  display: grid;
+  gap: 0.75rem;
+  place-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.table-fallback a {
+  justify-self: center;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius);
+  background: var(--wood-light);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* The line a table event produces reads like a stage direction, not like a
+ * dad talking. */
+.line-table .body {
+  grid-column: 1 / -1;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.table-head a {
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.table-head a:hover {
+  color: var(--ink);
+  text-decoration: underline;
 }

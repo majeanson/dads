@@ -129,6 +129,30 @@ weakening `sessionSecret()`.
 - Writes announce themselves in the room via the DO's `/announce` endpoint.
   The board holds the detail; the room line is what makes anyone look.
 
+## The table (M6)
+
+- Jaffre is framed cross-origin. A spike proved it works: jaffre sets no
+  `X-Frame-Options` and no CSP, has **no cookies at all** (identity is an
+  HMAC token in localStorage, the game socket authenticates with `?t=`), and
+  `localStorage` survives partitioning. So there is no cookie dependency to
+  break.
+- The embed URL goes to `/?name=…&from=dads#room/<code>`, **never**
+  `/join/<code>`: that route rewrites the URL and drops the query with it.
+- `groups.jaffre_room_code` is minted from the slug on first use then read
+  back forever. Deriving it every time would mean a renamed group silently
+  walks into an empty room.
+- `event.origin !== JAFFRE_ORIGIN` is the whole security boundary on the way
+  in — any page can postMessage at us, and a table event becomes a line in the
+  room. The matching check on jaffre's side takes the target origin from the
+  **referrer**, so a page cannot nominate someone else as the recipient.
+- Every framed dad relays the same jaffre event, so the DO drops a `table`
+  line identical to one posted in the last 20s.
+- **The table stays mounted; the prompts and board do not.** Unmounting the
+  iframe restarts the game; keeping the other two alive shows data that was
+  true when the page loaded. The e2e caught that regression — keep it.
+- jaffre's half lives in `jaffre/apps/web/src/embed.ts` (branch
+  `feat/dads-embed-bridge`). The two sides share a vocabulary but no code.
+
 ## Test layout
 
 - vitest storage is per **file**, not per test. Tests that seed groups call

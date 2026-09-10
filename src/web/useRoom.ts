@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DadNight } from '../shared/dadNight';
+import type { TableEvent } from '../shared/jaffre';
 import type { RoomMessage, RosterEntry, ServerFrame } from '../shared/protocol';
 
 export type Connection = 'connecting' | 'open' | 'reconnecting';
@@ -167,6 +168,14 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
     return true;
   }, []);
 
+  /** Relay something the table said. Dropped on the floor if the socket is
+   * down: a missed "a game started" is not worth queueing. */
+  const relayTableEvent = useCallback((event: TableEvent) => {
+    const ws = socket.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ t: 'table', event }));
+  }, []);
+
   const lastTypingSent = useRef(0);
   const sendTyping = useCallback(() => {
     const ws = socket.current;
@@ -177,7 +186,7 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
     ws.send(JSON.stringify({ t: 'typing' }));
   }, []);
 
-  return { ...state, send, answerPrompt, sendTyping };
+  return { ...state, send, answerPrompt, relayTableEvent, sendTyping };
 }
 
 /** Append by seq, dropping anything already held. Backfill and live frames

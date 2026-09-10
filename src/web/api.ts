@@ -214,3 +214,15 @@ export async function saveCommitmentOutcome(
   });
   if (!res.ok) throw new Error(`PUT /api/commitment-outcome ${res.status}`);
 }
+
+export interface TableInfo {
+  code: string;
+  embedUrl: string;
+  shareUrl: string;
+}
+
+export async function fetchTable(): Promise<TableInfo> {
+  const res = await fetch('/api/table');
+  if (!res.ok) throw new Error(`GET /api/table ${res.status}`);
+  return (await res.json()) as TableInfo;
+}

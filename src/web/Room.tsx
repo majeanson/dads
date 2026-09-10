@@ -4,18 +4,30 @@ import { Board } from './Board';
 import { DadNightBar } from './DadNightBar';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
+import { TableColumn } from './TableColumn';
 import { useRoom } from './useRoom';
 
 function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-type View = 'room' | 'prompts' | 'board';
+type View = 'room' | 'prompts' | 'board' | 'table';
+
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'room', label: 'Room' },
+  { id: 'table', label: 'Table' },
+  { id: 'prompts', label: 'Prompts' },
+  { id: 'board', label: 'Board' },
+];
 
 /**
- * The talk column. Roster on top, the evening's lines in the middle, the
- * composer at the bottom — or the whole prompt library, if that is what the
- * dad asked for. The table column (M6) sits beside it.
+ * A card night: the talking on the left, the table on the right, on any screen
+ * wide enough to hold both. Narrower than that, the nav picks one at a time.
+ *
+ * The table stays mounted and is hidden with CSS — unmounting it would restart
+ * the game every time someone glanced at the board. The prompts and the board
+ * are the opposite: they read once on mount, so keeping them alive would show
+ * data that was true when the page loaded and has been wrong ever since.
  */
 export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
   const room = useRoom(true, session.group.dadNight);
@@ -39,7 +51,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     .map(([, name]) => name);
 
   return (
-    <main className="room">
+    <main className="room" data-view={view}>
       <header className="room-head">
         <div>
           <h1>{session.group.name}</h1>
@@ -59,42 +71,21 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       <DadNightBar night={room.night} />
 
       <nav className="views" aria-label="Views">
-        <button
-          type="button"
-          className={view === 'room' ? 'is-current' : ''}
-          aria-current={view === 'room'}
-          onClick={() => setView('room')}
-        >
-          Room
-        </button>
-        <button
-          type="button"
-          className={view === 'prompts' ? 'is-current' : ''}
-          aria-current={view === 'prompts'}
-          onClick={() => setView('prompts')}
-        >
-          Prompts
-        </button>
-        <button
-          type="button"
-          className={view === 'board' ? 'is-current' : ''}
-          aria-current={view === 'board'}
-          onClick={() => setView('board')}
-        >
-          Board
-        </button>
+        {VIEWS.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            className={view === v.id ? 'is-current' : ''}
+            aria-current={view === v.id}
+            onClick={() => setView(v.id)}
+          >
+            {v.label}
+          </button>
+        ))}
       </nav>
 
-      {view === 'prompts' ? (
-        <div className="panel">
-          <PromptList />
-        </div>
-      ) : view === 'board' ? (
-        <div className="panel">
-          <Board />
-        </div>
-      ) : (
-        <>
+      <div className="stage">
+        <div className="col-talk">
           <ul className="roster" aria-label="Who's here">
             {room.roster.map((m) => (
               <li key={m.memberId} data-testid="roster-entry">
@@ -158,8 +149,20 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               Send
             </button>
           </form>
-        </>
-      )}
+        </div>
+
+        <div className="col-table">
+          <TableColumn onEvent={room.relayTableEvent} />
+        </div>
+
+        {/* Mounted on demand, unlike the table above: both read their data
+            once when they mount, so keeping them alive would show a board that
+            was current when the page loaded and has been wrong ever since. The
+            table is the only panel that must survive a tab switch. */}
+        <div className="panel panel-prompts">{view === 'prompts' ? <PromptList /> : null}</div>
+
+        <div className="panel panel-board">{view === 'board' ? <Board /> : null}</div>
+      </div>
     </main>
   );
 }

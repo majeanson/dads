@@ -15,6 +15,7 @@ import {
   type RosterEntry,
   type ServerFrame,
 } from '../shared/protocol';
+import { describeTableEvent } from '../shared/jaffre';
 import type { Env } from './env';
 import { newId } from './identity';
 import { todaysPrompt } from './prompts';
@@ -52,6 +53,13 @@ const FRESH_BACKFILL = 80;
  * seconds. Without this, every hop would print "Marc left" / "Marc came in".
  */
 const LEAVE_GRACE_MS = 15_000;
+
+/**
+ * Every dad with the table open relays the same jaffre event, so "a game
+ * started" would arrive once per framed browser. The room keeps the last
+ * table line and drops an identical one that follows close behind.
+ */
+const TABLE_DEDUPE_MS = 20_000;
 
 interface Attachment {
   memberId: string;
@@ -212,6 +220,14 @@ export class RoomDO extends DurableObject<Env> {
 
     if (frame.t === 'typing') {
       this.broadcast({ t: 'typing', memberId: who.memberId, name: who.name }, ws);
+      return;
+    }
+
+    if (frame.t === 'table') {
+      const line = describeTableEvent(frame.event);
+      if (line && !this.recentlySaid(line)) {
+        await this.post('table', null, who.name, line);
+      }
       return;
     }
 
@@ -476,6 +492,18 @@ export class RoomDO extends DurableObject<Env> {
     // his own line appear.
     this.broadcast({ t: 'msg', message });
     await this.archive(message);
+  }
+
+  /** Has this exact line already gone out in the last few seconds? */
+  private recentlySaid(body: string): boolean {
+    const row = this.ctx.storage.sql
+      .exec<{ created_at: number }>(
+        `SELECT created_at FROM tail WHERE kind = 'table' AND body = ?
+          ORDER BY seq DESC LIMIT 1`,
+        body,
+      )
+      .toArray()[0];
+    return row !== undefined && Date.now() - row.created_at < TABLE_DEDUPE_MS;
   }
 
   private groupId(): string | undefined {
