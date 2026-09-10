@@ -1183,3 +1183,10 @@ video.attachment {
   border-radius: var(--radius);
   background: var(--bg-soft);
 }
+
+/* Said in the menu where the switch would have been, when there cannot be a
+   switch: on an iPhone that is until the app is on the home screen. */
+.remind-note {
+  margin: 0;
+  font-size: 0.875rem;
+}

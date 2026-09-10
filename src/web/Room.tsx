@@ -12,6 +12,7 @@ import { prepare, readableSize, upload, type Prepared } from './media';
 import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
+import { Remind } from './Remind';
 import { Sheet } from './Sheet';
 import { TableColumn } from './TableColumn';
 import { Toggles } from './Toggles';
@@ -448,6 +449,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             <button type="button" data-testid="dad-night" onClick={() => setSheet('night')}>
               {nightItem(t, lang, room.night, now)}
             </button>
+
+            <Remind />
 
             <button type="button" onClick={onSignOut}>
               {t('menu.sign_out')}

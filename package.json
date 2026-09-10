@@ -19,7 +19,8 @@
     "types": "wrangler types --strict-vars=false",
     "group:create": "tsx scripts/create-group.ts",
     "audit:contrast": "node scripts/contrast-audit.mjs",
-    "icons": "node scripts/icons.mjs"
+    "icons": "node scripts/icons.mjs",
+    "vapid": "node scripts/vapid.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",

@@ -19,5 +19,16 @@ declare namespace Cloudflare {
      */
     TURN_KEY_ID?: string;
     TURN_KEY_API_TOKEN?: string;
+
+    /**
+     * VAPID keypair for dad-night reminders. Optional, exactly like TURN:
+     * without them /api/push answers 503, the client never offers the toggle,
+     * and nothing else changes.
+     *   npm run vapid
+     *   wrangler secret put VAPID_PUBLIC_KEY
+     *   wrangler secret put VAPID_PRIVATE_KEY
+     */
+    VAPID_PUBLIC_KEY?: string;
+    VAPID_PRIVATE_KEY?: string;
   }
 }

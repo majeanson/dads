@@ -7,6 +7,7 @@ import { getTodo } from './routes/todo';
 import { getMedia, listMedia, uploadMedia } from './routes/media';
 import { setNight } from './routes/night';
 import { getPresence } from './routes/presence';
+import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
 import { getTable } from './routes/table';
 import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
 
@@ -79,6 +80,15 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/presence':
       return getPresence(request, env, prod);
+
+    case 'GET /api/push':
+      return getPushKey(request, env, prod);
+
+    case 'POST /api/push':
+      return subscribePush(request, env, prod);
+
+    case 'DELETE /api/push':
+      return unsubscribePush(request, env, prod);
 
     case 'GET /api/board':
       return getBoard(request, env, prod);

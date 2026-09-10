@@ -129,10 +129,9 @@ describe('uploading', () => {
       };
       expect(body.media.contentType).toBe(declared);
 
-      const fetched = await worker.fetch(
-        new Request(`https://dads.test/api/media?id=${body.media.id}`, { headers: { cookie } }),
-        env,
-      );
+      const fetched = await worker.fetch(`https://dads.test/api/media?id=${body.media.id}`, {
+        headers: { cookie },
+      });
       expect(fetched.headers.get('Content-Type')).toBe(declared);
       // No disposition at all is what "render it where it lands" looks like;
       // the header only ever appears to force a download.

@@ -315,6 +315,33 @@ secret, custom domain bound by the route in wrangler.toml.
   at 60). The 15s leave grace still applies, so a wifi→LTE hop records nothing.
 - The roster itself is no longer in the menu — one place to look, not two.
 
+## Dad-night reminders (push)
+
+- **Optional exactly like TURN.** No VAPID secrets, no feature: `/api/push`
+  answers 503 and the menu never offers the toggle. `npm run vapid` prints a
+  pair; they are Worker secrets in production.
+- `src/worker/push.ts` is ported from jaffre — VAPID ES256 JWT and RFC 8291
+  aes128gcm on WebCrypto, because the node `web-push` package cannot run on
+  Workers. The two apps share no code by design; this crypto is the one thing
+  worth not writing twice.
+- **Per device and per dad, never per group, never on by default.** One
+  `push_subscriptions` row per browser that said yes (migration 0009), keyed
+  on the endpoint because that is the push service's own identity for it. Dead
+  subscriptions are pruned when the send says 404 or 410 — nothing else ever
+  tells us a browser is gone.
+- **An endpoint is a URL this Worker will later POST to**, so it must be an
+  https address or it is somebody choosing where our server sends its requests.
+  Pinned by a test.
+- `public/sw.js` does ONE job: show the notification and focus a tab. It caches
+  nothing and intercepts no fetch — a room full of other people is not useful
+  offline, and a stale shell from a cache is the classic way to ship a bug
+  nobody can clear.
+- **On an iPhone this only works from the home screen.** Apple's rule, not
+  ours; `pushShape()` detects it and the menu says so rather than showing a
+  switch that cannot do anything.
+- Sent from the `night_start` alarm, once, when the table opens. The standing
+  night is still the mechanism; this is a nudge for the man who asked for one.
+
 ## Small things that turned out to matter
 
 - **New lines follow a dad down only if he was at the bottom.** Scrolling to

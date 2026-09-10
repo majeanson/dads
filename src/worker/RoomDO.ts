@@ -18,6 +18,7 @@ import {
 } from '../shared/protocol';
 import { tableSaid } from '../shared/jaffre';
 import { englishOf, parseSaid, type Said } from '../shared/said';
+import { notifyGroup } from './push';
 import type { Env } from './env';
 import { newId } from './identity';
 import { mediaFor } from './media';
@@ -456,6 +457,19 @@ export class RoomDO extends DurableObject<Env> {
 
   private async openDadNight(now: number): Promise<void> {
     await this.say('dad night', { k: 'night_open' });
+
+    // The one thing this app does that reaches a dad who is not looking at
+    // it, and only for the dads who asked. Not awaited into the alarm's
+    // critical path beyond this: notifyGroup never throws.
+    const groupId = this.groupId();
+    if (groupId !== undefined) {
+      await notifyGroup(this.env, groupId, {
+        title: 'dads',
+        body: 'The table’s open.',
+        url: '/',
+        tag: 'dad-night',
+      });
+    }
     const night = this.storedNight();
     const window = night ? currentWindow(night, now) : null;
     // If the alarm ran so late that the window already closed, there is

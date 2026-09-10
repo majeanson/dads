@@ -31,7 +31,16 @@ export default tseslint.config(
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         crypto: 'readonly',
+        Buffer: 'readonly',
       },
+    },
+  },
+  {
+    // The service worker is neither a Worker nor a page: its global is `self`,
+    // and it is plain JavaScript served as-is from public/.
+    files: ['public/sw.js'],
+    languageOptions: {
+      globals: { self: 'readonly' },
     },
   },
 );
