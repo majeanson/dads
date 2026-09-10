@@ -55,9 +55,10 @@ Honest list. Everything else in here has a test standing behind it.
    tested with Chrome's fake devices, reaches a peer connection, and a camera
    turned on now really does appear on the other dad's screen — that has a
    test. Whether a human can hear a human, across two home routers, is not
-   something a headless browser can answer. Without `TURN_KEY_ID` /
-   `TURN_KEY_API_TOKEN` it is STUN-only, which carries most home connections
-   but not all.
+   something a headless browser can answer. A Cloudflare Realtime relay is
+   configured in production now (`dads-key`), so a dad behind a strict NAT has
+   a way through as well — verified by `/api/ice` returning credentialed
+   `turn:` and `turns:` servers alongside the STUN ones.
 3. **A dad night actually completing.** The open and close lines are tested
    with a faked clock; no real Thursday has passed yet.
 

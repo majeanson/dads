@@ -233,8 +233,10 @@ secret, custom domain bound by the route in wrangler.toml.
   on the socket attachment, so a dropped connection is off the call by
   definition.
 - `/api/ice` mirrors jaffre's: STUN unconditional, TURN a bonus, **never
-  errors**. Set `TURN_KEY_ID` / `TURN_KEY_API_TOKEN` to add a relay for strict
-  NATs; without them it is STUN-only, which covers most home connections.
+  errors**. `TURN_KEY_ID` / `TURN_KEY_API_TOKEN` are set in production from
+  the Realtime key `dads-key` — its own key, not jaffre's, so rolling one app's
+  token never reaches the other. Without them it degrades to STUN-only, which
+  covers most home connections but not a strict NAT.
 - e2e uses Chrome's fake devices (`--use-fake-device-for-media-stream`) and
   checks the mesh really reaches a peer connection. Whether a human can hear a
   human is not something a headless browser can answer.
