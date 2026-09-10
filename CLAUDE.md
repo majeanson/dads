@@ -150,8 +150,15 @@ weakening `sessionSecret()`.
 - **The table stays mounted; the prompts and board do not.** Unmounting the
   iframe restarts the game; keeping the other two alive shows data that was
   true when the page loaded. The e2e caught that regression — keep it.
-- jaffre's half lives in `jaffre/apps/web/src/embed.ts` (branch
-  `feat/dads-embed-bridge`). The two sides share a vocabulary but no code.
+- **A frame that loads and says nothing is the Safari case.** Safari
+  partitions — and can block — storage in a third-party frame, and jaffre's
+  identity is localStorage-only, so it can fail there as a blank panel rather
+  than an error. Nothing about that is detectable across origins, so
+  `TableColumn` waits `SILENCE_MS` for any bridge event and then offers the
+  own-tab link and a retry, above the frame rather than instead of it. Covered
+  by an e2e with a deliberately mute stub.
+- jaffre's half lives in `jaffre/apps/web/src/embed.ts`, on `main` and
+  deployed. The two sides share a vocabulary but no code.
 
 ## Look and feel (M7)
 

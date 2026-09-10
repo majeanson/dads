@@ -77,3 +77,37 @@ test('what the table says reaches the room, once', async ({ browser }) => {
   await marc.context().close();
   await sam.context().close();
 });
+
+test('a table that never speaks offers a way out', async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  // A table that loads and then says nothing — what a browser that refuses a
+  // third-party frame its storage looks like from out here. Nothing about it
+  // is detectable across origins, so the only honest signal is silence.
+  await page.route('https://jaffre.marcportal.com/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<!doctype html><meta charset="utf-8"><h1>a table that says nothing</h1>',
+    }),
+  );
+  await page.goto('/');
+  await page.getByLabel('Code').fill(E2E_TABLE_GROUP.code);
+  await page.getByLabel('Your name').fill('Quiet');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await view(page, 'Table').click();
+
+  // Nothing is claimed early: the frame may simply be slow.
+  await expect(page.getByTestId('table-silent')).toHaveCount(0);
+
+  // The notice sits ABOVE the frame rather than replacing it — the table may
+  // be perfectly usable and just mute.
+  await expect(page.getByTestId('table-silent')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId('table').locator('iframe')).toBeVisible();
+  await expect(
+    page.getByTestId('table-silent').getByRole('link', { name: /own tab/ }),
+  ).toBeVisible();
+
+  await context.close();
+});
