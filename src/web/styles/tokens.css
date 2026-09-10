@@ -237,13 +237,20 @@ main.room {
 
 .stage {
   display: grid;
+  /* Explicit, not implicit: an auto row sizes to its content and leaves the
+     rest of the screen empty below the composer. */
+  grid-template-rows: minmax(0, 1fr);
   gap: 1rem;
   min-height: 0;
 }
 
 .room[data-tab='today'] .col-talk {
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  /* call, question, THE CONVERSATION, typing, composer. The 1fr belongs to
+     the conversation and to nothing else — when the call bar was added it
+     landed on the question instead, which stretched that card down the page
+     and stopped the messages scrolling at all. */
+  grid-template-rows: auto auto 1fr auto auto;
   gap: 0.5rem;
   min-height: 0;
 }
