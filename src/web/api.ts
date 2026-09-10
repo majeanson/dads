@@ -226,3 +226,16 @@ export async function fetchTable(): Promise<TableInfo> {
   if (!res.ok) throw new Error(`GET /api/table ${res.status}`);
   return (await res.json()) as TableInfo;
 }
+
+export interface Todo {
+  /** Today's question is unanswered by you. */
+  prompt: boolean;
+  /** Your week is blank, or last week's commitment is still open. */
+  board: boolean;
+}
+
+export async function fetchTodo(): Promise<Todo> {
+  const res = await fetch('/api/todo');
+  if (!res.ok) throw new Error(`GET /api/todo ${res.status}`);
+  return (await res.json()) as Todo;
+}

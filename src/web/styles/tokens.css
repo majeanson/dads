@@ -241,7 +241,7 @@ main.room {
   min-height: 0;
 }
 
-.col-talk {
+.room[data-tab='today'] .col-talk {
   display: grid;
   grid-template-rows: auto 1fr auto auto;
   gap: 0.5rem;
@@ -255,11 +255,13 @@ main.room {
 
 /* Narrow: the table takes the room's place while it is open, because there is
    no room for both. */
-.room[data-table='on'] .col-table {
+.room[data-tab='table'] .col-table,
+.room[data-tab='prompts'] .panel-prompts,
+.room[data-tab='board'] .panel-board {
   display: block;
 }
 
-.room[data-table='on'] .col-talk {
+.room:not([data-tab='today']) .col-talk {
   display: none;
 }
 
@@ -279,8 +281,8 @@ main.room {
     grid-template-columns: 1fr 1fr;
   }
 
-  .col-table,
-  .room[data-table='on'] .col-talk {
+  /* Wide: the table is simply always beside the conversation. */
+  .room[data-tab='today'] .col-table {
     display: block;
   }
 
@@ -289,23 +291,44 @@ main.room {
   }
 }
 
-.toolbar {
+.tabs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
-  padding-bottom: var(--gap);
+  gap: 1rem;
   border-bottom: 1px solid var(--border);
 }
 
-.toolbar button {
-  padding: 0.3rem 0.7rem;
-  font-size: 0.875rem;
+.tabs button {
+  position: relative;
+  padding: 0 0 0.4rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.9375rem;
 }
 
-.toolbar button[aria-pressed='true'] {
-  border-color: var(--accent);
-  color: var(--accent);
+.tabs button:hover {
+  color: var(--text);
+}
+
+.tabs button.is-current {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+/* A mark, not a count: the number of things waiting is never the point, and
+   a badge with a number in it invites you to drive it to zero. */
+.mark {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: 0.3rem;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 0.35em;
 }
 
 .roster {
@@ -896,12 +919,12 @@ main.room {
   }
 
   .dadnight,
-  .toolbar {
+  .tabs {
     padding-bottom: 0.5rem;
     font-size: 0.875rem;
   }
 
-  .toolbar .roster {
+  .tabs .roster {
     /* Below the buttons rather than squeezed beside them. */
     flex-basis: 100%;
     margin-left: 0;
@@ -910,4 +933,91 @@ main.room {
   .prompt-card {
     padding: 0.6rem 0.75rem;
   }
+}
+
+/* --- the call ----------------------------------------------------------
+ *
+ * Sound is the point; pictures are optional. A dad with his camera off is a
+ * name, not an empty black rectangle taking up a phone screen.
+ */
+.call {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+}
+
+.call-out {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.call-out p {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.call-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.call-actions button {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.875rem;
+}
+
+.call-actions button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.call-count,
+.call-listening {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.call-count {
+  margin-left: auto;
+}
+
+.call-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.4rem;
+}
+
+.call-tile {
+  margin: 0;
+  position: relative;
+}
+
+.call-tile video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius);
+  background: var(--bg);
+  object-fit: cover;
+}
+
+.call-tile figcaption {
+  position: absolute;
+  left: 0.3rem;
+  bottom: 0.3rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--radius);
+  /* Its own ground: the tile behind it is a moving picture, so nothing else
+     can guarantee this stays readable. */
+  background: rgb(0 0 0 / 60%);
+  color: #fff;
+  font-size: 0.75rem;
 }

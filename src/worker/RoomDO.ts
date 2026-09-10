@@ -69,6 +69,10 @@ const TABLE_DEDUPE_MS = 20_000;
 interface SocketIdentity {
   memberId: string;
   name: string;
+  /** Whether this connection has its microphone in the room. Held on the
+   * socket rather than in storage because it is true only while the socket
+   * is: a dropped connection is off the call by definition. */
+  inCall?: boolean;
 }
 
 // A type, not an interface: sql.exec<T> needs an implicit index signature.
@@ -202,6 +206,7 @@ export class RoomDO extends DurableObject<Env> {
       t: 'hello',
       you: { memberId, name },
       roster: this.roster(),
+      call: this.callRoster(),
       messages: await this.backfill(Number.isFinite(after) && after > 0 ? after : null),
     };
     server.send(JSON.stringify(hello));
@@ -230,6 +235,40 @@ export class RoomDO extends DurableObject<Env> {
 
     if (frame.t === 'typing') {
       this.broadcast({ t: 'typing', memberId: who.memberId, name: who.name }, ws);
+      return;
+    }
+
+    if (frame.t === 'call') {
+      // The attachment is the only record, so it must be rewritten whole.
+      ws.serializeAttachment({ ...who, inCall: frame.join } satisfies SocketIdentity);
+      this.broadcastCallRoster();
+      if (!frame.join) {
+        // Tell the others to tear down their side rather than leave them
+        // holding a connection to somebody who has gone.
+        this.broadcast(
+          { t: 'rtc', from: who.memberId, name: who.name, payload: { hangup: true } },
+          ws,
+        );
+      }
+      return;
+    }
+
+    if (frame.t === 'rtc') {
+      // Relayed verbatim to one dad, with the sender named by the room rather
+      // than by the sender: a browser cannot claim to be somebody else.
+      const relayed = JSON.stringify({
+        t: 'rtc',
+        from: who.memberId,
+        name: who.name,
+        payload: frame.payload,
+      });
+      for (const target of this.ctx.getWebSockets(frame.to)) {
+        try {
+          target.send(relayed);
+        } catch {
+          // A socket mid-close; webSocketClose will deal with it.
+        }
+      }
       return;
     }
 
@@ -285,6 +324,8 @@ export class RoomDO extends DurableObject<Env> {
     if (!who) return;
     // The closing socket is still in getWebSockets() until the handshake
     // completes; exclude it explicitly when deciding whether the dad is gone.
+    // Whether or not the dad is wholly gone, that socket's microphone is.
+    if (who.inCall === true) this.broadcastCallRoster();
     if (this.isPresent(who.memberId, ws)) return;
     await this.scheduleLeave(who);
     this.broadcastRoster();
@@ -451,6 +492,22 @@ export class RoomDO extends DurableObject<Env> {
 
   private broadcastRoster(): void {
     this.broadcast({ t: 'roster', roster: this.roster() });
+  }
+
+  /** Who has a microphone in the room, deduped by dad. */
+  private callRoster(): RosterEntry[] {
+    const seen = new Map<string, RosterEntry>();
+    for (const ws of this.ctx.getWebSockets()) {
+      const who = ws.deserializeAttachment() as SocketIdentity | null;
+      if (who?.inCall === true && !seen.has(who.memberId)) {
+        seen.set(who.memberId, { memberId: who.memberId, name: who.name });
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  private broadcastCallRoster(): void {
+    this.broadcast({ t: 'call-roster', members: this.callRoster() });
   }
 
   private async scheduleLeave(who: SocketIdentity): Promise<void> {

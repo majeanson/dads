@@ -15,6 +15,16 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'on-first-retry',
+    // Fake devices, granted up front: the call is a real WebRTC mesh and there
+    // is no microphone on CI. Chrome generates a tone and a moving pattern.
+    permissions: ['microphone', 'camera'],
+    launchOptions: {
+      args: [
+        '--use-fake-ui-for-media-stream',
+        '--use-fake-device-for-media-stream',
+        '--autoplay-policy=no-user-gesture-required',
+      ],
+    },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

@@ -27,10 +27,17 @@ const STUB_TABLE = `<!doctype html><meta charset="utf-8"><h1>stub table</h1>
 /** A table that loads and then says nothing at all. */
 const MUTE_TABLE = '<!doctype html><meta charset="utf-8"><h1>a table that says nothing</h1>';
 
-function action(page: Page, name: 'Prompts' | 'Board' | 'Table' | 'Back to the room') {
+/**
+ * Scoped to the tab strip because Playwright matches accessible names by
+ * substring, and one curated prompt ends "...with no phone in the room?".
+ */
+function tab(page: Page, name: 'Today' | 'Table' | 'Prompts' | 'Board') {
+  // Anchored regex, not an exact match: a tab with something waiting is named
+  // "Board — something waiting", which is exactly what a screen reader should
+  // hear. The label is the prefix.
   return page
-    .getByRole('toolbar', { name: 'Room actions' })
-    .getByRole('button', { name, exact: true });
+    .getByRole('navigation', { name: 'Rooms' })
+    .getByRole('button', { name: new RegExp(`^${name}`) });
 }
 
 async function comeIn(browser: Browser, name: string, body = STUB_TABLE): Promise<Page> {
@@ -52,7 +59,7 @@ test('the group gets its own table, addressed to the dad by name', async ({ brow
 
   // At this width the table sits beside the room already — there is nothing
   // to open, and the toggle is not offered.
-  await expect(action(marc, 'Table')).toBeHidden();
+  await expect(tab(marc, 'Table')).toBeHidden();
   const frame = marc.getByTestId('table').locator('iframe');
   await expect(frame).toBeVisible();
 
@@ -101,11 +108,11 @@ test('on a phone the table takes the room’s place, and gives it back', async (
   await expect(page.getByLabel('Say something')).toBeVisible();
   await expect(page.getByTestId('table').locator('iframe')).toBeHidden();
 
-  await action(page, 'Table').click();
+  await tab(page, 'Table').click();
   await expect(page.getByTestId('table').locator('iframe')).toBeVisible();
   await expect(page.getByLabel('Say something')).toBeHidden();
 
-  await action(page, 'Back to the room').click();
+  await tab(page, 'Today').click();
   await expect(page.getByLabel('Say something')).toBeVisible();
   await expect(page.getByTestId('table').locator('iframe')).toBeHidden();
 

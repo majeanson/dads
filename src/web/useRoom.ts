@@ -12,6 +12,9 @@ export interface RoomState {
   messages: RoomMessage[];
   /** memberId → name, of dads typing in the last few seconds. */
   typing: Map<string, string>;
+  /** Who has a microphone in the room. Being here and being on the call are
+   * different things. */
+  call: RosterEntry[];
   /** Seeded from the session, then kept current by `night` frames, so a dad
    * who changes it updates every open room without a reload. */
   night: DadNight | null;
@@ -28,12 +31,16 @@ const RECONNECT_MAX_MS = 15_000;
  * the three lines it lost, not the whole evening again.
  */
 export function useRoom(enabled: boolean, initialNight: DadNight | null) {
+  /** Set by the call, read by the socket. A ref so a new peer never rebuilds
+   * the connection. */
+  const onSignalRef = useRef<(from: string, name: string, payload: unknown) => void>(() => {});
   const [state, setState] = useState<RoomState>({
     connection: 'connecting',
     you: null,
     roster: [],
     messages: [],
     typing: new Map(),
+    call: [],
     night: initialNight,
   });
 
@@ -92,6 +99,7 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
             connection: 'open',
             you: frame.you,
             roster: frame.roster,
+            call: frame.call,
             messages: merge(s.messages, frame.messages),
           }));
           return;
@@ -101,6 +109,14 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
           return;
         case 'night':
           setState((s) => ({ ...s, night: frame.night }));
+          return;
+        case 'call-roster':
+          setState((s) => ({ ...s, call: frame.members }));
+          return;
+        case 'rtc':
+          // Handed straight to whoever is running the call; the room hook has
+          // no business knowing what a session description is.
+          onSignalRef.current(frame.from, frame.name, frame.payload);
           return;
         case 'msg': {
           lastSeq.current = Math.max(lastSeq.current, frame.message.seq);
@@ -178,6 +194,20 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
     ws.send(JSON.stringify({ t: 'table', event }));
   }, []);
 
+  /** Sitting down at, or getting up from, the call. */
+  const setInCall = useCallback((join: boolean) => {
+    const ws = socket.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ t: 'call', join }));
+  }, []);
+
+  /** One leg of a handshake, addressed to one dad. */
+  const sendSignal = useCallback((to: string, payload: unknown) => {
+    const ws = socket.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ t: 'rtc', to, payload }));
+  }, []);
+
   const lastTypingSent = useRef(0);
   const sendTyping = useCallback(() => {
     const ws = socket.current;
@@ -188,7 +218,16 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
     ws.send(JSON.stringify({ t: 'typing' }));
   }, []);
 
-  return { ...state, send, answerPrompt, relayTableEvent, sendTyping };
+  return {
+    ...state,
+    send,
+    answerPrompt,
+    relayTableEvent,
+    sendTyping,
+    setInCall,
+    sendSignal,
+    onSignalRef,
+  };
 }
 
 /** Append by seq, dropping anything already held. Backfill and live frames

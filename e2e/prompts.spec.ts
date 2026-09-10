@@ -5,20 +5,16 @@ import { E2E_PROMPT_GROUP } from './global-setup';
 test.describe.configure({ mode: 'serial' });
 
 /**
- * The room is always on screen now; Prompts and Board open over it. Scoped to
- * the toolbar because Playwright matches accessible names by substring, and
- * one curated prompt ends "...with no phone in the room?".
+ * Scoped to the tab strip because Playwright matches accessible names by
+ * substring, and one curated prompt ends "...with no phone in the room?".
  */
-function action(page: Page, name: 'Prompts' | 'Board' | 'Table' | 'Back to the room') {
+function tab(page: Page, name: 'Today' | 'Table' | 'Prompts' | 'Board') {
+  // Anchored regex, not an exact match: a tab with something waiting is named
+  // "Board — something waiting", which is exactly what a screen reader should
+  // hear. The label is the prefix.
   return page
-    .getByRole('toolbar', { name: 'Room actions' })
-    .getByRole('button', { name, exact: true });
-}
-
-/** Closes whichever sheet is open. */
-async function closeSheet(page: Page) {
-  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+    .getByRole('navigation', { name: 'Rooms' })
+    .getByRole('button', { name: new RegExp(`^${name}`) });
 }
 
 async function comeIn(browser: Browser, name: string): Promise<Page> {
@@ -57,7 +53,7 @@ test('the day’s question is asked, answered, and seen by the others', async ({
 test('the whole library is browsable as a list, and a dad can add to it', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
 
-  await action(marc, 'Prompts').click();
+  await tab(marc, 'Prompts').click();
   await expect(marc.getByTestId('prompt-list')).toBeVisible();
 
   // The curated library, plus the sections around it.
@@ -80,9 +76,9 @@ test('the whole library is browsable as a list, and a dad can add to it', async 
 
   // It survives a reload, and going back to the room still works.
   await marc.reload();
-  await action(marc, 'Prompts').click();
+  await tab(marc, 'Prompts').click();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
-  await closeSheet(marc);
+  await tab(marc, 'Today').click();
   await expect(marc.getByTestId('prompt-card')).toBeVisible();
 
   await marc.context().close();

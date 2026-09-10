@@ -45,6 +45,12 @@ export interface RosterEntry {
 
 export type ClientFrame =
   | { t: 'chat'; body: string; mediaId?: string }
+  /** Sitting down at, or getting up from, the call. */
+  | { t: 'call'; join: boolean }
+  /** One leg of a WebRTC handshake, addressed to one other dad. The room
+   * relays it without looking inside: what is in there is between the two
+   * browsers. */
+  | { t: 'rtc'; to: string; payload: unknown }
   | { t: 'prompt'; body: string }
   | { t: 'table'; event: TableEvent }
   | { t: 'typing' };
@@ -54,10 +60,16 @@ export type ServerFrame =
       t: 'hello';
       you: RosterEntry;
       roster: RosterEntry[];
+      /** Who is already on the call when you arrive. */
+      call: RosterEntry[];
       /** Messages after the client's `after`, oldest first. */
       messages: RoomMessage[];
     }
   | { t: 'roster'; roster: RosterEntry[] }
+  /** Who is on the call right now. Separate from the roster: being in the room
+   * and being on the call are different things. */
+  | { t: 'call-roster'; members: RosterEntry[] }
+  | { t: 'rtc'; from: string; name: string; payload: unknown }
   | { t: 'msg'; message: RoomMessage }
   | { t: 'typing'; memberId: string; name: string }
   | { t: 'night'; night: DadNight | null }
@@ -82,6 +94,17 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   }
   if (frame.t === 'prompt' && typeof frame.body === 'string')
     return { t: 'prompt', body: frame.body };
+  if (frame.t === 'call' && typeof (value as { join?: unknown }).join === 'boolean') {
+    return { t: 'call', join: (value as { join: boolean }).join };
+  }
+  if (frame.t === 'rtc') {
+    const { to, payload } = value as { to?: unknown; payload?: unknown };
+    // The payload is opaque on purpose — the room is a wire, not a party to
+    // the negotiation — but it must be addressed to somebody.
+    return typeof to === 'string' && to !== '' && payload !== undefined
+      ? { t: 'rtc', to, payload }
+      : null;
+  }
   if (frame.t === 'table') {
     // Validated by the jaffre module, which owns that vocabulary.
     const event = parseTableEvent((value as { event?: unknown }).event);

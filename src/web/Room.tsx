@@ -1,55 +1,80 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import type { Session } from './api';
-import { Board } from './Board';
-import { DadNightBar } from './DadNightBar';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { fetchTodo, type Session, type Todo } from './api';
 import { Attachment } from './Attachment';
-import { toRows } from './messageGroups';
+import { Board } from './Board';
+import { CallBar } from './CallBar';
+import { DadNightBar } from './DadNightBar';
 import { prepare, readableSize, upload, type Prepared } from './media';
+import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
-import { Sheet } from './Sheet';
 import { TableColumn } from './TableColumn';
+import { useCall } from './useCall';
 import { useRoom } from './useRoom';
 
 function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-/** The two things you go and look at, then come back from. */
-type Open = 'prompts' | 'board' | null;
+type Tab = 'today' | 'table' | 'prompts' | 'board';
 
 /**
- * The room is the app. You are always in it.
+ * Today's chat is where you are; everything else is a tab you visit.
  *
- * The prompt library and the weekly board are things a dad goes and checks, so
- * they open over the room and close again rather than replacing it — the
- * conversation should never be somewhere you have to navigate back to.
+ * A tab carries a mark when something is waiting for YOU — a question you have
+ * not answered, a week you have not filled in — so the room itself tells you
+ * whether there is anywhere to go. A mark for something somebody else did
+ * would be noise.
  *
- * The table is the exception and stays mounted beside the talk: unmounting the
- * iframe would restart a game in progress. On a screen too narrow to hold
- * both, it takes the room's place until it is closed again.
+ * The table is the one tab that stays mounted while you are elsewhere:
+ * unmounting the iframe restarts a game. On a wide screen it needs no tab at
+ * all, because it sits beside the conversation.
  */
 export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
   const room = useRoom(true, session.group.dadNight);
-  const [open, setOpen] = useState<Open>(null);
-  const [showTable, setShowTable] = useState(false);
-  /** The talk gets most of the screen; the table can take half when a game is
-   * the point of the evening. */
+  const [tab, setTab] = useState<Tab>('today');
   const [wideTable, setWideTable] = useState(false);
   const [draft, setDraft] = useState('');
-  /** Picked but not sent yet: the dad still gets to write a caption, or change
-   * his mind, before anyone sees it. */
+  /** Picked but not sent: the dad still gets a caption, or a change of mind. */
   const [pending, setPending] = useState<Prepared | null>(null);
   const [sending, setSending] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [todo, setTodo] = useState<Todo>({ prompt: false, board: false });
   const picker = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    bottom.current?.scrollIntoView({ block: 'end' });
-  }, [room.messages.length]);
+  const call = useCall({
+    you: room.you?.memberId ?? null,
+    members: room.call,
+    send: room.sendSignal,
+    onJoinChange: room.setInCall,
+  });
 
-  // The browser tab says which group you are in, not just "dads".
+  // The room hook has no business knowing what a session description is; the
+  // call does. This is the seam between them.
+  const { onSignalRef } = room;
+  const { onSignal } = call;
+  useEffect(() => {
+    onSignalRef.current = onSignal;
+  }, [onSignal, onSignalRef]);
+
+  const refreshTodo = useCallback(() => {
+    fetchTodo()
+      .then(setTodo)
+      .catch(() => {
+        // No mark is better than a wrong one.
+      });
+  }, []);
+
+  // Anything that could change what is waiting — an answer, a check-in, a
+  // commitment — arrives as a line in the room.
+  const lastSeq = room.messages.at(-1)?.seq ?? 0;
+  useEffect(refreshTodo, [refreshTodo, lastSeq]);
+
+  useEffect(() => {
+    if (tab === 'today') bottom.current?.scrollIntoView({ block: 'end' });
+  }, [room.messages.length, tab]);
+
   useEffect(() => {
     document.title = session.group.name;
   }, [session.group.name]);
@@ -95,12 +120,15 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     .filter(([id]) => id !== session.member.id)
     .map(([, name]) => name);
 
+  const tabs: { id: Tab; label: string; mark: boolean; narrowOnly?: boolean }[] = [
+    { id: 'today', label: 'Today', mark: false },
+    { id: 'table', label: 'Table', mark: false, narrowOnly: true },
+    { id: 'prompts', label: 'Prompts', mark: todo.prompt },
+    { id: 'board', label: 'Board', mark: todo.board },
+  ];
+
   return (
-    <main
-      className="room"
-      data-table={showTable ? 'on' : 'off'}
-      data-split={wideTable ? 'half' : 'talk'}
-    >
+    <main className="room" data-tab={tab} data-split={wideTable ? 'half' : 'talk'}>
       <header className="room-head">
         <div>
           <h1>{session.group.name}</h1>
@@ -119,23 +147,22 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
       <DadNightBar night={room.night} />
 
-      <div className="toolbar" role="toolbar" aria-label="Room actions">
-        <button type="button" onClick={() => setOpen('prompts')}>
-          Prompts
-        </button>
-        <button type="button" onClick={() => setOpen('board')}>
-          Board
-        </button>
-        {/* Only offered where the table cannot already be seen: above 64rem it
-            sits beside the room and there is nothing to toggle. */}
-        <button
-          type="button"
-          className="only-narrow"
-          aria-pressed={showTable}
-          onClick={() => setShowTable((v) => !v)}
-        >
-          {showTable ? 'Back to the room' : 'Table'}
-        </button>
+      <nav className="tabs" aria-label="Rooms">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`${tab === t.id ? 'is-current' : ''}${t.narrowOnly ? ' only-narrow' : ''}`}
+            aria-current={tab === t.id}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+            {t.mark ? (
+              <span className="mark" data-testid={`mark-${t.id}`} aria-hidden="true" />
+            ) : null}
+            {t.mark ? <span className="sr-only"> — something waiting</span> : null}
+          </button>
+        ))}
         <ul className="roster" aria-label="Who's here">
           {room.roster.map((m) => (
             <li key={m.memberId} data-testid="roster-entry">
@@ -144,10 +171,22 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             </li>
           ))}
         </ul>
-      </div>
+      </nav>
 
       <div className="stage">
         <div className="col-talk">
+          <CallBar
+            state={call.state}
+            peers={call.peers}
+            muted={call.muted}
+            camera={call.camera}
+            localStream={call.localStream.current}
+            onJoin={() => void call.join()}
+            onLeave={call.leave}
+            onToggleMute={call.toggleMute}
+            onToggleCamera={() => void call.toggleCamera()}
+          />
+
           <PromptCard
             messages={room.messages}
             onAnswer={room.answerPrompt}
@@ -257,6 +296,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           </form>
         </div>
 
+        {/* Always mounted: unmounting the iframe restarts a game in progress. */}
         <div className="col-table">
           <TableColumn
             onEvent={room.relayTableEvent}
@@ -264,21 +304,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             onToggleWide={() => setWideTable((v) => !v)}
           />
         </div>
+
+        {/* Mounted on demand, so each reads its data fresh every visit rather
+            than showing what was true when the page loaded. */}
+        <div className="panel panel-prompts">{tab === 'prompts' ? <PromptList /> : null}</div>
+        <div className="panel panel-board">
+          {tab === 'board' ? <Board onChanged={refreshTodo} /> : null}
+        </div>
       </div>
-
-      {/* Mounted only while open, so each reads its data fresh every time
-          rather than showing what was true when the page loaded. */}
-      {open === 'prompts' ? (
-        <Sheet title="Prompts" onClose={() => setOpen(null)}>
-          <PromptList />
-        </Sheet>
-      ) : null}
-
-      {open === 'board' ? (
-        <Sheet title="The board" onClose={() => setOpen(null)}>
-          <Board />
-        </Sheet>
-      ) : null}
     </main>
   );
 }

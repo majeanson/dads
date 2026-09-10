@@ -15,13 +15,17 @@ const RATING_WORDS = ['', 'rough', 'hard', 'alright', 'good', 'great'];
  * The week, in public. Every dad has a row whether or not he filled it in —
  * a board that only shows the dads who turned up is a board that flatters.
  */
-export function Board() {
+export function Board({ onChanged }: { onChanged?: () => void } = {}) {
   const [data, setData] = useState<BoardData | null | 'loading'>('loading');
   const reload = useCallback(() => {
     fetchBoard()
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        // The tab's mark is about this dad's week, which may have just changed.
+        onChanged?.();
+      })
       .catch(() => setData(null));
-  }, []);
+  }, [onChanged]);
 
   useEffect(reload, [reload]);
 

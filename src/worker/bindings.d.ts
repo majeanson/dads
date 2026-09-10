@@ -9,5 +9,15 @@ declare namespace Cloudflare {
      * tests — sessionSecret() is where that is handled.
      */
     SESSION_SECRET?: string;
+
+    /**
+     * Cloudflare Realtime TURN key, for voice across strict NATs. Optional:
+     * without them the mesh runs STUN-only, which is enough for most home
+     * connections. Create a key at dash.cloudflare.com → Realtime → TURN:
+     *   wrangler secret put TURN_KEY_ID
+     *   wrangler secret put TURN_KEY_API_TOKEN
+     */
+    TURN_KEY_ID?: string;
+    TURN_KEY_API_TOKEN?: string;
   }
 }

@@ -2,6 +2,8 @@ import type { Env } from './env';
 import { IDENTITY_HEADERS } from './RoomDO';
 import { currentSession, join, leave, me } from './routes/auth';
 import { getBoard, putCheckIn, putCommitment, putCommitmentOutcome } from './routes/board';
+import { getIce } from './routes/ice';
+import { getTodo } from './routes/todo';
 import { getMedia, listMedia, uploadMedia } from './routes/media';
 import { setNight } from './routes/night';
 import { getTable } from './routes/table';
@@ -92,6 +94,12 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/media-list':
       return listMedia(request, env, prod);
+
+    case 'GET /api/todo':
+      return getTodo(request, env, prod);
+
+    case 'GET /api/ice':
+      return getIce(env);
 
     case 'GET /api/table':
       return getTable(request, env, prod);

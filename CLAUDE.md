@@ -201,21 +201,63 @@ secret, custom domain bound by the route in wrangler.toml.
 - `npx wrangler tail --format json` is how you find out what actually threw.
   The Worker's `[observability]` block is what makes those logs exist at all.
 
+## The call (voice and camera)
+
+- A full **mesh**: every dad connects directly to every other. Wrong for a
+  hundred people, exactly right for five — no server in the media path,
+  nothing to run, nothing to pay for.
+- The handshake rides the room's **existing websocket**. No second connection
+  to open, authenticate or keep alive, and the room already knows who everyone
+  is. The DO relays `rtc` frames verbatim and names the sender itself, so a
+  browser cannot claim to be somebody else.
+- `useCall` decides who offers with `me < them`, identically on both sides.
+  Without that rule two simultaneous offers collide and neither connects.
+- Candidates that outrun their description are queued and added once it lands.
+- Mute disables the track; it never removes it. Removing would renegotiate and
+  make everyone's tiles flicker.
+- Being in the room and being on the call are different things: `inCall` lives
+  on the socket attachment, so a dropped connection is off the call by
+  definition.
+- `/api/ice` mirrors jaffre's: STUN unconditional, TURN a bonus, **never
+  errors**. Set `TURN_KEY_ID` / `TURN_KEY_API_TOKEN` to add a relay for strict
+  NATs; without them it is STUN-only, which covers most home connections.
+- e2e uses Chrome's fake devices (`--use-fake-device-for-media-stream`) and
+  checks the mesh really reaches a peer connection. Whether a human can hear a
+  human is not something a headless browser can answer.
+
 ## Shape of the room
 
-- **The room is the app; you are always in it.** Prompts and the board are
-  things a dad goes and checks, so they open over the room in a `<Sheet>` and
-  close again. The conversation is never somewhere you navigate back to.
-- `Sheet` is the native `<dialog>` on purpose — focus trap, Escape, inert
-  background and backdrop all come from the platform. Do not replace it with a
-  div and a z-index.
-- Sheets mount only while open, so each reads its data fresh every time.
+- **Today's chat is where you are; everything else is a tab.** A tab carries
+  a mark when something is waiting for **you** — a question you have not
+  answered, a week you have not filled in. A mark for something somebody else
+  did would be noise, and a number invites you to drive it to zero.
+- `/api/todo` is what the marks read, and it is deliberately about the caller
+  and nobody else.
+- Panels mount only while their tab is open, so each reads fresh data.
 - **The table is the exception** and stays mounted beside the talk: unmounting
   the iframe restarts a game. Above 64rem it is simply always there and the
   toolbar's Table button is hidden (`.only-narrow`); below, it takes the
   room's place until closed.
-- e2e helpers: `action(page, 'Prompts')` scoped to the `toolbar` role, and
-  `closeSheet(page)`. There is no "Room" button to click back to.
+- e2e helper: `tab(page, 'Prompts')`, scoped to the `Rooms` navigation and
+  matching on an **anchored regex**, not an exact name — a tab with something
+  waiting is named "Board — something waiting", which is what a screen reader
+  should hear.
+
+## Media
+
+- Ten to a room; the eleventh silently pushes the oldest out, blob and record
+  together. The cap is the feature.
+- Images are shrunk in the **browser** (long side 1600, JPEG 0.82) before
+  upload. Every failure path falls back to the original file: a large upload
+  beats a failed one.
+- R2 objects are **never public**. They are served through the Worker behind
+  the session check and scoped to the caller's group; an id from another room
+  404s. These are photographs of people's children.
+- A failed record write deletes its own blob. A blob with no record is
+  unreachable and pays rent forever.
+- Attachments are hydrated from D1 on backfill, never stored in the DO tail —
+  a pruned photo then quietly disappears from its line instead of rendering
+  broken forever.
 
 ## Test layout
 

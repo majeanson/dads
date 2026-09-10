@@ -36,7 +36,13 @@ export const E2E_TABLE_GROUP = {
   name: 'The E2E Table',
   code: 'pigeon marble sorrel dune',
 };
+export const E2E_CALL_GROUP = {
+  slug: 'e2e-call',
+  name: 'The E2E Call',
+  code: 'lantern spruce heron opal',
+};
 const GROUPS = [
+  E2E_CALL_GROUP,
   E2E_GROUP,
   E2E_ROOM_GROUP,
   E2E_NIGHT_GROUP,
