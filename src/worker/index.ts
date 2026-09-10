@@ -82,7 +82,7 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
       return getPresence(request, env, prod);
 
     case 'GET /api/push':
-      return getPushKey(request, env, prod);
+      return getPushKey(request, env, url, prod);
 
     case 'POST /api/push':
       return subscribePush(request, env, prod);

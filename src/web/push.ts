@@ -48,17 +48,17 @@ export async function pushShape(): Promise<PushShape> {
   if (isIOS() && !standalone()) return { kind: 'needs-install' };
   if (Notification.permission === 'denied') return { kind: 'blocked' };
 
-  const res = await fetch('/api/push');
-  if (res.status === 503) return { kind: 'unavailable' };
-  if (!res.ok) return { kind: 'unsupported' };
-  const { endpoints } = (await res.json()) as { key: string; endpoints: string[] };
-
   try {
     const reg = await registration();
     const sub = await reg.pushManager.getSubscription();
     // On only if THIS browser holds a subscription the server also knows
-    // about: a subscription the server has forgotten is a promise nobody kept.
-    return { kind: 'ready', on: sub !== null && endpoints.includes(sub.endpoint) };
+    // about: one the server has forgotten is a promise nobody kept.
+    const asking = sub === null ? '' : '?endpoint=' + encodeURIComponent(sub.endpoint);
+    const res = await fetch('/api/push' + asking);
+    if (res.status === 503) return { kind: 'unavailable' };
+    if (!res.ok) return { kind: 'unsupported' };
+    const { known } = (await res.json()) as { key: string; known: boolean };
+    return { kind: 'ready', on: sub !== null && known };
   } catch {
     return { kind: 'unsupported' };
   }

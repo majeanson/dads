@@ -1,0 +1,53 @@
+name: E2E
+
+# The browser suite: the whole stack, built and served by wrangler dev against
+# a local D1, driven by two or three Chromium contexts at once.
+#
+# Kept out of ci.yml on purpose — it downloads a browser, boots a Worker and
+# runs multi-context social tests, which is minutes rather than seconds. It
+# runs after CI has gone green on main, nightly, and whenever somebody asks.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  schedule:
+    # Overnight in Toronto, which is where the dads are.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    # Only when the CI that triggered it actually passed. A scheduled or
+    # manual run has no upstream conclusion, so it always goes.
+    if: >
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # For a workflow_run, check out the exact commit CI passed on rather
+          # than whatever main has become since.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Nothing here touches Cloudflare: wrangler dev serves the built worker
+      # against a local D1 and a local Durable Object, and global-setup
+      # migrates that database itself.
+      - run: npm run e2e
+        env:
+          CI: 'true'
+          WRANGLER_SEND_METRICS: 'false'
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

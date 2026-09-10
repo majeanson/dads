@@ -458,23 +458,27 @@ export class RoomDO extends DurableObject<Env> {
   private async openDadNight(now: number): Promise<void> {
     await this.say('dad night', { k: 'night_open' });
 
+    const night = this.storedNight();
+    const window = night ? currentWindow(night, now) : null;
+    // If the alarm ran so late that the window already closed, there is
+    // nothing to close; ensureNightScheduled arms next week instead.
+    //
+    // Armed BEFORE the notifications go out, not after: sending them is a
+    // fan-out of HTTPS requests to services we do not run, and an alarm that
+    // has not been re-armed yet is a summary that never happens because
+    // somebody's push service was having a bad evening.
+    if (window) this.arm('night_end', window.end);
+
     // The one thing this app does that reaches a dad who is not looking at
-    // it, and only for the dads who asked. Not awaited into the alarm's
-    // critical path beyond this: notifyGroup never throws.
+    // it, and only for the dads who asked for it.
     const groupId = this.groupId();
     if (groupId !== undefined) {
       await notifyGroup(this.env, groupId, {
         title: 'dads',
         body: 'The table’s open.',
-        url: '/',
         tag: 'dad-night',
       });
     }
-    const night = this.storedNight();
-    const window = night ? currentWindow(night, now) : null;
-    // If the alarm ran so late that the window already closed, there is
-    // nothing to close; ensureNightScheduled arms next week instead.
-    if (window) this.arm('night_end', window.end);
   }
 
   /**

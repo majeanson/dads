@@ -43,7 +43,12 @@ export function parts(body: string): Part[] {
     }
 
     if (start > at) found.push({ link: false, text: body.slice(at, start) });
-    found.push({ link: true, text: raw, href });
+    // What it SAYS has to be where it goes. "https://example.com@evil.test/x"
+    // reads as example.com and lands on evil.test; a Cyrillic а in a hostname
+    // reads as Latin and resolves to punycode. Where the address the browser
+    // will actually use differs from the characters a dad typed, the honest
+    // one is shown — even though it is uglier, because the ugly one is true.
+    found.push({ link: true, text: href === raw ? raw : href, href });
     at = start + raw.length;
   }
 

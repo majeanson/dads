@@ -428,6 +428,18 @@ the screen with the empty space underneath it the moment the bar stopped
 rendering. Nothing in that column may depend on how many children happen to
 exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
 
+## CI
+
+- `.github/workflows/ci.yml` runs format, lint, typecheck, the contrast audit,
+  the unit suite and the build on every push. No browser, no wrangler dev, no
+  credentials: it stays cheap enough to run on everything.
+- `e2e.yml` runs the browser suite after CI goes green on main, nightly, and on
+  demand. Split out because it downloads Chromium and boots a Worker.
+- **There is deliberately no deploy job.** Deploying means applying migrations
+  first and then `npm run deploy`, in that order, by someone who has decided
+  the migration is safe. Five friends and one database is not a service with a
+  rollback plan.
+
 ## Test layout
 
 - vitest storage is per **file**, not per test. Tests that seed groups call

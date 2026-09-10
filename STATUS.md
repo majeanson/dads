@@ -34,7 +34,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 181, in workerd against the real migrations
+npm test              # 183, in workerd against the real migrations
 npm run e2e           # 32, against the built stack
 npm run audit:contrast  # 24 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
@@ -46,12 +46,7 @@ Migrations are separate and go first: `npm run migrate:remote`.
 
 Honest list. Everything else in here has a test standing behind it.
 
-1. **The table on an iPhone.** Safari partitions — and can block — storage in
-   a third-party frame, and jaffre's identity is localStorage-only. It may
-   simply work; it may show a blank panel. The room now waits twelve seconds
-   for the table to say anything and then offers a way out, so the failure is
-   at least legible. Verified in Chrome only.
-2. **The call between two real people on two real networks.** The mesh is
+1. **The call between two real people on two real networks.** The mesh is
    tested with Chrome's fake devices, reaches a peer connection, and a camera
    turned on now really does appear on the other dad's screen — that has a
    test. Whether a human can hear a human, across two home routers, is not
@@ -59,9 +54,11 @@ Honest list. Everything else in here has a test standing behind it.
    configured in production now (`dads-key`), so a dad behind a strict NAT has
    a way through as well — verified by `/api/ice` returning credentialed
    `turn:` and `turns:` servers alongside the STUN ones.
-3. **A dad night actually completing.** The open and close lines are tested
-   with a faked clock; no real Thursday has passed yet.
-4. **A reminder actually arriving on a phone.** The endpoint mints a key, the
+2. **A dad night's summary.** The open is proven on a real clock: the night
+   was set five minutes out on production and at 14:03 the room posted "Dad
+   night. The table's open." by itself, with nobody watching. The close comes
+   three hours later and has still only been seen with a faked clock.
+3. **A reminder actually arriving on a phone.** The endpoint mints a key, the
    subscribe and unsubscribe round trip is tested, and the send is jaffre's
    proven code — but no notification has yet gone from this Worker to a real
    lock screen. To try it: add dads to the home screen, open the menu, press
@@ -103,6 +100,16 @@ table isn't answering in here", under a table that was working perfectly.
 `welcome` now announces through the same path, pinned by an e2e in jaffre with
 a stand-in embedder on its own origin. Verified live: the frame speaks, and the
 warning is gone.
+
+## Proven on a real clock
+
+The jaffre table works inside the app on an iPhone — Safari gave the framed
+game its storage, so the partitioning case the fallback exists for did not
+happen there. The fallback stays: it costs nothing, and the next iOS release
+is not ours to predict.
+
+Dad night opens by itself. Set five minutes out on production, and at 14:03
+the room said so.
 
 ## Notes
 

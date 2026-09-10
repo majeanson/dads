@@ -31,14 +31,18 @@ self.addEventListener('push', (event) => {
       // One tag for a kind of thing: two reminders for the same night replace
       // each other rather than stacking up on the lock screen.
       tag: payload.tag || 'dads',
-      data: { url: payload.url || '/' },
     }),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/';
+
+  // Always this app, never an address out of the payload. Only something
+  // holding our VAPID private key can send one of these, but a notification
+  // that can be talked into opening an arbitrary page is a bad shape to leave
+  // lying around whatever the odds.
+  const url = self.registration.scope;
 
   // A tab that is already open is the one he wants — focus it rather than
   // opening a second room beside the first.

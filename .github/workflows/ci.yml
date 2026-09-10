@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Static checks, unit tests and the build. Everything here runs without a
+# browser, without wrangler dev and without a single credential, so it stays
+# cheap enough to run on every push.
+#
+# The browser suite lives in e2e.yml, which this workflow triggers on main.
+#
+# There is deliberately NO deploy job. Deploying dads means applying migrations
+# first and then `npm run deploy`, in that order, by someone who has decided the
+# migration is safe — this is five friends and one database, not a service with
+# a rollback plan. If that ever changes, the shape to copy is jaffre's
+# .github/workflows/ci.yml, which needs CLOUDFLARE_API_TOKEN and
+# CLOUDFLARE_ACCOUNT_ID as repository secrets.
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      # The palette in both themes, and the two explicit theme blocks against
+      # the two they are copied from.
+      - run: npm run audit:contrast
+      # In workerd, against the real migrations: a migration that does not
+      # apply fails the suite.
+      - run: npm test
+      - run: npm run build
