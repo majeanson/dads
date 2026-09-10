@@ -1,5 +1,9 @@
 import type { DadNight } from '../shared/dadNight';
 
+/** A night as the client sends it: the zone is omitted when the group already
+ * has one, so the server keeps it rather than adopting the editor's. */
+export type NightInput = Omit<DadNight, 'tz'> & { tz: string | null };
+
 export interface Session {
   group: { id: string; slug: string; name: string; dadNight: DadNight | null };
   member: { id: string; displayName: string };
@@ -76,7 +80,7 @@ export async function leave(): Promise<void> {
  * Any dad can set the group's night; the room announces who did it. Throws on
  * failure so the caller can say so rather than silently doing nothing.
  */
-export async function setNight(night: DadNight | null): Promise<void> {
+export async function setNight(night: NightInput | null): Promise<void> {
   const res = await fetch('/api/night', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

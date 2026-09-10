@@ -52,8 +52,35 @@ function toMedia(row: MediaRow): Media {
   };
 }
 
+/**
+ * The only types the browser is ever allowed to render inline from our own
+ * origin.
+ *
+ * An allowlist, not a prefix test, and `image/svg+xml` is deliberately absent:
+ * an SVG is a document that can carry script, so serving one inline from
+ * dads.marcportal.com would be running an uploader's code on the app's origin,
+ * with the session that goes with it. Everything else is sent as a download.
+ */
+const INLINE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']);
+
+export function isInlineSafe(contentType: string): boolean {
+  return INLINE_TYPES.has(contentType.toLowerCase());
+}
+
 export function isImage(contentType: string): boolean {
-  return contentType.startsWith('image/');
+  return isInlineSafe(contentType);
+}
+
+/**
+ * What we are willing to write down as a file's type.
+ *
+ * Anything not on the inline list becomes application/octet-stream: the byte
+ * stream is preserved exactly, but nothing downstream can be talked into
+ * treating it as a document.
+ */
+export function safeContentType(declared: string): string {
+  const type = declared.split(';')[0]!.trim().toLowerCase();
+  return isInlineSafe(type) ? type : 'application/octet-stream';
 }
 
 /**
@@ -116,7 +143,7 @@ export async function recentMedia(env: Env, groupId: string): Promise<Media[]> {
   const { results } = await env.DB.prepare(
     `SELECT id, name, content_type, size, width, height, member_id, created_at
        FROM media WHERE group_id = ?
-      ORDER BY created_at DESC LIMIT ?`,
+      ORDER BY created_at DESC, id DESC LIMIT ?`,
   )
     .bind(groupId, MEDIA_PER_GROUP)
     .all<MediaRow>();

@@ -64,7 +64,12 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
 
       ws.onopen = () => {
         attempt.current = 0;
-        pingTimer = setInterval(() => ws.send('ping'), PING_INTERVAL_MS);
+        pingTimer = setInterval(() => {
+          // Guarded like every other send here: the socket can enter CLOSING
+          // between the tick and the send, and an unhandled throw in a timer
+          // is a hard error rather than a dropped keepalive.
+          if (ws.readyState === WebSocket.OPEN) ws.send('ping');
+        }, PING_INTERVAL_MS);
       };
 
       ws.onmessage = (event) => {

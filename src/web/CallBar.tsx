@@ -77,8 +77,11 @@ export function CallBar({
       {showing.length > 0 || camera ? (
         <div className="call-tiles">
           {camera && localStream !== null ? <Tile stream={localStream} name="You" muted /> : null}
+          {/* Silent: every dad's sound comes from the <audio> elements
+              below, so a camera going on or off never interrupts what you can
+              hear — and nobody is played twice. */}
           {showing.map((p) => (
-            <Tile key={p.memberId} stream={p.stream} name={p.name} />
+            <Tile key={p.memberId} stream={p.stream} name={p.name} muted />
           ))}
         </div>
       ) : null}
@@ -98,22 +101,15 @@ export function CallBar({
   );
 }
 
-function Tile({
-  stream,
-  name,
-  muted = false,
-}: {
-  stream: MediaStream;
-  name: string;
-  muted?: boolean;
-}) {
+function Tile({ stream, name, muted }: { stream: MediaStream; name: string; muted: boolean }) {
   const video = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (video.current !== null) video.current.srcObject = stream;
   }, [stream]);
   return (
     <figure className="call-tile">
-      {/* Your own tile is always silent: hearing yourself is unusable. */}
+      {/* Always silent — your own because hearing yourself is unusable,
+          everyone else's because their sound comes from an <audio>. */}
       <video ref={video} autoPlay playsInline muted={muted} />
       <figcaption>{name}</figcaption>
     </figure>

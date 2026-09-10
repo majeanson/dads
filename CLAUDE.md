@@ -203,6 +203,20 @@ secret, custom domain bound by the route in wrangler.toml.
 
 ## The call (voice and camera)
 
+- **Perfect negotiation, not one-sided offers.** Both sides open the
+  connection and `negotiationneeded` sends the offer; `polite = me > them`
+  decides who yields when two cross. This is not only about glare: a camera
+  toggle needs a FRESH offer, and a design where only one side may offer
+  leaves the other side's camera inert.
+- A `failed` connection calls `restartIce()`, it does not tear down. The
+  roster has not changed, so nothing would ever rebuild it — the pair would be
+  deaf to each other for the rest of the evening.
+- `/api/ice` is fetched **once per call**, memoised. It is `no-store` and each
+  hit mints TURN credentials; per-candidate fetches put a round trip in the
+  ICE path dozens of times.
+- Every remote `<video>` is muted. Sound comes from the `<audio>` elements, so
+  a camera going on or off never interrupts it and nobody is heard twice.
+
 - A full **mesh**: every dad connects directly to every other. Wrong for a
   hundred people, exactly right for five — no server in the media path,
   nothing to run, nothing to pay for.
@@ -244,6 +258,13 @@ secret, custom domain bound by the route in wrangler.toml.
   should hear.
 
 ## Media
+
+- **Content types are an allowlist, and `image/svg+xml` is not on it.** An
+  SVG is a document that can carry script; serving one inline from our own
+  origin runs an uploader's code with this app's session. Anything not on the
+  list is stored and served as `application/octet-stream`, with
+  `X-Content-Type-Options: nosniff` and `Content-Disposition: attachment`.
+  Do not "fix" a file that downloads instead of rendering by widening this.
 
 - Ten to a room; the eleventh silently pushes the oldest out, blob and record
   together. The cap is the feature.

@@ -132,6 +132,44 @@ describe('uploading', () => {
   });
 });
 
+describe('what a browser is allowed to render', () => {
+  let group: SeededGroup;
+  beforeEach(async () => {
+    await resetTables();
+    group = await seedGroup();
+  });
+
+  it('refuses to remember a type that would run as a document', async () => {
+    const cookie = await cookieFor(group);
+    for (const declared of ['text/html', 'image/svg+xml', 'application/xhtml+xml', 'text/xml']) {
+      const res = await put(cookie, PNG, { 'Content-Type': declared });
+      const body = (await res.json()) as { media: { id: string; contentType: string } };
+      // The bytes are kept exactly; the label that would make a browser run
+      // them is not.
+      expect(body.media.contentType).toBe('application/octet-stream');
+
+      const fetched = await worker.fetch(`https://dads.test/api/media?id=${body.media.id}`, {
+        headers: { Cookie: cookie },
+      });
+      expect(fetched.headers.get('Content-Type')).toBe('application/octet-stream');
+      // Handed to the downloader, never to the renderer.
+      expect(fetched.headers.get('Content-Disposition')).toContain('attachment');
+      expect(fetched.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    }
+  });
+
+  it('lets a real photo render inline', async () => {
+    const cookie = await cookieFor(group);
+    const uploaded = await uploadOne(cookie);
+    const res = await worker.fetch(`https://dads.test/api/media?id=${uploaded.media.id}`, {
+      headers: { Cookie: cookie },
+    });
+    expect(res.headers.get('Content-Type')).toBe('image/png');
+    expect(res.headers.get('Content-Disposition')).toBeNull();
+    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
+  });
+});
+
 describe('the ten-photo cap', () => {
   let group: SeededGroup;
   beforeEach(async () => {

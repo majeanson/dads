@@ -105,8 +105,12 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
   // cookie is lost — a cleared jar, a browser update — the token still
   // identifies the device, so a dad comes back as himself instead of as a
   // second member with the same name.
-  const deviceToken =
-    typeof body.deviceToken === 'string' && body.deviceToken ? body.deviceToken : randomToken();
+  // A supplied token has to look like one we issued. Without a floor, two
+  // dads who ended up with the same short string — a copied localStorage, a
+  // pasted "try this" — would collide on members_by_device, and the second
+  // join would silently rename the first dad's row and inherit his history.
+  const supplied = typeof body.deviceToken === 'string' ? body.deviceToken : '';
+  const deviceToken = /^[A-Za-z0-9_-]{32,}$/.test(supplied) ? supplied : randomToken();
   const deviceHash = await hashDeviceToken(sessionSecret(env, isProduction), deviceToken);
   const now = Date.now();
 

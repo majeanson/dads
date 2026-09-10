@@ -137,6 +137,19 @@ describe('POST /api/join', () => {
     expect(count?.n).toBe(1);
   });
 
+  it('will not take a device token short enough to collide', async () => {
+    // Two dads who somehow ended up with the same short string must not become
+    // one dad: the second join would otherwise rename the first and inherit
+    // his check-ins, commitments and history.
+    const first = (await (
+      await worker.fetch(postJoin({ code: group.code, displayName: 'Marc', deviceToken: 'abc' }))
+    ).json()) as { member: { id: string } };
+    const second = (await (
+      await worker.fetch(postJoin({ code: group.code, displayName: 'Sam', deviceToken: 'abc' }))
+    ).json()) as { member: { id: string } };
+    expect(second.member.id).not.toBe(first.member.id);
+  });
+
   it('treats a new device as a new member', async () => {
     await worker.fetch(postJoin({ code: group.code, displayName: 'Marc' }));
     await worker.fetch(postJoin({ code: group.code, displayName: 'Marc' }));

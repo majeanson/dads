@@ -35,6 +35,13 @@ describe('M0 skeleton', () => {
     }
   });
 
+  it('keeps the TURN endpoint behind the door', async () => {
+    // Minting relay credentials is billable on our account; an open endpoint
+    // hands six-hour credentials to anyone who asks.
+    const res = await worker.fetch('https://dads.test/api/ice');
+    expect(res.status).toBe(401);
+  });
+
   it('refuses a websocket without a session', async () => {
     const res = await worker.fetch('https://dads.test/ws', {
       headers: { Upgrade: 'websocket' },

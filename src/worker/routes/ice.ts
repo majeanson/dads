@@ -1,4 +1,5 @@
 import type { Env } from '../env';
+import { currentSession } from './auth';
 
 /**
  * ICE servers for the voice mesh.
@@ -11,7 +12,13 @@ import type { Env } from '../env';
  * Same shape as jaffre's, deliberately: it is a solved problem and the two
  * apps sit on the same account.
  */
-export async function getIce(env: Env): Promise<Response> {
+export async function getIce(request: Request, env: Env, isProduction: boolean): Promise<Response> {
+  // Behind the session check like everything else. Minting TURN credentials
+  // is a billable act on our account, and an open endpoint that hands out
+  // six-hour relay credentials to anyone who asks is a bill waiting to happen.
+  const session = await currentSession(request, env, isProduction);
+  if (session === null) return Response.json({ error: 'unauthorized' }, { status: 401 });
+
   const iceServers: unknown[] = [
     { urls: 'stun:stun.cloudflare.com:3478' },
     { urls: 'stun:stun.l.google.com:19302' },

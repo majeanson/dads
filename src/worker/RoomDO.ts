@@ -676,28 +676,38 @@ export class RoomDO extends DurableObject<Env> {
     const groupId = this.groupId();
     if (ids.length === 0 || !groupId) return found;
 
-    const placeholders = ids.map(() => '?').join(', ');
-    const { results } = await this.env.DB.prepare(
-      `SELECT id, name, content_type, width, height FROM media
-        WHERE group_id = ? AND id IN (${placeholders})`,
-    )
-      .bind(groupId, ...ids)
-      .all<{
-        id: string;
-        name: string;
-        content_type: string;
-        width: number | null;
-        height: number | null;
-      }>();
+    // D1 allows around a hundred bound parameters per statement, and the tail
+    // holds up to 500 rows. Media is capped at ten LIVE per group, but pruned
+    // ids stay in tail.media_id forever, so a long-running room can easily
+    // carry more distinct ids than that in one backfill. Unchunked, a
+    // reconnect would throw, the hello frame would never be built, and that
+    // dad would be stuck in a reconnect loop he could not get out of.
+    const CHUNK = 80;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const slice = ids.slice(i, i + CHUNK);
+      const placeholders = slice.map(() => '?').join(', ');
+      const { results } = await this.env.DB.prepare(
+        `SELECT id, name, content_type, width, height FROM media
+          WHERE group_id = ? AND id IN (${placeholders})`,
+      )
+        .bind(groupId, ...slice)
+        .all<{
+          id: string;
+          name: string;
+          content_type: string;
+          width: number | null;
+          height: number | null;
+        }>();
 
-    for (const row of results) {
-      found.set(row.id, {
-        id: row.id,
-        name: row.name,
-        contentType: row.content_type,
-        width: row.width,
-        height: row.height,
-      });
+      for (const row of results) {
+        found.set(row.id, {
+          id: row.id,
+          name: row.name,
+          contentType: row.content_type,
+          width: row.width,
+          height: row.height,
+        });
+      }
     }
     return found;
   }

@@ -77,8 +77,13 @@ function NightEditor({ night, onDone }: { night: DadNight | null; onDone: () => 
         weekday: Number(weekday),
         time,
         // The group's zone is the group's, not whoever happens to be editing
-        // from a hotel in another country.
-        tz: night?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+        // from a hotel in another country — and when no night has ever been
+        // set there is no group zone here to send, so send none and let the
+        // server keep the one it already holds. dad_night_tz is not just the
+        // night's clock: the ISO week and the daily prompt rollover are both
+        // derived from it, so a dad on a business trip could otherwise move
+        // the whole group's calendar.
+        tz: night?.tz ?? null,
       });
       onDone();
     } catch {

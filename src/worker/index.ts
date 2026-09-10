@@ -99,7 +99,7 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
       return getTodo(request, env, prod);
 
     case 'GET /api/ice':
-      return getIce(env);
+      return getIce(request, env, prod);
 
     case 'GET /api/table':
       return getTable(request, env, prod);

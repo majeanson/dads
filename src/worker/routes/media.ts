@@ -1,6 +1,14 @@
 import type { Env } from '../env';
 import { newId } from '../identity';
-import { keyFor, MAX_UPLOAD_BYTES, mediaFor, pruneMedia, recentMedia } from '../media';
+import {
+  isInlineSafe,
+  keyFor,
+  MAX_UPLOAD_BYTES,
+  mediaFor,
+  pruneMedia,
+  recentMedia,
+  safeContentType,
+} from '../media';
 import { currentSession } from './auth';
 
 const MAX_NAME = 120;
@@ -27,6 +35,15 @@ function safeName(raw: unknown): string {
   const trimmed = name.replace(/[\r\n\t]/g, ' ').trim();
   const base = trimmed.split(/[\\/]/).pop() ?? '';
   return base.slice(0, MAX_NAME) || 'file';
+}
+
+/**
+ * A filename for the download header, built from the id rather than from the
+ * uploader's name: a header value cannot carry a quote or a newline safely,
+ * and the real name is already shown in the room next to the link.
+ */
+function downloadName(id: string): string {
+  return `${id.replace(/[^A-Za-z0-9_-]/g, '')}.bin`;
 }
 
 function dimension(value: string | null): number | null {
@@ -62,9 +79,11 @@ export async function uploadMedia(
     return Response.json({ error: 'too_large' }, { status: 413 });
   }
 
-  const contentType = (request.headers.get('Content-Type') ?? 'application/octet-stream')
-    .split(';')[0]!
-    .trim();
+  // Never stored as declared. A browser that can be talked into rendering an
+  // upload as text/html or image/svg+xml is running an uploader's script on
+  // this app's own origin, with this app's session — so only a short list of
+  // image types survives, and everything else becomes a byte stream.
+  const contentType = safeContentType(request.headers.get('Content-Type') ?? '');
   const name = safeName(request.headers.get('X-Dads-Filename'));
 
   const id = newId('med');
@@ -133,6 +152,14 @@ export async function getMedia(
   // Immutable: the id names these exact bytes and nothing ever rewrites them.
   // Private, because the response is only correct for the dad who asked.
   headers.set('Cache-Control', 'private, max-age=31536000, immutable');
+  // Belt to the allowlist's braces: never let a browser guess a type we did
+  // not agree to, and hand anything but a known-safe image to the downloader
+  // rather than to the renderer.
+  headers.set('X-Content-Type-Options', 'nosniff');
+  const type = headers.get('Content-Type') ?? 'application/octet-stream';
+  if (!isInlineSafe(type)) {
+    headers.set('Content-Disposition', `attachment; filename="${downloadName(id)}"`);
+  }
   return new Response(object.body, { headers });
 }
 

@@ -33,13 +33,18 @@ async function groupTimeZone(env: Env, groupId: string): Promise<string> {
   return row?.dad_night_tz ?? 'America/Montreal';
 }
 
-async function promptById(env: Env, id: string): Promise<Prompt | null> {
+/**
+ * Scoped to the group even though every current caller already resolved the id
+ * from that group's own rows: this is the one place a prompt is read by id,
+ * and it should not be possible to reach another group's through it.
+ */
+async function promptById(env: Env, groupId: string, id: string): Promise<Prompt | null> {
   const row = await env.DB.prepare(
     `SELECT p.id, p.body, p.group_id, m.display_name AS author_name
        FROM prompts p LEFT JOIN members m ON m.id = p.author_member_id
-      WHERE p.id = ?`,
+      WHERE p.id = ? AND (p.group_id IS NULL OR p.group_id = ?)`,
   )
-    .bind(id)
+    .bind(id, groupId)
     .first<{ id: string; body: string; group_id: string | null; author_name: string | null }>();
   if (!row) return null;
   return { id: row.id, body: row.body, groupId: row.group_id, authorName: row.author_name };
@@ -65,7 +70,7 @@ export async function todaysPrompt(
     .bind(groupId, day)
     .first<{ prompt_id: string }>();
   if (pinned) {
-    const prompt = await promptById(env, pinned.prompt_id);
+    const prompt = await promptById(env, groupId, pinned.prompt_id);
     if (prompt) return { day, prompt };
     // The pinned prompt was deleted outright. Fall through and pick again
     // rather than showing a group nothing.
@@ -90,7 +95,7 @@ export async function todaysPrompt(
     .bind(groupId, day, chosen)
     .run();
 
-  const prompt = await promptById(env, chosen);
+  const prompt = await promptById(env, groupId, chosen);
   return prompt ? { day, prompt } : null;
 }
 
