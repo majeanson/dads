@@ -2,12 +2,10 @@ import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { setRooms } from './api';
 import { useT } from './i18n';
-import { NightEditor } from './NightEditor';
 import { Remind } from './Remind';
 import { Toggles } from './Toggles';
 import { Button } from './ui/Button';
 import { Switch } from './ui/Switch';
-import type { DadNight } from '../shared/dadNight';
 import type { RoomsOpen } from '../shared/protocol';
 
 /**
@@ -17,15 +15,7 @@ import type { RoomsOpen } from '../shared/protocol';
  * what the GROUP has open, which any dad may change and all of them then see,
  * and what THIS dad reads it in, which is his alone and lives on his device.
  */
-export function Settings({
-  night,
-  rooms,
-  onSignOut,
-}: {
-  night: DadNight | null;
-  rooms: RoomsOpen;
-  onSignOut: () => void;
-}) {
+export function Settings({ rooms, onSignOut }: { rooms: RoomsOpen; onSignOut: () => void }) {
   const { t } = useT();
   // Optimistic: the switch answers the finger, and the socket brings everyone
   // else's copy along a moment later.
@@ -53,11 +43,6 @@ export function Settings({
 
   return (
     <div className="settings grid gap-6" data-testid="settings">
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-muted">{t('n.title')}</h2>
-        <NightEditor night={night} onDone={() => {}} />
-      </section>
-
       <section>
         <h2 className="mb-2 text-sm font-semibold text-muted">{t('set.rooms')}</h2>
         {/* Any dad, like the night: there is no admin in a room of five

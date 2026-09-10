@@ -91,7 +91,10 @@ test('what the room says about itself is read in each dad’s own language', asy
   await marc.getByRole('button', { name: 'Settings' }).click();
   await marc.getByRole('button', { name: 'FR', exact: true }).click();
 
-  // Marc sets the night, in French, in the same sheet.
+  // Marc sets the night, in French, from the menu's dad-night item.
+  await marc.getByRole('button', { name: 'Ferme', exact: true }).click();
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await marc.getByTestId('dad-night').click();
   await marc.getByLabel('Jour').selectOption('4');
   await marc.getByLabel('Heure').fill('21:00');
   await marc.getByRole('button', { name: 'Enregistre' }).click();

@@ -219,6 +219,26 @@ describe('the night itself', () => {
     expect(marc.lines()).toContain('Dad night. The table’s open.');
   });
 
+  it('nudges the day before without saying anything in the room', async () => {
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    await settle();
+
+    // The reminder is its own timer on the same alarm. Firing it must not
+    // open the night — a third kind sharing one alarm is exactly how the
+    // start gets eaten.
+    clockAt(start - 24 * 60 * 60 * 1000 + 1000);
+    expect(await fireAlarm(group)).toBe(true);
+    await settle();
+    expect(marc.lines()).not.toContain('Dad night. The table’s open.');
+
+    // And the night still opens at the hour it always did.
+    clockAt(start + 1000);
+    expect(await fireAlarm(group)).toBe(true);
+    await settle();
+    expect(marc.lines()).toContain('Dad night. The table’s open.');
+  });
+
   it('closes the night with what the group actually did', async () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');

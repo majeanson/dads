@@ -66,6 +66,10 @@ const LEAVE_GRACE_MS = 15_000;
  */
 const TABLE_DEDUPE_MS = 20_000;
 
+/** How long before the table opens the phones are told. The evening before,
+ * while a man can still move something. */
+const REMIND_BEFORE_MS = 24 * 60 * 60 * 1000;
+
 /** What a live socket remembers about who is on the other end of it. Named
  * for its job rather than for serializeAttachment, so it does not collide
  * with a message's Attachment. */
@@ -396,6 +400,7 @@ export class RoomDO extends DurableObject<Env> {
       this.ctx.storage.sql.exec('DELETE FROM schedule WHERE kind = ?', timer.kind);
       if (timer.kind === 'night_start') await this.openDadNight(now);
       else if (timer.kind === 'night_end') await this.closeDadNight(now);
+      else if (timer.kind === 'night_remind') await this.remindOfDadNight();
     }
 
     this.ensureNightScheduled();
@@ -433,7 +438,9 @@ export class RoomDO extends DurableObject<Env> {
       } else {
         this.ctx.storage.sql.exec(`DELETE FROM meta WHERE key = 'night'`);
       }
-      this.ctx.storage.sql.exec(`DELETE FROM schedule WHERE kind IN ('night_start','night_end')`);
+      this.ctx.storage.sql.exec(
+        `DELETE FROM schedule WHERE kind IN ('night_start','night_end','night_remind')`,
+      );
     }
     this.ensureNightScheduled();
   }
@@ -442,7 +449,9 @@ export class RoomDO extends DurableObject<Env> {
   private ensureNightScheduled(now = Date.now()): void {
     const night = this.storedNight();
     if (!night || !isValidNight(night)) {
-      this.ctx.storage.sql.exec(`DELETE FROM schedule WHERE kind IN ('night_start','night_end')`);
+      this.ctx.storage.sql.exec(
+        `DELETE FROM schedule WHERE kind IN ('night_start','night_end','night_remind')`,
+      );
       return;
     }
     const armed = this.ctx.storage.sql.exec('SELECT 1 FROM schedule').toArray().length;
@@ -453,15 +462,39 @@ export class RoomDO extends DurableObject<Env> {
     const window = currentWindow(night, now);
     if (window) return this.arm('night_end', window.end);
     const start = nextStart(night, now);
-    if (start !== null) this.arm('night_start', start);
+    if (start === null) return;
+    this.arm('night_start', start);
+    // The day before, for the dads who asked to be told. A nudge on Wednesday
+    // evening is the one that changes whether a man turns up on Thursday; the
+    // one at 21:00 on the night only tells him what he is already missing.
+    const remind = start - REMIND_BEFORE_MS;
+    if (remind > now) this.arm('night_remind', remind);
   }
 
-  private arm(kind: 'night_start' | 'night_end', at: number): void {
+  private arm(kind: 'night_start' | 'night_end' | 'night_remind', at: number): void {
     this.ctx.storage.sql.exec(
       'INSERT OR REPLACE INTO schedule (kind, due_at) VALUES (?, ?)',
       kind,
       at,
     );
+  }
+
+  /**
+   * Tomorrow night, to the phones that asked.
+   *
+   * Nothing is said in the room: a line saying "dad night tomorrow" every
+   * single week is the definition of furniture, and the countdown is already
+   * on the header for anyone who has the room open. This reaches the man who
+   * does not.
+   */
+  private async remindOfDadNight(): Promise<void> {
+    const groupId = this.groupId();
+    if (groupId === undefined) return;
+    await notifyGroup(this.env, groupId, {
+      title: 'dads',
+      body: 'Dad night tomorrow. Coming?',
+      tag: 'dad-night-soon',
+    });
   }
 
   private async openDadNight(now: number): Promise<void> {

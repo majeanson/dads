@@ -5,9 +5,11 @@ import { Board } from './Board';
 import { CallBar, JoinCall } from './CallBar';
 import { Here } from './Here';
 import { Invite } from './Invite';
+import { Night } from './Night';
 import {
   ArrowDown,
   CalendarCheck,
+  CalendarClock,
   Menu as MenuIcon,
   MessageCircleQuestion,
   Plus,
@@ -22,7 +24,7 @@ import { Button } from './ui/Button';
 import { cn } from './ui/cn';
 import { parts } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
-import { nightSoon } from './NightEditor';
+import { nightItem, nightSoon } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
@@ -44,7 +46,7 @@ const TICK_MS = 15_000;
 const NEAR_BOTTOM_PX = 80;
 
 /** What is open over the room, if anything. */
-type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'invite' | 'settings';
+type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night' | 'invite' | 'settings';
 
 /**
  * The room is the conversation and the call. That is the whole screen.
@@ -270,8 +272,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               about. A button, because it does something — but not a blue
               underlined link, which is three times louder than a group of five
               men needs its own head-count to be. */}
-          <p className="text-[0.9375rem] text-ink" onClick={() => setSheet('here')}>
-            <button type="button" className="count-in" data-testid="connection">
+          <p className="text-[0.9375rem] text-ink">
+            <button
+              type="button"
+              className="count-in"
+              data-testid="connection"
+              onClick={() => setSheet('here')}
+            >
               {room.connection === 'open'
                 ? t('room.here', { n: room.roster.length })
                 : room.connection === 'connecting'
@@ -281,7 +288,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             {soon === null ? null : (
               <span className="max-[26rem]:block max-[26rem]:pt-0.5">
                 <span className="max-[26rem]:hidden"> · </span>
-                {soon}
+                <button type="button" className="count-in" onClick={() => setSheet('night')}>
+                  {soon}
+                </button>
               </span>
             )}
           </p>
@@ -536,6 +545,11 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               </Button>
             ) : null}
 
+            <Button block data-testid="dad-night" onClick={() => setSheet('night')}>
+              <CalendarClock size={17} aria-hidden="true" className="text-muted" />
+              {nightItem(t, lang, room.night, now)}
+            </Button>
+
             {/* Second from the bottom, not first: the room is for the dads
                 who are already in it. But it is in the menu at all because
                 everything else in this app is worth nothing until the other
@@ -545,7 +559,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               {t('menu.invite')}
             </Button>
 
-            <Button block data-testid="dad-night" onClick={() => setSheet('settings')}>
+            <Button block onClick={() => setSheet('settings')}>
               <SettingsIcon size={17} aria-hidden="true" className="text-muted" />
               {t('menu.settings')}
             </Button>
@@ -584,6 +598,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         </Sheet>
       ) : null}
 
+      {sheet === 'night' ? (
+        <Sheet title={t('n.title')} onClose={() => setSheet(null)}>
+          <Night night={room.night} you={session.member.id} />
+        </Sheet>
+      ) : null}
+
       {sheet === 'invite' ? (
         <Sheet title={t('inv.title')} onClose={() => setSheet(null)}>
           <Invite />
@@ -592,7 +612,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
       {sheet === 'settings' ? (
         <Sheet title={t('set.title')} onClose={() => setSheet(null)}>
-          <Settings night={room.night} rooms={room.rooms} onSignOut={onSignOut} />
+          <Settings rooms={room.rooms} onSignOut={onSignOut} />
         </Sheet>
       ) : null}
     </main>

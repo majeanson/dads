@@ -24,9 +24,9 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   // With no night set the room says nothing about it anywhere.
   await expect(sam.locator('.room-head')).not.toContainText('dad night');
 
-  // It is set in Settings, along with everything else a dad can change.
+  // It is set where it is answered: the menu's own dad-night item.
   await marc.getByRole('button', { name: 'Menu' }).click();
-  await marc.getByRole('button', { name: 'Settings' }).click();
+  await marc.getByTestId('dad-night').click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
   await marc.getByRole('button', { name: 'Save' }).click();
@@ -42,6 +42,22 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   // It survives a reload, because it lives in D1 and not in the tab.
   await marc.reload();
   await expect(marc.locator('.room-head')).toContainText(/dad night/);
+
+  // And the question the standing slot never answered: who is actually
+  // coming. Marc says he is, in front of Sam.
+  await marc
+    .locator('.room-head')
+    .getByRole('button', { name: /dad night/ })
+    .click();
+  await marc.getByTestId('rsvp-in').click();
+  await expect(marc.getByTestId('rsvp-who')).toContainText('In: Marc');
+  await expect(sam.getByTestId('line').filter({ hasText: 'Marc is in.' })).toBeVisible();
+
+  // Changing his mind rewrites the answer rather than adding a second one.
+  await marc.getByTestId('rsvp-out').click();
+  await expect(marc.getByTestId('rsvp-who')).toContainText('Can’t: Marc');
+  await expect(marc.getByTestId('rsvp-who')).not.toContainText('In: Marc');
+  await expect(sam.getByTestId('line').filter({ hasText: 'Marc can’t make it.' })).toBeVisible();
 
   await marcCtx.close();
   await samCtx.close();

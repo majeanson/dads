@@ -20,6 +20,7 @@ export type Said =
   | { k: 'night_cleared'; by: string }
   | { k: 'night_open' }
   | { k: 'night_done'; dads: number; lines: number }
+  | { k: 'rsvp'; name: string; coming: boolean }
   | { k: 'check_in'; name: string; rating: number; note: string }
   | { k: 'commitment'; name: string; body: string }
   | { k: 'outcome'; name: string; body: string; note: string; done: boolean }
@@ -56,6 +57,10 @@ export function parseSaid(raw: unknown): Said | null {
     }
     case 'night_open':
       return { k: 'night_open' };
+    case 'rsvp': {
+      const name = str(said.name);
+      return name ? { k: 'rsvp', name, coming: said.coming === true } : null;
+    }
     case 'night_done': {
       const dads = num(said.dads);
       const lines = num(said.lines);
@@ -122,6 +127,8 @@ export function describeSaid(t: T, lang: Lang, said: Said, joined = false): stri
             dads: t(`sys.night_dads_${plural(lang, said.dads)}`, { n: said.dads }),
             lines: t(`sys.night_lines_${plural(lang, said.lines)}`, { n: said.lines }),
           });
+    case 'rsvp':
+      return t(said.coming ? 'sys.rsvp_in' : 'sys.rsvp_out', { name: said.name });
     case 'check_in':
       return t(said.note ? 'sys.check_in_note' : 'sys.check_in', {
         name: said.name,

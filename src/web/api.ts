@@ -109,6 +109,35 @@ export async function setNight(night: NightInput | null): Promise<void> {
   if (!res.ok) throw new Error(`PUT /api/night ${res.status}`);
 }
 
+export interface Rsvp {
+  memberId: string;
+  name: string;
+  coming: boolean;
+}
+
+export interface RsvpState {
+  /** The instant the evening being answered starts, or null if there is no
+   * night set. Decided by the server, never by this clock. */
+  occurrence: number | null;
+  answers: Rsvp[];
+}
+
+export async function fetchRsvps(): Promise<RsvpState> {
+  const res = await fetch('/api/rsvp');
+  if (!res.ok) throw new Error(`GET /api/rsvp ${res.status}`);
+  return (await res.json()) as RsvpState;
+}
+
+export async function setRsvp(coming: boolean): Promise<RsvpState> {
+  const res = await fetch('/api/rsvp', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ coming }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/rsvp ${res.status}`);
+  return (await res.json()) as RsvpState;
+}
+
 /** What the group has open. Any dad may change it; everyone sees it. */
 export async function setRooms(rooms: Partial<RoomsOpen>): Promise<void> {
   const res = await fetch('/api/rooms', {
