@@ -163,10 +163,6 @@
   }
 
   .quiet,
-  .lede {
-    color: var(--muted);
-  }
-
   .error {
     margin: 0.5rem 0 0;
     color: var(--danger);
@@ -248,15 +244,6 @@
   label {
     font-size: 0.875rem;
     color: var(--muted);
-  }
-
-  .join input {
-    margin-bottom: 0.75rem;
-  }
-
-  .join button[type='submit'],
-  form button[type='submit'] {
-    justify-self: start;
   }
 
   /* -------------------------------------------------------------------- room */
@@ -372,49 +359,6 @@
     gap: 0.5rem;
   }
 
-  .menu-roster {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 0.5rem;
-    margin: 0 0 0.25rem;
-    padding: 0;
-    list-style: none;
-    color: var(--muted);
-    font-size: 0.875rem;
-  }
-
-  .menu-roster li:not(:last-child)::after {
-    content: ',';
-  }
-
-  /* --- today's question, at the top of the questions sheet --- */
-
-  .prompt-card {
-    margin-bottom: 1.5rem;
-  }
-
-  .prompt-body {
-    margin: 0 0 0.35rem;
-    font-size: 1rem;
-  }
-
-  .prompt-meta {
-    margin: 0 0 0.5rem;
-    color: var(--muted);
-    font-size: 0.8125rem;
-  }
-
-  .prompt-answer textarea {
-    width: 100%;
-  }
-
-  .prompt-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-  }
-
   /* --- what was said --- */
 
   .lines {
@@ -428,8 +372,8 @@
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: baseline;
-    gap: 0.5rem;
-    padding: 0.15rem 0;
+    gap: 0.6rem;
+    padding: 0.25rem 0;
   }
 
   .line .who {
@@ -469,8 +413,9 @@
 
   .composer {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0.5rem;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.4rem;
   }
 
   /* --- the table --- */
@@ -482,7 +427,8 @@
     height: 100%;
     min-height: 24rem;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
     overflow: hidden;
   }
 
@@ -522,198 +468,6 @@
     place-content: center;
     padding: 2rem 1rem;
     text-align: center;
-  }
-
-  /* ------------------------------------------------- prompts and the board */
-
-  .prompt-list section,
-  .board section {
-    margin-bottom: 1.5rem;
-  }
-
-  .prompt-list h2,
-  .board h2 {
-    color: var(--muted);
-  }
-
-  .prompts,
-  .board-rows {
-    margin: 0;
-    padding: 0;
-    border-top: 1px solid var(--border);
-    list-style: none;
-  }
-
-  .prompt-row,
-  .board-row {
-    border-bottom: 1px solid var(--border);
-  }
-
-  .prompt-row-main {
-    display: block;
-    width: 100%;
-    padding: 0.5rem 0;
-    border: 0;
-    border-radius: 0;
-    background: none;
-    color: inherit;
-    text-align: left;
-  }
-
-  .prompt-row-main:disabled {
-    opacity: 1;
-    cursor: default;
-  }
-
-  .prompt-row-body {
-    display: block;
-  }
-
-  .prompt-row-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 0.5rem;
-    margin-top: 0.1rem;
-    color: var(--muted);
-    font-size: 0.8125rem;
-  }
-
-  .prompt-row-meta .is-answered {
-    color: var(--accent);
-  }
-
-  .prompt-answers {
-    margin: 0 0 0.5rem;
-    padding: 0 0 0 0.75rem;
-    border-left: 1px solid var(--border);
-    list-style: none;
-  }
-
-  .prompt-answers li {
-    padding: 0.15rem 0;
-    font-size: 0.875rem;
-  }
-
-  .prompt-answers .who {
-    font-weight: 600;
-  }
-
-  .add-prompt {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .add-prompt .error {
-    grid-column: 1 / -1;
-  }
-
-  /* --- the board --- */
-
-  .board-row {
-    display: grid;
-    grid-template-columns: 7rem 1fr;
-    gap: 0.5rem;
-    padding: 0.5rem 0;
-  }
-
-  @media (max-width: 32rem) {
-    .board-row {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-  }
-
-  .board-who {
-    font-weight: 600;
-  }
-
-  .board-detail {
-    display: grid;
-    gap: 0.15rem;
-  }
-
-  .board-commitment {
-    font-size: 0.9375rem;
-  }
-
-  .board-commitment.is-done {
-    color: var(--accent);
-  }
-
-  .board-commitment.is-missed {
-    color: var(--muted);
-  }
-
-  /* No box around either: each is the only thing on its part of the sheet, and
-     a border round the only thing there says nothing. */
-  .your-week,
-  .how-did-it-go {
-    display: grid;
-    gap: 0.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .your-week button[type='submit'] {
-    justify-self: start;
-  }
-
-  .your-week input,
-  .how-did-it-go input {
-    width: 100%;
-  }
-
-  .rating {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem;
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-
-  .rating legend {
-    padding: 0 0.5rem 0 0;
-    color: var(--muted);
-    font-size: 0.875rem;
-  }
-
-  .rating label {
-    position: relative;
-    display: grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    color: var(--muted);
-    font-size: 0.9375rem;
-    font-variant-numeric: tabular-nums;
-    cursor: pointer;
-  }
-
-  .rating label.is-picked {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: var(--on-accent);
-  }
-
-  /* Transparent, but filling the whole control: the input IS the hit area.
-   * A 0x0 input has no bounding box, which costs it its own click target and
-   * makes it invisible to anything driving the page. */
-  .rating input {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    opacity: 0;
-    cursor: pointer;
-  }
-
-  .rating label:has(input:focus-visible) {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
   }
 
   /* --- the conversation ------------------------------------------------- */
@@ -784,35 +538,6 @@
     display: flex;
     align-items: baseline;
     gap: 0.75rem;
-  }
-
-  /* --- attachments ------------------------------------------------------- */
-
-  .attachment {
-    display: block;
-    margin-top: 0.35rem;
-    width: fit-content;
-    max-width: 100%;
-  }
-
-  .attachment img {
-    display: block;
-    /* The intrinsic width/height on the element reserves the right shape before
-     * the bytes arrive; this keeps it inside the column once they do. */
-    max-width: min(20rem, 100%);
-    height: auto;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-  }
-
-  .attachment-file {
-    display: inline-block;
-    margin-top: 0.35rem;
-    padding: 0.25rem 0.6rem;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    font-size: 0.875rem;
-    text-decoration: none;
   }
 
   .composer {
@@ -933,40 +658,6 @@
     font-size: 0.75rem;
   }
 
-  /* --- who's here --------------------------------------------------------
-   *
-   * The roster, and the comings and goings that used to be lines in the
-   * conversation. Behind the header's count, because this is what you want
-   * when you wonder who looked in — not what you want between two things
-   * somebody said.
-   */
-  .here h2 {
-    margin-top: 1.25rem;
-  }
-
-  .comings {
-    margin: 0;
-    padding: 0;
-    border-top: 1px solid var(--border);
-    list-style: none;
-  }
-
-  .comings li {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.35rem 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.9375rem;
-  }
-
-  .comings time {
-    color: var(--muted);
-    font-size: 0.8125rem;
-    font-variant-numeric: tabular-nums;
-  }
-
   /* The header's two controls: the way into the call, and the way to everything
      else. The call's own row exists only while there is a call. */
   .head-actions {
@@ -1021,15 +712,6 @@
     opacity: 0.55;
   }
 
-  /* A clip sits where a photo would, at the same width. */
-  video.attachment {
-    max-width: min(20rem, 100%);
-    height: auto;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-soft);
-  }
-
   /* Said in the menu where the switch would have been, when there cannot be a
      switch: on an iPhone that is until the app is on the home screen. */
   .remind-note {
@@ -1072,14 +754,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-  }
-
-  .composer .pending img {
-    width: 2.75rem;
-    height: 2.75rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    object-fit: cover;
   }
 
   .pending-what {

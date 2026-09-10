@@ -7,7 +7,10 @@ import {
   type PoolEntry,
   type PromptAnswer,
 } from './api';
+import { Plus } from 'lucide-react';
 import { plural, promptText, useT, type Key } from './i18n';
+import { Button } from './ui/Button';
+import { FIELD } from './ui/field';
 
 const ADD_ERRORS: Record<string, Key> = {
   empty: 'q.add_empty',
@@ -53,8 +56,8 @@ export function PromptList() {
     };
   }, []);
 
-  if (state.status === 'loading') return <p className="quiet">{t('q.loading')}</p>;
-  if (state.status === 'error') return <p className="quiet">{t('q.failed')}</p>;
+  if (state.status === 'loading') return <p className="text-muted">{t('q.loading')}</p>;
+  if (state.status === 'error') return <p className="text-muted">{t('q.failed')}</p>;
 
   const { mine, history } = state;
 
@@ -63,13 +66,13 @@ export function PromptList() {
   }
 
   return (
-    <div className="prompt-list" data-testid="prompt-list">
+    <div data-testid="prompt-list">
       {/* Nothing at all until the group has been asked something before:
           a heading over "nothing yet" is two lines saying nothing. */}
       {history.length === 0 ? null : (
-        <section>
-          <h2>{t('q.asked_before')}</h2>
-          <ol className="prompts">
+        <section className="mb-6">
+          <h2 className="mb-1 text-sm font-semibold text-muted">{t('q.asked_before')}</h2>
+          <ol className="m-0 list-none border-t border-line p-0">
             {history.map((h) => (
               <PromptRow
                 key={`${h.day}-${h.promptId}`}
@@ -86,7 +89,7 @@ export function PromptList() {
         {/* No heading: the box says what it is. */}
         <AddPromptForm onAdded={added} />
         {mine.length === 0 ? null : (
-          <ol className="prompts">
+          <ol className="m-0 mt-3 list-none border-t border-line p-0">
             {mine.map((p) => (
               <PromptRow
                 key={p.id}
@@ -132,19 +135,19 @@ function PromptRow({
   }, [open, loaded, answers, id]);
 
   return (
-    <li className="prompt-row" data-testid="prompt-row">
+    <li className="border-b border-line" data-testid="prompt-row">
       <button
         type="button"
-        className="prompt-row-main"
+        className="block w-full cursor-pointer border-0 bg-transparent px-0 py-2.5 text-left text-ink disabled:cursor-default"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         disabled={answers === 0}
       >
-        <span className="prompt-row-body">{body}</span>
-        <span className="prompt-row-meta">
+        <span className="block text-[0.9375rem]">{body}</span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
           {meta ? <span>{meta}</span> : null}
           {answers > 0 ? (
-            <span className="is-answered">
+            <span className="text-accent">
               {t(`q.n_answers_${plural(lang, answers)}`, { n: answers })}
             </span>
           ) : null}
@@ -152,13 +155,13 @@ function PromptRow({
       </button>
 
       {open ? (
-        <ul className="prompt-answers">
+        <ul className="m-0 mb-2 list-none border-l-2 border-line py-0 pl-3">
           {loaded === null ? (
-            <li className="quiet">…</li>
+            <li className="text-muted">…</li>
           ) : (
             loaded.map((a) => (
-              <li key={a.id}>
-                <span className="who">{a.name}</span> {a.body}
+              <li key={a.id} className="py-1 text-sm">
+                <span className="font-semibold">{a.name}</span> {a.body}
               </li>
             ))
           )}
@@ -189,7 +192,7 @@ function AddPromptForm({ onAdded }: { onAdded: (entry: PoolEntry) => void }) {
   }
 
   return (
-    <form className="add-prompt" onSubmit={submit}>
+    <form className="flex flex-wrap items-start gap-2" onSubmit={submit}>
       <label htmlFor="new-prompt" className="sr-only">
         {t('q.add_label')}
       </label>
@@ -199,12 +202,14 @@ function AddPromptForm({ onAdded }: { onAdded: (entry: PoolEntry) => void }) {
         onChange={(e) => setBody(e.target.value)}
         placeholder={t('q.add_placeholder')}
         maxLength={240}
+        className={`${FIELD} min-w-0 flex-1`}
       />
-      <button type="submit" disabled={busy || !body.trim()}>
+      <Button type="submit" look="primary" disabled={busy || !body.trim()}>
+        <Plus size={15} aria-hidden="true" />
         {t('q.add_button')}
-      </button>
+      </Button>
       {error ? (
-        <p className="error" role="alert">
+        <p className="w-full text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}

@@ -1,3 +1,4 @@
+import { LogIn, LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchPresence, type PresenceEvent } from './api';
 import { useT } from './i18n';
@@ -50,13 +51,19 @@ export function Here({ roster }: { roster: { memberId: string; name: string; you
   }, []);
 
   return (
-    <div className="here" data-testid="here">
+    <div data-testid="here">
       {roster.length === 0 ? (
-        <p className="quiet">{t('here.nobody')}</p>
+        <p className="text-muted">{t('here.nobody')}</p>
       ) : (
-        <ul className="menu-roster" aria-label={t('here.title')}>
+        <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label={t('here.title')}>
           {roster.map((m) => (
-            <li key={m.memberId} data-testid="roster-entry">
+            <li
+              key={m.memberId}
+              data-testid="roster-entry"
+              className="rounded-full border border-line bg-panel px-3 py-1 text-sm"
+            >
+              {/* A dot, not a word: the list is of people who are here. */}
+              <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-accent align-middle" />
               {m.name}
               {m.you ? t('here.you') : ''}
             </li>
@@ -64,19 +71,30 @@ export function Here({ roster }: { roster: { memberId: string; name: string; you
         </ul>
       )}
 
-      <h2>{t('here.comings')}</h2>
+      <h2 className="mt-6 mb-2 text-sm font-semibold text-muted">{t('here.comings')}</h2>
       {events === 'loading' ? (
-        <p className="quiet">…</p>
+        <p className="text-muted">…</p>
       ) : events === null ? (
-        <p className="quiet">{t('here.failed')}</p>
+        <p className="text-muted">{t('here.failed')}</p>
       ) : events.length === 0 ? (
-        <p className="quiet">{t('here.nothing')}</p>
+        <p className="text-muted">{t('here.nothing')}</p>
       ) : (
-        <ul className="comings">
+        <ul className="m-0 list-none p-0">
           {events.map((e) => (
-            <li key={`${e.at}-${e.name}-${e.kind}`} data-testid="coming">
-              <span>{t(e.kind === 'in' ? 'here.came_in' : 'here.left', { name: e.name })}</span>
-              <time>{when(e.at, locale)}</time>
+            <li
+              key={`${e.at}-${e.name}-${e.kind}`}
+              data-testid="coming"
+              className="flex items-center gap-2.5 border-b border-line py-2 text-[0.9375rem] last:border-0"
+            >
+              {e.kind === 'in' ? (
+                <LogIn size={15} aria-hidden="true" className="shrink-0 text-accent" />
+              ) : (
+                <LogOut size={15} aria-hidden="true" className="shrink-0 text-muted" />
+              )}
+              <span className="flex-1">
+                {t(e.kind === 'in' ? 'here.came_in' : 'here.left', { name: e.name })}
+              </span>
+              <time className="text-xs text-muted tabular-nums">{when(e.at, locale)}</time>
             </li>
           ))}
         </ul>

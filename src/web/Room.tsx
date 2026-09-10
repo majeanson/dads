@@ -262,7 +262,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       onDragOver={(e) => e.preventDefault()}
       onDrop={dropped}
     >
-      <header className="room-head">
+      <header className="room-head border-b border-line pb-2.5">
         <div>
           <h1>{session.group.name}</h1>
           {/* The count is also the door to the roster and to who has been
@@ -386,11 +386,15 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             </Button>
           ) : null}
 
-          <p className="typing" aria-live="polite">
+          <p className="min-h-[1.2em] text-xs text-muted" aria-live="polite">
             {typingNames.length > 0 ? t('room.typing', { names: typingNames.join(', ') }) : ' '}
           </p>
 
-          <form className="composer" onSubmit={submit} onPaste={pasted}>
+          <form
+            className="composer rounded-xl border border-line bg-panel p-1.5 shadow-sm"
+            onSubmit={submit}
+            onPaste={pasted}
+          >
             {pending !== null ? (
               <p className="pending" data-testid="pending-media">
                 {preview === null ? null : <img src={preview} alt="" />}
@@ -445,6 +449,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             </label>
             <input
               id="say"
+              className="min-w-0 rounded-lg border-0 bg-transparent px-2 text-[0.9375rem] text-ink placeholder:text-muted/70 focus:outline-none"
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);

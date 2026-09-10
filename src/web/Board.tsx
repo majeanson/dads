@@ -8,7 +8,11 @@ import {
   type BoardData,
   type BoardRow,
 } from './api';
+import { Check } from 'lucide-react';
 import { useT, type Key, type T } from './i18n';
+import { Button } from './ui/Button';
+import { cn } from './ui/cn';
+import { FIELD } from './ui/field';
 
 const RATING: Key[] = [
   'b.rating_1',
@@ -46,14 +50,14 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
 
   useEffect(reload, [reload]);
 
-  if (data === 'loading') return <p className="quiet">{t('b.loading')}</p>;
-  if (!data) return <p className="quiet">{t('b.failed')}</p>;
+  if (data === 'loading') return <p className="text-muted">{t('b.loading')}</p>;
+  if (!data) return <p className="text-muted">{t('b.failed')}</p>;
 
   const [thisWeek, ...before] = data.weeks;
   const mine = thisWeek?.rows.find((r) => r.memberId === data.you) ?? null;
 
   return (
-    <div className="board" data-testid="board">
+    <div data-testid="board">
       {data.pending ? <HowDidItGo pending={data.pending} onSaved={reload} /> : null}
 
       <section>
@@ -61,7 +65,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
         {/* Your own row stays in the list, not just in the editor above it:
             the whole feature is group-visible by design, and you should be
             able to read your week in the same words everyone else reads it. */}
-        <ul className="board-rows">
+        <ul className="m-0 mt-4 list-none border-t border-line p-0">
           {(thisWeek?.rows ?? []).map((row) => (
             <BoardEntry key={row.memberId} row={row} isYou={row.memberId === data.you} />
           ))}
@@ -76,14 +80,14 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
           const kept = w.rows.filter((r) => r.commitment?.outcome === 'done').length;
           const promised = w.rows.filter((r) => r.commitment).length;
           return (
-            <section key={w.week}>
+            <section key={w.week} className="mt-6">
               {/* The follow-through number is the whole point of the week
                 behind you, so it stays — as words, not a badge. */}
-              <h2>
+              <h2 className="mb-1 text-sm font-semibold text-muted">
                 {t('b.week_of', { date: weekDate(w.week, lang) })}
                 {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
               </h2>
-              <ul className="board-rows">
+              <ul className="m-0 list-none border-t border-line p-0">
                 {w.rows.map((row) => (
                   <BoardEntry key={row.memberId} row={row} isYou={row.memberId === data.you} />
                 ))}
@@ -100,23 +104,33 @@ function BoardEntry({ row, isYou = false }: { row: BoardRow; isYou?: boolean }) 
   const { t } = useT();
   const empty = !row.checkIn && !row.commitment;
   return (
-    <li className="board-row" data-testid="board-row">
-      <span className="board-who">
+    <li
+      className="grid grid-cols-[6.5rem_1fr] gap-2 border-b border-line py-2.5 max-[32rem]:grid-cols-1 max-[32rem]:gap-0"
+      data-testid="board-row"
+    >
+      <span className="font-semibold">
         {row.name}
         {isYou ? t('here.you') : ''}
       </span>
       {empty ? (
-        <span className="quiet">{t('b.nothing_yet')}</span>
+        <span className="text-muted">{t('b.nothing_yet')}</span>
       ) : (
-        <span className="board-detail">
+        <span className="grid gap-0.5">
           {row.checkIn ? (
-            <span className="board-rating" data-testid="board-rating">
+            <span className="text-[0.9375rem]" data-testid="board-rating">
               <strong>{row.checkIn.rating}/5</strong> {ratingWord(t, row.checkIn.rating)}
               {row.checkIn.note ? ` — ${row.checkIn.note}` : ''}
             </span>
           ) : null}
           {row.commitment ? (
-            <span className={`board-commitment is-${row.commitment.outcome}`}>
+            <span
+              className={cn(
+                'text-[0.9375rem]',
+                row.commitment.outcome === 'done' && 'text-accent',
+                row.commitment.outcome === 'missed' && 'text-muted line-through',
+                row.commitment.outcome === 'pending' && 'text-muted',
+              )}
+            >
               {outcomeWord(t, row.commitment.outcome)}: {row.commitment.body}
               {row.commitment.reflection ? ` — ${row.commitment.reflection}` : ''}
             </span>
@@ -166,17 +180,31 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
   }
 
   return (
-    <form className="your-week" data-testid="your-week" onSubmit={submit}>
-      <fieldset className="rating">
-        <legend>{t('b.how_was')}</legend>
+    <form className="grid gap-3" data-testid="your-week" onSubmit={submit}>
+      <fieldset className="m-0 flex flex-wrap items-center gap-2 border-0 p-0">
+        <legend className="mb-1.5 text-sm text-muted">{t('b.how_was')}</legend>
         {[1, 2, 3, 4, 5].map((n) => (
-          <label key={n} className={rating === n ? 'is-picked' : ''}>
+          <label
+            key={n}
+            className={cn(
+              'relative grid h-10 w-10 cursor-pointer place-items-center rounded-app border tabular-nums',
+              'transition-colors duration-75',
+              rating === n
+                ? 'border-accent bg-accent text-on-accent'
+                : 'border-edge text-muted hover:border-accent hover:text-accent',
+              'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
+            )}
+          >
+            {/* Transparent and filling the label: the input IS the hit area.
+                A 0x0 input has no bounding box, which costs it its own click
+                target and makes it invisible to anything driving the page. */}
             <input
               type="radio"
               name="rating"
               value={n}
               checked={rating === n}
               onChange={() => setRating(n)}
+              className="absolute inset-0 m-0 cursor-pointer opacity-0"
             />
             <span aria-hidden="true">{n}</span>
             <span className="sr-only">
@@ -195,20 +223,32 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
         onChange={(e) => setNote(e.target.value)}
         placeholder={t('b.note_placeholder')}
         maxLength={280}
+        className={FIELD}
       />
 
-      <label htmlFor="commitment">{t('b.commit_label')}</label>
-      <input
-        id="commitment"
-        value={commitment}
-        onChange={(e) => setCommitment(e.target.value)}
-        placeholder={t('b.commit_placeholder')}
-        maxLength={200}
-      />
+      <div className="grid gap-1.5">
+        <label htmlFor="commitment" className="text-sm text-muted">
+          {t('b.commit_label')}
+        </label>
+        <input
+          id="commitment"
+          value={commitment}
+          onChange={(e) => setCommitment(e.target.value)}
+          placeholder={t('b.commit_placeholder')}
+          maxLength={200}
+          className={FIELD}
+        />
+      </div>
 
-      <button type="submit" disabled={busy || (!checkInChanged && !commitmentChanged)}>
+      <Button
+        type="submit"
+        look="primary"
+        className="justify-self-start"
+        disabled={busy || (!checkInChanged && !commitmentChanged)}
+      >
+        <Check size={15} aria-hidden="true" />
         {t('b.save')}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -233,8 +273,11 @@ function HowDidItGo({
   }
 
   return (
-    <section className="how-did-it-go" data-testid="how-did-it-go">
-      <p className="prompt-body">
+    <section
+      className="mb-6 rounded-lg border border-line bg-panel p-3"
+      data-testid="how-did-it-go"
+    >
+      <p className="m-0 text-[0.9375rem]">
         {t('b.you_said', {
           week: t('b.week_of', { date: weekDate(pending.week, lang) }),
           body: pending.body,
@@ -249,19 +292,16 @@ function HowDidItGo({
         onChange={(e) => setReflection(e.target.value)}
         placeholder={t('b.how_did_it_go')}
         maxLength={280}
+        className={`${FIELD} mt-2`}
       />
-      <div className="prompt-actions">
-        <button type="button" onClick={() => void answer('done')} disabled={busy}>
+      <div className="mt-2 flex items-center gap-2">
+        <Button look="primary" onClick={() => void answer('done')} disabled={busy}>
+          <Check size={15} aria-hidden="true" />
           {t('b.did_it')}
-        </button>
-        <button
-          type="button"
-          className="link"
-          onClick={() => void answer('missed')}
-          disabled={busy}
-        >
+        </Button>
+        <Button look="quiet" onClick={() => void answer('missed')} disabled={busy}>
           {t('b.didnt')}
-        </button>
+        </Button>
       </div>
     </section>
   );

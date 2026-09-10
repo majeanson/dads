@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { fetchTodaysPrompt, type TodaysPrompt } from './api';
+import { PenLine } from 'lucide-react';
 import { plural, promptText, useT } from './i18n';
+import { Button } from './ui/Button';
+import { FIELD } from './ui/field';
 import type { RoomMessage } from '../shared/protocol';
 
 /**
@@ -56,12 +59,12 @@ export function PromptCard({
   }
 
   return (
-    <section className="prompt-card" data-testid="prompt-card">
-      <p className="prompt-body" data-testid="prompt-body">
+    <section className="mb-6" data-testid="prompt-card">
+      <p className="m-0 text-lg leading-snug font-medium" data-testid="prompt-body">
         {promptText(lang, today.prompt)}
       </p>
 
-      <p className="prompt-meta">
+      <p className="mt-1.5 mb-3 text-sm text-muted">
         {answered
           ? t('q.you_answered')
           : answersToday.length === 0
@@ -70,7 +73,7 @@ export function PromptCard({
       </p>
 
       {open ? (
-        <form className="prompt-answer" onSubmit={submit}>
+        <form className="grid gap-2" onSubmit={submit}>
           <label htmlFor="answer" className="sr-only">
             {t('q.your_answer')}
           </label>
@@ -78,22 +81,24 @@ export function PromptCard({
             id="answer"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            rows={3}
+            rows={4}
             placeholder={t('q.take_your_time')}
+            className={`${FIELD} resize-y`}
           />
-          <div className="prompt-actions">
-            <button type="submit" disabled={!canAnswer || !draft.trim()}>
+          <div className="flex items-center gap-2">
+            <Button type="submit" look="primary" disabled={!canAnswer || !draft.trim()}>
               {t('q.answer')}
-            </button>
-            <button type="button" className="link" onClick={() => setOpen(false)}>
+            </Button>
+            <Button look="quiet" onClick={() => setOpen(false)}>
               {t('q.not_now')}
-            </button>
+            </Button>
           </div>
         </form>
       ) : (
-        <button type="button" className="prompt-open" onClick={() => setOpen(true)}>
+        <Button onClick={() => setOpen(true)}>
+          <PenLine size={15} aria-hidden="true" />
           {answered ? t('q.say_more') : t('q.answer')}
-        </button>
+        </Button>
       )}
     </section>
   );

@@ -210,6 +210,11 @@ weakening `sessionSecret()`.
 - An icon-only control still carries its words — `aria-label` plus an sr-only
   span. An icon with no name is a button nobody can ask for, in a screen
   reader or in a test.
+- **Every screen is on the kit now** — the door, the room, the composer, the
+  call, the menu, the settings, the questions, the week, who's here, the table
+  and the attachments. `tokens.css` is down from 1030 lines to ~860, and what
+  is left is layout that Tailwind would have expressed worse: the room's grid,
+  the message rows, the bottom-anchored list, the table frame.
 - **Plain is still the brief for words.** No webfont, no gradient, no
   shadow, no pill, no uppercase label — and no box, eyebrow, badge or count
   where the words alone do the job. One system font stack, seven colours,

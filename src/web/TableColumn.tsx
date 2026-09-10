@@ -1,7 +1,9 @@
+import { X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { JAFFRE_ORIGIN, parseTableEvent, type TableEvent } from '../shared/jaffre';
 import { fetchTable, type TableInfo } from './api';
 import { useT } from './i18n';
+import { Button } from './ui/Button';
 
 /**
  * How long to wait for the table to say anything before offering a way out.
@@ -96,9 +98,10 @@ export function TableColumn({
       <section className="table-frame">
         <div className="table-head">
           <h2>{t('t.title')}</h2>
-          <button type="button" className="link" onClick={onClose}>
+          <Button look="quiet" size="sm" onClick={onClose}>
+            <X size={14} aria-hidden="true" />
             {t('t.close')}
-          </button>
+          </Button>
         </div>
         <p className="table-fallback quiet">{t('t.setting')}</p>
       </section>
@@ -110,9 +113,10 @@ export function TableColumn({
       <section className="table-frame" data-testid="table">
         <div className="table-head">
           <h2>{t('t.title')}</h2>
-          <button type="button" className="link" onClick={onClose}>
+          <Button look="quiet" size="sm" onClick={onClose}>
+            <X size={14} aria-hidden="true" />
             {t('t.close')}
-          </button>
+          </Button>
         </div>
         <div className="table-fallback">
           <p className="quiet">{t('t.unreachable')}</p>
@@ -129,9 +133,10 @@ export function TableColumn({
           <a href={table.shareUrl} target="_blank" rel="noopener noreferrer">
             {t('t.own_tab')}
           </a>
-          <button type="button" className="link" onClick={onClose}>
+          <Button look="quiet" size="sm" onClick={onClose}>
+            <X size={14} aria-hidden="true" />
             {t('t.close')}
-          </button>
+          </Button>
         </span>
       </div>
 

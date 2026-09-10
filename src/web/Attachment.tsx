@@ -1,3 +1,4 @@
+import { Paperclip } from 'lucide-react';
 import type { Attachment as MessageAttachment } from '../shared/protocol';
 import { isImage, isVideo, mediaUrl } from './media';
 
@@ -17,7 +18,7 @@ export function Attachment({ media }: { media: MessageAttachment }) {
       // starts; metadata only, so a room full of clips is not a room that
       // downloads itself on open.
       <video
-        className="attachment"
+        className="mt-1.5 block h-auto w-full max-w-80 rounded-lg border border-line bg-panel"
         src={href}
         controls
         playsInline
@@ -30,14 +31,25 @@ export function Attachment({ media }: { media: MessageAttachment }) {
 
   if (!isImage(media.contentType)) {
     return (
-      <a className="attachment-file" href={href} target="_blank" rel="noopener noreferrer">
+      <a
+        className="mt-1.5 inline-flex items-center gap-2 rounded-app border border-edge px-2.5 py-1.5 text-sm no-underline hover:border-accent"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Paperclip size={14} aria-hidden="true" className="text-muted" />
         {media.name}
       </a>
     );
   }
 
   return (
-    <a className="attachment" href={href} target="_blank" rel="noopener noreferrer">
+    <a
+      className="mt-1.5 block w-fit max-w-full overflow-hidden rounded-lg border border-line"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       <img
         src={href}
         alt={media.name}
@@ -45,6 +57,7 @@ export function Attachment({ media }: { media: MessageAttachment }) {
         height={media.height ?? undefined}
         loading="lazy"
         decoding="async"
+        className="block h-auto max-w-80"
       />
     </a>
   );
