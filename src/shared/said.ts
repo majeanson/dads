@@ -96,8 +96,14 @@ export function parseSaid(raw: unknown): Said | null {
   }
 }
 
-/** The same fact, in whichever language is being read. */
-export function describeSaid(t: T, lang: Lang, said: Said): string {
+/**
+ * The same fact, in whichever language is being read.
+ *
+ * `joined` means the line above is about the same act by the same dad — a
+ * check-in and the commitment written with it — so his name is already on the
+ * screen and saying it twice is the room stuttering.
+ */
+export function describeSaid(t: T, lang: Lang, said: Said, joined = false): string {
   switch (said.k) {
     case 'night_set': {
       // Only the weekday and the clock are read; the zone is the group's and
@@ -123,7 +129,9 @@ export function describeSaid(t: T, lang: Lang, said: Said): string {
         note: said.note,
       });
     case 'commitment':
-      return t('sys.commitment', { name: said.name, body: said.body });
+      return joined
+        ? t('sys.commitment_short', { body: said.body })
+        : t('sys.commitment', { name: said.name, body: said.body });
     case 'outcome': {
       const key = said.done
         ? said.note

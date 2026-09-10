@@ -171,9 +171,17 @@ export function JoinCall({
   }
 
   return (
-    <Button size="sm" onClick={onJoin} disabled={state === 'joining'}>
+    <Button
+      size="sm"
+      onClick={onJoin}
+      disabled={state === 'joining'}
+      aria-label={t('call.join')}
+      className="max-[26rem]:w-9 max-[26rem]:px-0"
+    >
       <Phone size={15} aria-hidden="true" />
-      {state === 'joining' ? t('call.opening') : t('call.join')}
+      <span className="max-[26rem]:sr-only">
+        {state === 'joining' ? t('call.opening') : t('call.join')}
+      </span>
     </Button>
   );
 }

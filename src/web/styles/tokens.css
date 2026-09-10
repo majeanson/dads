@@ -759,3 +759,11 @@
     white-space: nowrap;
   }
 }
+
+@layer components {
+  /* A check-in and the commitment written with it are one sitting: the second
+     line sits under the first rather than arriving as separate news. */
+  .line.is-joined {
+    padding-top: 0;
+  }
+}

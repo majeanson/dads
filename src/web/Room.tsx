@@ -7,7 +7,6 @@ import { Here } from './Here';
 import {
   ArrowDown,
   CalendarCheck,
-  LogOut,
   Menu as MenuIcon,
   MessageCircleQuestion,
   Plus,
@@ -263,13 +262,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       onDrop={dropped}
     >
       <header className="room-head border-b border-line pb-2.5">
-        <div>
-          <h1>{session.group.name}</h1>
+        <div className="min-w-0">
+          <h1 className="truncate text-base font-semibold text-muted">{session.group.name}</h1>
           {/* The count is also the door to the roster and to who has been
               about. A button, because it does something — but not a blue
               underlined link, which is three times louder than a group of five
               men needs its own head-count to be. */}
-          <p className="quiet" onClick={() => setSheet('here')}>
+          <p className="text-[0.9375rem] text-ink" onClick={() => setSheet('here')}>
             <button type="button" className="count-in" data-testid="connection">
               {room.connection === 'open'
                 ? t('room.here', { n: room.roster.length })
@@ -333,7 +332,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               ) : (
                 <li
                   key={row.key}
-                  className={`line line-${row.message.kind}${row.showName ? '' : ' is-continued'}`}
+                  className={`line line-${row.message.kind}${row.showName ? '' : ' is-continued'}${
+                    row.joined ? ' is-joined' : ''
+                  }`}
                   data-testid="line"
                 >
                   {row.message.kind === 'chat' || row.message.kind === 'prompt' ? (
@@ -368,7 +369,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                     // before that was true.
                     <span className="body">
                       {row.message.said
-                        ? describeSaid(t, lang, row.message.said)
+                        ? describeSaid(t, lang, row.message.said, row.joined)
                         : row.message.body}
                     </span>
                   )}
@@ -537,11 +538,6 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               <SettingsIcon size={17} aria-hidden="true" className="text-muted" />
               {t('menu.settings')}
             </Button>
-
-            <Button block look="quiet" onClick={onSignOut} className="justify-start px-3.5">
-              <LogOut size={17} aria-hidden="true" />
-              {t('menu.sign_out')}
-            </Button>
           </nav>
         </Sheet>
       ) : null}
@@ -579,7 +575,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
       {sheet === 'settings' ? (
         <Sheet title={t('set.title')} onClose={() => setSheet(null)}>
-          <Settings night={room.night} rooms={room.rooms} />
+          <Settings night={room.night} rooms={room.rooms} onSignOut={onSignOut} />
         </Sheet>
       ) : null}
     </main>

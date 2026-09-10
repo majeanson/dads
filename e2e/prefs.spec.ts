@@ -25,7 +25,7 @@ test('a dad reads the room in French, and it stays French', async ({ page }) => 
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
   await page.getByRole('button', { name: 'Menu' }).click();
   await expect(page.getByRole('button', { name: 'Ouvre la table' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Déconnexion' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Réglages' })).toBeVisible();
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
   await expect(page.getByTestId('connection')).toHaveText(/ici$/);
   await expect(page.getByLabel('Dis quelque chose')).toBeVisible();

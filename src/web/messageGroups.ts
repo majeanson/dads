@@ -10,10 +10,21 @@ import type { RoomMessage } from '../shared/protocol';
 
 export type Row =
   | { kind: 'day'; key: string; label: string }
-  | { kind: 'message'; key: number; message: RoomMessage; showName: boolean };
+  | {
+      kind: 'message';
+      key: number;
+      message: RoomMessage;
+      showName: boolean;
+      /** A second line of the room's own that belongs to the same act as the
+       * one above it — printed as its continuation rather than as news. */
+      joined?: boolean;
+    };
 
 /** Consecutive lines from the same dad within this long are one turn. */
 const SAME_TURN_MS = 5 * 60 * 1000;
+
+/** A check-in and a commitment this close together are one sitting. */
+const SAME_SITTING_MS = 2 * 60 * 1000;
 
 function dayKey(ts: number): string {
   const d = new Date(ts);
@@ -57,6 +68,21 @@ export function dayLabel(ts: number, now = Date.now(), names: DayNames = EN_DAYS
  * saying where it is, two of which are wrong. The room should read like the
  * last one is the answer, because it is.
  */
+/** Two of the room's own lines that are one act, said twice. */
+function samePost(a: RoomMessage, b: RoomMessage): boolean {
+  const ka = a.said?.k;
+  const kb = b.said?.k;
+  if (ka === undefined || kb === undefined) return false;
+  // Filling in the week writes a check-in and a commitment a moment apart, by
+  // the same dad, about the same thing. Two lines for one sitting.
+  const pair =
+    (ka === 'check_in' && kb === 'commitment') || (ka === 'commitment' && kb === 'check_in');
+  const who =
+    (a.said as { name?: string }).name === (b.said as { name?: string }).name &&
+    (a.said as { name?: string }).name !== undefined;
+  return pair && who && Math.abs(b.createdAt - a.createdAt) < SAME_SITTING_MS;
+}
+
 function supersedes(a: RoomMessage, b: RoomMessage): boolean {
   const ka = a.said?.k;
   const kb = b.said?.k;
@@ -103,7 +129,8 @@ export function toRows(
       previous.memberId === message.memberId &&
       message.createdAt - previous.createdAt < SAME_TURN_MS;
 
-    rows.push({ kind: 'message', key: message.seq, message, showName: !sameTurn });
+    const joined = previous !== null && samePost(previous, message);
+    rows.push({ kind: 'message', key: message.seq, message, showName: !sameTurn, joined });
     previous = message;
   }
 
