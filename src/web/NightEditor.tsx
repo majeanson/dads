@@ -22,12 +22,16 @@ function countdownIn(t: T, lang: Lang, ms: number): string {
  * answer is what he wants.
  */
 export function nightSoon(t: T, lang: Lang, night: DadNight | null, now: number): string | null {
-  const phase = night ? phaseOf(night, now) : null;
+  if (night === null) return null;
+  const phase = phaseOf(night, now);
   if (phase?.kind === 'live') return t('n.soon_live');
+  // Close enough to be a countdown; otherwise the day and the time, because a
+  // standing appointment is there to answer "when is it again" without anybody
+  // having to go and look.
   if (phase?.kind === 'upcoming' && phase.startsIn <= SOON_MS) {
     return t('n.soon', { countdown: countdownIn(t, lang, phase.startsIn) });
   }
-  return null;
+  return t('n.header', { when: nightWhen(lang, night) });
 }
 
 export function nightItem(t: T, lang: Lang, night: DadNight | null, now: number): string {

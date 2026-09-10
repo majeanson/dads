@@ -1,11 +1,18 @@
 import type { DadNight } from '../shared/dadNight';
+import type { RoomsOpen } from '../shared/protocol';
 
 /** A night as the client sends it: the zone is omitted when the group already
  * has one, so the server keeps it rather than adopting the editor's. */
 export type NightInput = Omit<DadNight, 'tz'> & { tz: string | null };
 
 export interface Session {
-  group: { id: string; slug: string; name: string; dadNight: DadNight | null };
+  group: {
+    id: string;
+    slug: string;
+    name: string;
+    dadNight: DadNight | null;
+    rooms: RoomsOpen;
+  };
   member: { id: string; displayName: string };
 }
 
@@ -87,6 +94,16 @@ export async function setNight(night: NightInput | null): Promise<void> {
     body: JSON.stringify({ night }),
   });
   if (!res.ok) throw new Error(`PUT /api/night ${res.status}`);
+}
+
+/** What the group has open. Any dad may change it; everyone sees it. */
+export async function setRooms(rooms: Partial<RoomsOpen>): Promise<void> {
+  const res = await fetch('/api/rooms', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rooms),
+  });
+  if (!res.ok) throw new Error(`PUT /api/rooms ${res.status}`);
 }
 
 export interface Prompt {

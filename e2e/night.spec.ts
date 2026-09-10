@@ -21,31 +21,27 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await sam.getByLabel('Your name').fill('Sam');
   await sam.getByRole('button', { name: 'Come in' }).click();
   await expect(sam.getByTestId('connection')).toHaveText(/here$/);
-  // With no night set the menu offers to set one, and says nothing else
-  // about it anywhere.
-  await sam.getByRole('button', { name: 'Menu' }).click();
-  await expect(sam.getByTestId('dad-night')).toContainText('Set dad night');
+  // With no night set the room says nothing about it anywhere.
+  await expect(sam.locator('.room-head')).not.toContainText('dad night');
 
+  // It is set in Settings, along with everything else a dad can change.
   await marc.getByRole('button', { name: 'Menu' }).click();
-  await marc.getByRole('button', { name: 'Set dad night' }).click();
+  await marc.getByRole('button', { name: 'Settings' }).click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
   await marc.getByRole('button', { name: 'Save' }).click();
 
-  // Marc sees the countdown; Sam, whose menu is still open, gets it pushed
-  // without reloading.
-  await marc.getByRole('button', { name: 'Menu' }).click();
-  await expect(marc.getByTestId('dad-night')).toContainText('Thursdays at 21:00');
-  await expect(marc.getByTestId('dad-night')).toContainText(/in \d+ (day|hour|minute)/);
-  await expect(sam.getByTestId('dad-night')).toContainText('Thursdays at 21:00');
+  // Both headers carry it without a reload: "when is it again" should not
+  // cost anybody a tap.
+  await expect(marc.locator('.room-head')).toContainText(/dad night/);
+  await expect(sam.locator('.room-head')).toContainText(/dad night/);
   await expect(
     sam.getByTestId('line').filter({ hasText: 'Marc set dad night to Thursdays at 21:00.' }),
   ).toBeVisible();
 
   // It survives a reload, because it lives in D1 and not in the tab.
   await marc.reload();
-  await marc.getByRole('button', { name: 'Menu' }).click();
-  await expect(marc.getByTestId('dad-night')).toContainText('Thursdays at 21:00');
+  await expect(marc.locator('.room-head')).toContainText(/dad night/);
 
   await marcCtx.close();
   await samCtx.close();

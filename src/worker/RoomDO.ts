@@ -13,6 +13,7 @@ import {
   parseClientFrame,
   type CallMember,
   type RoomMessage,
+  type RoomsOpen,
   type RosterEntry,
   type ServerFrame,
 } from '../shared/protocol';
@@ -166,6 +167,14 @@ export class RoomDO extends DurableObject<Env> {
       this.broadcast({ t: 'night', night });
       await this.say(byName, nightChange(byName, night));
       await this.rescheduleAlarm();
+      return new Response(null, { status: 204 });
+    }
+
+    // What the group has open changed. Nothing is said in the conversation —
+    // a switch is not news — but every open room finds out at once.
+    if (url.pathname === '/rooms' && request.method === 'POST') {
+      const rooms = (await request.json()) as RoomsOpen;
+      this.broadcast({ t: 'rooms', rooms });
       return new Response(null, { status: 204 });
     }
 

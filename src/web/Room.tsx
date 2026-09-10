@@ -7,15 +7,14 @@ import { Here } from './Here';
 import { plural, useT } from './i18n';
 import { parts } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
-import { nightItem, nightSoon, NightEditor } from './NightEditor';
+import { nightSoon } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
-import { Remind } from './Remind';
+import { Settings } from './Settings';
 import { Sheet } from './Sheet';
 import { TableColumn } from './TableColumn';
-import { Toggles } from './Toggles';
 import { useCall } from './useCall';
 import { useRoom } from './useRoom';
 
@@ -30,7 +29,7 @@ const TICK_MS = 15_000;
 const NEAR_BOTTOM_PX = 80;
 
 /** What is open over the room, if anything. */
-type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night';
+type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'settings';
 
 /**
  * The room is the conversation and the call. That is the whole screen.
@@ -52,12 +51,14 @@ type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night';
  */
 export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
   const { t, lang } = useT();
-  const room = useRoom(true, session.group.dadNight);
+  const room = useRoom(true, session.group.dadNight, session.group.rooms);
   const [sheet, setSheet] = useState<Sheets | null>(null);
   const [tableOpen, setTableOpen] = useState(false);
   const [draft, setDraft] = useState('');
   /** Picked but not sent: the dad still gets a caption, or a change of mind. */
   const [pending, setPending] = useState<Prepared | null>(null);
+  /** A thumbnail of it, while it is still his to take back. */
+  const [preview, setPreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [todo, setTodo] = useState<Todo>({ prompt: false, board: false });
@@ -165,6 +166,23 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   }
 
   /**
+   * The thumbnail, made and unmade with what it shows.
+   *
+   * An object URL is a handle the browser holds until it is revoked, so every
+   * one has to be given back — a dad who changes his mind four times should
+   * not be leaking four photographs' worth of memory into his phone.
+   */
+  useEffect(() => {
+    if (pending === null || !pending.blob.type.startsWith('image/')) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(pending.blob);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pending]);
+
+  /**
    * A photo the dad already has in his hand: pasted from a screenshot, or
    * dragged onto the room. The picker still exists for a phone; this is for
    * the laptop, where hunting through a file dialog for something already on
@@ -215,7 +233,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     .filter(([id]) => id !== session.member.id)
     .map(([, name]) => name);
 
-  const waiting = todo.prompt || todo.board;
+  const waiting = (todo.prompt && room.rooms.questions) || (todo.board && room.rooms.week);
   const soon = nightSoon(t, lang, room.night, now);
   const days = {
     today: t('day.today'),
@@ -347,18 +365,21 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           <form className="composer" onSubmit={submit} onPaste={pasted}>
             {pending !== null ? (
               <p className="pending" data-testid="pending-media">
-                <span>
+                {preview === null ? null : <img src={preview} alt="" />}
+                <span className="pending-what">
                   {pending.name} <span className="quiet">{readableSize(pending.blob.size)}</span>
                 </span>
                 <button
                   type="button"
-                  className="link"
+                  className="pending-drop"
+                  title={t('composer.remove')}
                   onClick={() => {
                     setPending(null);
                     if (picker.current !== null) picker.current.value = '';
                   }}
                 >
-                  {t('composer.remove')}
+                  <span aria-hidden="true">×</span>
+                  <span className="sr-only">{t('composer.remove')}</span>
                 </button>
               </p>
             ) : null}
@@ -416,43 +437,45 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       {sheet === 'menu' ? (
         <Sheet title={t('menu.title')} onClose={() => setSheet(null)}>
           <nav className="menu" aria-label="Rooms">
-            <button type="button" onClick={() => setSheet('prompts')}>
-              {t('menu.questions')}
-              {todo.prompt ? (
-                <span className="mark" data-testid="mark-prompts" aria-hidden="true" />
-              ) : null}
-              {todo.prompt ? <span className="sr-only">{t('room.waiting')}</span> : null}
-            </button>
+            {room.rooms.questions ? (
+              <button type="button" onClick={() => setSheet('prompts')}>
+                {t('menu.questions')}
+                {todo.prompt ? (
+                  <span className="mark" data-testid="mark-prompts" aria-hidden="true" />
+                ) : null}
+                {todo.prompt ? <span className="sr-only">{t('room.waiting')}</span> : null}
+              </button>
+            ) : null}
 
-            <button type="button" onClick={() => setSheet('board')}>
-              {t('menu.week')}
-              {todo.board ? (
-                <span className="mark" data-testid="mark-board" aria-hidden="true" />
-              ) : null}
-              {todo.board ? <span className="sr-only">{t('room.waiting')}</span> : null}
-            </button>
+            {room.rooms.week ? (
+              <button type="button" onClick={() => setSheet('board')}>
+                {t('menu.week')}
+                {todo.board ? (
+                  <span className="mark" data-testid="mark-board" aria-hidden="true" />
+                ) : null}
+                {todo.board ? <span className="sr-only">{t('room.waiting')}</span> : null}
+              </button>
+            ) : null}
 
-            <button
-              type="button"
-              onClick={() => {
-                setTableOpen((v) => !v);
-                setSheet(null);
-              }}
-            >
-              {tableOpen ? t('menu.close_table') : t('menu.open_table')}
-            </button>
+            {room.rooms.table ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setTableOpen((v) => !v);
+                  setSheet(null);
+                }}
+              >
+                {tableOpen ? t('menu.close_table') : t('menu.open_table')}
+              </button>
+            ) : null}
 
-            <button type="button" data-testid="dad-night" onClick={() => setSheet('night')}>
-              {nightItem(t, lang, room.night, now)}
+            <button type="button" data-testid="dad-night" onClick={() => setSheet('settings')}>
+              {t('menu.settings')}
             </button>
-
-            <Remind />
 
             <button type="button" onClick={onSignOut}>
               {t('menu.sign_out')}
             </button>
-
-            <Toggles />
           </nav>
         </Sheet>
       ) : null}
@@ -488,9 +511,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         </Sheet>
       ) : null}
 
-      {sheet === 'night' ? (
-        <Sheet title={t('n.title')} onClose={() => setSheet(null)}>
-          <NightEditor night={room.night} onDone={() => setSheet(null)} />
+      {sheet === 'settings' ? (
+        <Sheet title={t('set.title')} onClose={() => setSheet(null)}>
+          <Settings night={room.night} rooms={room.rooms} />
         </Sheet>
       ) : null}
     </main>

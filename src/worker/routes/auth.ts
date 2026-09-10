@@ -1,4 +1,5 @@
 import type { DadNight } from '../../shared/dadNight';
+import type { RoomsOpen } from '../../shared/protocol';
 import { hashDeviceToken, randomToken, verifyInviteCode } from '../crypto';
 import type { Env } from '../env';
 import { sessionSecret } from '../env';
@@ -29,11 +30,34 @@ interface GroupRow {
   dad_night_weekday: number | null;
   dad_night_time: string | null;
   dad_night_tz: string;
+  questions_on: number;
+  week_on: number;
+  table_on: number;
 }
 
 export interface Session {
-  group: { id: string; slug: string; name: string; dadNight: DadNight | null };
+  group: {
+    id: string;
+    slug: string;
+    name: string;
+    dadNight: DadNight | null;
+    rooms: RoomsOpen;
+  };
   member: { id: string; displayName: string };
+}
+
+/** Columns to the shared shape. Absent means on: a group made before these
+ * columns existed has all three, which is what it had. */
+export function roomsFrom(row: {
+  questions_on?: number | null;
+  week_on?: number | null;
+  table_on?: number | null;
+}): RoomsOpen {
+  return {
+    questions: row.questions_on !== 0,
+    week: row.week_on !== 0,
+    table: row.table_on !== 0,
+  };
 }
 
 /** Columns → the shared shape. A group with no night set yet is null, not a
@@ -82,7 +106,8 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
 
   const { results } = await env.DB.prepare(
     `SELECT id, slug, name, invite_code_salt, invite_code_hash,
-            dad_night_weekday, dad_night_time, dad_night_tz
+            dad_night_weekday, dad_night_time, dad_night_tz,
+            questions_on, week_on, table_on
        FROM groups LIMIT ?`,
   )
     .bind(GROUP_SCAN_LIMIT)
@@ -146,6 +171,7 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
       slug: group.slug,
       name: group.name,
       dadNight: nightFrom(group),
+      rooms: roomsFrom(group),
     },
     member: { id: memberId, displayName },
   };
@@ -190,7 +216,8 @@ export async function currentSession(
 
   const row = await env.DB.prepare(
     `SELECT m.id AS member_id, m.display_name, g.id AS group_id, g.slug, g.name,
-            g.dad_night_weekday, g.dad_night_time, g.dad_night_tz
+            g.dad_night_weekday, g.dad_night_time, g.dad_night_tz,
+            g.questions_on, g.week_on, g.table_on
        FROM members m JOIN groups g ON g.id = m.group_id
       WHERE m.id = ? AND m.group_id = ?`,
   )
@@ -204,11 +231,20 @@ export async function currentSession(
       dad_night_weekday: number | null;
       dad_night_time: string | null;
       dad_night_tz: string;
+      questions_on: number;
+      week_on: number;
+      table_on: number;
     }>();
 
   if (!row) return null;
   return {
-    group: { id: row.group_id, slug: row.slug, name: row.name, dadNight: nightFrom(row) },
+    group: {
+      id: row.group_id,
+      slug: row.slug,
+      name: row.name,
+      dadNight: nightFrom(row),
+      rooms: roomsFrom(row),
+    },
     member: { id: row.member_id, displayName: row.display_name },
   };
 }

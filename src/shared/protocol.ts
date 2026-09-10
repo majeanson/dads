@@ -45,6 +45,17 @@ export interface RoomMessage {
   said?: Said | null;
 }
 
+/**
+ * What a group has open. Three switches, on by default, and any dad may change
+ * them — the group's setting rather than each man's, because two dads seeing
+ * different menus is how a group stops sharing a room.
+ */
+export interface RoomsOpen {
+  questions: boolean;
+  week: boolean;
+  table: boolean;
+}
+
 export interface RosterEntry {
   memberId: string;
   name: string;
@@ -91,6 +102,7 @@ export type ServerFrame =
   | { t: 'msg'; message: RoomMessage }
   | { t: 'typing'; memberId: string; name: string }
   | { t: 'night'; night: DadNight | null }
+  | { t: 'rooms'; rooms: RoomsOpen }
   | { t: 'error'; code: 'bad_frame' | 'too_long' | 'empty' | 'no_prompt' | 'no_media' };
 
 export function parseClientFrame(raw: unknown): ClientFrame | null {

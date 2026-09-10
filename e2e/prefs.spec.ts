@@ -16,9 +16,14 @@ test('a dad reads the room in French, and it stays French', async ({ page }) => 
   await comeIn(page, 'Marc');
 
   await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'FR', exact: true }).click();
 
-  // The whole app turns over, menu and room both.
+  // The whole app turns over: the sheet he is standing in, the menu behind
+  // it, and the room behind that.
+  await expect(page.getByTestId('settings')).toContainText('sur cet appareil');
+  await page.getByRole('button', { name: 'Ferme', exact: true }).click();
+  await page.getByRole('button', { name: 'Menu' }).click();
   await expect(page.getByRole('button', { name: 'Ouvre la table' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Déconnexion' })).toBeVisible();
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
@@ -36,8 +41,9 @@ test('a dad reads the room in French, and it stays French', async ({ page }) => 
 
   // And back again.
   await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: 'Réglages' }).click();
   await page.getByRole('button', { name: 'EN', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await expect(page.getByTestId('settings')).toContainText('on this device');
 });
 
 test('a dad asks for dark, and gets dark', async ({ page }) => {
@@ -47,6 +53,7 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
 
   await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Dark' }).click();
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
 
@@ -64,6 +71,7 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
 
   // Handing it back to the phone takes the stamp off again.
   await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Follow the phone' }).click();
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
 });
@@ -80,14 +88,14 @@ test('what the room says about itself is read in each dad’s own language', asy
   await comeIn(sam, 'Sam');
 
   await marc.getByRole('button', { name: 'Menu' }).click();
+  await marc.getByRole('button', { name: 'Settings' }).click();
   await marc.getByRole('button', { name: 'FR', exact: true }).click();
 
-  // Marc sets the night, in French.
-  await marc.getByRole('button', { name: /^Mets une soirée/ }).click();
+  // Marc sets the night, in French, in the same sheet.
   await marc.getByLabel('Jour').selectOption('4');
   await marc.getByLabel('Heure').fill('21:00');
-  // Saving closes the sheet on its own; there is nothing left to shut.
   await marc.getByRole('button', { name: 'Enregistre' }).click();
+  await marc.getByRole('button', { name: 'Ferme', exact: true }).click();
 
   // The same event, two rooms, two languages.
   await expect(
@@ -99,6 +107,7 @@ test('what the room says about itself is read in each dad’s own language', asy
 
   // And Sam switching over re-reads the line he already has.
   await sam.getByRole('button', { name: 'Menu' }).click();
+  await sam.getByRole('button', { name: 'Settings' }).click();
   await sam.getByRole('button', { name: 'FR', exact: true }).click();
   await sam.getByRole('button', { name: 'Ferme', exact: true }).click();
   await expect(
@@ -121,7 +130,10 @@ test('the day’s question is asked in the language it is read in', async ({ pag
 
   await page.getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await page.getByRole('button', { name: 'Ferme', exact: true }).click();
+  await page.getByRole('button', { name: 'Menu' }).click();
   await page
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: /^Les questions/ })
@@ -163,6 +175,7 @@ test('the phone’s own chrome follows the theme it was asked for', async ({ pag
   expect(await bar()).toBeNull();
 
   await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Dark' }).click();
   expect(await bar()).toBe('#131211');
 

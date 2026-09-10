@@ -8,6 +8,7 @@ import { getMedia, listMedia, uploadMedia } from './routes/media';
 import { setNight } from './routes/night';
 import { getPresence } from './routes/presence';
 import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
+import { putRooms } from './routes/rooms';
 import { getTable } from './routes/table';
 import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
 
@@ -74,6 +75,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'POST /api/leave':
       return leave(prod);
+
+    case 'PUT /api/rooms':
+      return putRooms(request, env, prod);
 
     case 'PUT /api/night':
       return setNight(request, env, prod);

@@ -1205,3 +1205,79 @@ video.attachment {
 .count-in:hover {
   text-decoration: underline;
 }
+
+/* --- settings ----------------------------------------------------------
+ *
+ * Two kinds of thing with a heading each: what the GROUP has open, which any
+ * dad may change and all of them then see, and what THIS dad reads it in,
+ * which is his and lives on his device.
+ */
+.settings section {
+  margin-bottom: 1.5rem;
+}
+
+.switches {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.switches button {
+  width: 100%;
+  text-align: left;
+  color: var(--muted);
+}
+
+/* On is the accent, off is muted and struck: a switch has to say which it is
+   without a legend explaining the colours. */
+.switches button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.switches button[aria-pressed='false'] {
+  text-decoration: line-through;
+}
+
+/* --- something picked, not yet sent ------------------------------------
+ *
+ * A thumbnail and an ×, sitting on the composer. The full photograph filled
+ * the screen before anybody had decided to send it, and "Remove" was a
+ * sentence where a control belongs.
+ */
+.composer .pending {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.composer .pending img {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  object-fit: cover;
+}
+
+.pending-what {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-drop {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.pending-drop:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}

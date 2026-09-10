@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DadNight } from '../shared/dadNight';
-import type { CallMember } from '../shared/protocol';
+import type { CallMember, RoomsOpen } from '../shared/protocol';
 import type { TableEvent } from '../shared/jaffre';
 import type { RoomMessage, RosterEntry, ServerFrame } from '../shared/protocol';
 
@@ -19,6 +19,8 @@ export interface RoomState {
   /** Seeded from the session, then kept current by `night` frames, so a dad
    * who changes it updates every open room without a reload. */
   night: DadNight | null;
+  /** The same, for what the group has open. */
+  rooms: RoomsOpen;
 }
 
 const PING_INTERVAL_MS = 30_000;
@@ -31,7 +33,7 @@ const RECONNECT_MAX_MS = 15_000;
  * what it missed (`after=<last seq>`), so a phone that hopped networks sees
  * the three lines it lost, not the whole evening again.
  */
-export function useRoom(enabled: boolean, initialNight: DadNight | null) {
+export function useRoom(enabled: boolean, initialNight: DadNight | null, initialRooms: RoomsOpen) {
   /** Set by the call, read by the socket. A ref so a new peer never rebuilds
    * the connection. */
   const onSignalRef = useRef<(from: string, name: string, payload: unknown) => void>(() => {});
@@ -43,6 +45,7 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
     typing: new Map(),
     call: [],
     night: initialNight,
+    rooms: initialRooms,
   });
 
   const socket = useRef<WebSocket | null>(null);
@@ -115,6 +118,9 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
           return;
         case 'night':
           setState((s) => ({ ...s, night: frame.night }));
+          return;
+        case 'rooms':
+          setState((s) => ({ ...s, rooms: frame.rooms }));
           return;
         case 'call-roster':
           setState((s) => ({ ...s, call: frame.members }));

@@ -49,11 +49,36 @@ export function dayLabel(ts: number, now = Date.now(), names: DayNames = EN_DAYS
   });
 }
 
+/**
+ * Which of the room's own lines say the same KIND of thing, so that only the
+ * last one is worth keeping.
+ *
+ * Somebody moving dad night three times in an afternoon leaves three lines
+ * saying where it is, two of which are wrong. The room should read like the
+ * last one is the answer, because it is.
+ */
+function supersedes(a: RoomMessage, b: RoomMessage): boolean {
+  const ka = a.said?.k;
+  const kb = b.said?.k;
+  if (ka === undefined || kb === undefined) return false;
+  return (
+    (ka === 'night_set' || ka === 'night_cleared') && (kb === 'night_set' || kb === 'night_cleared')
+  );
+}
+
 export function toRows(
   messages: RoomMessage[],
   now = Date.now(),
   names: DayNames = EN_DAYS,
 ): Row[] {
+  // Drop a line the very next one makes untrue. Only ever the room's own, and
+  // only ever a run of them with nothing said in between — a dad's message
+  // between two of them means both were read.
+  messages = messages.filter((message, i) => {
+    const next = messages[i + 1];
+    return next === undefined || !supersedes(message, next);
+  });
+
   const rows: Row[] = [];
   let lastDay: string | null = null;
   let previous: RoomMessage | null = null;
