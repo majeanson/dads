@@ -315,7 +315,43 @@ secret, custom domain bound by the route in wrangler.toml.
   at 60). The 15s leave grace still applies, so a wifi→LTE hop records nothing.
 - The roster itself is no longer in the menu — one place to look, not two.
 
+## Small things that turned out to matter
+
+- **New lines follow a dad down only if he was at the bottom.** Scrolling to
+  the newest message unconditionally snatches the page out of the hands of
+  anyone reading back through the week. `counted` is a ref, not state: only a
+  change in the message COUNT does anything, or a dad scrolling would count as
+  an arrival and cause the scroll he was trying to escape.
+- The tab's own title carries the unseen count. No permission, no prompt, no
+  service worker — the one free signal a browser gives.
+- **Links are split, never substituted.** `src/shared/linkify.ts` returns parts
+  and the renderer builds anchors from them, so no string ever becomes markup;
+  http(s) only, so nothing else can become an href.
+- **The screen stays awake on a call** (`useWakeLock`). The browser drops the
+  lock whenever the tab hides, so it is taken again on the way back.
+- **Speaking is worked out locally** (`src/web/speaking.ts`): one AudioContext,
+  one analyser per stream, one timer for all of them. Nothing is sent, nothing
+  is recorded. It is merged into `peers` at the last moment so a mark going on
+  and off never rebuilds a stream object and flickers the tiles.
+- **Mute travels over the wire** because a muted man and a quiet one are
+  identical from the far end of a peer connection. It rides the `call` frame
+  and lives on the socket attachment beside `inCall`, true only while the
+  socket is.
+
 ## Media
+
+- **Video is on the inline allowlist** (`video/mp4`, `video/webm`,
+  `video/quicktime` — what an iPhone calls a .mov). A clip that downloads
+  instead of playing is a clip nobody watches, and a container carries no
+  script and no origin. **HEIC is deliberately not**: Safari renders it and
+  nothing else does, so inlining it would show the picture to the dads on
+  iPhones and a broken box to everyone else.
+- The cap is **25 MB**, raised from 10 for video: ten seconds off a modern
+  phone is fifteen, and the browser cannot shrink what it cannot decode. Ten
+  objects to a room still bounds the total.
+- `getUserMedia` asks for echo cancellation, noise suppression and gain control
+  by name. Every browser does them by default; a default is not a promise, and
+  five men in five kitchens is the case they exist for.
 
 - **Content types are an allowlist, and `image/svg+xml` is not on it.** An
   SVG is a document that can carry script; serving one inline from our own

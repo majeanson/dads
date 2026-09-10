@@ -4,7 +4,8 @@ import { Attachment } from './Attachment';
 import { Board } from './Board';
 import { CallBar, JoinCall } from './CallBar';
 import { Here } from './Here';
-import { useT } from './i18n';
+import { plural, useT } from './i18n';
+import { parts } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { nightItem, nightSoon, NightEditor } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
@@ -23,6 +24,9 @@ function clock(ts: number): string {
 
 /** Coarse enough to be free, fine enough that a countdown stays honest. */
 const TICK_MS = 15_000;
+
+/** Close enough to the newest line to count as reading it. */
+const NEAR_BOTTOM_PX = 80;
 
 /** What is open over the room, if anything. */
 type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night';
@@ -57,8 +61,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [todo, setTodo] = useState<Todo>({ prompt: false, board: false });
   const [now, setNow] = useState(() => Date.now());
+  /** Reading the newest line, rather than back through the week. */
+  const [pinned, setPinned] = useState(true);
+  const [unseen, setUnseen] = useState(0);
   const picker = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
+  const lines = useRef<HTMLOListElement>(null);
 
   const call = useCall({
     you: room.you?.memberId ?? null,
@@ -93,18 +101,84 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     return () => clearInterval(timer);
   }, []);
 
+  /**
+   * New lines follow you down only if you were already at the bottom.
+   *
+   * Scrolling to the newest message on every arrival is right until a dad is
+   * reading back through last Thursday, at which point it snatches the page
+   * out of his hands every time somebody types. If he is up there, the line
+   * waits and the room says how many.
+   */
+  const counted = useRef(0);
   useEffect(() => {
-    if (!tableOpen) bottom.current?.scrollIntoView({ block: 'end' });
-  }, [room.messages.length, tableOpen]);
+    const count = room.messages.length;
+    // Only a new line does anything here. `pinned` is in the dependencies
+    // because the effect reads it, but a dad scrolling must never itself
+    // cause a scroll or count as an arrival.
+    if (count === counted.current) return;
+    const arrived = Math.max(0, count - counted.current);
+    counted.current = count;
+    if (tableOpen) return;
 
+    if (pinned) bottom.current?.scrollIntoView({ block: 'end' });
+    if (pinned && !document.hidden) setUnseen(0);
+    else setUnseen((n) => n + arrived);
+  }, [room.messages.length, tableOpen, pinned]);
+
+  /** A dad who has scrolled up, or looked away, has not seen it. */
+  const atBottom = useCallback(() => {
+    const el = lines.current;
+    if (el === null) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
+  }, []);
+
+  const toBottom = useCallback(() => {
+    bottom.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    setPinned(true);
+    setUnseen(0);
+  }, []);
+
+  // Coming back to the tab is seeing it.
   useEffect(() => {
-    document.title = session.group.name;
-  }, [session.group.name]);
+    function seen() {
+      if (!document.hidden && atBottom()) setUnseen(0);
+    }
+    document.addEventListener('visibilitychange', seen);
+    return () => document.removeEventListener('visibilitychange', seen);
+  }, [atBottom]);
+
+  /**
+   * The tab's own title carries the count while you are looking elsewhere.
+   *
+   * No permission, no prompt, no service worker: the one signal a browser will
+   * give you for free, and the only one that suits a room five men use.
+   */
+  useEffect(() => {
+    document.title = unseen > 0 ? `(${unseen}) ${session.group.name}` : session.group.name;
+  }, [session.group.name, unseen]);
 
   async function pick(file: File | undefined) {
     setUploadError(null);
     if (file === undefined) return;
     setPending(await prepare(file));
+  }
+
+  /**
+   * A photo the dad already has in his hand: pasted from a screenshot, or
+   * dragged onto the room. The picker still exists for a phone; this is for
+   * the laptop, where hunting through a file dialog for something already on
+   * the clipboard is the long way round.
+   */
+  function dropped(event: React.DragEvent) {
+    event.preventDefault();
+    void pick(event.dataTransfer.files[0]);
+  }
+
+  function pasted(event: React.ClipboardEvent) {
+    const file = event.clipboardData.files[0];
+    if (file === undefined) return;
+    event.preventDefault();
+    void pick(file);
   }
 
   async function submit(event: FormEvent) {
@@ -149,7 +223,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   };
 
   return (
-    <main className="room" data-table={tableOpen ? 'open' : 'closed'}>
+    <main
+      className="room"
+      data-table={tableOpen ? 'open' : 'closed'}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={dropped}
+    >
       <header className="room-head">
         <div>
           <h1>{session.group.name}</h1>
@@ -189,13 +268,19 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             peers={call.peers}
             muted={call.muted}
             camera={call.camera}
+            speakingYou={call.speakingYou}
             localStream={call.localStream.current}
             onLeave={call.leave}
             onToggleMute={call.toggleMute}
             onToggleCamera={() => void call.toggleCamera()}
           />
 
-          <ol className="lines" aria-label={t('room.messages')}>
+          <ol
+            className="lines"
+            aria-label={t('room.messages')}
+            ref={lines}
+            onScroll={() => setPinned(atBottom())}
+          >
             {room.messages.length === 0 ? (
               <li className="lines-empty quiet">{t('room.empty')}</li>
             ) : null}
@@ -217,7 +302,20 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                         {row.message.kind === 'prompt' ? (
                           <span className="answer-tag">{t('line.answered')}</span>
                         ) : null}
-                        {row.message.body}
+                        {parts(row.message.body).map((part, i) =>
+                          part.link ? (
+                            <a
+                              key={i}
+                              href={part.href}
+                              target="_blank"
+                              rel="noopener noreferrer nofollow"
+                            >
+                              {part.text}
+                            </a>
+                          ) : (
+                            <span key={i}>{part.text}</span>
+                          ),
+                        )}
                         {row.message.media ? <Attachment media={row.message.media} /> : null}
                       </span>
                       <time className="when">{clock(row.message.createdAt)}</time>
@@ -239,11 +337,17 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             <div ref={bottom} />
           </ol>
 
+          {!pinned && unseen > 0 ? (
+            <button type="button" className="to-bottom" onClick={toBottom} data-testid="to-bottom">
+              {t(`room.unseen_${plural(lang, unseen)}`, { n: unseen })}
+            </button>
+          ) : null}
+
           <p className="typing" aria-live="polite">
             {typingNames.length > 0 ? t('room.typing', { names: typingNames.join(', ') }) : ' '}
           </p>
 
-          <form className="composer" onSubmit={submit}>
+          <form className="composer" onSubmit={submit} onPaste={pasted}>
             {pending !== null ? (
               <p className="pending" data-testid="pending-media">
                 <span>

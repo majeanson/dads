@@ -15,7 +15,7 @@ export const MEDIA_PER_GROUP = 10;
 
 /** Anything larger is refused outright. Images are shrunk in the browser long
  * before they get here; this is the backstop for everything else. */
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 export interface Media {
   id: string;
@@ -60,15 +60,33 @@ function toMedia(row: MediaRow): Media {
  * an SVG is a document that can carry script, so serving one inline from
  * dads.marcportal.com would be running an uploader's code on the app's origin,
  * with the session that goes with it. Everything else is sent as a download.
+ *
+ * Video is on the list because a dad filming his kid on a swing is the same
+ * act as photographing him, and a twelve-second clip that downloads instead of
+ * playing is a clip nobody watches. It carries no script and no origin of its
+ * own: a container the browser either decodes or does not.
+ *
+ * HEIC is deliberately NOT here. Safari renders it and nothing else does, so
+ * inlining it would show the picture to the dads on iPhones and a broken box
+ * to everyone else — worse than the download it gets instead. The browser
+ * shrinks a HEIC to JPEG on the way out anyway wherever it can decode one.
  */
-const INLINE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']);
+const INLINE_IMAGES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']);
+
+/** quicktime is what an iPhone calls the .mov it hands you. */
+const INLINE_VIDEO = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 
 export function isInlineSafe(contentType: string): boolean {
-  return INLINE_TYPES.has(contentType.toLowerCase());
+  const type = contentType.toLowerCase();
+  return INLINE_IMAGES.has(type) || INLINE_VIDEO.has(type);
 }
 
 export function isImage(contentType: string): boolean {
-  return isInlineSafe(contentType);
+  return INLINE_IMAGES.has(contentType.toLowerCase());
+}
+
+export function isVideo(contentType: string): boolean {
+  return INLINE_VIDEO.has(contentType.toLowerCase());
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useT } from './i18n';
 import type { Peer } from './useCall';
 
@@ -17,6 +17,7 @@ export function CallBar({
   peers,
   muted,
   camera,
+  speakingYou,
   localStream,
   onLeave,
   onToggleMute,
@@ -26,12 +27,15 @@ export function CallBar({
   peers: Peer[];
   muted: boolean;
   camera: boolean;
+  speakingYou: boolean;
   localStream: MediaStream | null;
   onLeave: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
 }) {
   const { t } = useT();
+  /** The one tile a dad has asked to actually look at. */
+  const [big, setBig] = useState<string | null>(null);
 
   // Out of a call there is nothing to show: the way in is a button in the
   // header, because a whole row saying "no call is happening" is a row of
@@ -40,9 +44,12 @@ export function CallBar({
 
   const showing = peers.filter((p) => p.hasVideo);
   const listening = peers.filter((p) => !p.hasVideo);
+  // A tile that has gone away cannot stay enlarged.
+  const enlarged =
+    big !== null && (big === 'you' ? camera : showing.some((p) => p.memberId === big)) ? big : null;
 
   return (
-    <div className="call" data-testid="call">
+    <div className="call" data-testid="call" data-big={enlarged === null ? undefined : 'yes'}>
       <div className="call-actions">
         <button type="button" aria-pressed={muted} onClick={onToggleMute}>
           {muted ? t('call.unmute') : t('call.mute')}
@@ -61,13 +68,29 @@ export function CallBar({
       {showing.length > 0 || camera ? (
         <div className="call-tiles">
           {camera && localStream !== null ? (
-            <Tile stream={localStream} name={t('call.you')} muted />
+            <Tile
+              stream={localStream}
+              name={t('call.you')}
+              speaking={speakingYou && !muted}
+              muted
+              big={enlarged === 'you'}
+              onToggleBig={() => setBig(enlarged === 'you' ? null : 'you')}
+            />
           ) : null}
           {/* Silent: every dad's sound comes from the <audio> elements
               below, so a camera going on or off never interrupts what you can
               hear — and nobody is played twice. */}
           {showing.map((p) => (
-            <Tile key={p.memberId} stream={p.stream} name={p.name} muted />
+            <Tile
+              key={p.memberId}
+              stream={p.stream}
+              name={p.name}
+              speaking={p.speaking}
+              quiet={p.muted}
+              muted
+              big={enlarged === p.memberId}
+              onToggleBig={() => setBig(enlarged === p.memberId ? null : p.memberId)}
+            />
           ))}
         </div>
       ) : null}
@@ -81,7 +104,18 @@ export function CallBar({
       ))}
 
       {listening.length > 0 ? (
-        <p className="quiet call-listening">{listening.map((p) => p.name).join(', ')}</p>
+        <p className="quiet call-listening">
+          {listening.map((p) => (
+            <span
+              key={p.memberId}
+              className={`heard${p.speaking ? ' is-speaking' : ''}${p.muted ? ' is-quiet' : ''}`}
+              data-testid="heard"
+            >
+              {p.name}
+              {p.muted ? <span className="sr-only"> — {t('call.is_muted')}</span> : null}
+            </span>
+          ))}
+        </p>
       ) : null}
     </div>
   );
@@ -119,17 +153,53 @@ export function JoinCall({
   );
 }
 
-function Tile({ stream, name, muted }: { stream: MediaStream; name: string; muted: boolean }) {
+/**
+ * One dad's picture.
+ *
+ * The whole tile is the button: on a phone there is no room for a control
+ * beside it, and "tap the man to see the man" needs no explaining. Enlarged,
+ * it is still in the same place in the same list — it just stops being a
+ * thumbnail.
+ */
+function Tile({
+  stream,
+  name,
+  speaking,
+  quiet = false,
+  muted,
+  big,
+  onToggleBig,
+}: {
+  stream: MediaStream;
+  name: string;
+  speaking: boolean;
+  quiet?: boolean;
+  muted: boolean;
+  big: boolean;
+  onToggleBig: () => void;
+}) {
+  const { t } = useT();
   const video = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (video.current !== null) video.current.srcObject = stream;
   }, [stream]);
+
   return (
-    <figure className="call-tile" data-testid="call-tile">
-      {/* Always silent — your own because hearing yourself is unusable,
-          everyone else's because their sound comes from an <audio>. */}
-      <video ref={video} autoPlay playsInline muted={muted} />
-      <figcaption>{name}</figcaption>
+    <figure
+      className={`call-tile${speaking ? ' is-speaking' : ''}`}
+      data-testid="call-tile"
+      data-big={big ? 'yes' : undefined}
+    >
+      <button type="button" onClick={onToggleBig} aria-pressed={big}>
+        {/* Always silent — your own because hearing yourself is unusable,
+            everyone else's because their sound comes from an <audio>. */}
+        <video ref={video} autoPlay playsInline muted={muted} />
+        <span className="sr-only">{big ? t('call.shrink') : t('call.enlarge')}</span>
+      </button>
+      <figcaption>
+        {name}
+        {quiet ? <span title={t('call.is_muted')}> ✕</span> : null}
+      </figcaption>
     </figure>
   );
 }

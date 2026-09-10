@@ -50,10 +50,21 @@ export interface RosterEntry {
   name: string;
 }
 
+/**
+ * A dad on the call, and whether his microphone is off.
+ *
+ * The mute has to come from the room: from the other end of a peer connection
+ * a muted track and a man who is simply not talking look exactly the same, and
+ * "why is nobody answering me" is the whole reason to be able to tell.
+ */
+export interface CallMember extends RosterEntry {
+  muted?: boolean;
+}
+
 export type ClientFrame =
   | { t: 'chat'; body: string; mediaId?: string }
-  /** Sitting down at, or getting up from, the call. */
-  | { t: 'call'; join: boolean }
+  /** Sitting down at, getting up from, or muting yourself on the call. */
+  | { t: 'call'; join: boolean; muted?: boolean }
   /** One leg of a WebRTC handshake, addressed to one other dad. The room
    * relays it without looking inside: what is in there is between the two
    * browsers. */
@@ -68,14 +79,14 @@ export type ServerFrame =
       you: RosterEntry;
       roster: RosterEntry[];
       /** Who is already on the call when you arrive. */
-      call: RosterEntry[];
+      call: CallMember[];
       /** Messages after the client's `after`, oldest first. */
       messages: RoomMessage[];
     }
   | { t: 'roster'; roster: RosterEntry[] }
   /** Who is on the call right now. Separate from the roster: being in the room
    * and being on the call are different things. */
-  | { t: 'call-roster'; members: RosterEntry[] }
+  | { t: 'call-roster'; members: CallMember[] }
   | { t: 'rtc'; from: string; name: string; payload: unknown }
   | { t: 'msg'; message: RoomMessage }
   | { t: 'typing'; memberId: string; name: string }
@@ -102,7 +113,8 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   if (frame.t === 'prompt' && typeof frame.body === 'string')
     return { t: 'prompt', body: frame.body };
   if (frame.t === 'call' && typeof (value as { join?: unknown }).join === 'boolean') {
-    return { t: 'call', join: (value as { join: boolean }).join };
+    const { join, muted } = value as { join: boolean; muted?: unknown };
+    return { t: 'call', join, muted: muted === true };
   }
   if (frame.t === 'rtc') {
     const { to, payload } = value as { to?: unknown; payload?: unknown };

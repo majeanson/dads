@@ -15,8 +15,15 @@ import type { Attachment } from '../shared/protocol';
 const MAX_EDGE = 1600;
 const JPEG_QUALITY = 0.82;
 
-/** The backstop the server also enforces. */
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+/**
+ * The backstop the server also enforces.
+ *
+ * Twenty-five rather than ten because of video: ten seconds off a modern phone
+ * is fifteen megabytes and there is nothing the browser can do to shrink it,
+ * so the old cap meant "no clips". The room keeps ten objects and throws the
+ * eleventh away, so the ceiling on a group is bounded either way.
+ */
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 export interface Prepared {
   blob: Blob;
@@ -27,6 +34,14 @@ export interface Prepared {
 
 export function isImage(type: string): boolean {
   return type.startsWith('image/');
+}
+
+/** The three containers a browser will play inline. Kept level with the
+ * server's own list in src/worker/media.ts, which is what actually decides. */
+const INLINE_VIDEO = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
+
+export function isVideo(type: string): boolean {
+  return INLINE_VIDEO.has(type.toLowerCase());
 }
 
 /** "2.4 MB" — what a person would say about a file's size. */

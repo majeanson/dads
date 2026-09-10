@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DadNight } from '../shared/dadNight';
+import type { CallMember } from '../shared/protocol';
 import type { TableEvent } from '../shared/jaffre';
 import type { RoomMessage, RosterEntry, ServerFrame } from '../shared/protocol';
 
@@ -14,7 +15,7 @@ export interface RoomState {
   typing: Map<string, string>;
   /** Who has a microphone in the room. Being here and being on the call are
    * different things. */
-  call: RosterEntry[];
+  call: CallMember[];
   /** Seeded from the session, then kept current by `night` frames, so a dad
    * who changes it updates every open room without a reload. */
   night: DadNight | null;
@@ -200,10 +201,10 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
   }, []);
 
   /** Sitting down at, or getting up from, the call. */
-  const setInCall = useCallback((join: boolean) => {
+  const setInCall = useCallback((join: boolean, muted?: boolean) => {
     const ws = socket.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ t: 'call', join }));
+    ws.send(JSON.stringify({ t: 'call', join, muted: muted === true }));
   }, []);
 
   /** One leg of a handshake, addressed to one dad. */

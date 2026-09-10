@@ -11,6 +11,7 @@ import {
   MAX_MESSAGE_LENGTH,
   type Attachment,
   parseClientFrame,
+  type CallMember,
   type RoomMessage,
   type RosterEntry,
   type ServerFrame,
@@ -69,6 +70,9 @@ const TABLE_DEDUPE_MS = 20_000;
 interface SocketIdentity {
   memberId: string;
   name: string;
+  /** His microphone is off. Held with `inCall` and for the same reason: it is
+   * true only while this socket is. */
+  muted?: boolean;
   /** Whether this connection has its microphone in the room. Held on the
    * socket rather than in storage because it is true only while the socket
    * is: a dropped connection is off the call by definition. */
@@ -247,7 +251,11 @@ export class RoomDO extends DurableObject<Env> {
 
     if (frame.t === 'call') {
       // The attachment is the only record, so it must be rewritten whole.
-      ws.serializeAttachment({ ...who, inCall: frame.join } satisfies SocketIdentity);
+      ws.serializeAttachment({
+        ...who,
+        inCall: frame.join,
+        muted: frame.muted === true,
+      } satisfies SocketIdentity);
       this.broadcastCallRoster();
       if (!frame.join) {
         // Tell the others to tear down their side rather than leave them
@@ -520,13 +528,17 @@ export class RoomDO extends DurableObject<Env> {
   /** Who has a microphone in the room, deduped by dad. Same exclusion, and for
    * the same reason: a dropped dad who stays on the list is a dad everyone
    * else is still holding a dead peer connection to. */
-  private callRoster(except?: WebSocket): RosterEntry[] {
-    const seen = new Map<string, RosterEntry>();
+  private callRoster(except?: WebSocket): CallMember[] {
+    const seen = new Map<string, CallMember>();
     for (const ws of this.ctx.getWebSockets()) {
       if (ws === except) continue;
       const who = ws.deserializeAttachment() as SocketIdentity | null;
       if (who?.inCall === true && !seen.has(who.memberId)) {
-        seen.set(who.memberId, { memberId: who.memberId, name: who.name });
+        seen.set(who.memberId, {
+          memberId: who.memberId,
+          name: who.name,
+          muted: who.muted === true,
+        });
       }
     }
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));

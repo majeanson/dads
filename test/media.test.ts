@@ -1,7 +1,7 @@
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ServerFrame } from '../src/shared/protocol';
-import { MEDIA_PER_GROUP } from '../src/worker/media';
+import { MEDIA_PER_GROUP, MAX_UPLOAD_BYTES } from '../src/worker/media';
 import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
 
 const worker = workerExports.default;
@@ -109,10 +109,42 @@ describe('uploading', () => {
   it('refuses an empty body and anything oversized', async () => {
     const cookie = await cookieFor(group);
     expect((await put(cookie, new Uint8Array(0))).status).toBe(400);
-    // Declared oversize is refused before the bytes are read at all.
-    expect((await put(cookie, PNG, { 'Content-Length': String(11 * 1024 * 1024) })).status).toBe(
-      413,
-    );
+    // Declared oversize is refused before the bytes are read at all. Read from
+    // the constant rather than repeating it: the cap moved once already, for
+    // video, and a test that hard-codes it goes green on the wrong number.
+    expect(
+      (await put(cookie, PNG, { 'Content-Length': String(MAX_UPLOAD_BYTES + 1) })).status,
+    ).toBe(413);
+  });
+
+  /**
+   * A dad filming his kid on a swing is doing the same thing as photographing
+   * him. A clip that downloads instead of playing is a clip nobody watches.
+   */
+  it('lets a video play inline, and still refuses a document', async () => {
+    const cookie = await cookieFor(group);
+    for (const declared of ['video/mp4', 'video/webm', 'video/quicktime']) {
+      const body = (await (await put(cookie, PNG, { 'Content-Type': declared })).json()) as {
+        media: { id: string; contentType: string };
+      };
+      expect(body.media.contentType).toBe(declared);
+
+      const fetched = await worker.fetch(
+        new Request(`https://dads.test/api/media?id=${body.media.id}`, { headers: { cookie } }),
+        env,
+      );
+      expect(fetched.headers.get('Content-Type')).toBe(declared);
+      // No disposition at all is what "render it where it lands" looks like;
+      // the header only ever appears to force a download.
+      expect(fetched.headers.get('Content-Disposition')).toBeNull();
+    }
+
+    // And the thing that has always been true stays true: HEIC is not on the
+    // list, because Safari is the only browser that would render it.
+    const heic = (await (await put(cookie, PNG, { 'Content-Type': 'image/heic' })).json()) as {
+      media: { contentType: string };
+    };
+    expect(heic.media.contentType).toBe('application/octet-stream');
   });
 
   it('never lets a filename escape its own directory', async () => {

@@ -27,6 +27,8 @@ const EN = {
   'room.empty': 'Nobody has said anything yet.',
   'room.typing': '{names} typing…',
   'room.messages': 'Messages',
+  'room.unseen_one': '1 new ↓',
+  'room.unseen_other': '{n} new ↓',
   'day.today': 'Today',
   'day.yesterday': 'Yesterday',
 
@@ -36,7 +38,7 @@ const EN = {
   'composer.sending': 'Sending…',
   'composer.attach': 'Add a photo or a file',
   'composer.remove': 'Take it off',
-  'composer.too_large': 'That file is too big — 10 MB is the limit.',
+  'composer.too_large': 'That one is too big — 25 MB is the limit.',
   'composer.upload_failed': 'Couldn’t send that. Try again.',
   'line.answered': 'answered',
 
@@ -54,6 +56,9 @@ const EN = {
   'call.alone': 'just you so far',
   'call.count': '{n} on the call',
   'call.you': 'You',
+  'call.enlarge': 'Make this bigger',
+  'call.shrink': 'Make this smaller again',
+  'call.is_muted': 'microphone off',
 
   // ------------------------------------------------------------- the menu
   'menu.title': 'Menu',
@@ -220,6 +225,8 @@ const FR: Record<Key, string> = {
   'room.empty': 'Personne n’a rien dit encore.',
   'room.typing': '{names} écrit…',
   'room.messages': 'Messages',
+  'room.unseen_one': '1 nouveau ↓',
+  'room.unseen_other': '{n} nouveaux ↓',
   'day.today': 'Aujourd’hui',
   'day.yesterday': 'Hier',
 
@@ -229,7 +236,7 @@ const FR: Record<Key, string> = {
   'composer.sending': 'J’envoie…',
   'composer.attach': 'Ajoute une photo ou un fichier',
   'composer.remove': 'Enlève-le',
-  'composer.too_large': 'Le fichier est trop gros — 10 Mo maximum.',
+  'composer.too_large': 'Celui-là est trop gros — 25 Mo maximum.',
   'composer.upload_failed': 'Ça n’a pas passé. Réessaie.',
   'line.answered': 'a répondu',
 
@@ -247,6 +254,9 @@ const FR: Record<Key, string> = {
   'call.alone': 'juste toi pour l’instant',
   'call.count': '{n} dans l’appel',
   'call.you': 'Toi',
+  'call.enlarge': 'Agrandis',
+  'call.shrink': 'Réduis',
+  'call.is_muted': 'micro fermé',
 
   // ------------------------------------------------------------- le menu
   'menu.title': 'Menu',

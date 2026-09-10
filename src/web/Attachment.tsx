@@ -1,5 +1,5 @@
 import type { Attachment as MessageAttachment } from '../shared/protocol';
-import { isImage, mediaUrl } from './media';
+import { isImage, isVideo, mediaUrl } from './media';
 
 /**
  * A photo or file on a line.
@@ -10,6 +10,23 @@ import { isImage, mediaUrl } from './media';
  */
 export function Attachment({ media }: { media: MessageAttachment }) {
   const href = mediaUrl(media.id);
+
+  if (isVideo(media.contentType)) {
+    return (
+      // playsInline or an iPhone takes the whole screen for it the moment it
+      // starts; metadata only, so a room full of clips is not a room that
+      // downloads itself on open.
+      <video
+        className="attachment"
+        src={href}
+        controls
+        playsInline
+        preload="metadata"
+        width={media.width ?? undefined}
+        height={media.height ?? undefined}
+      />
+    );
+  }
 
   if (!isImage(media.contentType)) {
     return (

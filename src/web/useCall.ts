@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { RosterEntry } from '../shared/protocol';
+import type { CallMember } from '../shared/protocol';
+import { SpeakingWatch } from './speaking';
+import { useWakeLock } from './wakeLock';
 
 /**
  * Voice, and optionally camera, between the dads in the room.
@@ -25,6 +27,11 @@ export interface Peer {
   stream: MediaStream;
   /** Whether that dad is currently sending pictures as well as sound. */
   hasVideo: boolean;
+  /** He has stopped his own microphone. Told to us by the room, because a
+   * muted track is indistinguishable from a quiet one out here. */
+  muted: boolean;
+  /** He is talking right now. Worked out locally from his own audio. */
+  speaking: boolean;
 }
 
 export type CallState = 'out' | 'joining' | 'in' | 'denied' | 'failed';
@@ -50,6 +57,10 @@ interface PeerLink {
 }
 
 const FALLBACK_ICE: RTCIceServer[] = [{ urls: 'stun:stun.cloudflare.com:3478' }];
+
+/** What this dad's own microphone is watched under: not a member id, so it
+ * can never collide with one. */
+const YOU = 'you';
 
 /**
  * Asked for once per call, not once per signal.
@@ -85,19 +96,26 @@ export function useCall({
 }: {
   you: string | null;
   /** Who the room says is on the call, this dad included. */
-  members: RosterEntry[];
+  members: CallMember[];
   send: Send;
-  onJoinChange: (join: boolean) => void;
+  onJoinChange: (join: boolean, muted?: boolean) => void;
 }) {
   const [state, setState] = useState<CallState>('out');
   const [peers, setPeers] = useState<Peer[]>([]);
   const [muted, setMuted] = useState(false);
   const [camera, setCamera] = useState(false);
+  const [speaking, setSpeaking] = useState<string[]>([]);
+
+  // A phone locks itself after half a minute of a dad listening rather than
+  // touching it, which is most of a call.
+  useWakeLock(state === 'in');
 
   const local = useRef<MediaStream | null>(null);
   const links = useRef(new Map<string, PeerLink>());
   const streams = useRef(new Map<string, MediaStream>());
   const names = useRef(new Map<string, string>());
+  const mutes = useRef(new Map<string, boolean>());
+  const watch = useRef<SpeakingWatch | null>(null);
 
   const publish = useCallback(() => {
     setPeers(
@@ -106,6 +124,8 @@ export function useCall({
         name: names.current.get(memberId) ?? 'a dad',
         stream,
         hasVideo: stream.getVideoTracks().some((t) => t.readyState === 'live'),
+        muted: mutes.current.get(memberId) === true,
+        speaking: false,
       })),
     );
   }, []);
@@ -115,6 +135,7 @@ export function useCall({
       links.current.get(memberId)?.pc.close();
       links.current.delete(memberId);
       streams.current.delete(memberId);
+      watch.current?.drop(memberId);
       publish();
     },
     [publish],
@@ -159,6 +180,7 @@ export function useCall({
       pc.ontrack = (event) => {
         const stream = event.streams[0] ?? new MediaStream([event.track]);
         streams.current.set(memberId, stream);
+        watch.current?.watch(memberId, stream);
         // A camera going on or off changes what this stream holds without any
         // event we would otherwise notice.
         stream.onaddtrack = publish;
@@ -200,9 +222,12 @@ export function useCall({
     for (const link of links.current.values()) link.pc.close();
     links.current.clear();
     streams.current.clear();
+    watch.current?.close();
+    watch.current = null;
     for (const track of local.current?.getTracks() ?? []) track.stop();
     local.current = null;
     setPeers([]);
+    setSpeaking([]);
     setCamera(false);
     setMuted(false);
   }, []);
@@ -210,7 +235,20 @@ export function useCall({
   const join = useCallback(async () => {
     setState('joining');
     try {
-      local.current = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      // Spelled out rather than left to `audio: true`. Every browser turns
+      // these on by default today, but a call between five men in five
+      // kitchens is exactly the case they exist for, and a default is not a
+      // promise.
+      local.current = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: false,
+      });
+      watch.current = new SpeakingWatch(setSpeaking);
+      watch.current.watch(YOU, local.current);
     } catch (err) {
       // Refusing the microphone is a choice, not a fault; anything else is a
       // device that will not open.
@@ -228,12 +266,17 @@ export function useCall({
   }, [onJoinChange, stop]);
 
   /** Mute is a track that stops sending, not a track that goes away: removing
-   * it would renegotiate and make everyone's tiles flicker. */
+   * it would renegotiate and make everyone's tiles flicker.
+   *
+   * The room is told, because from the other end a muted dad and a silent one
+   * look identical — and "why is nobody answering me" is the whole reason to
+   * say which. */
   const toggleMute = useCallback(() => {
     const next = !muted;
     for (const track of local.current?.getAudioTracks() ?? []) track.enabled = !next;
     setMuted(next);
-  }, [muted]);
+    onJoinChange(true, next);
+  }, [muted, onJoinChange]);
 
   /**
    * The camera. Adding or removing the track fires `negotiationneeded` on
@@ -336,7 +379,11 @@ export function useCall({
     if (state !== 'in' || you === null) return;
 
     const others = members.filter((m) => m.memberId !== you);
-    for (const m of others) names.current.set(m.memberId, m.name);
+    for (const m of others) {
+      names.current.set(m.memberId, m.name);
+      mutes.current.set(m.memberId, m.muted === true);
+    }
+    publish();
 
     for (const memberId of [...links.current.keys()]) {
       if (!others.some((m) => m.memberId === memberId)) teardown(memberId);
@@ -352,13 +399,17 @@ export function useCall({
     return () => {
       cancelled = true;
     };
-  }, [linkTo, members, state, teardown, you]);
+  }, [linkTo, members, publish, state, teardown, you]);
 
   useEffect(() => stop, [stop]);
 
   return {
     state,
-    peers,
+    // Merged here rather than in `publish` so that a mark going on and off
+    // several times a second never rebuilds a peer's stream object — which
+    // would hand every <video> a "new" source and make the tiles flicker.
+    peers: peers.map((p) => ({ ...p, speaking: speaking.includes(p.memberId) })),
+    speakingYou: speaking.includes(YOU),
     muted,
     camera,
     join,
