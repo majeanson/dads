@@ -91,7 +91,7 @@ Driving it turned up a defect on **jaffre's** side, since fixed and deployed.
 `emitTableEvent`'s `ready` was reached only from the `roster` message, and
 `welcome` sets the first roster itself — so `ready` had never fired in
 production. Everything else crossed — seats, games, final scores — but dads
-waits `SILENCE_MS` for *any* event and was therefore telling every dad "the
+waits `SILENCE_MS` for _any_ event and was therefore telling every dad "the
 table isn't answering in here", under a table that was working perfectly.
 `welcome` now announces through the same path, pinned by an e2e in jaffre with
 a stand-in embedder on its own origin. Verified live: the frame speaks, and the

@@ -5,16 +5,25 @@ import { E2E_BOARD_GROUP } from './global-setup';
 test.describe.configure({ mode: 'serial' });
 
 /**
- * Scoped to the tab strip because Playwright matches accessible names by
- * substring, and one curated prompt ends "...with no phone in the room?".
+ * Everything that is not the conversation lives behind the one Menu button.
+ *
+ * Scoped to the menu because Playwright matches accessible names by substring,
+ * and one curated prompt ends "...with no phone in the room?". Anchored regex
+ * rather than an exact name: an item with something waiting is called
+ * "Board — something waiting", which is exactly what a screen reader should
+ * hear, and the label is the prefix.
  */
-function tab(page: Page, name: 'Today' | 'Table' | 'Prompts' | 'Board') {
-  // Anchored regex, not an exact match: a tab with something waiting is named
-  // "Board — something waiting", which is exactly what a screen reader should
-  // hear. The label is the prefix.
-  return page
+async function open(page: Page, name: 'Prompts' | 'Board' | 'Open the table' | 'Dad night') {
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page
     .getByRole('navigation', { name: 'Rooms' })
-    .getByRole('button', { name: new RegExp(`^${name}`) });
+    .getByRole('button', { name: new RegExp(`^${name}`) })
+    .click();
+}
+
+/** Shut whatever sheet is open and go back to the conversation. */
+async function close(page: Page) {
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
 }
 
 async function comeIn(browser: Browser, name: string): Promise<Page> {
@@ -32,10 +41,17 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
-  // A blank week is something waiting, and the tab says so.
-  await expect(marc.getByTestId('mark-board')).toBeVisible();
+  // A blank week is something waiting, and the room says so on its one
+  // button before you have opened anything.
+  await expect(marc.getByTestId('mark-menu')).toBeVisible();
 
-  await tab(marc, 'Board').click();
+  // The menu is where it says WHICH thing is waiting.
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await expect(marc.getByTestId('mark-board')).toBeVisible();
+  await marc
+    .getByRole('navigation', { name: 'Rooms' })
+    .getByRole('button', { name: /^Board/ })
+    .click();
   await expect(marc.getByTestId('your-week')).toBeVisible();
 
   // Sam starts blank on Marc's board — everyone gets a row either way.
@@ -45,14 +61,18 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
 
   await marc.getByRole('radio', { name: '2 — hard' }).check();
   await marc.getByLabel('One line about your week').fill('Shouted about shoes.');
-  await marc.getByRole('button', { name: 'Check in' }).click();
+  await marc.getByRole('button', { name: 'Save' }).click();
   await expect(
     marc.getByTestId('board-row').filter({ hasText: 'Marc (you)' }).first(),
   ).toContainText('2/5');
 
+  // The commitment is the same form and the same button: one Save, and only
+  // what actually changed is sent.
   await marc.getByLabel('One thing to try this week').fill('Phone in the drawer at six');
-  await marc.getByRole('button', { name: 'Commit' }).click();
-  await expect(marc.getByTestId('your-week')).toBeVisible();
+  await marc.getByRole('button', { name: 'Save' }).click();
+  await expect(
+    marc.getByTestId('board-row').filter({ hasText: 'Marc (you)' }).first(),
+  ).toContainText('Phone in the drawer at six');
 
   // The room heard about both, live, without Sam reloading.
   await expect(
@@ -63,7 +83,7 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   ).toBeVisible();
 
   // And Sam's board shows Marc's week.
-  await tab(sam, 'Board').click();
+  await open(sam, 'Board');
   const marcRow = sam.getByTestId('board-row').filter({ hasText: 'Marc' }).first();
   await expect(marcRow).toContainText('2/5');
   await expect(marcRow).toContainText('Phone in the drawer at six');
@@ -73,29 +93,29 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   await sam.context().close();
 });
 
-test('a check-in survives a reload, and the tabs still work', async ({ browser }) => {
+test('a check-in survives a reload, and the menu still works', async ({ browser }) => {
   // A fresh context is a fresh device, so this is a different dad from the
   // one above — hence a name of his own.
   const dave = await comeIn(browser, 'Dave');
-  await tab(dave, 'Board').click();
+  await open(dave, 'Board');
 
   await dave.getByRole('radio', { name: '5 — great' }).check();
   await dave.getByLabel('One line about your week').fill('Good week, for once.');
-  await dave.getByRole('button', { name: 'Check in' }).click();
+  await dave.getByRole('button', { name: 'Save' }).click();
 
   const daveRow = dave.getByTestId('board-row').filter({ hasText: 'Dave (you)' }).first();
   await expect(daveRow).toContainText('5/5');
 
   await dave.reload();
-  await tab(dave, 'Board').click();
+  await open(dave, 'Board');
   await expect(
     dave.getByTestId('board-row').filter({ hasText: 'Dave (you)' }).first(),
   ).toContainText('Good week, for once.');
 
-  // Back to the conversation, which is all the Today tab is now.
-  await tab(dave, 'Today').click();
+  // Closing the sheet leaves the conversation, which is the whole room.
+  await close(dave);
   await expect(dave.getByRole('button', { name: 'Send' })).toBeVisible();
-  await expect(dave.getByTestId('prompt-card')).toHaveCount(0);
+  await expect(dave.getByTestId('board')).toHaveCount(0);
 
   await dave.context().close();
 });

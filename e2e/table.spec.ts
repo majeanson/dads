@@ -28,16 +28,20 @@ const STUB_TABLE = `<!doctype html><meta charset="utf-8"><h1>stub table</h1>
 const MUTE_TABLE = '<!doctype html><meta charset="utf-8"><h1>a table that says nothing</h1>';
 
 /**
- * Scoped to the tab strip because Playwright matches accessible names by
- * substring, and one curated prompt ends "...with no phone in the room?".
+ * Everything that is not the conversation lives behind the one Menu button.
+ *
+ * Scoped to the menu because Playwright matches accessible names by substring,
+ * and one curated prompt ends "...with no phone in the room?". Anchored regex
+ * rather than an exact name: an item with something waiting is called
+ * "Board — something waiting", which is exactly what a screen reader should
+ * hear, and the label is the prefix.
  */
-function tab(page: Page, name: 'Today' | 'Table' | 'Prompts' | 'Board') {
-  // Anchored regex, not an exact match: a tab with something waiting is named
-  // "Board — something waiting", which is exactly what a screen reader should
-  // hear. The label is the prefix.
-  return page
+async function open(page: Page, name: 'Prompts' | 'Board' | 'Open the table' | 'Dad night') {
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page
     .getByRole('navigation', { name: 'Rooms' })
-    .getByRole('button', { name: new RegExp(`^${name}`) });
+    .getByRole('button', { name: new RegExp(`^${name}`) })
+    .click();
 }
 
 async function comeIn(browser: Browser, name: string, body = STUB_TABLE): Promise<Page> {
@@ -57,9 +61,11 @@ async function comeIn(browser: Browser, name: string, body = STUB_TABLE): Promis
 test('the group gets its own table, addressed to the dad by name', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
 
-  // At this width the table sits beside the room already — there is nothing
-  // to open, and the toggle is not offered.
-  await expect(tab(marc, 'Table')).toBeHidden();
+  // The table is not there until it is asked for, at any width: an evening
+  // starts as a conversation.
+  await expect(marc.getByTestId('table').locator('iframe')).toBeHidden();
+
+  await open(marc, 'Open the table');
   const frame = marc.getByTestId('table').locator('iframe');
   await expect(frame).toBeVisible();
 
@@ -73,6 +79,9 @@ test('the group gets its own table, addressed to the dad by name', async ({ brow
   await expect(out).toHaveAttribute('href', /from=dads/);
   await expect(out).not.toHaveAttribute('href', /name=/);
 
+  // Wide, the conversation is still there beside it.
+  await expect(marc.getByLabel('Say something')).toBeVisible();
+
   await marc.context().close();
 });
 
@@ -80,8 +89,9 @@ test('what the table says reaches the room, once', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
-  // Both dads have the table open — the frame is mounted from the start — so
-  // both browsers relay the same event.
+  // The frame is mounted from the start whether or not it is on screen — that
+  // is what keeps a game alive across a closed table — so both browsers relay
+  // the same event without either of them opening anything.
   const line = sam.getByTestId('line').filter({ hasText: 'A game started at the table' });
   await expect(line).toHaveCount(1);
   await expect(
@@ -108,11 +118,13 @@ test('on a phone the table takes the room’s place, and gives it back', async (
   await expect(page.getByLabel('Say something')).toBeVisible();
   await expect(page.getByTestId('table').locator('iframe')).toBeHidden();
 
-  await tab(page, 'Table').click();
+  await open(page, 'Open the table');
   await expect(page.getByTestId('table').locator('iframe')).toBeVisible();
   await expect(page.getByLabel('Say something')).toBeHidden();
 
-  await tab(page, 'Today').click();
+  // And the table hands the room back from its own head, without a trip
+  // through the menu.
+  await page.getByTestId('table').getByRole('button', { name: 'Close the table' }).click();
   await expect(page.getByLabel('Say something')).toBeVisible();
   await expect(page.getByTestId('table').locator('iframe')).toBeHidden();
 
@@ -124,6 +136,7 @@ test('a table that never speaks offers a way out', async ({ browser }) => {
   // from out here. Nothing about it is detectable across origins, so the only
   // honest signal is silence.
   const page = await comeIn(browser, 'Quiet', MUTE_TABLE);
+  await open(page, 'Open the table');
 
   // Nothing is claimed early: the frame may simply be slow.
   await expect(page.getByTestId('table-silent')).toHaveCount(0);

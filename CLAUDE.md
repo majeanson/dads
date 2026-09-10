@@ -162,10 +162,11 @@ weakening `sessionSecret()`.
 
 ## Look and feel (M7)
 
-- **Plain is the brief.** No webfont, no gradient, no shadow, no pill, no
-  uppercase label. One system font stack, seven colours, hairline rules, and
-  the browser's own defaults wherever they are already right. If a change adds
-  decoration, it is going the wrong way.
+- **Plain is the brief, and empty is plainer.** No webfont, no gradient, no
+  shadow, no pill, no uppercase label — and no box, eyebrow, badge or count
+  where the words alone do the job. One system font stack, seven colours,
+  hairline rules, and the browser's own defaults wherever they are already
+  right. If a change adds decoration, it is going the wrong way.
 - Light and dark both ship, following the OS via `prefers-color-scheme`.
   There is **no toggle** on purpose — the OS already holds that preference.
 - `npm run audit:contrast` checks every rendered pair **in both themes** and
@@ -243,21 +244,34 @@ secret, custom domain bound by the route in wrangler.toml.
 
 ## Shape of the room
 
-- **Today's chat is where you are; everything else is a tab.** A tab carries
-  a mark when something is waiting for **you** — a question you have not
-  answered, a week you have not filled in. A mark for something somebody else
-  did would be noise, and a number invites you to drive it to zero.
-- `/api/todo` is what the marks read, and it is deliberately about the caller
-  and nobody else.
-- Panels mount only while their tab is open, so each reads fresh data.
-- **The table is the exception** and stays mounted beside the talk: unmounting
-  the iframe restarts a game. Above 64rem it is simply always there and the
-  toolbar's Table button is hidden (`.only-narrow`); below, it takes the
-  room's place until closed.
-- e2e helper: `tab(page, 'Prompts')`, scoped to the `Rooms` navigation and
-  matching on an **anchored regex**, not an exact name — a tab with something
-  waiting is named "Board — something waiting", which is what a screen reader
-  should hear.
+- **The room is the conversation and the call. That is the whole screen.**
+  Header, call row, messages, composer — nothing else, at any width. There is
+  no tab strip: tabs are a claim that four things matter equally, and here they
+  do not. Anything added above the message list has to earn its row by being
+  worth the row of conversation it costs.
+- **Everything else is behind the one Menu button**: who's here, Prompts,
+  Board, the table, dad night, sign out. Each opens as a `Sheet` — a native
+  `<dialog>`, so the focus trap, Escape, the inert background and the backdrop
+  come from the platform. Sheets mount on open, so each reads fresh data.
+- The Menu carries a mark when something is waiting for **you** — a question
+  you have not answered, a week you have not filled in — and the menu itself
+  says which. A mark for something somebody else did would be noise, and a
+  number invites you to drive it to zero. `/api/todo` is what the marks read,
+  and it is deliberately about the caller and nobody else.
+- **Dad night appears on the header only inside 24 hours** (`nightSoon`), and
+  in full in the menu (`nightItem`). The rest of the week the countdown is
+  furniture: the room already posts the open and the summary as lines.
+- **The table stays mounted whether or not it is on screen** — unmounting the
+  iframe restarts a game — and `data-table="open"` on `main.room` is what shows
+  it. Above 64rem, open means half each and the room widens to 74rem; closed,
+  the conversation keeps a 44rem measure, because a chat line 1200px wide puts
+  the name at one end and the time at the other. Below 64rem it takes the
+  room's place. There is no width toggle: one size, and the way to make the
+  game bigger is its own tab.
+- e2e helpers: `open(page, 'Prompts')` clicks Menu then the item, scoped to the
+  `Rooms` navigation and matching on an **anchored regex**, not an exact name —
+  an item with something waiting is named "Board — something waiting", which is
+  what a screen reader should hear. `close(page)` clicks the sheet's Close.
 
 ## Media
 

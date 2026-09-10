@@ -12,19 +12,17 @@ const SILENCE_MS = 12_000;
 /**
  * The Jaffre table, beside the talking.
  *
- * The frame is never unmounted once it exists — switching to the board and
- * back must not restart a game in progress — so the parent hides it with CSS
- * instead. Anything the table says arrives by postMessage and is relayed into
- * the room by `onEvent`.
+ * The frame is never unmounted once it exists — closing the table, or opening
+ * anything over it, must not restart a game in progress — so the parent hides
+ * it with CSS instead. Anything the table says arrives by postMessage and is
+ * relayed into the room by `onEvent`.
  */
 export function TableColumn({
   onEvent,
-  wide,
-  onToggleWide,
+  onClose,
 }: {
   onEvent: (event: TableEvent) => void;
-  wide: boolean;
-  onToggleWide: () => void;
+  onClose: () => void;
 }) {
   const [table, setTable] = useState<TableInfo | null | 'loading'>('loading');
   const [blocked, setBlocked] = useState(false);
@@ -96,6 +94,9 @@ export function TableColumn({
       <section className="table-frame">
         <div className="table-head">
           <h2>The table</h2>
+          <button type="button" className="link" onClick={onClose}>
+            Close the table
+          </button>
         </div>
         <p className="table-fallback quiet">Setting the table…</p>
       </section>
@@ -107,6 +108,9 @@ export function TableColumn({
       <section className="table-frame" data-testid="table">
         <div className="table-head">
           <h2>The table</h2>
+          <button type="button" className="link" onClick={onClose}>
+            Close the table
+          </button>
         </div>
         <div className="table-fallback">
           <p className="quiet">Couldn’t reach the table.</p>
@@ -120,14 +124,12 @@ export function TableColumn({
       <div className="table-head">
         <h2>The table</h2>
         <span className="table-head-actions">
-          {/* Only where both columns are on screen: below that the table is
-              already the whole width. */}
-          <button type="button" className="link only-wide" onClick={onToggleWide}>
-            {wide ? 'Narrower' : 'Wider'}
-          </button>
           <a href={table.shareUrl} target="_blank" rel="noopener noreferrer">
             Open in its own tab ↗
           </a>
+          <button type="button" className="link" onClick={onClose}>
+            Close the table
+          </button>
         </span>
       </div>
 

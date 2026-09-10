@@ -20,15 +20,21 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await sam.getByLabel('Code').fill(E2E_NIGHT_GROUP.code);
   await sam.getByLabel('Your name').fill('Sam');
   await sam.getByRole('button', { name: 'Come in' }).click();
-  // With no night set the bar is one link and nothing else.
+  await expect(sam.getByTestId('connection')).toHaveText(/here$/);
+  // With no night set the menu offers to set one, and says nothing else
+  // about it anywhere.
+  await sam.getByRole('button', { name: 'Menu' }).click();
   await expect(sam.getByTestId('dad-night')).toContainText('Set dad night');
 
+  await marc.getByRole('button', { name: 'Menu' }).click();
   await marc.getByRole('button', { name: 'Set dad night' }).click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
   await marc.getByRole('button', { name: 'Save' }).click();
 
-  // Marc sees the countdown; Sam gets it pushed without reloading.
+  // Marc sees the countdown; Sam, whose menu is still open, gets it pushed
+  // without reloading.
+  await marc.getByRole('button', { name: 'Menu' }).click();
   await expect(marc.getByTestId('dad-night')).toContainText('thursdays at 21:00');
   await expect(marc.getByTestId('dad-night')).toContainText(/in \d+ (day|hour|minute)/);
   await expect(sam.getByTestId('dad-night')).toContainText('thursdays at 21:00');
@@ -38,6 +44,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
 
   // It survives a reload, because it lives in D1 and not in the tab.
   await marc.reload();
+  await marc.getByRole('button', { name: 'Menu' }).click();
   await expect(marc.getByTestId('dad-night')).toContainText('thursdays at 21:00');
 
   await marcCtx.close();

@@ -191,7 +191,9 @@ form button[type='submit'] {
 
 main.room {
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
+  /* The header, and then the room. There is no third row: every strip of
+     chrome above the conversation is a strip of conversation you cannot see. */
+  grid-template-rows: auto 1fr;
   gap: var(--gap);
   max-width: 44rem;
   height: 100dvh;
@@ -210,23 +212,7 @@ main.room {
   font-size: 0.875rem;
 }
 
-/* One quiet line, no rule under it. Every row of chrome above the
-   conversation is a row of conversation you cannot see. */
-.dadnight {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-}
-
-.dadnight-line {
-  flex: 1 1 auto;
-  margin: 0;
-}
-
 .night-editor {
-  flex: 1 1 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -244,7 +230,7 @@ main.room {
   min-height: 0;
 }
 
-.room[data-tab='today'] .col-talk {
+.col-talk {
   display: grid;
   /* call, THE CONVERSATION, typing, composer. The 1fr belongs to the
      conversation and to nothing else — when the call bar was added it landed
@@ -262,68 +248,63 @@ main.room {
 
 /* Narrow: the table takes the room's place while it is open, because there is
    no room for both. */
-.room[data-tab='table'] .col-table,
-.room[data-tab='prompts'] .panel-prompts,
-.room[data-tab='board'] .panel-board {
+.room[data-table='open'] .col-table {
   display: block;
 }
 
-.room:not([data-tab='today']) .col-talk {
+.room[data-table='open'] .col-talk {
   display: none;
 }
 
 @media (min-width: 64rem) {
-  main.room {
+  /* The conversation keeps a readable measure whatever the screen is: a line
+     of chat 1200px wide puts the name at one end and the time at the other.
+     Only the table earns the extra width, and only while it is open. */
+  .room[data-table='open'] {
     max-width: 74rem;
   }
 
-  /* Wide: they sit side by side and the toggle has nothing to do, so it is
-     not offered. The talk gets most of the screen — it is what the room is
-     for — and the table can take half when a game is the point. */
-  .stage {
-    grid-template-columns: 70fr 30fr;
-  }
-
-  .room[data-split='half'] .stage {
+  /* Wide: with the table open the two sit side by side, half each. Closed —
+     which is how every evening starts — the conversation has the whole room.
+     There is no width toggle any more: one size, and a dad who wants the game
+     bigger than that opens it in its own tab. */
+  .room[data-table='open'] .stage {
     grid-template-columns: 1fr 1fr;
   }
 
-  /* Wide: the table is simply always beside the conversation. */
-  .room[data-tab='today'] .col-table {
-    display: block;
-  }
-
-  .only-narrow {
-    display: none;
+  .room[data-table='open'] .col-talk {
+    display: grid;
   }
 }
 
-.tabs {
+/* --- the menu ----------------------------------------------------------
+ *
+ * Everything the app can do that is not talking, as a list of plain buttons,
+ * one to a line, in the order a dad is likely to want them.
+ */
+.menu {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.menu button {
+  width: 100%;
+  text-align: left;
+}
+
+.menu-roster {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.tabs button {
-  position: relative;
-  padding: 0 0 0.4rem;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: none;
+  gap: 0 0.5rem;
+  margin: 0 0 0.25rem;
+  padding: 0;
+  list-style: none;
   color: var(--muted);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 }
 
-.tabs button:hover {
-  color: var(--text);
-}
-
-.tabs button.is-current {
-  border-bottom-color: var(--accent);
-  color: var(--text);
+.menu-roster li:not(:last-child)::after {
+  content: ',';
 }
 
 /* A mark, not a count: the number of things waiting is never the point, and
@@ -338,36 +319,16 @@ main.room {
   vertical-align: 0.35em;
 }
 
-.roster {
-  display: flex;
-  flex-wrap: wrap;
-  /* Pushed to the end of the toolbar: it is information, not an action. */
-  margin: 0 0 0 auto;
-  gap: 0 0.5rem;
-  padding: 0;
-  list-style: none;
-  color: var(--muted);
-  font-size: 0.875rem;
+/* The one control in the header, and the only thing up there competing with
+   the group's own name. */
+.menu-open {
+  white-space: nowrap;
 }
 
-.roster li:not(:last-child)::after {
-  content: ',';
-}
-
-/* --- today's question, at the top of the Prompts tab --- */
+/* --- today's question, at the top of the questions sheet --- */
 
 .prompt-card {
-  margin-bottom: var(--gap);
-  padding: var(--gap);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
-}
-
-.prompt-eyebrow {
-  margin: 0 0 0.15rem;
-  color: var(--muted);
-  font-size: 0.8125rem;
+  margin-bottom: 1.5rem;
 }
 
 .prompt-body {
@@ -509,16 +470,7 @@ main.room {
 
 .prompt-list h2,
 .board h2 {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
   color: var(--muted);
-}
-
-.prompt-list .count,
-.board .count {
-  color: var(--muted);
-  font-weight: 400;
 }
 
 .prompts,
@@ -563,7 +515,7 @@ main.room {
   font-size: 0.8125rem;
 }
 
-.badge.is-answered {
+.prompt-row-meta .is-answered {
   color: var(--accent);
 }
 
@@ -619,12 +571,11 @@ main.room {
   gap: 0.15rem;
 }
 
-.board-commitment .badge {
-  color: var(--muted);
-  font-size: 0.8125rem;
+.board-commitment {
+  font-size: 0.9375rem;
 }
 
-.board-commitment.is-done .badge {
+.board-commitment.is-done {
   color: var(--accent);
 }
 
@@ -632,15 +583,17 @@ main.room {
   color: var(--muted);
 }
 
+/* No box around either: each is the only thing on its part of the sheet, and
+   a border round the only thing there says nothing. */
 .your-week,
 .how-did-it-go {
   display: grid;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding: var(--gap);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.your-week button[type='submit'] {
+  justify-self: start;
 }
 
 .your-week input,
@@ -825,18 +778,6 @@ main.room {
   }
 }
 
-/* The width toggle belongs to the table and only exists where both columns
- * are on screen. */
-.only-wide {
-  display: none;
-}
-
-@media (min-width: 64rem) {
-  .only-wide {
-    display: inline;
-  }
-}
-
 .table-head-actions {
   display: flex;
   align-items: baseline;
@@ -914,8 +855,7 @@ main.room {
 /* --- lean on a phone ---------------------------------------------------
  *
  * Every row of chrome above the conversation is a row of conversation you
- * cannot see. On a short screen the header, the dad-night line and the
- * toolbar all give up their padding first. */
+ * cannot see. On a short screen the header gives up its padding first. */
 @media (max-width: 40rem) {
   main.room {
     gap: 0.5rem;
@@ -925,21 +865,6 @@ main.room {
   .room-head h1 {
     font-size: 1.125rem;
   }
-
-  .tabs {
-    padding-bottom: 0.5rem;
-    font-size: 0.875rem;
-  }
-
-  .tabs .roster {
-    /* Below the buttons rather than squeezed beside them. */
-    flex-basis: 100%;
-    margin-left: 0;
-  }
-
-  .prompt-card {
-    padding: 0.6rem 0.75rem;
-  }
 }
 
 /* --- the call ----------------------------------------------------------
@@ -947,13 +872,11 @@ main.room {
  * Sound is the point; pictures are optional. A dad with his camera off is a
  * name, not an empty black rectangle taking up a phone screen.
  */
+/* A row, not a panel. Nothing is happening on the call most of the time, and
+   a bordered box announcing that is a box for nothing. */
 .call {
   display: grid;
   gap: 0.5rem;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
 }
 
 .call-out {

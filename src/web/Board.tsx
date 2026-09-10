@@ -11,6 +11,10 @@ import {
 
 const RATING_WORDS = ['', 'rough', 'hard', 'alright', 'good', 'great'];
 
+function outcomeWord(outcome: 'pending' | 'done' | 'missed'): string {
+  return outcome === 'done' ? 'kept' : outcome === 'missed' ? 'missed' : 'trying';
+}
+
 /**
  * The week, in public. Every dad has a row whether or not he filled it in —
  * a board that only shows the dads who turned up is a board that flatters.
@@ -21,7 +25,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
     fetchBoard()
       .then((d) => {
         setData(d);
-        // The tab's mark is about this dad's week, which may have just changed.
+        // The menu's mark is about this dad's week, which may have just changed.
         onChanged?.();
       })
       .catch(() => setData(null));
@@ -40,9 +44,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
       {data.pending ? <HowDidItGo pending={data.pending} onSaved={reload} /> : null}
 
       <section>
-        <h2>
-          This week <span className="count">{weekLabel(data.week)}</span>
-        </h2>
+        <h2>This week</h2>
         <YourWeek row={mine} onSaved={reload} />
         {/* Your own row stays in the list, not just in the editor above it:
             the whole feature is group-visible by design, and you should be
@@ -54,26 +56,29 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
         </ul>
       </section>
 
-      {before.map((w) => (
-        <section key={w.week}>
-          <h2>
-            {weekLabel(w.week)}{' '}
-            <span className="count">
-              {w.rows.filter((r) => r.commitment?.outcome === 'done').length}/
-              {w.rows.filter((r) => r.commitment).length} kept
-            </span>
-          </h2>
-          {w.rows.every((r) => !r.checkIn && !r.commitment) ? (
-            <p className="quiet">Nothing from anyone.</p>
-          ) : (
-            <ul className="board-rows">
-              {w.rows.map((row) => (
-                <BoardEntry key={row.memberId} row={row} isYou={row.memberId === data.you} />
-              ))}
-            </ul>
-          )}
-        </section>
-      ))}
+      {/* A week nobody filled in is not a week worth printing: four
+          'nothing from anyone' headings is a scroll through an empty diary. */}
+      {before
+        .filter((w) => w.rows.some((r) => r.checkIn ?? r.commitment))
+        .map((w) => {
+          const kept = w.rows.filter((r) => r.commitment?.outcome === 'done').length;
+          const promised = w.rows.filter((r) => r.commitment).length;
+          return (
+            <section key={w.week}>
+              {/* The follow-through number is the whole point of the week
+                behind you, so it stays — as words, not a badge. */}
+              <h2>
+                {weekLabel(w.week)}
+                {promised > 0 ? ` · ${kept}/${promised} kept` : ''}
+              </h2>
+              <ul className="board-rows">
+                {w.rows.map((row) => (
+                  <BoardEntry key={row.memberId} row={row} isYou={row.memberId === data.you} />
+                ))}
+              </ul>
+            </section>
+          );
+        })}
     </div>
   );
 }
@@ -99,14 +104,7 @@ function BoardEntry({ row, isYou = false }: { row: BoardRow; isYou?: boolean }) 
           ) : null}
           {row.commitment ? (
             <span className={`board-commitment is-${row.commitment.outcome}`}>
-              <span className="badge">
-                {row.commitment.outcome === 'done'
-                  ? 'kept'
-                  : row.commitment.outcome === 'missed'
-                    ? 'missed'
-                    : 'trying'}
-              </span>{' '}
-              {row.commitment.body}
+              {outcomeWord(row.commitment.outcome)}: {row.commitment.body}
               {row.commitment.reflection ? ` — ${row.commitment.reflection}` : ''}
             </span>
           ) : null}
@@ -116,11 +114,21 @@ function BoardEntry({ row, isYou = false }: { row: BoardRow; isYou?: boolean }) 
   );
 }
 
-/** Your own row, editable in place. */
+/**
+ * Your own week: the number, the line, the thing to try — and one Save.
+ *
+ * It sends only what actually changed. Re-sending a commitment that has not
+ * been edited would reset its outcome, because a new promise has not been kept
+ * yet; a dad correcting a typo in his note must not quietly un-keep it.
+ */
 function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void }) {
-  const [rating, setRating] = useState(row?.checkIn?.rating ?? 0);
-  const [note, setNote] = useState(row?.checkIn?.note ?? '');
-  const [commitment, setCommitment] = useState(row?.commitment?.body ?? '');
+  const savedRating = row?.checkIn?.rating ?? 0;
+  const savedNote = row?.checkIn?.note ?? '';
+  const savedCommitment = row?.commitment?.body ?? '';
+
+  const [rating, setRating] = useState(savedRating);
+  const [note, setNote] = useState(savedNote);
+  const [commitment, setCommitment] = useState(savedCommitment);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -129,75 +137,65 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
     setCommitment(row?.commitment?.body ?? '');
   }, [row]);
 
-  async function submitCheckIn(event: FormEvent) {
-    event.preventDefault();
-    if (!rating) return;
-    setBusy(true);
-    await saveCheckIn(rating, note).catch(() => {});
-    setBusy(false);
-    onSaved();
-  }
+  const checkInChanged = rating > 0 && (rating !== savedRating || note.trim() !== savedNote.trim());
+  const commitmentChanged =
+    commitment.trim() !== '' && commitment.trim() !== savedCommitment.trim();
 
-  async function submitCommitment(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!commitment.trim()) return;
+    if (!checkInChanged && !commitmentChanged) return;
     setBusy(true);
-    await saveCommitment(commitment).catch(() => {});
+    if (checkInChanged) await saveCheckIn(rating, note).catch(() => {});
+    if (commitmentChanged) await saveCommitment(commitment).catch(() => {});
     setBusy(false);
     onSaved();
   }
 
   return (
-    <div className="your-week" data-testid="your-week">
-      <form onSubmit={submitCheckIn}>
-        <fieldset className="rating">
-          <legend>How was your week?</legend>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <label key={n} className={rating === n ? 'is-picked' : ''}>
-              <input
-                type="radio"
-                name="rating"
-                value={n}
-                checked={rating === n}
-                onChange={() => setRating(n)}
-              />
-              <span aria-hidden="true">{n}</span>
-              <span className="sr-only">
-                {n} — {RATING_WORDS[n]}
-              </span>
-            </label>
-          ))}
-        </fieldset>
+    <form className="your-week" data-testid="your-week" onSubmit={submit}>
+      <fieldset className="rating">
+        <legend>How was your week?</legend>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <label key={n} className={rating === n ? 'is-picked' : ''}>
+            <input
+              type="radio"
+              name="rating"
+              value={n}
+              checked={rating === n}
+              onChange={() => setRating(n)}
+            />
+            <span aria-hidden="true">{n}</span>
+            <span className="sr-only">
+              {n} — {RATING_WORDS[n]}
+            </span>
+          </label>
+        ))}
+      </fieldset>
 
-        <label htmlFor="note" className="sr-only">
-          One line about your week
-        </label>
-        <input
-          id="note"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="One line — the honest version"
-          maxLength={280}
-        />
-        <button type="submit" disabled={busy || !rating}>
-          {row?.checkIn ? 'Update' : 'Check in'}
-        </button>
-      </form>
+      <label htmlFor="note" className="sr-only">
+        One line about your week
+      </label>
+      <input
+        id="note"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="One line — the honest version"
+        maxLength={280}
+      />
 
-      <form onSubmit={submitCommitment}>
-        <label htmlFor="commitment">One thing to try this week</label>
-        <input
-          id="commitment"
-          value={commitment}
-          onChange={(e) => setCommitment(e.target.value)}
-          placeholder="Something small and concrete"
-          maxLength={200}
-        />
-        <button type="submit" disabled={busy || !commitment.trim()}>
-          {row?.commitment ? 'Change it' : 'Commit'}
-        </button>
-      </form>
-    </div>
+      <label htmlFor="commitment">One thing to try this week</label>
+      <input
+        id="commitment"
+        value={commitment}
+        onChange={(e) => setCommitment(e.target.value)}
+        placeholder="Something small and concrete"
+        maxLength={200}
+      />
+
+      <button type="submit" disabled={busy || (!checkInChanged && !commitmentChanged)}>
+        Save
+      </button>
+    </form>
   );
 }
 
@@ -221,8 +219,9 @@ function HowDidItGo({
 
   return (
     <section className="how-did-it-go" data-testid="how-did-it-go">
-      <p className="prompt-eyebrow">{weekLabel(pending.week)}</p>
-      <p className="prompt-body">You said you’d try: {pending.body}</p>
+      <p className="prompt-body">
+        {weekLabel(pending.week)} — you said you’d try: {pending.body}
+      </p>
       <label htmlFor="reflection" className="sr-only">
         How did it go?
       </label>

@@ -5,7 +5,6 @@ import {
   fetchPrompts,
   type HistoryEntry,
   type PoolEntry,
-  type Prompt,
   type PromptAnswer,
 } from './api';
 
@@ -17,25 +16,35 @@ const ADD_ERRORS: Record<string, string> = {
 };
 
 /**
- * Every question the group can be asked, in one list: what was asked when,
- * what the group said, and what is still waiting its turn.
+ * What has been asked before, and how to ask something new.
+ *
+ * The curated hundred are deliberately NOT listed. They are the pool the daily
+ * pick draws from, not reading material: a dad scrolling a hundred questions
+ * nobody has answered is a dad doing filing. What is worth showing is what
+ * this group has actually said, and the door to add one of your own.
  */
 export function PromptList() {
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'error' }
-    | {
-        status: 'ready';
-        today: { day: string; prompt: Prompt } | null;
-        pool: PoolEntry[];
-        history: HistoryEntry[];
-      }
+    | { status: 'ready'; mine: PoolEntry[]; history: HistoryEntry[] }
   >({ status: 'loading' });
 
   useEffect(() => {
     let cancelled = false;
     fetchPrompts()
-      .then((data) => !cancelled && setState({ status: 'ready', ...data }))
+      .then((data) => {
+        if (cancelled) return;
+        setState({
+          status: 'ready',
+          // A dad's own questions are the ones with a group behind them; the
+          // library rows carry no group and are not shown.
+          mine: data.pool.filter((p) => p.groupId !== null),
+          // Today's is the card above this list. Printing it again under
+          // 'asked before' is the same question twice on one small screen.
+          history: data.history.filter((h) => h.promptId !== data.today?.prompt.id),
+        });
+      })
       .catch(() => !cancelled && setState({ status: 'error' }));
     return () => {
       cancelled = true;
@@ -45,36 +54,16 @@ export function PromptList() {
   if (state.status === 'loading') return <p className="quiet">Fetching the list…</p>;
   if (state.status === 'error') return <p className="quiet">Couldn’t load the prompts.</p>;
 
-  const { today, pool, history } = state;
-  const mine = pool.filter((p) => p.groupId !== null);
-  const library = pool.filter((p) => p.groupId === null);
-  const askedIds = new Set(history.map((h) => h.promptId));
+  const { mine, history } = state;
 
   function added(entry: PoolEntry) {
-    setState((s) => (s.status === 'ready' ? { ...s, pool: [entry, ...s.pool] } : s));
+    setState((s) => (s.status === 'ready' ? { ...s, mine: [entry, ...s.mine] } : s));
   }
 
   return (
     <div className="prompt-list" data-testid="prompt-list">
-      {today ? (
-        <section>
-          <h2>Today</h2>
-          <ol className="prompts">
-            <PromptRow
-              key={today.prompt.id}
-              id={today.prompt.id}
-              body={today.prompt.body}
-              badges={['today']}
-              answers={history.find((h) => h.promptId === today.prompt.id)?.answers ?? 0}
-            />
-          </ol>
-        </section>
-      ) : null}
-
       <section>
-        <h2>
-          Asked before <span className="count">{history.length}</span>
-        </h2>
+        <h2>Asked before</h2>
         {history.length === 0 ? (
           <p className="quiet">Nothing yet. The first question lands tomorrow.</p>
         ) : (
@@ -84,7 +73,6 @@ export function PromptList() {
                 key={`${h.day}-${h.promptId}`}
                 id={h.promptId}
                 body={h.body}
-                badges={[h.day]}
                 answers={h.answers}
               />
             ))}
@@ -93,49 +81,21 @@ export function PromptList() {
       </section>
 
       <section>
-        <h2>
-          Yours <span className="count">{mine.length}</span>
-        </h2>
+        <h2>Add a question</h2>
         <AddPromptForm onAdded={added} />
-        {mine.length === 0 ? (
-          <p className="quiet">None yet. Add a question you actually want answered.</p>
-        ) : (
+        {mine.length === 0 ? null : (
           <ol className="prompts">
             {mine.map((p) => (
               <PromptRow
                 key={p.id}
                 id={p.id}
                 body={p.body}
-                badges={[
-                  p.authorName ? `by ${p.authorName}` : 'yours',
-                  ...(askedIds.has(p.id) ? [] : ['not asked yet']),
-                ]}
+                meta={p.authorName ? `by ${p.authorName}` : 'yours'}
                 answers={p.answers}
               />
             ))}
           </ol>
         )}
-      </section>
-
-      <section>
-        <h2>
-          The library <span className="count">{library.length}</span>
-        </h2>
-        <ol className="prompts">
-          {library.map((p) => (
-            <PromptRow
-              key={p.id}
-              id={p.id}
-              body={p.body}
-              badges={
-                p.timesAsked > 0
-                  ? [`asked ${p.timesAsked}×`, ...(p.lastAsked ? [p.lastAsked] : [])]
-                  : []
-              }
-              answers={p.answers}
-            />
-          ))}
-        </ol>
       </section>
     </div>
   );
@@ -146,12 +106,12 @@ export function PromptList() {
 function PromptRow({
   id,
   body,
-  badges,
+  meta,
   answers,
 }: {
   id: string;
   body: string;
-  badges: string[];
+  meta?: string;
   answers: number;
 }) {
   const [open, setOpen] = useState(false);
@@ -179,13 +139,9 @@ function PromptRow({
       >
         <span className="prompt-row-body">{body}</span>
         <span className="prompt-row-meta">
-          {badges.map((b) => (
-            <span key={b} className="badge">
-              {b}
-            </span>
-          ))}
+          {meta ? <span>{meta}</span> : null}
           {answers > 0 ? (
-            <span className="badge is-answered">
+            <span className="is-answered">
               {answers} answer{answers === 1 ? '' : 's'}
             </span>
           ) : null}

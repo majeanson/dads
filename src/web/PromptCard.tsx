@@ -6,7 +6,10 @@ import type { RoomMessage } from '../shared/protocol';
  * Today's question, and the box to answer it in.
  *
  * The answer goes into the room as a message rather than into a private
- * store: the whole point is that the others read it.
+ * store: the whole point is that the others read it. Which is also why this
+ * is not on the room's screen: the question is asked once a day, the answers
+ * are the conversation, and a card repeating the question above every line is
+ * furniture.
  */
 export function PromptCard({
   messages,
@@ -52,16 +55,16 @@ export function PromptCard({
 
   return (
     <section className="prompt-card" data-testid="prompt-card">
-      <p className="prompt-eyebrow">Today’s question</p>
       <p className="prompt-body" data-testid="prompt-body">
         {today.prompt.body}
       </p>
 
       <p className="prompt-meta">
-        {answersToday.length === 0
-          ? 'Nobody has answered yet.'
-          : `${answersToday.length} answer${answersToday.length === 1 ? '' : 's'} so far.`}
-        {answered ? ' You’ve answered.' : ''}
+        {answered
+          ? 'You’ve answered.'
+          : answersToday.length === 0
+            ? 'Nobody has answered yet.'
+            : `${answersToday.length} answer${answersToday.length === 1 ? '' : 's'}.`}
       </p>
 
       {open ? (

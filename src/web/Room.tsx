@@ -3,11 +3,12 @@ import { fetchTodo, type Session, type Todo } from './api';
 import { Attachment } from './Attachment';
 import { Board } from './Board';
 import { CallBar } from './CallBar';
-import { DadNightBar } from './DadNightBar';
+import { nightItem, nightSoon, NightEditor } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
+import { Sheet } from './Sheet';
 import { TableColumn } from './TableColumn';
 import { useCall } from './useCall';
 import { useRoom } from './useRoom';
@@ -16,34 +17,41 @@ function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-type Tab = 'today' | 'table' | 'prompts' | 'board';
+/** Coarse enough to be free, fine enough that a countdown stays honest. */
+const TICK_MS = 15_000;
+
+/** What is open over the room, if anything. */
+type Sheets = 'menu' | 'prompts' | 'board' | 'night';
 
 /**
- * Today's chat is where you are; everything else is a tab you visit.
+ * The room is the conversation and the call. That is the whole screen.
  *
- * The conversation is the room, so nothing competes with it above the message
- * list. Today's question lives behind the Prompts tab with all the others;
- * the tab's mark is what says one is waiting for you.
+ * Everything else the app can do — the day's question, the week's board, the
+ * table, the standing night, the way out — is one button away and nothing at
+ * all until it is asked for. There is no tab strip, because tabs are a claim
+ * that four things matter equally, and here they do not: dads came to talk.
  *
- * A tab carries a mark when something is waiting for YOU — a question you have
- * not answered, a week you have not filled in — so the room itself tells you
- * whether there is anywhere to go. A mark for something somebody else did
- * would be noise.
+ * The menu carries a mark when something is waiting for YOU — a question you
+ * have not answered, a week you have not filled in. A mark for something
+ * somebody else did would be noise, and a number would invite you to drive it
+ * to zero.
  *
- * The table is the one tab that stays mounted while you are elsewhere:
- * unmounting the iframe restarts a game. On a wide screen it needs no tab at
- * all, because it sits beside the conversation.
+ * The table is the one thing that is not a sheet: it stays mounted for the
+ * whole evening, because unmounting the iframe restarts a game in progress.
+ * Open, it sits beside the conversation on a wide screen and takes its place
+ * on a phone.
  */
 export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
   const room = useRoom(true, session.group.dadNight);
-  const [tab, setTab] = useState<Tab>('today');
-  const [wideTable, setWideTable] = useState(false);
+  const [sheet, setSheet] = useState<Sheets | null>(null);
+  const [tableOpen, setTableOpen] = useState(false);
   const [draft, setDraft] = useState('');
   /** Picked but not sent: the dad still gets a caption, or a change of mind. */
   const [pending, setPending] = useState<Prepared | null>(null);
   const [sending, setSending] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [todo, setTodo] = useState<Todo>({ prompt: false, board: false });
+  const [now, setNow] = useState(() => Date.now());
   const picker = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -76,8 +84,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   useEffect(refreshTodo, [refreshTodo, lastSeq]);
 
   useEffect(() => {
-    if (tab === 'today') bottom.current?.scrollIntoView({ block: 'end' });
-  }, [room.messages.length, tab]);
+    const timer = setInterval(() => setNow(Date.now()), TICK_MS);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!tableOpen) bottom.current?.scrollIntoView({ block: 'end' });
+  }, [room.messages.length, tableOpen]);
 
   useEffect(() => {
     document.title = session.group.name;
@@ -124,58 +137,31 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     .filter(([id]) => id !== session.member.id)
     .map(([, name]) => name);
 
-  const tabs: { id: Tab; label: string; mark: boolean; narrowOnly?: boolean }[] = [
-    { id: 'today', label: 'Today', mark: false },
-    { id: 'table', label: 'Table', mark: false, narrowOnly: true },
-    { id: 'prompts', label: 'Prompts', mark: todo.prompt },
-    { id: 'board', label: 'Board', mark: todo.board },
-  ];
+  const waiting = todo.prompt || todo.board;
+  const soon = nightSoon(room.night, now);
 
   return (
-    <main className="room" data-tab={tab} data-split={wideTable ? 'half' : 'talk'}>
+    <main className="room" data-table={tableOpen ? 'open' : 'closed'}>
       <header className="room-head">
         <div>
           <h1>{session.group.name}</h1>
-          <p className="quiet" data-testid="connection">
-            {room.connection === 'open'
-              ? `${room.roster.length} here`
-              : room.connection === 'connecting'
-                ? 'Opening the door…'
-                : 'Reconnecting…'}
+          <p className="quiet">
+            <span data-testid="connection">
+              {room.connection === 'open'
+                ? `${room.roster.length} here`
+                : room.connection === 'connecting'
+                  ? 'Opening the door…'
+                  : 'Reconnecting…'}
+            </span>
+            {soon === null ? null : ` · ${soon}`}
           </p>
         </div>
-        <button type="button" className="link" onClick={onSignOut}>
-          Sign out
+        <button type="button" className="menu-open" onClick={() => setSheet('menu')}>
+          Menu
+          {waiting ? <span className="mark" data-testid="mark-menu" aria-hidden="true" /> : null}
+          {waiting ? <span className="sr-only"> — something waiting</span> : null}
         </button>
       </header>
-
-      <DadNightBar night={room.night} />
-
-      <nav className="tabs" aria-label="Rooms">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={`${tab === t.id ? 'is-current' : ''}${t.narrowOnly ? ' only-narrow' : ''}`}
-            aria-current={tab === t.id}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-            {t.mark ? (
-              <span className="mark" data-testid={`mark-${t.id}`} aria-hidden="true" />
-            ) : null}
-            {t.mark ? <span className="sr-only"> — something waiting</span> : null}
-          </button>
-        ))}
-        <ul className="roster" aria-label="Who's here">
-          {room.roster.map((m) => (
-            <li key={m.memberId} data-testid="roster-entry">
-              {m.name}
-              {m.memberId === session.member.id ? ' (you)' : ''}
-            </li>
-          ))}
-        </ul>
-      </nav>
 
       <div className="stage">
         <div className="col-talk">
@@ -296,31 +282,83 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
         {/* Always mounted: unmounting the iframe restarts a game in progress. */}
         <div className="col-table">
-          <TableColumn
-            onEvent={room.relayTableEvent}
-            wide={wideTable}
-            onToggleWide={() => setWideTable((v) => !v)}
-          />
-        </div>
-
-        {/* Mounted on demand, so each reads its data fresh every visit rather
-            than showing what was true when the page loaded. */}
-        <div className="panel panel-prompts">
-          {tab === 'prompts' ? (
-            <>
-              <PromptCard
-                messages={room.messages}
-                onAnswer={room.answerPrompt}
-                canAnswer={room.connection === 'open'}
-              />
-              <PromptList />
-            </>
-          ) : null}
-        </div>
-        <div className="panel panel-board">
-          {tab === 'board' ? <Board onChanged={refreshTodo} /> : null}
+          <TableColumn onEvent={room.relayTableEvent} onClose={() => setTableOpen(false)} />
         </div>
       </div>
+
+      {sheet === 'menu' ? (
+        <Sheet title="Menu" onClose={() => setSheet(null)}>
+          <nav className="menu" aria-label="Rooms">
+            <ul className="menu-roster" aria-label="Who's here">
+              {room.roster.map((m) => (
+                <li key={m.memberId} data-testid="roster-entry">
+                  {m.name}
+                  {m.memberId === session.member.id ? ' (you)' : ''}
+                </li>
+              ))}
+            </ul>
+
+            <button type="button" onClick={() => setSheet('prompts')}>
+              Prompts
+              {todo.prompt ? (
+                <span className="mark" data-testid="mark-prompts" aria-hidden="true" />
+              ) : null}
+              {todo.prompt ? <span className="sr-only"> — something waiting</span> : null}
+            </button>
+
+            <button type="button" onClick={() => setSheet('board')}>
+              Board
+              {todo.board ? (
+                <span className="mark" data-testid="mark-board" aria-hidden="true" />
+              ) : null}
+              {todo.board ? <span className="sr-only"> — something waiting</span> : null}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setTableOpen((v) => !v);
+                setSheet(null);
+              }}
+            >
+              {tableOpen ? 'Close the table' : 'Open the table'}
+            </button>
+
+            <button type="button" data-testid="dad-night" onClick={() => setSheet('night')}>
+              {nightItem(room.night, now)}
+            </button>
+
+            <button type="button" onClick={onSignOut}>
+              Sign out
+            </button>
+          </nav>
+        </Sheet>
+      ) : null}
+
+      {/* Each sheet mounts when it opens, so it reads fresh data every time
+          rather than showing what was true when the page loaded. */}
+      {sheet === 'prompts' ? (
+        <Sheet title="Questions" onClose={() => setSheet(null)}>
+          <PromptCard
+            messages={room.messages}
+            onAnswer={room.answerPrompt}
+            canAnswer={room.connection === 'open'}
+          />
+          <PromptList />
+        </Sheet>
+      ) : null}
+
+      {sheet === 'board' ? (
+        <Sheet title="The week" onClose={() => setSheet(null)}>
+          <Board onChanged={refreshTodo} />
+        </Sheet>
+      ) : null}
+
+      {sheet === 'night' ? (
+        <Sheet title="Dad night" onClose={() => setSheet(null)}>
+          <NightEditor night={room.night} onDone={() => setSheet(null)} />
+        </Sheet>
+      ) : null}
     </main>
   );
 }

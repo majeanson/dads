@@ -5,16 +5,25 @@ import { E2E_PROMPT_GROUP } from './global-setup';
 test.describe.configure({ mode: 'serial' });
 
 /**
- * Scoped to the tab strip because Playwright matches accessible names by
- * substring, and one curated prompt ends "...with no phone in the room?".
+ * Everything that is not the conversation lives behind the one Menu button.
+ *
+ * Scoped to the menu because Playwright matches accessible names by substring,
+ * and one curated prompt ends "...with no phone in the room?". Anchored regex
+ * rather than an exact name: an item with something waiting is called
+ * "Board — something waiting", which is exactly what a screen reader should
+ * hear, and the label is the prefix.
  */
-function tab(page: Page, name: 'Today' | 'Table' | 'Prompts' | 'Board') {
-  // Anchored regex, not an exact match: a tab with something waiting is named
-  // "Board — something waiting", which is exactly what a screen reader should
-  // hear. The label is the prefix.
-  return page
+async function open(page: Page, name: 'Prompts' | 'Board' | 'Open the table' | 'Dad night') {
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page
     .getByRole('navigation', { name: 'Rooms' })
-    .getByRole('button', { name: new RegExp(`^${name}`) });
+    .getByRole('button', { name: new RegExp(`^${name}`) })
+    .click();
+}
+
+/** Shut whatever sheet is open and go back to the conversation. */
+async function close(page: Page) {
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
 }
 
 async function comeIn(browser: Browser, name: string): Promise<Page> {
@@ -32,12 +41,12 @@ test('the day’s question is asked, answered, and seen by the others', async ({
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
-  // The question is not in the conversation's way: it waits behind the tab,
+  // The question is not in the conversation's way: it waits behind the menu,
   // which carries a mark until you have answered it.
   await expect(marc.getByTestId('prompt-card')).toHaveCount(0);
-  await expect(marc.getByTestId('mark-prompts')).toBeVisible();
-  await tab(marc, 'Prompts').click();
-  await tab(sam, 'Prompts').click();
+  await expect(marc.getByTestId('mark-menu')).toBeVisible();
+  await open(marc, 'Prompts');
+  await open(sam, 'Prompts');
 
   // Both dads get the same question — it is the group's, not the browser's.
   const question = await marc.getByTestId('prompt-body').textContent();
@@ -49,7 +58,7 @@ test('the day’s question is asked, answered, and seen by the others', async ({
   await marc.getByRole('button', { name: 'Answer', exact: true }).click();
 
   // The answer lands in the conversation, where the others read it.
-  await tab(sam, 'Today').click();
+  await close(sam);
   const answer = sam.getByTestId('line').filter({ hasText: 'It was not about shoes' });
   await expect(answer).toBeVisible();
   await expect(answer).toContainText('answered');
@@ -59,20 +68,21 @@ test('the day’s question is asked, answered, and seen by the others', async ({
   await sam.context().close();
 });
 
-test('the whole library is browsable as a list, and a dad can add to it', async ({ browser }) => {
+test('what the group was asked before is readable, and a dad can add one', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
 
-  await tab(marc, 'Prompts').click();
+  await open(marc, 'Prompts');
   await expect(marc.getByTestId('prompt-list')).toBeVisible();
 
-  // The curated library, plus the sections around it.
-  await expect(marc.getByRole('heading', { name: /^The library/ })).toBeVisible();
+  // What the group has actually been asked — not the curated hundred, which
+  // are a pool to draw from and not reading material.
   await expect(marc.getByRole('heading', { name: /^Asked before/ })).toBeVisible();
-  await expect(marc.getByTestId('prompt-row').first()).toBeVisible();
-  expect(await marc.getByTestId('prompt-row').count()).toBeGreaterThan(50);
+  await expect(marc.getByRole('heading', { name: /^Add a question/ })).toBeVisible();
 
-  // Today's question shows up under Asked before, carrying its answer.
-  await expect(marc.getByTestId('prompt-row').filter({ hasText: 'answer' }).first()).toBeVisible();
+  // Today's question is printed once, on the card, and is NOT repeated in the
+  // list underneath it.
+  const question = await marc.getByTestId('prompt-body').textContent();
+  await expect(marc.getByTestId('prompt-row').filter({ hasText: question! })).toHaveCount(0);
 
   // A dad adds one of his own; it appears immediately under Yours.
   const own = `What are you not saying to your kid? ${Date.now()}`;
@@ -85,9 +95,9 @@ test('the whole library is browsable as a list, and a dad can add to it', async 
 
   // It survives a reload, and going back to the room still works.
   await marc.reload();
-  await tab(marc, 'Prompts').click();
+  await open(marc, 'Prompts');
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
-  await tab(marc, 'Today').click();
+  await close(marc);
   await expect(marc.getByRole('button', { name: 'Send' })).toBeVisible();
 
   await marc.context().close();

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import {
   countdown,
   formatNight,
@@ -9,56 +9,40 @@ import {
 } from '../shared/dadNight';
 import { setNight as saveNight } from './api';
 
-/** Fine enough that "any moment" is honest, coarse enough to be free. */
-const TICK_MS = 15_000;
+/** Inside this, the night is close enough to belong on the room's header. */
+const SOON_MS = 24 * 60 * 60 * 1000;
 
-function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), TICK_MS);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
+/**
+ * The standing appointment, in as few words as it can be said.
+ *
+ * Two readings of the same thing: `nightSoon` is what the room shows, and only
+ * when it is nearly time — the rest of the week that line would be furniture.
+ * `nightItem` is the menu's, where a dad has gone looking for it and the full
+ * answer is what he wants.
+ */
+export function nightSoon(night: DadNight | null, now: number): string | null {
+  const phase = night ? phaseOf(night, now) : null;
+  if (phase?.kind === 'live') return 'dad night — the table’s open';
+  if (phase?.kind === 'upcoming' && phase.startsIn <= SOON_MS) {
+    return `dad night ${countdown(phase.startsIn)}`;
+  }
+  return null;
+}
+
+export function nightItem(night: DadNight | null, now: number): string {
+  if (night === null) return 'Set dad night';
+  const phase = phaseOf(night, now);
+  const when = formatNight(night).toLowerCase();
+  if (phase?.kind === 'live') return `Dad night ${when} — the table’s open`;
+  if (phase?.kind === 'upcoming') return `Dad night ${when} — ${countdown(phase.startsIn)}`;
+  return `Dad night ${when}`;
 }
 
 /**
- * The standing appointment, and the countdown to it. This is the whole
- * co-presence mechanism: no push, no email — a slot everyone knows and a
- * clock that says how long until it.
+ * Setting it. Any dad can — there is no admin here — and the change is
+ * announced in the room by name, which is the whole social mechanism.
  */
-export function DadNightBar({ night }: { night: DadNight | null }) {
-  const now = useNow();
-  const [editing, setEditing] = useState(false);
-
-  const phase = night ? phaseOf(night, now) : null;
-  const viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const elsewhere = night && night.tz !== viewerTz;
-
-  return (
-    <section className="dadnight" data-testid="dad-night">
-      {phase?.kind === 'live' ? (
-        <p className="dadnight-line is-live">
-          <strong>Dad night.</strong> The table’s open.
-        </p>
-      ) : phase?.kind === 'upcoming' ? (
-        <p className="dadnight-line">
-          <strong>Dad night</strong> {formatNight(night!).toLowerCase()}
-          {elsewhere ? ` (${night!.tz})` : ''} — {countdown(phase.startsIn)}
-        </p>
-      ) : null}
-
-      {/* With no night set this line IS the whole bar: one link, not a
-          sentence announcing an absence. */}
-      <button type="button" className="link" onClick={() => setEditing((v) => !v)}>
-        {editing ? 'Never mind' : night ? 'Change' : 'Set dad night'}
-      </button>
-
-      {editing ? <NightEditor night={night} onDone={() => setEditing(false)} /> : null}
-    </section>
-  );
-}
-
-function NightEditor({ night, onDone }: { night: DadNight | null; onDone: () => void }) {
+export function NightEditor({ night, onDone }: { night: DadNight | null; onDone: () => void }) {
   const [weekday, setWeekday] = useState(String(night?.weekday ?? 4));
   const [time, setTime] = useState(night?.time ?? '21:00');
   const [error, setError] = useState<string | null>(null);

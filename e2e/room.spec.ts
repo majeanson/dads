@@ -20,9 +20,12 @@ test('two dads see each other and each other’s lines', async ({ browser }) => 
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
-  await expect(marc.getByTestId('roster-entry')).toHaveCount(2);
-  await expect(sam.getByTestId('roster-entry')).toHaveCount(2);
+  // The count is on the room; the names are one button away, because on most
+  // evenings knowing that three dads are here is the whole question.
   await expect(marc.getByTestId('connection')).toHaveText('2 here');
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await expect(marc.getByTestId('roster-entry')).toHaveCount(2);
+  await marc.getByRole('button', { name: 'Close', exact: true }).click();
 
   await marc.getByLabel('Say something').fill('rough bedtime tonight');
   await marc.getByRole('button', { name: 'Send' }).click();

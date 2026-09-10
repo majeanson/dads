@@ -23,9 +23,11 @@ test('the right code lets a dad in, and he stays in on reload', async ({ page })
   await page.getByRole('button', { name: 'Come in' }).click();
 
   await expect(page.getByRole('heading', { name: E2E_GROUP.name })).toBeVisible();
+  await page.getByRole('button', { name: 'Menu' }).click();
   await expect(page.getByTestId('roster-entry').filter({ hasText: 'Marc (you)' })).toBeVisible();
 
   await page.reload();
+  await page.getByRole('button', { name: 'Menu' }).click();
   await expect(page.getByTestId('roster-entry').filter({ hasText: 'Marc (you)' })).toBeVisible();
 });
 
@@ -36,6 +38,7 @@ test('signing out returns to the door', async ({ page }) => {
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toBeVisible();
 
+  await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByLabel('Code')).toBeVisible();
 
