@@ -338,6 +338,33 @@ secret, custom domain bound by the route in wrangler.toml.
   a pruned photo then quietly disappears from its line instead of rendering
   broken forever.
 
+## Public facing
+
+- **The icons come from one SVG.** `public/icon.svg` is the artwork; `npm run
+icons` rasterises the favicon, the 192/512 and the apple-touch-icon from it
+  with the Playwright chromium already in the repo. Committed, not built on
+  deploy — a deploy should not need a browser.
+- `public/manifest.webmanifest` makes "add to home screen" a real app rather
+  than a blank square in a browser window, and `robots.txt` plus a `noindex`
+  meta keep a private room out of the index.
+- **Security headers live in `public/_headers`, not in the Worker.**
+  `run_worker_first` covers only `/api` and `/ws`, so for every other path the
+  assets binding answers before the Worker runs at all: a wrapper around
+  `env.ASSETS.fetch` never fires. Pinned by an e2e.
+- `theme-color` is the real `--bg`, light and dark, and `theme.ts` keeps a
+  fixed one in step with an explicit choice so a dad who asked for dark does
+  not get a white bar above the room.
+- **The door carries the language toggle** and nothing else: a francophone
+  whose browser says English could not say otherwise until he was inside.
+
+## The talk column is flex, not grid rows
+
+The call bar renders only while there IS a call, and with named grid rows the
+conversation inherited whichever row was left over — it jumped to the top of
+the screen with the empty space underneath it the moment the bar stopped
+rendering. Nothing in that column may depend on how many children happen to
+exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
+
 ## Test layout
 
 - vitest storage is per **file**, not per test. Tests that seed groups call

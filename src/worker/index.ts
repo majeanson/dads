@@ -31,6 +31,8 @@ export default {
       return handleWs(request, env, url, ctx);
     }
 
+    // Headers for these come from public/_headers: the assets binding answers
+    // before this Worker runs, so they cannot be set here.
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

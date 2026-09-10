@@ -27,10 +27,25 @@ export function storedTheme(): Theme {
   return 'system';
 }
 
+/** --bg, light and dark. The one place outside tokens.css that needs them. */
+const BAR = { light: '#fffefc', dark: '#131211' };
+
 function apply(theme: Theme): void {
   const root = document.documentElement;
   if (theme === 'system') delete root.dataset.theme;
   else root.dataset.theme = theme;
+
+  // The browser's own chrome — the bar above the page on a phone — follows a
+  // change made now, not only one restored by the shell at boot. On 'system'
+  // the media-query pair in index.html takes back over.
+  const fixed = document.querySelector('meta[name="theme-color"]:not([media])');
+  if (theme === 'system') {
+    fixed?.remove();
+    return;
+  }
+  const meta = fixed ?? document.head.appendChild(document.createElement('meta'));
+  meta.setAttribute('name', 'theme-color');
+  meta.setAttribute('content', BAR[theme]);
 }
 
 export function useTheme(): [Theme, (theme: Theme) => void] {

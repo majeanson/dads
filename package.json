@@ -18,7 +18,8 @@
     "migrate:remote": "wrangler d1 migrations apply dads --remote",
     "types": "wrangler types --strict-vars=false",
     "group:create": "tsx scripts/create-group.ts",
-    "audit:contrast": "node scripts/contrast-audit.mjs"
+    "audit:contrast": "node scripts/contrast-audit.mjs",
+    "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",

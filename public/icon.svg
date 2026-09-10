@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="dads">
+  <!--
+    A dad in sunglasses.
+
+    The source of truth for every icon the app ships: scripts/icons.mjs renders
+    the PNGs from this file, so the artwork exists once. Flat shapes in the
+    app's own palette and nothing else — at 16 pixels the only things that
+    survive are a pale circle on blue and a dark bar across it, which is
+    exactly what this is.
+  -->
+  <rect width="512" height="512" rx="112" fill="#0b57d0" />
+  <circle cx="256" cy="248" r="152" fill="#fffefc" />
+  <g fill="#1c1a17">
+    <!-- The bar is the bridge as well: one shape, readable at any size. -->
+    <rect x="106" y="206" width="300" height="28" rx="14" />
+    <rect x="122" y="222" width="112" height="76" rx="32" />
+    <rect x="278" y="222" width="112" height="76" rx="32" />
+  </g>
+  <path
+    d="M204 332 q52 42 104 0"
+    fill="none"
+    stroke="#1c1a17"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+</svg>

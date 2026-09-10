@@ -1,0 +1,5 @@
+# A private clubhouse on a public domain. There is nothing here to index and
+# nothing behind the door a crawler could reach anyway — the invite code is the
+# lock, this is only the sign on it.
+User-agent: *
+Disallow: /

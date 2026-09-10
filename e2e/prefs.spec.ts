@@ -133,3 +133,42 @@ test('the day’s question is asked in the language it is read in', async ({ pag
   expect(french).not.toBe(english);
   expect(french!.length).toBeGreaterThan(10);
 });
+
+test('a francophone can say so at the door, before he is anybody', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByLabel('Code')).toBeVisible();
+
+  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await expect(page.getByLabel('Ton nom')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Entre' })).toBeVisible();
+
+  // And the door remembers, so the room he walks into is already French.
+  await page.getByLabel('Code').fill(E2E_PREFS_GROUP.code);
+  await page.getByLabel('Ton nom').fill('Luc');
+  await page.getByRole('button', { name: 'Entre' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/ici$/);
+});
+
+test('the phone’s own chrome follows the theme it was asked for', async ({ page }) => {
+  await comeIn(page, 'Théo');
+
+  const bar = () =>
+    page.evaluate(
+      () =>
+        document.querySelector('meta[name="theme-color"]:not([media])')?.getAttribute('content') ??
+        null,
+    );
+
+  // Nothing fixed while the phone decides: the media-query pair holds.
+  expect(await bar()).toBeNull();
+
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('button', { name: 'Dark' }).click();
+  expect(await bar()).toBe('#131211');
+
+  await page.getByRole('button', { name: 'Light' }).click();
+  expect(await bar()).toBe('#fffefc');
+
+  await page.getByRole('button', { name: 'Follow the phone' }).click();
+  expect(await bar()).toBeNull();
+});

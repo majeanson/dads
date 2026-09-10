@@ -1,0 +1,9 @@
+# Headers for everything the assets binding serves.
+#
+# It has to be this file rather than code: `run_worker_first` deliberately
+# covers only /api and /ws, so for every other path the assets binding answers
+# before the Worker runs at all — a wrapper in the Worker would never fire.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { fetchTodo, type Session, type Todo } from './api';
 import { Attachment } from './Attachment';
 import { Board } from './Board';
-import { CallBar } from './CallBar';
+import { CallBar, JoinCall } from './CallBar';
 import { Here } from './Here';
 import { useT } from './i18n';
 import { describeSaid } from '../shared/said';
@@ -172,11 +172,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             {soon === null ? null : ` · ${soon}`}
           </p>
         </div>
-        <button type="button" className="menu-open" onClick={() => setSheet('menu')}>
-          {t('room.menu')}
-          {waiting ? <span className="mark" data-testid="mark-menu" aria-hidden="true" /> : null}
-          {waiting ? <span className="sr-only">{t('room.waiting')}</span> : null}
-        </button>
+        <span className="head-actions">
+          <JoinCall state={call.state} onJoin={() => void call.join()} />
+          <button type="button" className="menu-open" onClick={() => setSheet('menu')}>
+            {t('room.menu')}
+            {waiting ? <span className="mark" data-testid="mark-menu" aria-hidden="true" /> : null}
+            {waiting ? <span className="sr-only">{t('room.waiting')}</span> : null}
+          </button>
+        </span>
       </header>
 
       <div className="stage">
@@ -187,7 +190,6 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             muted={call.muted}
             camera={call.camera}
             localStream={call.localStream.current}
-            onJoin={() => void call.join()}
             onLeave={call.leave}
             onToggleMute={call.toggleMute}
             onToggleCamera={() => void call.toggleCamera()}

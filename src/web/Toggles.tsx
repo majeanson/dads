@@ -1,6 +1,31 @@
 import { useT, type Lang } from './i18n';
 import { useTheme, type Theme } from './theme';
 
+const LANGS: { id: Lang; label: string }[] = [
+  { id: 'en', label: 'EN' },
+  { id: 'fr', label: 'FR' },
+];
+
+/**
+ * Which of the two languages this dad reads.
+ *
+ * Its own component because the door needs it too: a francophone whose browser
+ * says English met an English door and could not say otherwise until he was
+ * already inside.
+ */
+export function LangToggle() {
+  const { lang, setLang, t } = useT();
+  return (
+    <div className="toggle" role="group" aria-label={t('menu.language')}>
+      {LANGS.map((l) => (
+        <button key={l.id} type="button" aria-pressed={lang === l.id} onClick={() => setLang(l.id)}>
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Language and theme, as two rows of small buttons.
  *
@@ -10,13 +35,8 @@ import { useTheme, type Theme } from './theme';
  * has its words underneath for anything that reads the page aloud.
  */
 export function Toggles() {
-  const { lang, setLang, t } = useT();
+  const { t } = useT();
   const [theme, setTheme] = useTheme();
-
-  const langs: { id: Lang; label: string }[] = [
-    { id: 'en', label: 'EN' },
-    { id: 'fr', label: 'FR' },
-  ];
 
   const themes: { id: Theme; glyph: string; label: string }[] = [
     { id: 'system', glyph: '▣', label: t('theme.system') },
@@ -26,18 +46,7 @@ export function Toggles() {
 
   return (
     <div className="toggles">
-      <div className="toggle" role="group" aria-label={t('menu.language')}>
-        {langs.map((l) => (
-          <button
-            key={l.id}
-            type="button"
-            aria-pressed={lang === l.id}
-            onClick={() => setLang(l.id)}
-          >
-            {l.label}
-          </button>
-        ))}
-      </div>
+      <LangToggle />
 
       <div className="toggle" role="group" aria-label={t('menu.theme')}>
         {themes.map((th) => (

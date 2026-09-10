@@ -2,10 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover so the page owns the whole screen on a notched
+         phone; tokens.css pays that back with safe-area padding, which is what
+         keeps the Send button off the home indicator. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
+    <!-- The real palette, not an approximation of it: these are --bg from
+         tokens.css, light and dark. -->
+    <meta name="theme-color" content="#fffefc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#131211" media="(prefers-color-scheme: dark)" />
+    <!-- A private room on a public domain. Nothing to index. -->
+    <meta name="robots" content="noindex, nofollow" />
+
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="dads" />
+
     <title>dads</title>
     <script>
       // Before the first paint, not after React mounts: a dad who asked for
@@ -15,6 +31,15 @@
         var theme = localStorage.getItem('dads.theme');
         if (theme === 'light' || theme === 'dark') {
           document.documentElement.dataset.theme = theme;
+          // The phone's own chrome follows the choice too, or a dad who asked
+          // for dark still gets a white bar above the room.
+          var bar = document.querySelector('meta[name="theme-color"]:not([media])');
+          if (!bar) {
+            bar = document.createElement('meta');
+            bar.setAttribute('name', 'theme-color');
+            document.head.appendChild(bar);
+          }
+          bar.setAttribute('content', theme === 'dark' ? '#131211' : '#fffefc');
         }
         var lang = localStorage.getItem('dads.lang');
         if (lang === 'en' || lang === 'fr') document.documentElement.lang = lang;

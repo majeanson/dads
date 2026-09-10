@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { join, type JoinFailure, type Session } from './api';
 import { plural, useT, type Key, type T } from './i18n';
+import { LangToggle } from './Toggles';
 
 // One message for a wrong code and for a code that belongs to no group: the
 // door must not tell a stranger whether he is close.
@@ -81,6 +82,10 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
           {error}
         </p>
       ) : null}
+
+      {/* The one thing a stranger at the door can change. The theme follows
+          his phone and needs no asking; the language does. */}
+      <LangToggle />
     </main>
   );
 }

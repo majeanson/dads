@@ -3,11 +3,14 @@ import { useT } from './i18n';
 import type { Peer } from './useCall';
 
 /**
- * The call, along the top of the room.
+ * The call, along the top of the room — and only while there is one.
  *
  * Sound is the point and pictures are optional, so a dad with his camera off
  * is a name and nothing else — no empty black rectangle taking up a phone
  * screen. Tiles only appear for the dads actually showing something.
+ *
+ * Joining lives in the header (see `JoinCall`): the resting room is the
+ * conversation and nothing else.
  */
 export function CallBar({
   state,
@@ -15,7 +18,6 @@ export function CallBar({
   muted,
   camera,
   localStream,
-  onJoin,
   onLeave,
   onToggleMute,
   onToggleCamera,
@@ -25,35 +27,16 @@ export function CallBar({
   muted: boolean;
   camera: boolean;
   localStream: MediaStream | null;
-  onJoin: () => void;
   onLeave: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
 }) {
   const { t } = useT();
 
-  if (state === 'out' || state === 'joining') {
-    return (
-      <div className="call call-out">
-        <button type="button" onClick={onJoin} disabled={state === 'joining'}>
-          {state === 'joining' ? t('call.opening') : t('call.join')}
-        </button>
-      </div>
-    );
-  }
-
-  if (state === 'denied' || state === 'failed') {
-    return (
-      <div className="call call-out">
-        <p className="quiet" role="alert">
-          {state === 'denied' ? t('call.denied') : t('call.failed')}
-        </p>
-        <button type="button" onClick={onJoin}>
-          {t('call.retry')}
-        </button>
-      </div>
-    );
-  }
+  // Out of a call there is nothing to show: the way in is a button in the
+  // header, because a whole row saying "no call is happening" is a row of
+  // conversation nobody can see.
+  if (state === 'out' || state === 'joining') return null;
 
   const showing = peers.filter((p) => p.hasVideo);
   const listening = peers.filter((p) => !p.hasVideo);
@@ -101,6 +84,38 @@ export function CallBar({
         <p className="quiet call-listening">{listening.map((p) => p.name).join(', ')}</p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The way into the call, for the header.
+ *
+ * Also where the microphone's refusals are said, because that is where the
+ * dad just pressed something and is owed an answer.
+ */
+export function JoinCall({
+  state,
+  onJoin,
+}: {
+  state: 'out' | 'joining' | 'in' | 'denied' | 'failed';
+  onJoin: () => void;
+}) {
+  const { t } = useT();
+  if (state === 'in') return null;
+
+  if (state === 'denied' || state === 'failed') {
+    return (
+      <button type="button" className="call-denied" onClick={onJoin} title={t(`call.${state}`)}>
+        {t('call.retry')}
+        <span className="sr-only"> — {t(`call.${state}`)}</span>
+      </button>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onJoin} disabled={state === 'joining'}>
+      {state === 'joining' ? t('call.opening') : t('call.join')}
+    </button>
   );
 }
 
