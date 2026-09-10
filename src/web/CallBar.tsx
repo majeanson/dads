@@ -223,7 +223,12 @@ function Tile({
       data-testid="call-tile"
       data-big={big ? 'yes' : undefined}
     >
-      <button type="button" onClick={onToggleBig} aria-pressed={big}>
+      <button
+        type="button"
+        onClick={onToggleBig}
+        aria-pressed={big}
+        className="block w-full cursor-pointer border-0 bg-transparent p-0"
+      >
         {/* Always silent — your own because hearing yourself is unusable,
             everyone else's because their sound comes from an <audio>. */}
         <video ref={video} autoPlay playsInline muted={muted} />

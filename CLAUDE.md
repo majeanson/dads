@@ -57,6 +57,13 @@ weakening `sessionSecret()`.
 - Failed joins are throttled per IP in `join_attempts` (10 per 10 minutes).
   A success clears the bucket. Only the IP's HMAC is stored.
 - `scripts/create-group.ts` is the only way a group comes to exist.
+- **An invite link carries its own secret, never the code.** The code is stored
+  only as a PBKDF2 hash, so the app cannot put it in a link — it does not know
+  it. `POST /api/invite` mints 256 random bits, HMAC'd at rest like a device
+  token, good for a week and for as many dads as it is sent to. Joining with
+  `{ invite }` skips the code field entirely and fails into the same message a
+  wrong code gets. The token is stripped from the address bar before the join
+  screen paints: it is a credential, not a route.
 
 ## The room (M2)
 
@@ -83,6 +90,24 @@ weakening `sessionSecret()`.
 - The DO has exactly one alarm, so the `schedule` table multiplexes it
   alongside the leave-grace `leaving` table. `rescheduleAlarm()` always arms
   the earliest across both. Anything new that wants a timer goes in `schedule`.
+- **Three timers, one alarm.** `night_remind` fires 24 hours out and pushes
+  "Dad night tomorrow. Coming?" to the phones that asked — and says NOTHING in
+  the room, because a weekly line saying it is nearly Thursday is furniture.
+  `ensureNightScheduled` arms the reminder and the start together; it must not
+  early-return on "something is armed" between them.
+- **Who is coming is a separate question from when it is**, and it is the one
+  that decides turnout. `rsvps` (migration 0012) is keyed on the OCCURRENCE —
+  the instant the evening starts, computed by `occurrenceOf` from the group's
+  slot and never taken from the client, so two phones cannot disagree about
+  which Thursday they mean. One row per dad per evening; the room hears it by
+  name; pressing the button you already pressed says nothing.
+- **`GET /api/night.ics` is a TZID and an RRULE, not an instant.** 21:00 stays
+  21:00 across a DST shift, for the same reason a night is a slot. No VTIMEZONE
+  travels with it — every calendar resolves IANA names, and a hand-rolled one
+  that drifts is worse than none.
+- The night is set from the menu's dad-night item, NOT from Settings. Settings
+  is what a dad sets once; the night is what the group keeps deciding, and it
+  belongs beside the answer to it.
 - `night_start` posts "the table's open" and arms `night_end`; `night_end`
   counts the window from the **D1 archive** and posts the summary, then arms
   next week. A group with no night arms nothing.
@@ -204,6 +229,11 @@ weakening `sessionSecret()`.
 - **The palette is still tokens.css.** `@theme inline` hands the same variables
   to Tailwind, so `bg-paper`, `text-ink` and `border-line` follow light, dark
   and the explicit override — and `audit:contrast` still reads the hexes.
+- **No rule dresses a bare element any more.** `button`, `input`, `select` and
+  `textarea` had defaults from M7; they reached into controls that never asked,
+  and 0.75rem of side padding on `button` put the Radix switch thumb 13px into
+  its track and hanging off the right end. Every control carries its own class.
+  Do not add an element selector back.
 - **The hand-written CSS lives in `@layer components`.** Tailwind's utilities
   are layered, and an UNLAYERED rule beats a layered one however specific: a
   bare `button { background: … }` silently defeated every `bg-*` in the app.
@@ -253,6 +283,10 @@ secret, custom domain bound by the route in wrangler.toml.
   `group:create --code "<same code>"` for each group.
 - Deploy is `npm run deploy` (build then `wrangler deploy`). Migrations are
   separate and go first: `npm run migrate:remote`.
+- `npm run backup` writes `backups/dads-YYYY-MM-DD.json` — every D1 table, plain
+  JSON, gitignored. D1 Time Travel covers thirty days and the mistake you
+  notice this month; this covers the one you notice in June. R2 blobs are not
+  in it, only their records.
 - `npx wrangler tail --format json` is how you find out what actually threw.
   The Worker's `[observability]` block is what makes those logs exist at all.
 

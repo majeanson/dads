@@ -177,43 +177,13 @@
     white-space: nowrap;
   }
 
-  /* ---------------------------------------------------------------- controls */
-
-  input,
-  select,
-  textarea {
-    padding: 0.4rem 0.5rem;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    background: var(--bg);
-    color: var(--text);
-    font: inherit;
-  }
-
-  textarea {
-    resize: vertical;
-  }
-
-  button {
-    padding: 0.4rem 0.75rem;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    background: var(--bg-soft);
-    color: var(--text);
-    font: inherit;
-    cursor: pointer;
-  }
-
-  button[type='submit'] {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: var(--on-accent);
-  }
-
-  button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  /* ---------------------------------------------------------------- controls
+   *
+   * Nothing here dresses a bare element any more. Every control comes through
+   * src/web/ui, and a rule on `button` reaches things that never asked for it:
+   * a Radix switch track is a button, and 0.75rem of side padding was enough
+   * to hang its thumb off the end.
+   */
 
   /* Text that happens to be a button. */
   .link {
@@ -222,6 +192,8 @@
     background: none;
     color: var(--accent);
     text-decoration: underline;
+    cursor: pointer;
+    font: inherit;
   }
 
   /* ------------------------------------------------------------------- pages */

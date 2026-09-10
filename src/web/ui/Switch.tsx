@@ -36,7 +36,7 @@ export function Switch({
         disabled={disabled}
         data-testid={testId}
         className={cn(
-          'relative h-6 w-11 shrink-0 p-0 rounded-full border transition-colors duration-100',
+          'relative h-6 w-11 shrink-0 rounded-full border transition-colors duration-100',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
           checked ? 'border-accent bg-accent' : 'border-edge bg-panel',
         )}

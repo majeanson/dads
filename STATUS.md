@@ -10,14 +10,14 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 
 |                    |                                                                                       |
 | ------------------ | ------------------------------------------------------------------------------------- |
-| **Get in**         | Type the code and a name. Remembered on that device forever.                          |
+| **Get in**         | Follow a link, or type the code, and a name. Remembered on that device forever.       |
 | **Talk**           | Live chat with presence, typing, reconnect-and-backfill, day dividers.                |
 | **Be heard**       | Voice call in the room, camera optional. Full WebRTC mesh.                            |
 | **Show something** | Photos and files inline, ten to a room, shrunk in the browser.                        |
 | **Answer**         | A curated question every day, answered in front of the others.                        |
 | **Be counted**     | Weekly 1–5, one honest line, one thing to try, and whether it happened.               |
 | **Play**           | Jaffre framed beside the conversation, name passed through, table events in the chat. |
-| **Turn up**        | A standing dad night with a countdown, announced and summarised in the room.          |
+| **Turn up**        | A standing dad night: countdown, who's coming, a nudge the day before, an .ics.       |
 
 ## The shape of it
 
@@ -38,6 +38,7 @@ npm test              # 183, in workerd against the real migrations
 npm run e2e           # 32, against the built stack
 npm run audit:contrast  # 24 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
+npm run backup        # every D1 table into backups/, gitignored
 ```
 
 Migrations are separate and go first: `npm run migrate:remote`.

@@ -20,7 +20,8 @@
     "group:create": "tsx scripts/create-group.ts",
     "audit:contrast": "node scripts/contrast-audit.mjs",
     "icons": "node scripts/icons.mjs",
-    "vapid": "node scripts/vapid.mjs"
+    "vapid": "node scripts/vapid.mjs",
+    "backup": "tsx scripts/backup.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",
