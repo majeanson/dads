@@ -5,6 +5,7 @@ import { DadNightBar } from './DadNightBar';
 import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
+import { Sheet } from './Sheet';
 import { TableColumn } from './TableColumn';
 import { useRoom } from './useRoom';
 
@@ -12,33 +13,30 @@ function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-type View = 'room' | 'prompts' | 'board' | 'table';
-
-const VIEWS: { id: View; label: string }[] = [
-  { id: 'room', label: 'Room' },
-  { id: 'table', label: 'Table' },
-  { id: 'prompts', label: 'Prompts' },
-  { id: 'board', label: 'Board' },
-];
+/** The two things you go and look at, then come back from. */
+type Open = 'prompts' | 'board' | null;
 
 /**
- * A card night: the talking on the left, the table on the right, on any screen
- * wide enough to hold both. Narrower than that, the nav picks one at a time.
+ * The room is the app. You are always in it.
  *
- * The table stays mounted and is hidden with CSS — unmounting it would restart
- * the game every time someone glanced at the board. The prompts and the board
- * are the opposite: they read once on mount, so keeping them alive would show
- * data that was true when the page loaded and has been wrong ever since.
+ * The prompt library and the weekly board are things a dad goes and checks, so
+ * they open over the room and close again rather than replacing it — the
+ * conversation should never be somewhere you have to navigate back to.
+ *
+ * The table is the exception and stays mounted beside the talk: unmounting the
+ * iframe would restart a game in progress. On a screen too narrow to hold
+ * both, it takes the room's place until it is closed again.
  */
 export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
   const room = useRoom(true, session.group.dadNight);
-  const [view, setView] = useState<View>('room');
+  const [open, setOpen] = useState<Open>(null);
+  const [showTable, setShowTable] = useState(false);
   const [draft, setDraft] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (view === 'room') bottom.current?.scrollIntoView({ block: 'end' });
-  }, [room.messages.length, view]);
+    bottom.current?.scrollIntoView({ block: 'end' });
+  }, [room.messages.length]);
 
   // The browser tab says which group you are in, not just "dads".
   useEffect(() => {
@@ -57,7 +55,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     .map(([, name]) => name);
 
   return (
-    <main className="room" data-view={view}>
+    <main className="room" data-table={showTable ? 'on' : 'off'}>
       <header className="room-head">
         <div>
           <h1>{session.group.name}</h1>
@@ -76,31 +74,35 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
       <DadNightBar night={room.night} />
 
-      <nav className="views" aria-label="Views">
-        {VIEWS.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            className={view === v.id ? 'is-current' : ''}
-            aria-current={view === v.id}
-            onClick={() => setView(v.id)}
-          >
-            {v.label}
-          </button>
-        ))}
-      </nav>
+      <div className="toolbar" role="toolbar" aria-label="Room actions">
+        <button type="button" onClick={() => setOpen('prompts')}>
+          Prompts
+        </button>
+        <button type="button" onClick={() => setOpen('board')}>
+          Board
+        </button>
+        {/* Only offered where the table cannot already be seen: above 64rem it
+            sits beside the room and there is nothing to toggle. */}
+        <button
+          type="button"
+          className="only-narrow"
+          aria-pressed={showTable}
+          onClick={() => setShowTable((v) => !v)}
+        >
+          {showTable ? 'Back to the room' : 'Table'}
+        </button>
+        <ul className="roster" aria-label="Who's here">
+          {room.roster.map((m) => (
+            <li key={m.memberId} data-testid="roster-entry">
+              {m.name}
+              {m.memberId === session.member.id ? ' (you)' : ''}
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <div className="stage">
         <div className="col-talk">
-          <ul className="roster" aria-label="Who's here">
-            {room.roster.map((m) => (
-              <li key={m.memberId} data-testid="roster-entry">
-                {m.name}
-                {m.memberId === session.member.id ? ' (you)' : ''}
-              </li>
-            ))}
-          </ul>
-
           <PromptCard
             messages={room.messages}
             onAnswer={room.answerPrompt}
@@ -170,15 +172,21 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         <div className="col-table">
           <TableColumn onEvent={room.relayTableEvent} />
         </div>
-
-        {/* Mounted on demand, unlike the table above: both read their data
-            once when they mount, so keeping them alive would show a board that
-            was current when the page loaded and has been wrong ever since. The
-            table is the only panel that must survive a tab switch. */}
-        <div className="panel panel-prompts">{view === 'prompts' ? <PromptList /> : null}</div>
-
-        <div className="panel panel-board">{view === 'board' ? <Board /> : null}</div>
       </div>
+
+      {/* Mounted only while open, so each reads its data fresh every time
+          rather than showing what was true when the page loaded. */}
+      {open === 'prompts' ? (
+        <Sheet title="Prompts" onClose={() => setOpen(null)}>
+          <PromptList />
+        </Sheet>
+      ) : null}
+
+      {open === 'board' ? (
+        <Sheet title="The board" onClose={() => setOpen(null)}>
+          <Board />
+        </Sheet>
+      ) : null}
     </main>
   );
 }

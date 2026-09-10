@@ -4,8 +4,21 @@ import { E2E_BOARD_GROUP } from './global-setup';
 // One group, one shared board.
 test.describe.configure({ mode: 'serial' });
 
-function view(page: Page, name: 'Room' | 'Prompts' | 'Board') {
-  return page.getByRole('navigation', { name: 'Views' }).getByRole('button', { name, exact: true });
+/**
+ * The room is always on screen now; Prompts and Board open over it. Scoped to
+ * the toolbar because Playwright matches accessible names by substring, and
+ * one curated prompt ends "...with no phone in the room?".
+ */
+function action(page: Page, name: 'Prompts' | 'Board' | 'Table' | 'Back to the room') {
+  return page
+    .getByRole('toolbar', { name: 'Room actions' })
+    .getByRole('button', { name, exact: true });
+}
+
+/** Closes whichever sheet is open. */
+async function closeSheet(page: Page) {
+  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 }
 
 async function comeIn(browser: Browser, name: string): Promise<Page> {
@@ -23,7 +36,7 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
-  await view(marc, 'Board').click();
+  await action(marc, 'Board').click();
   await expect(marc.getByTestId('your-week')).toBeVisible();
 
   // Sam starts blank on Marc's board — everyone gets a row either way.
@@ -51,7 +64,7 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   ).toBeVisible();
 
   // And Sam's board shows Marc's week.
-  await view(sam, 'Board').click();
+  await action(sam, 'Board').click();
   const marcRow = sam.getByTestId('board-row').filter({ hasText: 'Marc' }).first();
   await expect(marcRow).toContainText('2/5');
   await expect(marcRow).toContainText('Phone in the drawer at six');
@@ -65,7 +78,7 @@ test('a check-in survives a reload, and the tabs still work', async ({ browser }
   // A fresh context is a fresh device, so this is a different dad from the
   // one above — hence a name of his own.
   const dave = await comeIn(browser, 'Dave');
-  await view(dave, 'Board').click();
+  await action(dave, 'Board').click();
 
   await dave.getByRole('radio', { name: '5 — great' }).check();
   await dave.getByLabel('One line about your week').fill('Good week, for once.');
@@ -75,12 +88,12 @@ test('a check-in survives a reload, and the tabs still work', async ({ browser }
   await expect(daveRow).toContainText('5/5');
 
   await dave.reload();
-  await view(dave, 'Board').click();
+  await action(dave, 'Board').click();
   await expect(
     dave.getByTestId('board-row').filter({ hasText: 'Dave (you)' }).first(),
   ).toContainText('Good week, for once.');
 
-  await view(dave, 'Room').click();
+  await closeSheet(dave);
   await expect(dave.getByTestId('prompt-card')).toBeVisible();
 
   await dave.context().close();

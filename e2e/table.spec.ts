@@ -24,15 +24,20 @@ const STUB_TABLE = `<!doctype html><meta charset="utf-8"><h1>stub table</h1>
   setTimeout(say, 1000);
 </script>`;
 
-function view(page: Page, name: 'Room' | 'Table' | 'Prompts' | 'Board') {
-  return page.getByRole('navigation', { name: 'Views' }).getByRole('button', { name, exact: true });
+/** A table that loads and then says nothing at all. */
+const MUTE_TABLE = '<!doctype html><meta charset="utf-8"><h1>a table that says nothing</h1>';
+
+function action(page: Page, name: 'Prompts' | 'Board' | 'Table' | 'Back to the room') {
+  return page
+    .getByRole('toolbar', { name: 'Room actions' })
+    .getByRole('button', { name, exact: true });
 }
 
-async function comeIn(browser: Browser, name: string): Promise<Page> {
+async function comeIn(browser: Browser, name: string, body = STUB_TABLE): Promise<Page> {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.route('https://jaffre.marcportal.com/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'text/html', body: STUB_TABLE }),
+    route.fulfill({ status: 200, contentType: 'text/html', body }),
   );
   await page.goto('/');
   await page.getByLabel('Code').fill(E2E_TABLE_GROUP.code);
@@ -45,7 +50,9 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
 test('the group gets its own table, addressed to the dad by name', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
 
-  await view(marc, 'Table').click();
+  // At this width the table sits beside the room already — there is nothing
+  // to open, and the toggle is not offered.
+  await expect(action(marc, 'Table')).toBeHidden();
   const frame = marc.getByTestId('table').locator('iframe');
   await expect(frame).toBeVisible();
 
@@ -78,25 +85,38 @@ test('what the table says reaches the room, once', async ({ browser }) => {
   await sam.context().close();
 });
 
-test('a table that never speaks offers a way out', async ({ browser }) => {
-  const context = await browser.newContext();
+test('on a phone the table takes the room’s place, and gives it back', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 400, height: 780 } });
   const page = await context.newPage();
-  // A table that loads and then says nothing — what a browser that refuses a
-  // third-party frame its storage looks like from out here. Nothing about it
-  // is detectable across origins, so the only honest signal is silence.
   await page.route('https://jaffre.marcportal.com/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'text/html',
-      body: '<!doctype html><meta charset="utf-8"><h1>a table that says nothing</h1>',
-    }),
+    route.fulfill({ status: 200, contentType: 'text/html', body: STUB_TABLE }),
   );
   await page.goto('/');
   await page.getByLabel('Code').fill(E2E_TABLE_GROUP.code);
-  await page.getByLabel('Your name').fill('Quiet');
+  await page.getByLabel('Your name').fill('Phone');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
-  await view(page, 'Table').click();
+
+  // No room for both, so the room is what you see and the table is offered.
+  await expect(page.getByLabel('Say something')).toBeVisible();
+  await expect(page.getByTestId('table').locator('iframe')).toBeHidden();
+
+  await action(page, 'Table').click();
+  await expect(page.getByTestId('table').locator('iframe')).toBeVisible();
+  await expect(page.getByLabel('Say something')).toBeHidden();
+
+  await action(page, 'Back to the room').click();
+  await expect(page.getByLabel('Say something')).toBeVisible();
+  await expect(page.getByTestId('table').locator('iframe')).toBeHidden();
+
+  await context.close();
+});
+
+test('a table that never speaks offers a way out', async ({ browser }) => {
+  // What a browser that refuses a third-party frame its storage looks like
+  // from out here. Nothing about it is detectable across origins, so the only
+  // honest signal is silence.
+  const page = await comeIn(browser, 'Quiet', MUTE_TABLE);
 
   // Nothing is claimed early: the frame may simply be slow.
   await expect(page.getByTestId('table-silent')).toHaveCount(0);
@@ -109,5 +129,5 @@ test('a table that never speaks offers a way out', async ({ browser }) => {
     page.getByTestId('table-silent').getByRole('link', { name: /own tab/ }),
   ).toBeVisible();
 
-  await context.close();
+  await page.context().close();
 });

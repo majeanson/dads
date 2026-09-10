@@ -5,12 +5,20 @@ import { E2E_PROMPT_GROUP } from './global-setup';
 test.describe.configure({ mode: 'serial' });
 
 /**
- * Scoped to the nav landmark on purpose: Playwright matches accessible names
- * by substring, and one of the curated prompts ends "...with no phone in the
- * room?", which otherwise collides with the Room button.
+ * The room is always on screen now; Prompts and Board open over it. Scoped to
+ * the toolbar because Playwright matches accessible names by substring, and
+ * one curated prompt ends "...with no phone in the room?".
  */
-function view(page: Page, name: 'Room' | 'Prompts') {
-  return page.getByRole('navigation', { name: 'Views' }).getByRole('button', { name, exact: true });
+function action(page: Page, name: 'Prompts' | 'Board' | 'Table' | 'Back to the room') {
+  return page
+    .getByRole('toolbar', { name: 'Room actions' })
+    .getByRole('button', { name, exact: true });
+}
+
+/** Closes whichever sheet is open. */
+async function closeSheet(page: Page) {
+  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 }
 
 async function comeIn(browser: Browser, name: string): Promise<Page> {
@@ -49,7 +57,7 @@ test('the day’s question is asked, answered, and seen by the others', async ({
 test('the whole library is browsable as a list, and a dad can add to it', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
 
-  await view(marc, 'Prompts').click();
+  await action(marc, 'Prompts').click();
   await expect(marc.getByTestId('prompt-list')).toBeVisible();
 
   // The curated library, plus the sections around it.
@@ -70,9 +78,9 @@ test('the whole library is browsable as a list, and a dad can add to it', async 
 
   // It survives a reload, and going back to the room still works.
   await marc.reload();
-  await view(marc, 'Prompts').click();
+  await action(marc, 'Prompts').click();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
-  await view(marc, 'Room').click();
+  await closeSheet(marc);
   await expect(marc.getByTestId('prompt-card')).toBeVisible();
 
   await marc.context().close();

@@ -233,34 +233,6 @@ main.room {
   gap: 0.5rem;
 }
 
-.views {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--border);
-  scrollbar-width: none;
-}
-
-.views::-webkit-scrollbar {
-  display: none;
-}
-
-.views button {
-  flex: 0 0 auto;
-  padding: 0 0 0.4rem;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: none;
-  color: var(--muted);
-  font-size: 0.9375rem;
-}
-
-.views button.is-current {
-  border-bottom-color: var(--accent);
-  color: var(--text);
-}
-
 /* --- the stage: talk, and the table beside it on a wide screen --- */
 
 .stage {
@@ -269,28 +241,26 @@ main.room {
   min-height: 0;
 }
 
-.col-talk,
-.col-table,
-.panel {
-  display: none;
-  min-height: 0;
-}
-
-.room[data-view='room'] .col-talk {
+.col-talk {
   display: grid;
-  grid-template-rows: auto auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto auto;
   gap: 0.5rem;
   min-height: 0;
 }
 
-.room[data-view='table'] .col-table,
-.room[data-view='prompts'] .panel-prompts,
-.room[data-view='board'] .panel-board {
+.col-table {
+  display: none;
+  min-height: 0;
+}
+
+/* Narrow: the table takes the room's place while it is open, because there is
+   no room for both. */
+.room[data-table='on'] .col-table {
   display: block;
 }
 
-.panel {
-  overflow-y: auto;
+.room[data-table='on'] .col-talk {
+  display: none;
 }
 
 @media (min-width: 64rem) {
@@ -298,20 +268,47 @@ main.room {
     max-width: 74rem;
   }
 
-  .room[data-view='room'] .stage {
+  /* Wide: they sit side by side and the toggle has nothing to do, so it is
+     not offered. */
+  .stage {
     grid-template-columns: minmax(0, 1fr) minmax(0, 28rem);
   }
 
-  .room[data-view='room'] .col-table {
+  .col-table,
+  .room[data-table='on'] .col-talk {
     display: block;
   }
+
+  .only-narrow {
+    display: none;
+  }
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding-bottom: var(--gap);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar button {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.875rem;
+}
+
+.toolbar button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .roster {
   display: flex;
   flex-wrap: wrap;
+  /* Pushed to the end of the toolbar: it is information, not an action. */
+  margin: 0 0 0 auto;
   gap: 0 0.5rem;
-  margin: 0;
   padding: 0;
   list-style: none;
   color: var(--muted);
@@ -729,4 +726,65 @@ main.room {
   background: var(--bg-soft);
   color: var(--muted);
   font-size: 0.8125rem;
+}
+
+/* --- sheets ------------------------------------------------------------
+ *
+ * The prompt library and the board open over the room. Native <dialog>, so
+ * the focus trap, Escape, the inert background and the backdrop all come
+ * from the platform rather than from code that would get them subtly wrong.
+ */
+.sheet {
+  width: min(42rem, 100%);
+  max-height: 85dvh;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* Enough to push the room back. 45% barely registers over a dark ground,
+ * which left the conversation competing with the sheet in front of it. */
+.sheet::backdrop {
+  background: rgb(0 0 0 / 65%);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: var(--gap) 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sheet-body {
+  padding: 1rem;
+  /* 85dvh minus the header; the body is what scrolls, not the page behind. */
+  max-height: calc(85dvh - 3.25rem);
+  overflow-y: auto;
+}
+
+/* On a phone a sheet is the screen. */
+@media (max-width: 40rem) {
+  .sheet {
+    width: 100%;
+    max-width: none;
+    max-height: 100dvh;
+    height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .sheet-body {
+    max-height: calc(100dvh - 3.25rem);
+  }
 }

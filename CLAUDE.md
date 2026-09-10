@@ -201,6 +201,22 @@ secret, custom domain bound by the route in wrangler.toml.
 - `npx wrangler tail --format json` is how you find out what actually threw.
   The Worker's `[observability]` block is what makes those logs exist at all.
 
+## Shape of the room
+
+- **The room is the app; you are always in it.** Prompts and the board are
+  things a dad goes and checks, so they open over the room in a `<Sheet>` and
+  close again. The conversation is never somewhere you navigate back to.
+- `Sheet` is the native `<dialog>` on purpose — focus trap, Escape, inert
+  background and backdrop all come from the platform. Do not replace it with a
+  div and a z-index.
+- Sheets mount only while open, so each reads its data fresh every time.
+- **The table is the exception** and stays mounted beside the talk: unmounting
+  the iframe restarts a game. Above 64rem it is simply always there and the
+  toolbar's Table button is hidden (`.only-narrow`); below, it takes the
+  room's place until closed.
+- e2e helpers: `action(page, 'Prompts')` scoped to the `toolbar` role, and
+  `closeSheet(page)`. There is no "Room" button to click back to.
+
 ## Test layout
 
 - vitest storage is per **file**, not per test. Tests that seed groups call
