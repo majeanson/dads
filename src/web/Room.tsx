@@ -4,6 +4,7 @@ import { Attachment } from './Attachment';
 import { Board } from './Board';
 import { CallBar, JoinCall } from './CallBar';
 import { Here } from './Here';
+import { Invite } from './Invite';
 import {
   ArrowDown,
   CalendarCheck,
@@ -11,6 +12,7 @@ import {
   MessageCircleQuestion,
   Plus,
   SendHorizontal,
+  Send,
   Settings as SettingsIcon,
   Spade,
   X,
@@ -42,7 +44,7 @@ const TICK_MS = 15_000;
 const NEAR_BOTTOM_PX = 80;
 
 /** What is open over the room, if anything. */
-type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'settings';
+type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'invite' | 'settings';
 
 /**
  * The room is the conversation and the call. That is the whole screen.
@@ -534,6 +536,15 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               </Button>
             ) : null}
 
+            {/* Second from the bottom, not first: the room is for the dads
+                who are already in it. But it is in the menu at all because
+                everything else in this app is worth nothing until the other
+                four are here. */}
+            <Button block onClick={() => setSheet('invite')}>
+              <Send size={17} aria-hidden="true" className="text-muted" />
+              {t('menu.invite')}
+            </Button>
+
             <Button block data-testid="dad-night" onClick={() => setSheet('settings')}>
               <SettingsIcon size={17} aria-hidden="true" className="text-muted" />
               {t('menu.settings')}
@@ -570,6 +581,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       {sheet === 'board' ? (
         <Sheet title={t('b.title')} onClose={() => setSheet(null)}>
           <Board onChanged={refreshTodo} />
+        </Sheet>
+      ) : null}
+
+      {sheet === 'invite' ? (
+        <Sheet title={t('inv.title')} onClose={() => setSheet(null)}>
+          <Invite />
         </Sheet>
       ) : null}
 

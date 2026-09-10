@@ -24,8 +24,23 @@ function message(t: T, lang: 'en' | 'fr', failure: JoinFailure): string {
   return t(MESSAGES[failure.error] ?? 'join.unknown');
 }
 
+/**
+ * The token out of /i/<token>, taken once and taken OFF the address bar.
+ *
+ * It is a credential. Leaving it in the URL puts it in the tab title, in a
+ * screenshot of the door, and in whatever this browser syncs — for a link
+ * whose whole job was to be used once and forgotten.
+ */
+function inviteFromUrl(): string {
+  const match = /^\/i\/([A-Za-z0-9_-]{32,})$/.exec(location.pathname);
+  if (!match) return '';
+  history.replaceState(null, '', '/');
+  return match[1] ?? '';
+}
+
 export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void }) {
   const { t, lang } = useT();
+  const [invite] = useState(inviteFromUrl);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +51,7 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
     setBusy(true);
     setError(null);
     try {
-      const result = await join(code, name);
+      const result = await join(code, name, invite || undefined);
       if (result.ok) onJoined(result.session);
       else setError(message(t, lang, result.failure));
     } catch {
@@ -53,26 +68,33 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
           a code should recognise where he has landed. */}
       <img src="/icon.svg" alt="" width={56} height={56} className="mb-5 rounded-2xl shadow-sm" />
       <h1 className="m-0 text-3xl font-semibold tracking-tight">dads</h1>
-      <p className="mt-2 mb-8 text-[0.9375rem] text-muted">{t('join.lede')}</p>
+      <p className="mt-2 mb-8 text-[0.9375rem] text-muted">
+        {invite ? t('join.invited') : t('join.lede')}
+      </p>
 
       <form onSubmit={submit} className="grid gap-4">
-        <div className="grid gap-1.5">
-          <label htmlFor="code" className="text-sm text-muted">
-            {t('join.code')}
-          </label>
-          <input
-            id="code"
-            name="code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            className={FIELD}
-            // The only thing anyone comes here to do.
-            autoFocus
-          />
-        </div>
+        {/* A dad who followed a link has already been let in by whoever sent
+            it. Asking him for the passphrase as well would be asking him to
+            prove it twice. */}
+        {invite ? null : (
+          <div className="grid gap-1.5">
+            <label htmlFor="code" className="text-sm text-muted">
+              {t('join.code')}
+            </label>
+            <input
+              id="code"
+              name="code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              className={FIELD}
+              // The only thing anyone comes here to do.
+              autoFocus
+            />
+          </div>
+        )}
 
         <div className="grid gap-1.5">
           <label htmlFor="name" className="text-sm text-muted">
@@ -86,6 +108,7 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
             autoComplete="given-name"
             maxLength={32}
             className={FIELD}
+            autoFocus={invite !== ''}
           />
         </div>
 

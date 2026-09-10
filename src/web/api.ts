@@ -59,11 +59,12 @@ export async function fetchSession(): Promise<Session | null> {
 export async function join(
   code: string,
   displayName: string,
+  invite?: string,
 ): Promise<{ ok: true; session: Session } | { ok: false; failure: JoinFailure }> {
   const res = await fetch('/api/join', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, displayName, deviceToken: readDeviceToken() }),
+    body: JSON.stringify({ code, invite, displayName, deviceToken: readDeviceToken() }),
   });
 
   if (!res.ok) {
@@ -77,6 +78,18 @@ export async function join(
   const body = (await res.json()) as Session & { deviceToken: string };
   writeDeviceToken(body.deviceToken);
   return { ok: true, session: { group: body.group, member: body.member } };
+}
+
+/**
+ * A link to hand a dad, minted fresh each time the sheet is opened. The token
+ * comes back once and is never stored here: the link IS the secret, and the
+ * place for it is his messages app, not our localStorage.
+ */
+export async function createInvite(): Promise<{ url: string; expiresAt: number }> {
+  const res = await fetch('/api/invite', { method: 'POST' });
+  if (!res.ok) throw new Error(`POST /api/invite ${res.status}`);
+  const body = (await res.json()) as { token: string; expiresAt: number };
+  return { url: `${location.origin}/i/${body.token}`, expiresAt: body.expiresAt };
 }
 
 export async function leave(): Promise<void> {

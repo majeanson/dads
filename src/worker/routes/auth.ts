@@ -13,6 +13,7 @@ import {
   verifyIdentity,
 } from '../identity';
 import { checkJoinThrottle, clearJoinFailures, recordJoinFailure } from '../throttle';
+import { groupIdForInvite } from './invite';
 
 export const MAX_NAME_LENGTH = 32;
 
@@ -72,12 +73,17 @@ export function nightFrom(row: {
 }
 
 /**
- * POST /api/join — { code, displayName, deviceToken? }
+ * POST /api/join — { code | invite, displayName, deviceToken? }
  *
  * The code alone decides which group you land in: dads.marcportal.com has no
  * group picker, because "the dads" is the only thing the people using it know
  * about. That means a wrong code cannot be told apart from a wrong group, and
  * the error says so.
+ *
+ * An invite token says the same thing with a link instead of a passphrase. It
+ * is checked first because a dad who followed one never typed a code, and it
+ * fails into exactly the same message: the door tells a stranger nothing about
+ * how close he got.
  */
 export async function join(request: Request, env: Env, isProduction: boolean): Promise<Response> {
   const throttle = await checkJoinThrottle(env, request, isProduction);
@@ -88,7 +94,7 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
     );
   }
 
-  let body: { code?: unknown; displayName?: unknown; deviceToken?: unknown };
+  let body: { code?: unknown; invite?: unknown; displayName?: unknown; deviceToken?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -96,28 +102,37 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
   }
 
   const code = typeof body.code === 'string' ? body.code : '';
+  const invite = typeof body.invite === 'string' ? body.invite : '';
   const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
 
-  if (!code.trim()) return Response.json({ error: 'missing_code' }, { status: 400 });
+  if (!code.trim() && !invite) return Response.json({ error: 'missing_code' }, { status: 400 });
   if (!displayName) return Response.json({ error: 'missing_name' }, { status: 400 });
   if ([...displayName].length > MAX_NAME_LENGTH) {
     return Response.json({ error: 'name_too_long' }, { status: 400 });
   }
 
-  const { results } = await env.DB.prepare(
-    `SELECT id, slug, name, invite_code_salt, invite_code_hash,
-            dad_night_weekday, dad_night_time, dad_night_tz,
-            questions_on, week_on, table_on
-       FROM groups LIMIT ?`,
-  )
-    .bind(GROUP_SCAN_LIMIT)
-    .all<GroupRow>();
+  const columns = `id, slug, name, invite_code_salt, invite_code_hash,
+                    dad_night_weekday, dad_night_time, dad_night_tz,
+                    questions_on, week_on, table_on`;
 
   let group: GroupRow | undefined;
-  for (const candidate of results) {
-    if (await verifyInviteCode(code, candidate.invite_code_salt, candidate.invite_code_hash)) {
-      group = candidate;
-      break;
+  if (invite) {
+    const groupId = await groupIdForInvite(env, invite, isProduction);
+    if (groupId !== null) {
+      group =
+        (await env.DB.prepare(`SELECT ${columns} FROM groups WHERE id = ?`)
+          .bind(groupId)
+          .first<GroupRow>()) ?? undefined;
+    }
+  } else {
+    const { results } = await env.DB.prepare(`SELECT ${columns} FROM groups LIMIT ?`)
+      .bind(GROUP_SCAN_LIMIT)
+      .all<GroupRow>();
+    for (const candidate of results) {
+      if (await verifyInviteCode(code, candidate.invite_code_salt, candidate.invite_code_hash)) {
+        group = candidate;
+        break;
+      }
     }
   }
 

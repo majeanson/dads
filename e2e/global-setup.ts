@@ -51,6 +51,11 @@ export const E2E_LEAVE_GROUP = {
   name: 'The E2E Leaving',
   code: 'anchor pewter fable mint',
 };
+export const E2E_INVITE_GROUP = {
+  slug: 'e2e-invite',
+  name: 'The E2E Invite',
+  code: 'clover ferry basalt wren',
+};
 const GROUPS = [
   E2E_CALL_GROUP,
   E2E_GROUP,
@@ -61,6 +66,7 @@ const GROUPS = [
   E2E_TABLE_GROUP,
   E2E_PREFS_GROUP,
   E2E_LEAVE_GROUP,
+  E2E_INVITE_GROUP,
 ];
 
 function wrangler(...args: string[]): string {
@@ -99,7 +105,7 @@ export default function globalSetup(): void {
   const reset = join(mkdtempSync(join(tmpdir(), 'dads-e2e-')), 'reset.sql');
   writeFileSync(
     reset,
-    `DELETE FROM groups WHERE slug IN (${slugs});\nDELETE FROM join_attempts;\n`,
+    `DELETE FROM invites;\nDELETE FROM groups WHERE slug IN (${slugs});\nDELETE FROM join_attempts;\n`,
   );
   wrangler('d1', 'execute', 'dads', '--local', '-y', '--file', reset);
 
