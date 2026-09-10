@@ -498,9 +498,10 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   private async openDadNight(now: number): Promise<void> {
-    await this.say('dad night', { k: 'night_open' });
-
     const night = this.storedNight();
+    const items = await this.itemsUpForTonight(night, now);
+    await this.say('dad night', items > 0 ? { k: 'night_open', items } : { k: 'night_open' });
+
     const window = night ? currentWindow(night, now) : null;
     // If the alarm ran so late that the window already closed, there is
     // nothing to close; ensureNightScheduled arms next week instead.
@@ -517,9 +518,33 @@ export class RoomDO extends DurableObject<Env> {
     if (groupId !== undefined) {
       await notifyGroup(this.env, groupId, {
         title: 'dads',
-        body: 'The table’s open.',
+        body: items > 0 ? `The table’s open. ${items} to get into.` : 'The table’s open.',
         tag: 'dad-night',
       });
+    }
+  }
+
+  /**
+   * How many things the week put up for the evening now starting.
+   *
+   * Counted from D1, like the summary is: the list is written by a route and
+   * this object never sees those writes go past.
+   */
+  private async itemsUpForTonight(night: DadNight | null, now: number): Promise<number> {
+    const groupId = this.groupId();
+    const start = night ? currentWindow(night, now)?.start : undefined;
+    if (groupId === undefined || start === undefined) return 0;
+    try {
+      const row = await this.env.DB.prepare(
+        'SELECT COUNT(*) AS n FROM night_items WHERE group_id = ? AND occurrence = ?',
+      )
+        .bind(groupId, start)
+        .first<{ n: number }>();
+      return row?.n ?? 0;
+    } catch (err) {
+      // A count that cannot be read is not a reason to skip opening the night.
+      console.error('night items count failed', err);
+      return 0;
     }
   }
 

@@ -17,7 +17,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 | **Answer**         | A curated question every day, answered in front of the others.                        |
 | **Be counted**     | Weekly 1–5, one honest line, one thing to try, and whether it happened.               |
 | **Play**           | Jaffre framed beside the conversation, name passed through, table events in the chat. |
-| **Turn up**        | A standing dad night: countdown, who's coming, a nudge the day before, an .ics.       |
+| **Turn up**        | A standing dad night: countdown, who's coming, what to get into, a nudge, an .ics.    |
 
 ## The shape of it
 

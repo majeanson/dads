@@ -59,6 +59,28 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await expect(marc.getByTestId('rsvp-who')).not.toContainText('In: Marc');
   await expect(sam.getByTestId('line').filter({ hasText: 'Marc can’t make it.' })).toBeVisible();
 
+  // And the thing the standing slot was always missing: what we are there to
+  // talk about. Marc puts one up on Tuesday; it is there on Thursday, and Sam
+  // sees it go up without opening anything.
+  await marc.getByLabel('Add', { exact: true }).fill('How do you handle bedtime?');
+  await marc.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(marc.getByTestId('agenda-item')).toContainText('How do you handle bedtime?');
+  await expect(marc.getByTestId('agenda-item')).toContainText('Marc');
+  await expect(
+    sam.getByTestId('line').filter({ hasText: 'put something up for dad night' }),
+  ).toBeVisible();
+
+  // Sam sees it in his own sheet, and cannot take back what he did not write.
+  await sam.getByRole('button', { name: 'Menu' }).click();
+  await sam.getByTestId('dad-night').click();
+  const samsView = sam.getByTestId('agenda-item').filter({ hasText: 'bedtime' });
+  await expect(samsView).toBeVisible();
+  await expect(samsView.getByRole('button', { name: 'Take it back' })).toHaveCount(0);
+
+  // Marc can.
+  await marc.getByTestId('agenda-item').getByRole('button', { name: 'Take it back' }).click();
+  await expect(marc.getByTestId('agenda-item')).toHaveCount(0);
+
   await marcCtx.close();
   await samCtx.close();
 });

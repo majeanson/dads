@@ -219,6 +219,33 @@ describe('the night itself', () => {
     expect(marc.lines()).toContain('Dad night. The table’s open.');
   });
 
+  it('opens with what the week put up for it', async () => {
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    await settle();
+
+    const who = await env.DB.prepare('SELECT id FROM members WHERE group_id = ?')
+      .bind(group.id)
+      .first<{ id: string }>();
+
+    // Two things thought of during the week, filed against this evening.
+    for (const body of ['Bedtime', 'The school thing']) {
+      await env.DB.prepare(
+        `INSERT INTO night_items (id, group_id, member_id, occurrence, body, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(`item_${body}`, group.id, who!.id, start, body, Date.now())
+        .run();
+    }
+
+    clockAt(start + 1000);
+    expect(await fireAlarm(group)).toBe(true);
+    await settle();
+
+    // The count, not the list: the line is what makes a man open the sheet.
+    expect(marc.lines()).toContain('Dad night. The table’s open — 2 things to get into.');
+  });
+
   it('nudges the day before without saying anything in the room', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);

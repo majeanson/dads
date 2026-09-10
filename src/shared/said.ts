@@ -18,7 +18,9 @@ import type { DadNight } from './dadNight';
 export type Said =
   | { k: 'night_set'; by: string; weekday: number; time: string }
   | { k: 'night_cleared'; by: string }
-  | { k: 'night_open' }
+  /** `items` is how many things the week put up for it, absent when none. */
+  | { k: 'night_open'; items?: number }
+  | { k: 'item_added'; name: string; body: string }
   | { k: 'night_done'; dads: number; lines: number }
   | { k: 'rsvp'; name: string; coming: boolean }
   | { k: 'check_in'; name: string; rating: number; note: string }
@@ -55,8 +57,15 @@ export function parseSaid(raw: unknown): Said | null {
       const by = str(said.by);
       return by ? { k: 'night_cleared', by } : null;
     }
-    case 'night_open':
-      return { k: 'night_open' };
+    case 'night_open': {
+      const items = num(said.items);
+      return items !== null && items > 0 ? { k: 'night_open', items } : { k: 'night_open' };
+    }
+    case 'item_added': {
+      const name = str(said.name);
+      const body = str(said.body);
+      return name && body ? { k: 'item_added', name, body } : null;
+    }
     case 'rsvp': {
       const name = str(said.name);
       return name ? { k: 'rsvp', name, coming: said.coming === true } : null;
@@ -119,7 +128,13 @@ export function describeSaid(t: T, lang: Lang, said: Said, joined = false): stri
     case 'night_cleared':
       return t('sys.night_cleared', { by: said.by });
     case 'night_open':
-      return t('sys.night_open');
+      // The count, never the list: the room line is what makes a man open the
+      // sheet, and the sheet is where the detail lives. Same rule as the week.
+      return said.items === undefined || said.items === 0
+        ? t('sys.night_open')
+        : t(`sys.night_open_items_${plural(lang, said.items)}`, { n: said.items });
+    case 'item_added':
+      return t('sys.item_added', { name: said.name, body: said.body });
     case 'night_done':
       return said.dads === 0
         ? t('sys.night_done_none')

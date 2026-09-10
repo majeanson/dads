@@ -115,27 +115,53 @@ export interface Rsvp {
   coming: boolean;
 }
 
-export interface RsvpState {
+export interface NightItem {
+  id: string;
+  memberId: string;
+  name: string;
+  body: string;
+}
+
+export interface NightState {
   /** The instant the evening being answered starts, or null if there is no
    * night set. Decided by the server, never by this clock. */
   occurrence: number | null;
   answers: Rsvp[];
+  items: NightItem[];
 }
 
-export async function fetchRsvps(): Promise<RsvpState> {
-  const res = await fetch('/api/rsvp');
-  if (!res.ok) throw new Error(`GET /api/rsvp ${res.status}`);
-  return (await res.json()) as RsvpState;
+export async function fetchNight(): Promise<NightState> {
+  const res = await fetch('/api/night');
+  if (!res.ok) throw new Error(`GET /api/night ${res.status}`);
+  return (await res.json()) as NightState;
 }
 
-export async function setRsvp(coming: boolean): Promise<RsvpState> {
+export async function setRsvp(coming: boolean): Promise<NightState> {
   const res = await fetch('/api/rsvp', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ coming }),
   });
   if (!res.ok) throw new Error(`PUT /api/rsvp ${res.status}`);
-  return (await res.json()) as RsvpState;
+  return (await res.json()) as NightState;
+}
+
+/** Something to get into on the night. Anyone may add; the room hears it. */
+export async function addNightItem(body: string): Promise<NightState> {
+  const res = await fetch('/api/night-item', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body }),
+  });
+  if (!res.ok) throw new Error(`POST /api/night-item ${res.status}`);
+  return (await res.json()) as NightState;
+}
+
+/** Taking your own back. The server only lets a man remove what he wrote. */
+export async function removeNightItem(id: string): Promise<NightState> {
+  const res = await fetch(`/api/night-item?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`DELETE /api/night-item ${res.status}`);
+  return (await res.json()) as NightState;
 }
 
 /** What the group has open. Any dad may change it; everyone sees it. */

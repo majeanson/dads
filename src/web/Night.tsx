@@ -1,18 +1,30 @@
-import { CalendarPlus, Check, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { fetchRsvps, setRsvp, type Rsvp } from './api';
+import { CalendarPlus, Check, Plus, Trash2, X } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import {
+  addNightItem,
+  fetchNight,
+  removeNightItem,
+  setRsvp,
+  type NightItem,
+  type NightState,
+  type Rsvp,
+} from './api';
 import { useT } from './i18n';
 import { nightItem, NightEditor } from './NightEditor';
 import { Button } from './ui/Button';
+import { FIELD } from './ui/field';
 import type { DadNight } from '../shared/dadNight';
+
+const EMPTY: NightState = { occurrence: null, answers: [], items: [] };
 
 /**
  * Everything about the standing night, in one place.
  *
- * The slot was always the mechanism — a night everybody knows about, announced
- * and summarised in the room. What it never answered is the question a man
- * actually asks himself on Thursday afternoon: is anyone else going to be
- * there? So this is when, who has said yes, and the two buttons that say it.
+ * The slot got the dads to the table and never said what they were there to
+ * talk about, so an evening became whatever the loudest of them brought up.
+ * This is the week's answer to that: when it is, who is coming, and the list
+ * of things anybody thought of between now and then. On the night, that list
+ * is the conversation.
  *
  * Changing the night lives here too rather than in Settings. Settings is for
  * the things a dad sets once; the night is something the group keeps
@@ -20,95 +32,69 @@ import type { DadNight } from '../shared/dadNight';
  */
 export function Night({ night, you }: { night: DadNight | null; you: string }) {
   const { t, lang } = useT();
-  const [answers, setAnswers] = useState<Rsvp[] | null>(null);
+  const [state, setState] = useState<NightState | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    fetchRsvps()
-      .then((s) => !cancelled && setAnswers(s.answers))
-      .catch(() => !cancelled && setAnswers([]));
+    fetchNight()
+      .then((s) => !cancelled && setState(s))
+      .catch(() => !cancelled && setState(EMPTY));
     return () => {
       cancelled = true;
     };
   }, [night]);
 
-  async function answer(coming: boolean) {
+  async function act(work: Promise<NightState>) {
     setBusy(true);
     try {
-      setAnswers((await setRsvp(coming)).answers);
+      setState(await work);
     } catch {
-      // The room is the record; a failed press leaves the buttons as they were.
+      // The room is the record; a failed press leaves the sheet as it was.
     } finally {
       setBusy(false);
     }
   }
-
-  const mine = answers?.find((a) => a.memberId === you) ?? null;
-  const coming = (answers ?? []).filter((a) => a.coming);
-  const not = (answers ?? []).filter((a) => !a.coming);
 
   return (
     <div className="grid gap-5" data-testid="night">
       {night === null ? (
         <p className="m-0 text-[0.9375rem] text-muted">{t('n.none')}</p>
       ) : (
-        <div className="grid gap-3">
-          <p className="m-0 text-[0.9375rem]" data-testid="night-when">
-            {nightItem(t, lang, night, Date.now())}
-          </p>
+        <>
+          <div className="grid gap-3">
+            <p className="m-0 text-[0.9375rem]" data-testid="night-when">
+              {nightItem(t, lang, night, Date.now())}
+            </p>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              look={mine?.coming === true ? 'primary' : 'plain'}
-              disabled={busy}
-              onClick={() => void answer(true)}
-              data-testid="rsvp-in"
+            <Coming
+              answers={state?.answers ?? []}
+              you={you}
+              busy={busy}
+              onAnswer={(coming) => void act(setRsvp(coming))}
+            />
+
+            {/* The countdown only reaches a dad who has opened the room. His
+                own calendar reaches him on Thursday afternoon, where the
+                decision actually gets made. */}
+            <a
+              href="/api/night.ics"
+              className="inline-flex items-center gap-1.5 text-sm"
+              data-testid="night-ics"
             >
-              <Check size={15} aria-hidden="true" />
-              {t('n.im_in')}
-            </Button>
-            <Button
-              look={mine?.coming === false ? 'danger' : 'plain'}
-              disabled={busy}
-              onClick={() => void answer(false)}
-              data-testid="rsvp-out"
-            >
-              <X size={15} aria-hidden="true" />
-              {t('n.cant')}
-            </Button>
+              <CalendarPlus size={15} aria-hidden="true" />
+              {t('n.calendar')}
+            </a>
           </div>
 
-          {/* Names, not a count. "3 coming" is a number a man reads as a
-              quorum; the names are what tell him whether HIS friend is
-              coming, which is the thing that decides it. */}
-          <p className="m-0 text-[0.9375rem] text-muted" data-testid="rsvp-who">
-            {coming.length === 0 && not.length === 0
-              ? t('n.nobody_yet')
-              : [
-                  coming.length > 0
-                    ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
-                    : '',
-                  not.length > 0
-                    ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-          </p>
-
-          {/* The countdown only reaches a dad who has opened the room. His own
-              calendar reaches him on Thursday afternoon, where the decision
-              actually gets made. */}
-          <a
-            href="/api/night.ics"
-            className="inline-flex items-center gap-1.5 text-sm"
-            data-testid="night-ics"
-          >
-            <CalendarPlus size={15} aria-hidden="true" />
-            {t('n.calendar')}
-          </a>
-        </div>
+          <Agenda
+            items={state?.items ?? []}
+            you={you}
+            busy={busy}
+            onAdd={(body) => act(addNightItem(body))}
+            onRemove={(id) => void act(removeNightItem(id))}
+          />
+        </>
       )}
 
       <section>
@@ -118,5 +104,152 @@ export function Night({ night, you }: { night: DadNight | null; you: string }) {
         <NightEditor night={night} onDone={() => {}} />
       </section>
     </div>
+  );
+}
+
+/** Two buttons and the names of everyone who has pressed one. */
+function Coming({
+  answers,
+  you,
+  busy,
+  onAnswer,
+}: {
+  answers: Rsvp[];
+  you: string;
+  busy: boolean;
+  onAnswer: (coming: boolean) => void;
+}) {
+  const { t } = useT();
+  const mine = answers.find((a) => a.memberId === you) ?? null;
+  const coming = answers.filter((a) => a.coming);
+  const not = answers.filter((a) => !a.coming);
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          look={mine?.coming === true ? 'primary' : 'plain'}
+          disabled={busy}
+          onClick={() => onAnswer(true)}
+          data-testid="rsvp-in"
+        >
+          <Check size={15} aria-hidden="true" />
+          {t('n.im_in')}
+        </Button>
+        <Button
+          look={mine?.coming === false ? 'danger' : 'plain'}
+          disabled={busy}
+          onClick={() => onAnswer(false)}
+          data-testid="rsvp-out"
+        >
+          <X size={15} aria-hidden="true" />
+          {t('n.cant')}
+        </Button>
+      </div>
+
+      {/* Names, not a count. "3 coming" is a number a man reads as a quorum;
+          the names tell him whether HIS friend is coming, which is the thing
+          that actually decides it. */}
+      <p className="m-0 text-[0.9375rem] text-muted" data-testid="rsvp-who">
+        {answers.length === 0
+          ? t('n.nobody_yet')
+          : [
+              coming.length > 0
+                ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
+                : '',
+              not.length > 0 ? t('n.out_list', { names: not.map((a) => a.name).join(', ') }) : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+      </p>
+    </>
+  );
+}
+
+/**
+ * What we should get into.
+ *
+ * The whole point of writing it down on Tuesday is that it survives to
+ * Thursday. Each line carries the name of the man who put it up, because on
+ * the night somebody has to start, and "Marc wanted to ask about bedtime" is
+ * how that happens without anyone having to volunteer.
+ */
+function Agenda({
+  items,
+  you,
+  busy,
+  onAdd,
+  onRemove,
+}: {
+  items: NightItem[];
+  you: string;
+  busy: boolean;
+  onAdd: (body: string) => Promise<void>;
+  onRemove: (id: string) => void;
+}) {
+  const { t } = useT();
+  const [draft, setDraft] = useState('');
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const body = draft.trim();
+    if (!body) return;
+    setDraft('');
+    await onAdd(body);
+  }
+
+  return (
+    <section data-testid="agenda">
+      <h2 className="mb-2 text-sm font-semibold text-muted">{t('n.agenda')}</h2>
+
+      {items.length === 0 ? (
+        <p className="m-0 mb-2 text-[0.9375rem] text-muted">{t('n.agenda_empty')}</p>
+      ) : (
+        <ul className="m-0 mb-2 list-none border-t border-line p-0">
+          {items.map((item) => (
+            <li
+              className="flex items-start gap-2 border-b border-line py-2.5"
+              key={item.id}
+              data-testid="agenda-item"
+            >
+              <span className="min-w-0 flex-1 text-[0.9375rem]">
+                {item.body} <span className="text-muted">— {item.name}</span>
+              </span>
+              {/* Only your own, and the server enforces it too. */}
+              {item.memberId === you ? (
+                <Button
+                  look="danger"
+                  size="iconSm"
+                  disabled={busy}
+                  onClick={() => onRemove(item.id)}
+                  aria-label={t('n.agenda_remove')}
+                >
+                  <Trash2 size={14} aria-hidden="true" />
+                  <span className="sr-only">{t('n.agenda_remove')}</span>
+                </Button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form className="flex gap-2" onSubmit={submit}>
+        <label htmlFor="night-item" className="sr-only">
+          {t('n.agenda_add')}
+        </label>
+        <input
+          id="night-item"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={t('n.agenda_placeholder')}
+          maxLength={200}
+          className={`${FIELD} min-w-0 flex-1`}
+        />
+        <Button type="submit" look="primary" disabled={busy || draft.trim() === ''}>
+          <Plus size={15} aria-hidden="true" />
+          {t('n.agenda_add')}
+        </Button>
+      </form>
+    </section>
   );
 }

@@ -101,6 +101,17 @@ weakening `sessionSecret()`.
   slot and never taken from the client, so two phones cannot disagree about
   which Thursday they mean. One row per dad per evening; the room hears it by
   name; pressing the button you already pressed says nothing.
+- **The night sheet is where the week collects what the night is for.**
+  `night_items` (migration 0013) is keyed on the same occurrence as an RSVP, so
+  a thought had on Tuesday belongs to Thursday and one had at ten past nine
+  belongs to the evening happening around it. Any dad adds; only its author can
+  take it back, enforced by the `member_id` in the DELETE. No status, no
+  ticking off — a list to look at together, not a backlog to work.
+- **Adding one is announced WITH the thing itself**, which is the one room line
+  that carries its own detail instead of pointing at a sheet: half the value of
+  a man writing it down is another man reading it and thinking of his own. The
+  line that OPENS the night carries only the count, like the board — the count
+  is what makes anyone look.
 - **`GET /api/night.ics` is a TZID and an RRULE, not an instant.** 21:00 stays
   21:00 across a DST shift, for the same reason a night is a slot. No VTIMEZONE
   travels with it — every calendar resolves IANA names, and a hand-rolled one

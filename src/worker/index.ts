@@ -10,7 +10,7 @@ import { getMedia, listMedia, uploadMedia } from './routes/media';
 import { setNight } from './routes/night';
 import { getPresence } from './routes/presence';
 import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
-import { getRsvps, putRsvp } from './routes/rsvp';
+import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp';
 import { putRooms } from './routes/rooms';
 import { getTable } from './routes/table';
 import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
@@ -88,11 +88,17 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
     case 'PUT /api/night':
       return setNight(request, env, prod);
 
-    case 'GET /api/rsvp':
+    case 'GET /api/night':
       return getRsvps(request, env, prod);
 
     case 'PUT /api/rsvp':
       return putRsvp(request, env, prod);
+
+    case 'POST /api/night-item':
+      return addNightItem(request, env, prod);
+
+    case 'DELETE /api/night-item':
+      return removeNightItem(request, env, url, prod);
 
     case 'GET /api/night.ics':
       return getNightIcs(request, env, prod);
