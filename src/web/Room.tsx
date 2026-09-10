@@ -4,7 +4,21 @@ import { Attachment } from './Attachment';
 import { Board } from './Board';
 import { CallBar, JoinCall } from './CallBar';
 import { Here } from './Here';
+import {
+  ArrowDown,
+  CalendarCheck,
+  LogOut,
+  Menu as MenuIcon,
+  MessageCircleQuestion,
+  Plus,
+  SendHorizontal,
+  Settings as SettingsIcon,
+  Spade,
+  X,
+} from 'lucide-react';
 import { plural, useT } from './i18n';
+import { Button } from './ui/Button';
+import { cn } from './ui/cn';
 import { parts } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { nightSoon } from './NightEditor';
@@ -13,7 +27,7 @@ import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
 import { Settings } from './Settings';
-import { Sheet } from './Sheet';
+import { Sheet } from './ui/Sheet';
 import { TableColumn } from './TableColumn';
 import { useCall } from './useCall';
 import { useRoom } from './useRoom';
@@ -268,11 +282,18 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         </div>
         <span className="head-actions">
           <JoinCall state={call.state} onJoin={() => void call.join()} />
-          <button type="button" className="menu-open" onClick={() => setSheet('menu')}>
+          <Button size="sm" onClick={() => setSheet('menu')} className="relative">
+            <MenuIcon size={16} aria-hidden="true" />
             {t('room.menu')}
-            {waiting ? <span className="mark" data-testid="mark-menu" aria-hidden="true" /> : null}
+            {waiting ? (
+              <span
+                className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent"
+                data-testid="mark-menu"
+                aria-hidden="true"
+              />
+            ) : null}
             {waiting ? <span className="sr-only">{t('room.waiting')}</span> : null}
-          </button>
+          </Button>
         </span>
       </header>
 
@@ -353,9 +374,16 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           </ol>
 
           {!pinned && unseen > 0 ? (
-            <button type="button" className="to-bottom" onClick={toBottom} data-testid="to-bottom">
+            <Button
+              look="primary"
+              size="sm"
+              className="mx-auto rounded-full"
+              onClick={toBottom}
+              data-testid="to-bottom"
+            >
+              <ArrowDown size={14} aria-hidden="true" />
               {t(`room.unseen_${plural(lang, unseen)}`, { n: unseen })}
-            </button>
+            </Button>
           ) : null}
 
           <p className="typing" aria-live="polite">
@@ -369,18 +397,19 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 <span className="pending-what">
                   {pending.name} <span className="quiet">{readableSize(pending.blob.size)}</span>
                 </span>
-                <button
-                  type="button"
-                  className="pending-drop"
-                  title={t('composer.remove')}
+                <Button
+                  look="danger"
+                  size="iconSm"
+                  className="rounded-full"
+                  aria-label={t('composer.remove')}
                   onClick={() => {
                     setPending(null);
                     if (picker.current !== null) picker.current.value = '';
                   }}
                 >
-                  <span aria-hidden="true">×</span>
+                  <X size={14} aria-hidden="true" />
                   <span className="sr-only">{t('composer.remove')}</span>
-                </button>
+                </Button>
               </p>
             ) : null}
 
@@ -390,8 +419,16 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               </p>
             ) : null}
 
-            <label htmlFor="attach" className="attach">
-              <span aria-hidden="true">＋</span>
+            <label
+              htmlFor="attach"
+              className={cn(
+                'grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-app',
+                'border border-edge text-muted transition-colors duration-75',
+                'hover:border-accent hover:text-accent',
+                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
+              )}
+            >
+              <Plus size={18} aria-hidden="true" />
               <span className="sr-only">{t('composer.attach')}</span>
             </label>
             <input
@@ -417,14 +454,20 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               autoComplete="off"
               disabled={room.connection !== 'open'}
             />
-            <button
+            <Button
               type="submit"
+              look="primary"
+              size="icon"
+              aria-label={t('composer.send')}
               disabled={
                 room.connection !== 'open' || sending || (!draft.trim() && pending === null)
               }
             >
-              {sending ? t('composer.sending') : t('composer.send')}
-            </button>
+              <SendHorizontal size={18} aria-hidden="true" />
+              <span className="sr-only">
+                {sending ? t('composer.sending') : t('composer.send')}
+              </span>
+            </Button>
           </form>
         </div>
 
@@ -438,44 +481,57 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         <Sheet title={t('menu.title')} onClose={() => setSheet(null)}>
           <nav className="menu" aria-label="Rooms">
             {room.rooms.questions ? (
-              <button type="button" onClick={() => setSheet('prompts')}>
+              <Button block onClick={() => setSheet('prompts')}>
+                <MessageCircleQuestion size={17} aria-hidden="true" className="text-muted" />
                 {t('menu.questions')}
                 {todo.prompt ? (
-                  <span className="mark" data-testid="mark-prompts" aria-hidden="true" />
+                  <span
+                    className="ml-auto h-2 w-2 rounded-full bg-accent"
+                    data-testid="mark-prompts"
+                    aria-hidden="true"
+                  />
                 ) : null}
                 {todo.prompt ? <span className="sr-only">{t('room.waiting')}</span> : null}
-              </button>
+              </Button>
             ) : null}
 
             {room.rooms.week ? (
-              <button type="button" onClick={() => setSheet('board')}>
+              <Button block onClick={() => setSheet('board')}>
+                <CalendarCheck size={17} aria-hidden="true" className="text-muted" />
                 {t('menu.week')}
                 {todo.board ? (
-                  <span className="mark" data-testid="mark-board" aria-hidden="true" />
+                  <span
+                    className="ml-auto h-2 w-2 rounded-full bg-accent"
+                    data-testid="mark-board"
+                    aria-hidden="true"
+                  />
                 ) : null}
                 {todo.board ? <span className="sr-only">{t('room.waiting')}</span> : null}
-              </button>
+              </Button>
             ) : null}
 
             {room.rooms.table ? (
-              <button
-                type="button"
+              <Button
+                block
                 onClick={() => {
                   setTableOpen((v) => !v);
                   setSheet(null);
                 }}
               >
+                <Spade size={17} aria-hidden="true" className="text-muted" />
                 {tableOpen ? t('menu.close_table') : t('menu.open_table')}
-              </button>
+              </Button>
             ) : null}
 
-            <button type="button" data-testid="dad-night" onClick={() => setSheet('settings')}>
+            <Button block data-testid="dad-night" onClick={() => setSheet('settings')}>
+              <SettingsIcon size={17} aria-hidden="true" className="text-muted" />
               {t('menu.settings')}
-            </button>
+            </Button>
 
-            <button type="button" onClick={onSignOut}>
+            <Button block look="quiet" onClick={onSignOut} className="justify-start px-3.5">
+              <LogOut size={17} aria-hidden="true" />
               {t('menu.sign_out')}
-            </button>
+            </Button>
           </nav>
         </Sheet>
       ) : null}

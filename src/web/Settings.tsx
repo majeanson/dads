@@ -4,6 +4,7 @@ import { useT } from './i18n';
 import { NightEditor } from './NightEditor';
 import { Remind } from './Remind';
 import { Toggles } from './Toggles';
+import { Switch } from './ui/Switch';
 import type { DadNight } from '../shared/dadNight';
 import type { RoomsOpen } from '../shared/protocol';
 
@@ -43,33 +44,31 @@ export function Settings({ night, rooms }: { night: DadNight | null; rooms: Room
   return (
     <div className="settings" data-testid="settings">
       <section>
-        <h2>{t('n.title')}</h2>
+        <h2 className="mb-2 text-sm font-semibold text-muted">{t('n.title')}</h2>
         <NightEditor night={night} onDone={() => {}} />
       </section>
 
       <section>
-        <h2>{t('set.rooms')}</h2>
+        <h2 className="mb-2 text-sm font-semibold text-muted">{t('set.rooms')}</h2>
         {/* Any dad, like the night: there is no admin in a room of five
             friends, and inventing one for three switches would be inventing
             one. */}
-        <div className="switches">
+        <div className="grid gap-2">
           {rows.map((row) => (
-            <button
+            <Switch
               key={row.key}
-              type="button"
-              aria-pressed={shown[row.key]}
+              label={row.label}
+              checked={shown[row.key]}
               disabled={busy}
-              onClick={() => void toggle(row.key)}
-              data-testid={`room-${row.key}`}
-            >
-              {row.label}
-            </button>
+              onChange={() => void toggle(row.key)}
+              testId={`room-${row.key}`}
+            />
           ))}
         </div>
       </section>
 
       <section>
-        <h2>{t('set.yours')}</h2>
+        <h2 className="mb-2 text-sm font-semibold text-muted">{t('set.yours')}</h2>
         <Toggles />
         <Remind />
       </section>

@@ -1,4 +1,6 @@
+import { Moon, Sun, SunMoon } from 'lucide-react';
 import { useT, type Lang } from './i18n';
+import { Button } from './ui/Button';
 import { useTheme, type Theme } from './theme';
 
 const LANGS: { id: Lang; label: string }[] = [
@@ -16,11 +18,17 @@ const LANGS: { id: Lang; label: string }[] = [
 export function LangToggle() {
   const { lang, setLang, t } = useT();
   return (
-    <div className="toggle" role="group" aria-label={t('menu.language')}>
+    <div className="flex gap-1.5" role="group" aria-label={t('menu.language')}>
       {LANGS.map((l) => (
-        <button key={l.id} type="button" aria-pressed={lang === l.id} onClick={() => setLang(l.id)}>
+        <Button
+          key={l.id}
+          size="sm"
+          aria-pressed={lang === l.id}
+          onClick={() => setLang(l.id)}
+          className={lang === l.id ? 'border-accent text-accent' : 'text-muted'}
+        >
           {l.label}
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -38,28 +46,29 @@ export function Toggles() {
   const { t } = useT();
   const [theme, setTheme] = useTheme();
 
-  const themes: { id: Theme; glyph: string; label: string }[] = [
-    { id: 'system', glyph: '▣', label: t('theme.system') },
-    { id: 'light', glyph: '☀', label: t('theme.light') },
-    { id: 'dark', glyph: '☾', label: t('theme.dark') },
+  const themes: { id: Theme; Icon: typeof Sun; label: string }[] = [
+    { id: 'system', Icon: SunMoon, label: t('theme.system') },
+    { id: 'light', Icon: Sun, label: t('theme.light') },
+    { id: 'dark', Icon: Moon, label: t('theme.dark') },
   ];
 
   return (
-    <div className="toggles">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <LangToggle />
 
-      <div className="toggle" role="group" aria-label={t('menu.theme')}>
+      <div className="flex gap-1.5" role="group" aria-label={t('menu.theme')}>
         {themes.map((th) => (
-          <button
+          <Button
             key={th.id}
-            type="button"
+            size="icon"
             aria-pressed={theme === th.id}
             onClick={() => setTheme(th.id)}
             title={th.label}
+            className={theme === th.id ? 'border-accent text-accent' : 'text-muted'}
           >
-            <span aria-hidden="true">{th.glyph}</span>
+            <th.Icon size={16} aria-hidden="true" />
             <span className="sr-only">{th.label}</span>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

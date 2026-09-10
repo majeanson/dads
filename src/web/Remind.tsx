@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from './i18n';
 import { disablePush, enablePush, pushShape, type PushShape } from './push';
+import { Switch } from './ui/Switch';
 
 /**
  * "Tell me when the table opens."
@@ -51,14 +52,14 @@ export function Remind() {
   }
 
   return (
-    <button
-      type="button"
-      aria-pressed={shape.on}
-      disabled={busy}
-      onClick={() => void toggle()}
-      data-testid="remind"
-    >
-      {shape.on ? t('remind.on') : t('remind.off')}
-    </button>
+    <div className="mt-3">
+      <Switch
+        label={t('remind.off')}
+        checked={shape.on}
+        disabled={busy}
+        onChange={() => void toggle()}
+        testId="remind"
+      />
+    </div>
   );
 }

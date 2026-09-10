@@ -191,9 +191,26 @@ weakening `sessionSecret()`.
 - Theme and language are stamped on `<html>` by a script in `index.html`,
   before the first paint. React only keeps them in step afterwards.
 
-## Look and feel (M7)
+## Look and feel
 
-- **Plain is the brief, and empty is plainer.** No webfont, no gradient, no
+- **Tailwind + Radix + lucide, on our own palette** (2026-09-10). This
+  reverses M7's "no library, browser defaults": controls looked like text,
+  there were no icons, and the whole thing read as a document rather than as a
+  screen.
+- `src/web/ui/` is the whole of it: `Button` (cva variants — plain, primary,
+  quiet, danger; sm/md/icon), `Sheet` (Radix Dialog), `Switch` (Radix), `cn`
+  (clsx + tailwind-merge, so a caller's class beats the component's).
+- **The palette is still tokens.css.** `@theme inline` hands the same variables
+  to Tailwind, so `bg-paper`, `text-ink` and `border-line` follow light, dark
+  and the explicit override — and `audit:contrast` still reads the hexes.
+- **The hand-written CSS lives in `@layer components`.** Tailwind's utilities
+  are layered, and an UNLAYERED rule beats a layered one however specific: a
+  bare `button { background: … }` silently defeated every `bg-*` in the app.
+  Layering it is what makes converting one component at a time possible.
+- An icon-only control still carries its words — `aria-label` plus an sr-only
+  span. An icon with no name is a button nobody can ask for, in a screen
+  reader or in a test.
+- **Plain is still the brief for words.** No webfont, no gradient, no
   shadow, no pill, no uppercase label — and no box, eyebrow, badge or count
   where the words alone do the job. One system font stack, seven colours,
   hairline rules, and the browser's own defaults wherever they are already

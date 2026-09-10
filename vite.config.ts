@@ -1,8 +1,9 @@
+import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwind()],
   build: { outDir: 'dist', emptyOutDir: true },
   server: {
     // `npm run dev` (wrangler, :8787) serves the API and websockets;

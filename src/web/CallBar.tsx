@@ -1,5 +1,7 @@
+import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from './i18n';
+import { Button } from './ui/Button';
 import type { Peer } from './useCall';
 
 /**
@@ -51,16 +53,33 @@ export function CallBar({
   return (
     <div className="call" data-testid="call" data-big={enlarged === null ? undefined : 'yes'}>
       <div className="call-actions">
-        <button type="button" aria-pressed={muted} onClick={onToggleMute}>
+        <Button
+          size="sm"
+          aria-pressed={muted}
+          onClick={onToggleMute}
+          className={muted ? 'border-danger text-danger' : ''}
+        >
+          {muted ? <MicOff size={15} aria-hidden="true" /> : <Mic size={15} aria-hidden="true" />}
           {muted ? t('call.unmute') : t('call.mute')}
-        </button>
-        <button type="button" aria-pressed={camera} onClick={onToggleCamera}>
+        </Button>
+        <Button
+          size="sm"
+          aria-pressed={camera}
+          onClick={onToggleCamera}
+          className={camera ? 'border-accent text-accent' : ''}
+        >
+          {camera ? (
+            <VideoOff size={15} aria-hidden="true" />
+          ) : (
+            <Video size={15} aria-hidden="true" />
+          )}
           {camera ? t('call.camera_off') : t('call.camera_on')}
-        </button>
-        <button type="button" className="link" onClick={onLeave}>
+        </Button>
+        <Button size="sm" look="danger" onClick={onLeave}>
+          <PhoneOff size={15} aria-hidden="true" />
           {t('call.leave')}
-        </button>
-        <span className="quiet call-count">
+        </Button>
+        <span className="ml-auto shrink text-sm text-muted">
           {peers.length === 0 ? t('call.alone') : t('call.count', { n: peers.length + 1 })}
         </span>
       </div>
@@ -139,17 +158,19 @@ export function JoinCall({
 
   if (state === 'denied' || state === 'failed') {
     return (
-      <button type="button" className="call-denied" onClick={onJoin} title={t(`call.${state}`)}>
+      <Button size="sm" look="danger" onClick={onJoin} title={t(`call.${state}`)}>
+        <MicOff size={15} aria-hidden="true" />
         {t('call.retry')}
         <span className="sr-only"> — {t(`call.${state}`)}</span>
-      </button>
+      </Button>
     );
   }
 
   return (
-    <button type="button" onClick={onJoin} disabled={state === 'joining'}>
+    <Button size="sm" onClick={onJoin} disabled={state === 'joining'}>
+      <Phone size={15} aria-hidden="true" />
       {state === 'joining' ? t('call.opening') : t('call.join')}
-    </button>
+    </Button>
   );
 }
 

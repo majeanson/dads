@@ -37,9 +37,7 @@ export async function putRooms(
     table: body.table ?? session.group.rooms.table,
   };
 
-  await env.DB.prepare(
-    'UPDATE groups SET questions_on = ?, week_on = ?, table_on = ? WHERE id = ?',
-  )
+  await env.DB.prepare('UPDATE groups SET questions_on = ?, week_on = ?, table_on = ? WHERE id = ?')
     .bind(Number(next.questions), Number(next.week), Number(next.table), session.group.id)
     .run();
 
