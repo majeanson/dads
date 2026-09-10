@@ -2,6 +2,7 @@ import type { Env } from './env';
 import { IDENTITY_HEADERS } from './RoomDO';
 import { currentSession, join, leave, me } from './routes/auth';
 import { setNight } from './routes/night';
+import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
 
 export { RoomDO } from './RoomDO';
 
@@ -67,6 +68,18 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'PUT /api/night':
       return setNight(request, env, prod);
+
+    case 'GET /api/prompt':
+      return getTodaysPrompt(request, env, prod);
+
+    case 'GET /api/prompts':
+      return listPrompts(request, env, prod);
+
+    case 'POST /api/prompts':
+      return addPrompt(request, env, prod);
+
+    case 'GET /api/prompt-answers':
+      return getPromptAnswers(request, env, url, prod);
   }
 
   return Response.json({ error: 'not_found' }, { status: 404 });

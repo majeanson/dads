@@ -20,6 +20,8 @@ export interface RoomMessage {
   name: string;
   body: string;
   createdAt: number;
+  /** Set on kind 'prompt': which question this answers. */
+  promptId?: string | null;
 }
 
 export interface RosterEntry {
@@ -27,7 +29,8 @@ export interface RosterEntry {
   name: string;
 }
 
-export type ClientFrame = { t: 'chat'; body: string } | { t: 'typing' };
+export type ClientFrame =
+  { t: 'chat'; body: string } | { t: 'prompt'; body: string } | { t: 'typing' };
 
 export type ServerFrame =
   | {
@@ -41,7 +44,7 @@ export type ServerFrame =
   | { t: 'msg'; message: RoomMessage }
   | { t: 'typing'; memberId: string; name: string }
   | { t: 'night'; night: DadNight | null }
-  | { t: 'error'; code: 'bad_frame' | 'too_long' | 'empty' };
+  | { t: 'error'; code: 'bad_frame' | 'too_long' | 'empty' | 'no_prompt' };
 
 export function parseClientFrame(raw: unknown): ClientFrame | null {
   if (typeof raw !== 'string') return null;
@@ -55,5 +58,7 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   const frame = value as { t?: unknown; body?: unknown };
   if (frame.t === 'typing') return { t: 'typing' };
   if (frame.t === 'chat' && typeof frame.body === 'string') return { t: 'chat', body: frame.body };
+  if (frame.t === 'prompt' && typeof frame.body === 'string')
+    return { t: 'prompt', body: frame.body };
   return null;
 }

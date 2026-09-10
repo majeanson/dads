@@ -84,3 +84,80 @@ export async function setNight(night: DadNight | null): Promise<void> {
   });
   if (!res.ok) throw new Error(`PUT /api/night ${res.status}`);
 }
+
+export interface Prompt {
+  id: string;
+  body: string;
+  groupId: string | null;
+  authorName: string | null;
+}
+
+export interface PoolEntry extends Prompt {
+  timesAsked: number;
+  lastAsked: string | null;
+  answers: number;
+}
+
+export interface HistoryEntry {
+  day: string;
+  promptId: string;
+  body: string;
+  answers: number;
+}
+
+export interface TodaysPrompt {
+  day: string;
+  prompt: Prompt;
+  answered: boolean;
+}
+
+export interface PromptAnswer {
+  id: string;
+  body: string;
+  createdAt: number;
+  name: string;
+}
+
+export async function fetchTodaysPrompt(): Promise<TodaysPrompt | null> {
+  const res = await fetch('/api/prompt');
+  if (!res.ok) throw new Error(`GET /api/prompt ${res.status}`);
+  const body = (await res.json()) as Partial<TodaysPrompt>;
+  return body.prompt ? (body as TodaysPrompt) : null;
+}
+
+export async function fetchPrompts(): Promise<{
+  today: { day: string; prompt: Prompt } | null;
+  pool: PoolEntry[];
+  history: HistoryEntry[];
+}> {
+  const res = await fetch('/api/prompts');
+  if (!res.ok) throw new Error(`GET /api/prompts ${res.status}`);
+  return (await res.json()) as {
+    today: { day: string; prompt: Prompt } | null;
+    pool: PoolEntry[];
+    history: HistoryEntry[];
+  };
+}
+
+export async function fetchPromptAnswers(promptId: string): Promise<PromptAnswer[]> {
+  const res = await fetch(`/api/prompt-answers?promptId=${encodeURIComponent(promptId)}`);
+  if (!res.ok) throw new Error(`GET /api/prompt-answers ${res.status}`);
+  return ((await res.json()) as { answers: PromptAnswer[] }).answers;
+}
+
+export type AddPromptResult =
+  | { ok: true; prompt: PoolEntry }
+  | { ok: false; error: 'empty' | 'too_long' | 'already_asked' | 'unknown' };
+
+export async function addPrompt(body: string): Promise<AddPromptResult> {
+  const res = await fetch('/api/prompts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body }),
+  });
+  if (res.ok) return { ok: true, prompt: ((await res.json()) as { prompt: PoolEntry }).prompt };
+  const failure = (await res.json().catch(() => ({}))) as {
+    error?: 'empty' | 'too_long' | 'already_asked';
+  };
+  return { ok: false, error: failure.error ?? 'unknown' };
+}

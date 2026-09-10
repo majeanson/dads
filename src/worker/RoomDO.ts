@@ -17,6 +17,7 @@ import {
 } from '../shared/protocol';
 import type { Env } from './env';
 import { newId } from './identity';
+import { todaysPrompt } from './prompts';
 
 /**
  * One Durable Object per group. Owns the LIVE half of the room: who is
@@ -66,6 +67,7 @@ type TailRow = {
   name: string;
   body: string;
   created_at: number;
+  prompt_id: string | null;
 };
 
 export class RoomDO extends DurableObject<Env> {
@@ -83,7 +85,8 @@ export class RoomDO extends DurableObject<Env> {
           member_id  TEXT,
           name       TEXT NOT NULL,
           body       TEXT NOT NULL,
-          created_at INTEGER NOT NULL
+          created_at INTEGER NOT NULL,
+          prompt_id  TEXT
         );
         CREATE TABLE IF NOT EXISTS leaving (
           member_id TEXT PRIMARY KEY,
@@ -98,6 +101,16 @@ export class RoomDO extends DurableObject<Env> {
           due_at INTEGER NOT NULL
         );
       `);
+      // Forward migration for rooms created before prompt answers existed.
+      // CREATE TABLE IF NOT EXISTS does nothing to a table that is already
+      // there, so a new column needs saying out loud.
+      const columns = ctx.storage.sql
+        .exec<{ name: string }>('PRAGMA table_info(tail)')
+        .toArray()
+        .map((c) => c.name);
+      if (!columns.includes('prompt_id')) {
+        ctx.storage.sql.exec('ALTER TABLE tail ADD COLUMN prompt_id TEXT');
+      }
     });
   }
 
@@ -196,6 +209,16 @@ export class RoomDO extends DurableObject<Env> {
     if (!body) return this.sendTo(ws, { t: 'error', code: 'empty' });
     if ([...body].length > MAX_MESSAGE_LENGTH)
       return this.sendTo(ws, { t: 'error', code: 'too_long' });
+
+    if (frame.t === 'prompt') {
+      const groupId = this.groupId();
+      // Resolved here rather than trusted from the client: an answer must
+      // attach to the question the group was actually asked today.
+      const today = groupId ? await todaysPrompt(this.env, groupId) : null;
+      if (!today) return this.sendTo(ws, { t: 'error', code: 'no_prompt' });
+      await this.post('prompt', who.memberId, who.name, body, today.prompt.id);
+      return;
+    }
 
     await this.post('chat', who.memberId, who.name, body);
   }
@@ -415,20 +438,22 @@ export class RoomDO extends DurableObject<Env> {
     memberId: string | null,
     name: string,
     body: string,
+    promptId: string | null = null,
   ): Promise<void> {
     const id = newId('msg');
     const createdAt = Date.now();
 
     const seq = this.ctx.storage.sql
       .exec<{ seq: number }>(
-        `INSERT INTO tail (id, kind, member_id, name, body, created_at)
-         VALUES (?, ?, ?, ?, ?, ?) RETURNING seq`,
+        `INSERT INTO tail (id, kind, member_id, name, body, created_at, prompt_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING seq`,
         id,
         kind,
         memberId,
         name,
         body,
         createdAt,
+        promptId,
       )
       .one().seq;
     this.ctx.storage.sql.exec(
@@ -436,7 +461,7 @@ export class RoomDO extends DurableObject<Env> {
       TAIL_LIMIT,
     );
 
-    const message: RoomMessage = { seq, id, kind, memberId, name, body, createdAt };
+    const message: RoomMessage = { seq, id, kind, memberId, name, body, createdAt, promptId };
     // Fan out before the archive write: a dad should not wait on D1 to see
     // his own line appear.
     this.broadcast({ t: 'msg', message });
@@ -454,10 +479,18 @@ export class RoomDO extends DurableObject<Env> {
     if (!groupId) return;
     try {
       await this.env.DB.prepare(
-        `INSERT INTO messages (id, group_id, member_id, kind, body, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO messages (id, group_id, member_id, kind, body, created_at, prompt_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
-        .bind(message.id, groupId, message.memberId, message.kind, message.body, message.createdAt)
+        .bind(
+          message.id,
+          groupId,
+          message.memberId,
+          message.kind,
+          message.body,
+          message.createdAt,
+          message.promptId ?? null,
+        )
         .run();
     } catch (err) {
       // The line already reached every dad and is in the tail. Losing the
@@ -485,6 +518,7 @@ export class RoomDO extends DurableObject<Env> {
       name: r.name,
       body: r.body,
       createdAt: r.created_at,
+      promptId: r.prompt_id,
     }));
   }
 

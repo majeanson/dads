@@ -160,6 +160,13 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
     return true;
   }, []);
 
+  const answerPrompt = useCallback((body: string) => {
+    const ws = socket.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    ws.send(JSON.stringify({ t: 'prompt', body }));
+    return true;
+  }, []);
+
   const lastTypingSent = useRef(0);
   const sendTyping = useCallback(() => {
     const ws = socket.current;
@@ -170,7 +177,7 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
     ws.send(JSON.stringify({ t: 'typing' }));
   }, []);
 
-  return { ...state, send, sendTyping };
+  return { ...state, send, answerPrompt, sendTyping };
 }
 
 /** Append by seq, dropping anything already held. Backfill and live frames

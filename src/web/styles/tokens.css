@@ -117,7 +117,7 @@ button[type='submit']:disabled {
 main.room {
   max-width: 44rem;
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto auto;
+  grid-template-rows: auto auto auto auto auto 1fr auto auto;
   min-height: 100dvh;
   padding-block: 1.25rem;
   gap: 0.5rem;
@@ -263,5 +263,220 @@ main.room {
 
 .night-editor .error {
   flex: 1 1 100%;
+  margin: 0;
+}
+
+/* ---- views + prompts (M4) ---- */
+.views {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.views button {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.views button.is-current {
+  background: var(--felt-raised);
+  border-color: var(--wood-light);
+  color: var(--ink);
+}
+
+.panel {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.prompt-card {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--felt-raised);
+}
+
+.prompt-eyebrow {
+  margin: 0 0 0.3rem;
+  color: var(--ink-dim);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.prompt-body {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+
+.prompt-meta {
+  margin: 0 0 0.6rem;
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+}
+
+.prompt-open,
+.prompt-actions button[type='submit'] {
+  padding: 0.45rem 0.9rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--wood-light);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.prompt-answer textarea {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--felt);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.prompt-actions .link {
+  margin: 0;
+}
+
+.line-prompt .answer-tag {
+  margin-right: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--wood);
+  color: var(--ink);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* the list */
+.prompt-list section {
+  margin-bottom: 1.5rem;
+}
+
+.prompt-list h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.prompt-list .count {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--felt-raised);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+}
+
+.prompts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.prompt-row {
+  border-bottom: 1px solid var(--line);
+}
+
+.prompt-row-main {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0.1rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.prompt-row-main:disabled {
+  cursor: default;
+}
+
+.prompt-row-body {
+  display: block;
+  line-height: 1.4;
+}
+
+.prompt-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+}
+
+.badge {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-dim);
+  font-size: 0.7rem;
+}
+
+.badge.is-answered {
+  border-color: var(--wood-light);
+  color: var(--accent);
+}
+
+.prompt-answers {
+  margin: 0 0 0.6rem;
+  padding: 0 0 0 0.8rem;
+  border-left: 2px solid var(--line);
+  list-style: none;
+}
+
+.prompt-answers li {
+  padding: 0.2rem 0;
+  font-size: 0.9rem;
+}
+
+.add-prompt {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.add-prompt input {
+  margin: 0;
+}
+
+.add-prompt button {
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--wood-light);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.add-prompt .error {
+  grid-column: 1 / -1;
   margin: 0;
 }

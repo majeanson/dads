@@ -16,6 +16,9 @@ list; do not relitigate a decision recorded there without asking.
 - **Tests run against the real schema.** `vitest.config.ts` reads
   `migrations/` and applies it to the faked D1. A migration that does not apply
   fails the suite.
+- **Playwright matches accessible names by substring.** `getByRole('button',
+{ name: 'Room' })` also matches a prompt ending "...with no phone in the
+  room?". Scope to a landmark and pass `exact: true` for short names.
 - **Behavioural e2e only.** Playwright asserts what a dad can do, not what a
   pixel looks like. The design pass is M7; until then, no UI-detail assertions.
 - **Never leave a dev server orphaned.** On Windows, killing the shell does not
@@ -81,6 +84,23 @@ weakening `sessionSecret()`.
   re-arms, announces, and pushes a `night` frame to open sockets.
 - Setting a night mid-evening arms that evening's end, so it means something
   immediately instead of waiting a week.
+
+## Prompts (M4)
+
+- The curated 100 live in `migrations/0003_prompt_library.sql` with
+  `group_id NULL` (global) and `created_at 0`. **Adding to the library means a
+  new migration, never editing that one** — ids are stable and the daily pick
+  indexes into an ordered pool.
+- The pick is `hash(groupId + day) % poolSize` — deterministic, no coordination.
+  It is still written to `prompt_days` and never recomputed, because the pool
+  grows when a dad adds a prompt and yesterday's question must not move
+  underneath the answers already filed against it.
+- The day turns over at the **group's** midnight (`dad_night_tz`), not UTC's.
+- An answer is a `messages` row of kind `prompt` carrying `prompt_id`. The DO
+  resolves today's prompt itself rather than trusting the client's id.
+- The DO's `tail` table gained `prompt_id` via a `PRAGMA table_info` check in
+  the constructor. `CREATE TABLE IF NOT EXISTS` does nothing to an existing
+  table, so every future DO column needs the same treatment.
 
 ## Test layout
 

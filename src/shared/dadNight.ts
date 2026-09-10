@@ -125,6 +125,18 @@ function shiftCivilDate(year: number, month: number, day: number, days: number) 
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 }
 
+/**
+ * The civil date in `tz` at instant `ts`, as "YYYY-MM-DD".
+ *
+ * A group's day turns over at its own midnight, not UTC's. Getting this wrong
+ * would hand a group a new question in the middle of an evening.
+ */
+export function civilDayIn(ts: number, tz: string): string {
+  const c = civilTimeAt(ts, tz);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${c.year}-${pad(c.month)}-${pad(c.day)}`;
+}
+
 export function parseTime(time: string): { hour: number; minute: number } | null {
   const match = /^(\d{2}):(\d{2})$/.exec(time);
   if (!match) return null;
