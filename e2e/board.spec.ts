@@ -74,12 +74,14 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
     marc.getByTestId('board-row').filter({ hasText: 'Marc (you)' }).first(),
   ).toContainText('Phone in the drawer at six');
 
-  // The room heard about both, live, without Sam reloading.
+  // The room heard about both, live, without Sam reloading — as one sitting
+  // rather than as two pieces of news, so the second line does not say Marc
+  // again.
   await expect(
     sam.getByTestId('line').filter({ hasText: 'Marc checked in — 2/5. Shouted about shoes.' }),
   ).toBeVisible();
   await expect(
-    sam.getByTestId('line').filter({ hasText: 'Marc is trying this week: Phone in the drawer' }),
+    sam.getByTestId('line').filter({ hasText: 'and trying: Phone in the drawer' }),
   ).toBeVisible();
 
   // And Sam's board shows Marc's week.
