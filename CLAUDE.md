@@ -273,6 +273,17 @@ secret, custom domain bound by the route in wrangler.toml.
   an item with something waiting is named "Board — something waiting", which is
   what a screen reader should hear. `close(page)` clicks the sheet's Close.
 
+## Who's here
+
+- **Coming and going is not conversation.** `presence` in D1 (migration 0006)
+  holds it, the DO writes it with `notePresence`, and it never touches the tail
+  or `messages`. In a group of five on phones that switch networks, lines like
+  "Marc came in" were most of what the archive contained.
+- It is read behind the header's **"3 here"**, which is a button: the roster
+  now, then the comings and goings, newest first (`GET /api/presence`, capped
+  at 60). The 15s leave grace still applies, so a wifi→LTE hop records nothing.
+- The roster itself is no longer in the menu — one place to look, not two.
+
 ## Media
 
 - **Content types are an allowlist, and `image/svg+xml` is not on it.** An

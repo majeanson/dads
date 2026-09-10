@@ -243,3 +243,15 @@ export async function fetchTodo(): Promise<Todo> {
   if (!res.ok) throw new Error(`GET /api/todo ${res.status}`);
   return (await res.json()) as Todo;
 }
+
+export interface PresenceEvent {
+  name: string;
+  kind: 'in' | 'out';
+  at: number;
+}
+
+export async function fetchPresence(): Promise<PresenceEvent[]> {
+  const res = await fetch('/api/presence');
+  if (!res.ok) throw new Error(`GET /api/presence ${res.status}`);
+  return ((await res.json()) as { events: PresenceEvent[] }).events;
+}

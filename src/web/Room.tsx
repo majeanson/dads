@@ -3,6 +3,7 @@ import { fetchTodo, type Session, type Todo } from './api';
 import { Attachment } from './Attachment';
 import { Board } from './Board';
 import { CallBar } from './CallBar';
+import { Here } from './Here';
 import { nightItem, nightSoon, NightEditor } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { toRows } from './messageGroups';
@@ -21,7 +22,7 @@ function clock(ts: number): string {
 const TICK_MS = 15_000;
 
 /** What is open over the room, if anything. */
-type Sheets = 'menu' | 'prompts' | 'board' | 'night';
+type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night';
 
 /**
  * The room is the conversation and the call. That is the whole screen.
@@ -146,13 +147,21 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         <div>
           <h1>{session.group.name}</h1>
           <p className="quiet">
-            <span data-testid="connection">
+            {/* The count is also the door to the roster and to who has been
+                about — the comings and goings are not lines in the
+                conversation any more, and this is where you ask for them. */}
+            <button
+              type="button"
+              className="link"
+              data-testid="connection"
+              onClick={() => setSheet('here')}
+            >
               {room.connection === 'open'
                 ? `${room.roster.length} here`
                 : room.connection === 'connecting'
                   ? 'Opening the door…'
                   : 'Reconnecting…'}
-            </span>
+            </button>
             {soon === null ? null : ` · ${soon}`}
           </p>
         </div>
@@ -289,15 +298,6 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       {sheet === 'menu' ? (
         <Sheet title="Menu" onClose={() => setSheet(null)}>
           <nav className="menu" aria-label="Rooms">
-            <ul className="menu-roster" aria-label="Who's here">
-              {room.roster.map((m) => (
-                <li key={m.memberId} data-testid="roster-entry">
-                  {m.name}
-                  {m.memberId === session.member.id ? ' (you)' : ''}
-                </li>
-              ))}
-            </ul>
-
             <button type="button" onClick={() => setSheet('prompts')}>
               Prompts
               {todo.prompt ? (
@@ -332,6 +332,18 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               Sign out
             </button>
           </nav>
+        </Sheet>
+      ) : null}
+
+      {sheet === 'here' ? (
+        <Sheet title="Who’s here" onClose={() => setSheet(null)}>
+          <Here
+            roster={room.roster.map((m) => ({
+              memberId: m.memberId,
+              name: m.name,
+              you: m.memberId === session.member.id,
+            }))}
+          />
         </Sheet>
       ) : null}
 

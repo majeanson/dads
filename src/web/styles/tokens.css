@@ -951,3 +951,37 @@ main.room {
   color: #fff;
   font-size: 0.75rem;
 }
+
+/* --- who's here --------------------------------------------------------
+ *
+ * The roster, and the comings and goings that used to be lines in the
+ * conversation. Behind the header's count, because this is what you want
+ * when you wonder who looked in — not what you want between two things
+ * somebody said.
+ */
+.here h2 {
+  margin-top: 1.25rem;
+}
+
+.comings {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.comings li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9375rem;
+}
+
+.comings time {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}

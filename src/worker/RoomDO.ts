@@ -217,7 +217,7 @@ export class RoomDO extends DurableObject<Env> {
       // concerned; only a genuine arrival gets a line. His pending alarm goes
       // with the row, so the object is not woken for nothing.
       if (wasLeaving) await this.rescheduleAlarm();
-      else await this.post('system', null, name, `${name} came in`);
+      else await this.notePresence(memberId, name, 'in');
       this.broadcastRoster();
     }
 
@@ -351,7 +351,7 @@ export class RoomDO extends DurableObject<Env> {
       // Reconnected during the grace window but the row survived a race: the
       // dad is here, so he did not leave.
       if (this.isPresent(row.member_id)) continue;
-      await this.post('system', null, row.name, `${row.name} left`);
+      await this.notePresence(row.member_id, row.name, 'out');
     }
 
     const timers = this.ctx.storage.sql
@@ -592,6 +592,35 @@ export class RoomDO extends DurableObject<Env> {
     // his own line appear.
     this.broadcast({ t: 'msg', message });
     await this.archive(message);
+  }
+
+  /**
+   * Somebody arrived, or gave up waiting for the wifi.
+   *
+   * Deliberately NOT a message. A line in the conversation for every network
+   * hop is the room talking about itself, and in a group of five on phones it
+   * is most of what the archive would hold. This goes straight to D1 and
+   * nowhere near the tail: the roster already says who is here right now, and
+   * the comings and goings are read from behind it, by a dad who wants them.
+   */
+  private async notePresence(
+    memberId: string | null,
+    name: string,
+    kind: 'in' | 'out',
+  ): Promise<void> {
+    const groupId = this.groupId();
+    if (!groupId) return;
+    try {
+      await this.env.DB.prepare(
+        `INSERT INTO presence (id, group_id, member_id, name, kind, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(newId('pres'), groupId, memberId, name, kind, Date.now())
+        .run();
+    } catch (err) {
+      // Nobody is waiting on this, and nothing downstream depends on it.
+      console.error('presence write failed', { groupId, name, kind }, err);
+    }
   }
 
   /** Has this exact line already gone out in the last few seconds? */

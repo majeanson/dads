@@ -6,6 +6,7 @@ import { getIce } from './routes/ice';
 import { getTodo } from './routes/todo';
 import { getMedia, listMedia, uploadMedia } from './routes/media';
 import { setNight } from './routes/night';
+import { getPresence } from './routes/presence';
 import { getTable } from './routes/table';
 import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
 
@@ -73,6 +74,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'PUT /api/night':
       return setNight(request, env, prod);
+
+    case 'GET /api/presence':
+      return getPresence(request, env, prod);
 
     case 'GET /api/board':
       return getBoard(request, env, prod);

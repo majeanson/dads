@@ -77,14 +77,17 @@ describe('RoomDO', () => {
     open.splice(0).forEach((d) => d.close());
   });
 
-  it('welcomes a dad with himself on the roster and announces him', async () => {
+  it('welcomes a dad with himself on the roster, and records his arrival', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
     const hello = await marc.next('hello');
     expect(hello.you.name).toBe('Marc');
     expect(hello.roster.map((r) => r.name)).toEqual(['Marc']);
-    const arrival = await marc.next('msg', (f) => f.message.kind === 'system');
-    expect(arrival.message.body).toBe('Marc came in');
+
+    // Arriving is not something anybody said, so it is not a line in the
+    // conversation — it is a row behind the roster.
+    expect(await presence(group.id)).toEqual(['Marc in']);
+    expect(marc.frames.some((f) => f.t === 'msg')).toBe(false);
   });
 
   it('fans a line out to everyone in the room, including the sender', async () => {
@@ -121,8 +124,7 @@ describe('RoomDO', () => {
     const hello = await tab2.next('hello');
     expect(hello.roster).toHaveLength(1);
     // The second tab is not a second arrival.
-    const arrivals = marc.frames.filter((f) => f.t === 'msg' && f.message.body === 'Marc came in');
-    expect(arrivals).toHaveLength(1);
+    expect(await presence(group.id)).toEqual(['Marc in']);
   });
 
   it('backfills a fresh client with the recent lines', async () => {
@@ -135,7 +137,7 @@ describe('RoomDO', () => {
     const sam = await enter(group, 'Sam');
     open.push(sam);
     const hello = await sam.next('hello');
-    expect(bodies(hello.messages)).toEqual(['Marc came in', 'one', 'two']);
+    expect(bodies(hello.messages)).toEqual(['one', 'two']);
   });
 
   it('backfills a reconnecting client with only what it missed', async () => {
@@ -167,11 +169,8 @@ describe('RoomDO', () => {
     )
       .bind(group.id)
       .all<{ kind: string; body: string; member_id: string | null }>();
-    expect(results.map((r) => [r.kind, r.body])).toEqual([
-      ['system', 'Marc came in'],
-      ['chat', 'for the record'],
-    ]);
-    expect(results[1]?.member_id).toBeTruthy();
+    expect(results.map((r) => [r.kind, r.body])).toEqual([['chat', 'for the record']]);
+    expect(results[0]?.member_id).toBeTruthy();
   });
 
   it('rejects empty and oversized lines without echoing them', async () => {
@@ -216,6 +215,18 @@ describe('RoomDO', () => {
     }
   }
 
+  /** Comings and goings, oldest first, as "<name> <in|out>". */
+  async function presence(groupId: string): Promise<string[]> {
+    // The write happens after the roster has gone out; give it a tick.
+    await new Promise((r) => setTimeout(r, 50));
+    const { results } = await env.DB.prepare(
+      'SELECT name, kind FROM presence WHERE group_id = ? ORDER BY created_at, rowid',
+    )
+      .bind(groupId)
+      .all<{ name: string; kind: string }>();
+    return results.map((r) => `${r.name} ${r.kind}`);
+  }
+
   /** Every line a dad has seen, backfill and live alike. */
   function seen(dad: Dad): string[] {
     return dad.frames.flatMap((f) =>
@@ -223,7 +234,7 @@ describe('RoomDO', () => {
     );
   }
 
-  it('does not say a dad left until the grace window has passed', async () => {
+  it('does not record a dad leaving until the grace window has passed', async () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(sam);
@@ -232,18 +243,17 @@ describe('RoomDO', () => {
     marc.close();
     const roster = await sam.next('roster', (f) => f.roster.length === 1);
     expect(roster.roster.map((r) => r.name)).toEqual(['Sam']);
-    await new Promise((r) => setTimeout(r, 30));
-    expect(seen(sam)).not.toContain('Marc left');
+    expect(await presence(group.id)).not.toContain('Marc out');
 
     // Firing the alarm early changes nothing: the leave is not yet due.
     const stub = env.ROOM.get(env.ROOM.idFromName(group.id));
     expect(await runDurableObjectAlarm(stub)).toBe(true);
-    await new Promise((r) => setTimeout(r, 30));
-    expect(seen(sam)).not.toContain('Marc left');
+    expect(await presence(group.id)).not.toContain('Marc out');
 
     expect(await graceWindowPasses()).toBe(true);
-    const left = await sam.next('msg', (f) => f.message.body === 'Marc left');
-    expect(left.message.kind).toBe('system');
+    expect(await presence(group.id)).toContain('Marc out');
+    // And still nothing in the conversation about it.
+    expect(seen(sam).some((b) => b.includes('Marc'))).toBe(false);
   });
 
   it('treats a return within the grace window as never having left', async () => {
@@ -260,9 +270,9 @@ describe('RoomDO', () => {
 
     // Nothing pending, so no alarm to run.
     expect(await graceWindowPasses()).toBe(false);
-    await new Promise((r) => setTimeout(r, 30));
-    expect(seen(sam).filter((b) => b === 'Marc left')).toHaveLength(0);
-    expect(seen(sam).filter((b) => b === 'Marc came in')).toHaveLength(1);
+    // One arrival each, no departure: as far as the room is concerned Marc
+    // never went.
+    expect(await presence(group.id)).toEqual(['Marc in', 'Sam in']);
   });
 
   it('keeps groups apart', async () => {
