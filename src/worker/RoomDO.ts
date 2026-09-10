@@ -137,6 +137,16 @@ export class RoomDO extends DurableObject<Env> {
       return new Response(null, { status: 204 });
     }
 
+    // Something happened outside the socket that the room should know about:
+    // a check-in, a commitment, how last week went. Only the Worker can reach
+    // this. The board is where the detail lives; this is what makes anyone
+    // look at the board.
+    if (url.pathname === '/announce' && request.method === 'POST') {
+      const { name, body } = (await request.json()) as { name: string; body: string };
+      await this.post('system', null, name, body);
+      return new Response(null, { status: 204 });
+    }
+
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('expected websocket', { status: 426 });
     }

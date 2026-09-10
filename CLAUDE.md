@@ -19,6 +19,13 @@ list; do not relitigate a decision recorded there without asking.
 - **Playwright matches accessible names by substring.** `getByRole('button',
 { name: 'Room' })` also matches a prompt ending "...with no phone in the
   room?". Scope to a landmark and pass `exact: true` for short names.
+- **A control needs a real bounding box.** A visually-hidden radio styled
+  `width:0;height:0` has no hit area of its own and is invisible to anything
+  driving the page. Fill the label with `position:absolute;inset:0;opacity:0`
+  instead.
+- **A fresh browser context is a fresh dad.** e2e identity lives in a cookie
+  plus localStorage, so `browser.newContext()` creates a new member even with
+  the same name. Give each test its own names.
 - **Behavioural e2e only.** Playwright asserts what a dad can do, not what a
   pixel looks like. The design pass is M7; until then, no UI-detail assertions.
 - **Never leave a dev server orphaned.** On Windows, killing the shell does not
@@ -101,6 +108,26 @@ weakening `sessionSecret()`.
 - The DO's `tail` table gained `prompt_id` via a `PRAGMA table_info` check in
   the constructor. `CREATE TABLE IF NOT EXISTS` does nothing to an existing
   table, so every future DO column needs the same treatment.
+
+## The board (M5)
+
+- `src/shared/week.ts` is pure ISO-8601 week numbering, computed in the
+  **group's** zone. ISO rules are not the obvious ones: weeks start Monday and
+  week 1 holds the first Thursday, so early January often belongs to the
+  previous year and some years have 53 weeks. Do not replace it with
+  "day of year / 7".
+- Check-ins and commitments are one per dad per week, upserted on the
+  `(group_id, member_id, week)` unique index. Changing a commitment mid-week
+  resets its outcome — a new promise has not been kept yet.
+- Everything on the board is **group-visible by design**, including your own
+  row, which renders in the list as well as in the editor. Every member gets a
+  row whether or not he filled it in; a board that only shows the dads who
+  turned up is a board that flatters.
+- `pending` scans back through the shown weeks, not just the one behind, so a
+  fortnight away does not lose the question. A dad can only close his own
+  commitment — the update is keyed on his member id.
+- Writes announce themselves in the room via the DO's `/announce` endpoint.
+  The board holds the detail; the room line is what makes anyone look.
 
 ## Test layout
 

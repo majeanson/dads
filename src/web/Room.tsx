@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Session } from './api';
+import { Board } from './Board';
 import { DadNightBar } from './DadNightBar';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
@@ -9,7 +10,7 @@ function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-type View = 'room' | 'prompts';
+type View = 'room' | 'prompts' | 'board';
 
 /**
  * The talk column. Roster on top, the evening's lines in the middle, the
@@ -74,11 +75,23 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         >
           Prompts
         </button>
+        <button
+          type="button"
+          className={view === 'board' ? 'is-current' : ''}
+          aria-current={view === 'board'}
+          onClick={() => setView('board')}
+        >
+          Board
+        </button>
       </nav>
 
       {view === 'prompts' ? (
         <div className="panel">
           <PromptList />
+        </div>
+      ) : view === 'board' ? (
+        <div className="panel">
+          <Board />
         </div>
       ) : (
         <>

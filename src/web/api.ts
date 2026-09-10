@@ -161,3 +161,56 @@ export async function addPrompt(body: string): Promise<AddPromptResult> {
   };
   return { ok: false, error: failure.error ?? 'unknown' };
 }
+
+export type Outcome = 'pending' | 'done' | 'missed';
+
+export interface BoardRow {
+  memberId: string;
+  name: string;
+  checkIn: { rating: number; note: string } | null;
+  commitment: { body: string; outcome: Outcome; reflection: string } | null;
+}
+
+export interface BoardData {
+  week: string;
+  weeks: { week: string; rows: BoardRow[] }[];
+  pending: { week: string; body: string } | null;
+  you: string;
+}
+
+export async function fetchBoard(): Promise<BoardData> {
+  const res = await fetch('/api/board');
+  if (!res.ok) throw new Error(`GET /api/board ${res.status}`);
+  return (await res.json()) as BoardData;
+}
+
+export async function saveCheckIn(rating: number, note: string): Promise<void> {
+  const res = await fetch('/api/check-in', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating, note }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/check-in ${res.status}`);
+}
+
+export async function saveCommitment(body: string): Promise<void> {
+  const res = await fetch('/api/commitment', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/commitment ${res.status}`);
+}
+
+export async function saveCommitmentOutcome(
+  week: string,
+  outcome: 'done' | 'missed',
+  reflection: string,
+): Promise<void> {
+  const res = await fetch('/api/commitment-outcome', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ week, outcome, reflection }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/commitment-outcome ${res.status}`);
+}

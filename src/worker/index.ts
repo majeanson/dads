@@ -1,6 +1,7 @@
 import type { Env } from './env';
 import { IDENTITY_HEADERS } from './RoomDO';
 import { currentSession, join, leave, me } from './routes/auth';
+import { getBoard, putCheckIn, putCommitment, putCommitmentOutcome } from './routes/board';
 import { setNight } from './routes/night';
 import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
 
@@ -68,6 +69,18 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'PUT /api/night':
       return setNight(request, env, prod);
+
+    case 'GET /api/board':
+      return getBoard(request, env, prod);
+
+    case 'PUT /api/check-in':
+      return putCheckIn(request, env, prod);
+
+    case 'PUT /api/commitment':
+      return putCommitment(request, env, prod);
+
+    case 'PUT /api/commitment-outcome':
+      return putCommitmentOutcome(request, env, prod);
 
     case 'GET /api/prompt':
       return getTodaysPrompt(request, env, prod);

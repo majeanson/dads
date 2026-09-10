@@ -26,7 +26,12 @@ export const E2E_PROMPT_GROUP = {
   name: 'The E2E Prompts',
   code: 'walnut sienna kettle bison',
 };
-const GROUPS = [E2E_GROUP, E2E_ROOM_GROUP, E2E_NIGHT_GROUP, E2E_PROMPT_GROUP];
+export const E2E_BOARD_GROUP = {
+  slug: 'e2e-board',
+  name: 'The E2E Board',
+  code: 'harbor lilac gravel teak',
+};
+const GROUPS = [E2E_GROUP, E2E_ROOM_GROUP, E2E_NIGHT_GROUP, E2E_PROMPT_GROUP, E2E_BOARD_GROUP];
 
 function wrangler(...args: string[]): string {
   return run('npx', ['wrangler', ...args]);
