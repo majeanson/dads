@@ -52,7 +52,7 @@ export function Remind() {
   }
 
   return (
-    <div className="mt-3">
+    <div className="mt-3 border-t border-line">
       <Switch
         label={t('remind.off')}
         checked={shape.on}

@@ -55,9 +55,9 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   await expect(marc.getByTestId('your-week')).toBeVisible();
 
   // Sam starts blank on Marc's board — everyone gets a row either way.
-  await expect(marc.getByTestId('board-row').filter({ hasText: 'Sam' })).toContainText(
-    'nothing yet',
-  );
+  // A dad with nothing down yet is named on one line, not given a row of his
+  // own saying so.
+  await expect(marc.getByTestId('board-waiting')).toContainText(/Nothing yet:.*Sam/);
 
   await marc.getByRole('radio', { name: '2 — hard' }).check();
   await marc.getByLabel('One line about your week').fill('Shouted about shoes.');

@@ -63,7 +63,7 @@ export function Settings({
         {/* Any dad, like the night: there is no admin in a room of five
             friends, and inventing one for three switches would be inventing
             one. */}
-        <div className="grid gap-2">
+        <div className="border-t border-line">
           {rows.map((row) => (
             <Switch
               key={row.key}

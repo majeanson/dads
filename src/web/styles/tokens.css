@@ -277,13 +277,6 @@
     font-size: 0.875rem;
   }
 
-  .night-editor {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
   /* --- the stage: talk, and the table beside it on a wide screen --- */
 
   .stage {

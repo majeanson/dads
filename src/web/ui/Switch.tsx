@@ -23,9 +23,9 @@ export function Switch({
   return (
     <label
       className={cn(
-        'flex cursor-pointer items-center justify-between gap-3 rounded-app border px-3 py-2.5',
+        'flex cursor-pointer items-center justify-between gap-3 border-b border-line py-2.5',
         'transition-colors duration-75',
-        checked ? 'border-line bg-panel text-ink' : 'border-line/60 text-muted',
+        checked ? 'text-ink' : 'text-muted',
         disabled && 'pointer-events-none opacity-50',
       )}
     >

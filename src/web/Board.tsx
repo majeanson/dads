@@ -32,8 +32,9 @@ function outcomeWord(t: T, outcome: 'pending' | 'done' | 'missed'): string {
 }
 
 /**
- * The week, in public. Every dad has a row whether or not he filled it in —
- * a board that only shows the dads who turned up is a board that flatters.
+ * The week, in public. Nobody is left out — a board that only shows the dads
+ * who turned up is a board that flatters — but the men with nothing down yet
+ * share one line rather than each getting a row that says nothing.
  */
 export function Board({ onChanged }: { onChanged?: () => void } = {}) {
   const { t, lang } = useT();
@@ -65,11 +66,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
         {/* Your own row stays in the list, not just in the editor above it:
             the whole feature is group-visible by design, and you should be
             able to read your week in the same words everyone else reads it. */}
-        <ul className="m-0 mt-4 list-none border-t border-line p-0">
-          {(thisWeek?.rows ?? []).map((row) => (
-            <BoardEntry key={row.memberId} row={row} isYou={row.memberId === data.you} />
-          ))}
-        </ul>
+        <WeekRows rows={thisWeek?.rows ?? []} you={data.you} className="mt-4" />
       </section>
 
       {/* A week nobody filled in is not a week worth printing: four
@@ -87,11 +84,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
                 {t('b.week_of', { date: weekDate(w.week, lang) })}
                 {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
               </h2>
-              <ul className="m-0 list-none border-t border-line p-0">
-                {w.rows.map((row) => (
-                  <BoardEntry key={row.memberId} row={row} isYou={row.memberId === data.you} />
-                ))}
-              </ul>
+              <WeekRows rows={w.rows} you={data.you} />
             </section>
           );
         })}
@@ -99,10 +92,36 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
   );
 }
 
+/**
+ * A week's rows, and one line for everybody who has not filled it in.
+ *
+ * Nobody is hidden — a board that only shows the dads who turned up is a board
+ * that flatters — but a row each for five men with nothing to say is five rows
+ * of the same three words. The names are the honesty; the rows were furniture.
+ */
+function WeekRows({ rows, you, className }: { rows: BoardRow[]; you: string; className?: string }) {
+  const { t } = useT();
+  const said = rows.filter((r) => r.checkIn ?? r.commitment);
+  const quiet = rows.filter((r) => !r.checkIn && !r.commitment);
+  return (
+    <ul className={cn('m-0 list-none border-t border-line p-0', className)}>
+      {said.map((row) => (
+        <BoardEntry key={row.memberId} row={row} isYou={row.memberId === you} />
+      ))}
+      {quiet.length > 0 ? (
+        <li className="border-b border-line py-2.5 text-muted" data-testid="board-waiting">
+          {t('b.waiting', {
+            names: quiet.map((r) => r.name + (r.memberId === you ? t('here.you') : '')).join(', '),
+          })}
+        </li>
+      ) : null}
+    </ul>
+  );
+}
+
 /** One dad's week, read-only. */
 function BoardEntry({ row, isYou = false }: { row: BoardRow; isYou?: boolean }) {
   const { t } = useT();
-  const empty = !row.checkIn && !row.commitment;
   return (
     <li
       className="grid grid-cols-[6.5rem_1fr] gap-2 border-b border-line py-2.5 max-[32rem]:grid-cols-1 max-[32rem]:gap-0"
@@ -112,31 +131,27 @@ function BoardEntry({ row, isYou = false }: { row: BoardRow; isYou?: boolean }) 
         {row.name}
         {isYou ? t('here.you') : ''}
       </span>
-      {empty ? (
-        <span className="text-muted">{t('b.nothing_yet')}</span>
-      ) : (
-        <span className="grid gap-0.5">
-          {row.checkIn ? (
-            <span className="text-[0.9375rem]" data-testid="board-rating">
-              <strong>{row.checkIn.rating}/5</strong> {ratingWord(t, row.checkIn.rating)}
-              {row.checkIn.note ? ` — ${row.checkIn.note}` : ''}
-            </span>
-          ) : null}
-          {row.commitment ? (
-            <span
-              className={cn(
-                'text-[0.9375rem]',
-                row.commitment.outcome === 'done' && 'text-accent',
-                row.commitment.outcome === 'missed' && 'text-muted line-through',
-                row.commitment.outcome === 'pending' && 'text-muted',
-              )}
-            >
-              {outcomeWord(t, row.commitment.outcome)}: {row.commitment.body}
-              {row.commitment.reflection ? ` — ${row.commitment.reflection}` : ''}
-            </span>
-          ) : null}
-        </span>
-      )}
+      <span className="grid gap-0.5">
+        {row.checkIn ? (
+          <span className="text-[0.9375rem]" data-testid="board-rating">
+            <strong>{row.checkIn.rating}/5</strong> {ratingWord(t, row.checkIn.rating)}
+            {row.checkIn.note ? ` — ${row.checkIn.note}` : ''}
+          </span>
+        ) : null}
+        {row.commitment ? (
+          <span
+            className={cn(
+              'text-[0.9375rem]',
+              row.commitment.outcome === 'done' && 'text-accent',
+              row.commitment.outcome === 'missed' && 'text-muted line-through',
+              row.commitment.outcome === 'pending' && 'text-muted',
+            )}
+          >
+            {outcomeWord(t, row.commitment.outcome)}: {row.commitment.body}
+            {row.commitment.reflection ? ` — ${row.commitment.reflection}` : ''}
+          </span>
+        ) : null}
+      </span>
     </li>
   );
 }

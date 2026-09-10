@@ -1,6 +1,7 @@
 import { Moon, Sun, SunMoon } from 'lucide-react';
 import { useT, type Lang } from './i18n';
 import { Button } from './ui/Button';
+import { cn } from './ui/cn';
 import { useTheme, type Theme } from './theme';
 
 const LANGS: { id: Lang; label: string }[] = [
@@ -22,10 +23,10 @@ export function LangToggle() {
       {LANGS.map((l) => (
         <Button
           key={l.id}
-          size="sm"
+          size="icon"
+          className={cn('w-11', lang === l.id ? 'border-accent text-accent' : 'text-muted')}
           aria-pressed={lang === l.id}
           onClick={() => setLang(l.id)}
-          className={lang === l.id ? 'border-accent text-accent' : 'text-muted'}
         >
           {l.label}
         </Button>
