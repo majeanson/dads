@@ -1190,3 +1190,18 @@ video.attachment {
   margin: 0;
   font-size: 0.875rem;
 }
+
+/* The head-count is a way in, not a link: a group of five men does not need
+   its own number underlined in blue. */
+.count-in {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.count-in:hover {
+  text-decoration: underline;
+}

@@ -64,11 +64,11 @@ export function PromptList() {
 
   return (
     <div className="prompt-list" data-testid="prompt-list">
-      <section>
-        <h2>{t('q.asked_before')}</h2>
-        {history.length === 0 ? (
-          <p className="quiet">{t('q.first_tomorrow')}</p>
-        ) : (
+      {/* Nothing at all until the group has been asked something before:
+          a heading over "nothing yet" is two lines saying nothing. */}
+      {history.length === 0 ? null : (
+        <section>
+          <h2>{t('q.asked_before')}</h2>
           <ol className="prompts">
             {history.map((h) => (
               <PromptRow
@@ -79,11 +79,11 @@ export function PromptList() {
               />
             ))}
           </ol>
-        )}
-      </section>
+        </section>
+      )}
 
       <section>
-        <h2>{t('q.add')}</h2>
+        {/* No heading: the box says what it is. */}
         <AddPromptForm onAdded={added} />
         {mine.length === 0 ? null : (
           <ol className="prompts">

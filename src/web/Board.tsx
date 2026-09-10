@@ -57,7 +57,6 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
       {data.pending ? <HowDidItGo pending={data.pending} onSaved={reload} /> : null}
 
       <section>
-        <h2>{t('b.this_week')}</h2>
         <YourWeek row={mine} onSaved={reload} />
         {/* Your own row stays in the list, not just in the editor above it:
             the whole feature is group-visible by design, and you should be

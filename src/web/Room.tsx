@@ -233,16 +233,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       <header className="room-head">
         <div>
           <h1>{session.group.name}</h1>
-          <p className="quiet">
-            {/* The count is also the door to the roster and to who has been
-                about — the comings and goings are not lines in the
-                conversation any more, and this is where you ask for them. */}
-            <button
-              type="button"
-              className="link"
-              data-testid="connection"
-              onClick={() => setSheet('here')}
-            >
+          {/* The count is also the door to the roster and to who has been
+              about. A button, because it does something — but not a blue
+              underlined link, which is three times louder than a group of five
+              men needs its own head-count to be. */}
+          <p className="quiet" onClick={() => setSheet('here')}>
+            <button type="button" className="count-in" data-testid="connection">
               {room.connection === 'open'
                 ? t('room.here', { n: room.roster.length })
                 : room.connection === 'connecting'

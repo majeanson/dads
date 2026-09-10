@@ -54,11 +54,7 @@ Honest list. Everything else in here has a test standing behind it.
    configured in production now (`dads-key`), so a dad behind a strict NAT has
    a way through as well — verified by `/api/ice` returning credentialed
    `turn:` and `turns:` servers alongside the STUN ones.
-2. **A dad night's summary.** The open is proven on a real clock: the night
-   was set five minutes out on production and at 14:03 the room posted "Dad
-   night. The table's open." by itself, with nobody watching. The close comes
-   three hours later and has still only been seen with a faked clock.
-3. **A reminder actually arriving on a phone.** The endpoint mints a key, the
+2. **A reminder actually arriving on a phone.** The endpoint mints a key, the
    subscribe and unsubscribe round trip is tested, and the send is jaffre's
    proven code — but no notification has yet gone from this Worker to a real
    lock screen. To try it: add dads to the home screen, open the menu, press
@@ -108,8 +104,14 @@ game its storage, so the partitioning case the fallback exists for did not
 happen there. The fallback stays: it costs nothing, and the next iOS release
 is not ours to predict.
 
-Dad night opens by itself. Set five minutes out on production, and at 14:03
-the room said so.
+Dad night runs itself, both ends, on a real clock. Set five minutes out on
+production, the room posted "Dad night. The table's open." at 14:03 with
+nobody watching; set again so that a window closed five minutes later, it
+posted "Dad night done — one dad turned up, 3 lines."
+
+Changing the night cancels whatever was armed for the old one, which is right
+and is worth knowing: resetting the slot two minutes after it opened is what
+made the first summary never arrive.
 
 ## Notes
 

@@ -74,10 +74,12 @@ test('what the group was asked before is readable, and a dad can add one', async
   await open(marc, 'Questions');
   await expect(marc.getByTestId('prompt-list')).toBeVisible();
 
-  // What the group has actually been asked — not the curated hundred, which
-  // are a pool to draw from and not reading material.
-  await expect(marc.getByRole('heading', { name: /^Asked before/ })).toBeVisible();
-  await expect(marc.getByRole('heading', { name: /^Add a question/ })).toBeVisible();
+  // Not the curated hundred: they are a pool to draw from, not reading
+  // material. And nothing at all where there is nothing — this group has only
+  // ever been asked today's question, so there is no "asked before" section
+  // and no heading over an empty one.
+  await expect(marc.getByRole('heading', { name: /^Asked before/ })).toHaveCount(0);
+  await expect(marc.getByLabel('A question for the group')).toBeVisible();
 
   // Today's question is printed once, on the card, and is NOT repeated in the
   // list underneath it.

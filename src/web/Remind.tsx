@@ -25,22 +25,15 @@ export function Remind() {
     };
   }, []);
 
-  if (shape === null || shape.kind === 'unsupported' || shape.kind === 'unavailable') return null;
-
-  if (shape.kind === 'needs-install') {
-    return (
+  // Nothing at all unless there is something to press. "Your browser is
+  // blocking notifications" is a sentence about a setting three menus deep in
+  // somebody else's app, in the middle of a list of buttons.
+  if (shape === null || shape.kind !== 'ready') {
+    return shape?.kind === 'needs-install' ? (
       <p className="quiet remind-note" data-testid="remind-install">
         {t('remind.needs_install')}
       </p>
-    );
-  }
-
-  if (shape.kind === 'blocked') {
-    return (
-      <p className="quiet remind-note" data-testid="remind-blocked">
-        {t('remind.blocked')}
-      </p>
-    );
+    ) : null;
   }
 
   async function toggle() {
