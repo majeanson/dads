@@ -11,6 +11,16 @@ export const MAX_MESSAGE_LENGTH = 2000;
 
 export type MessageKind = 'chat' | 'system' | 'prompt' | 'table';
 
+export interface Attachment {
+  id: string;
+  name: string;
+  contentType: string;
+  /** Known for images; lets the room hold the right shape before the bytes
+   * arrive, so the conversation does not jump as it loads. */
+  width: number | null;
+  height: number | null;
+}
+
 export interface RoomMessage {
   /** Monotonic per room. What a reconnecting client sends back as `after`. */
   seq: number;
@@ -23,6 +33,9 @@ export interface RoomMessage {
   createdAt: number;
   /** Set on kind 'prompt': which question this answers. */
   promptId?: string | null;
+  /** A photo or file attached to the line. The bytes live behind
+   * /api/media?id=…, never in the frame. */
+  media?: Attachment | null;
 }
 
 export interface RosterEntry {
@@ -31,7 +44,7 @@ export interface RosterEntry {
 }
 
 export type ClientFrame =
-  | { t: 'chat'; body: string }
+  | { t: 'chat'; body: string; mediaId?: string }
   | { t: 'prompt'; body: string }
   | { t: 'table'; event: TableEvent }
   | { t: 'typing' };
@@ -48,7 +61,7 @@ export type ServerFrame =
   | { t: 'msg'; message: RoomMessage }
   | { t: 'typing'; memberId: string; name: string }
   | { t: 'night'; night: DadNight | null }
-  | { t: 'error'; code: 'bad_frame' | 'too_long' | 'empty' | 'no_prompt' };
+  | { t: 'error'; code: 'bad_frame' | 'too_long' | 'empty' | 'no_prompt' | 'no_media' };
 
 export function parseClientFrame(raw: unknown): ClientFrame | null {
   if (typeof raw !== 'string') return null;
@@ -61,7 +74,12 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   if (!value || typeof value !== 'object') return null;
   const frame = value as { t?: unknown; body?: unknown };
   if (frame.t === 'typing') return { t: 'typing' };
-  if (frame.t === 'chat' && typeof frame.body === 'string') return { t: 'chat', body: frame.body };
+  if (frame.t === 'chat' && typeof frame.body === 'string') {
+    const mediaId = (value as { mediaId?: unknown }).mediaId;
+    return typeof mediaId === 'string' && mediaId !== ''
+      ? { t: 'chat', body: frame.body, mediaId }
+      : { t: 'chat', body: frame.body };
+  }
   if (frame.t === 'prompt' && typeof frame.body === 'string')
     return { t: 'prompt', body: frame.body };
   if (frame.t === 'table') {

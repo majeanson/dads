@@ -154,10 +154,12 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null) {
     };
   }, [enabled]);
 
-  const send = useCallback((body: string) => {
+  const send = useCallback((body: string, mediaId?: string) => {
     const ws = socket.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
-    ws.send(JSON.stringify({ t: 'chat', body }));
+    ws.send(
+      JSON.stringify(mediaId === undefined ? { t: 'chat', body } : { t: 'chat', body, mediaId }),
+    );
     return true;
   }, []);
 

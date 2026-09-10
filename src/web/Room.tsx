@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Session } from './api';
 import { Board } from './Board';
 import { DadNightBar } from './DadNightBar';
+import { Attachment } from './Attachment';
 import { toRows } from './messageGroups';
+import { prepare, readableSize, upload, type Prepared } from './media';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
 import { Sheet } from './Sheet';
@@ -31,7 +33,16 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const room = useRoom(true, session.group.dadNight);
   const [open, setOpen] = useState<Open>(null);
   const [showTable, setShowTable] = useState(false);
+  /** The talk gets most of the screen; the table can take half when a game is
+   * the point of the evening. */
+  const [wideTable, setWideTable] = useState(false);
   const [draft, setDraft] = useState('');
+  /** Picked but not sent yet: the dad still gets to write a caption, or change
+   * his mind, before anyone sees it. */
+  const [pending, setPending] = useState<Prepared | null>(null);
+  const [sending, setSending] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,11 +54,41 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     document.title = session.group.name;
   }, [session.group.name]);
 
-  function submit(event: FormEvent) {
+  async function pick(file: File | undefined) {
+    setUploadError(null);
+    if (file === undefined) return;
+    setPending(await prepare(file));
+  }
+
+  async function submit(event: FormEvent) {
     event.preventDefault();
     const body = draft.trim();
-    if (!body) return;
-    if (room.send(body)) setDraft('');
+    // A photo with no caption is still something said.
+    if (!body && pending === null) return;
+
+    if (pending === null) {
+      if (room.send(body)) setDraft('');
+      return;
+    }
+
+    setSending(true);
+    setUploadError(null);
+    const result = await upload(pending);
+    setSending(false);
+
+    if (!result.ok) {
+      setUploadError(
+        result.error === 'too_large'
+          ? 'That file is too big — 10 MB is the limit.'
+          : 'Couldn’t send that. Try again.',
+      );
+      return;
+    }
+    if (room.send(body, result.media.id)) {
+      setDraft('');
+      setPending(null);
+      if (picker.current !== null) picker.current.value = '';
+    }
   }
 
   const typingNames = [...room.typing.entries()]
@@ -55,7 +96,11 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     .map(([, name]) => name);
 
   return (
-    <main className="room" data-table={showTable ? 'on' : 'off'}>
+    <main
+      className="room"
+      data-table={showTable ? 'on' : 'off'}
+      data-split={wideTable ? 'half' : 'talk'}
+    >
       <header className="room-head">
         <div>
           <h1>{session.group.name}</h1>
@@ -132,6 +177,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                           <span className="answer-tag">answered</span>
                         ) : null}
                         {row.message.body}
+                        {row.message.media ? <Attachment media={row.message.media} /> : null}
                       </span>
                       <time className="when">{clock(row.message.createdAt)}</time>
                     </>
@@ -149,6 +195,43 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           </p>
 
           <form className="composer" onSubmit={submit}>
+            {pending !== null ? (
+              <p className="pending" data-testid="pending-media">
+                <span>
+                  {pending.name} <span className="quiet">{readableSize(pending.blob.size)}</span>
+                </span>
+                <button
+                  type="button"
+                  className="link"
+                  onClick={() => {
+                    setPending(null);
+                    if (picker.current !== null) picker.current.value = '';
+                  }}
+                >
+                  Remove
+                </button>
+              </p>
+            ) : null}
+
+            {uploadError !== null ? (
+              <p className="error" role="alert">
+                {uploadError}
+              </p>
+            ) : null}
+
+            <label htmlFor="attach" className="attach">
+              <span aria-hidden="true">＋</span>
+              <span className="sr-only">Attach a photo or file</span>
+            </label>
+            <input
+              ref={picker}
+              id="attach"
+              className="sr-only"
+              type="file"
+              onChange={(e) => void pick(e.target.files?.[0])}
+              disabled={room.connection !== 'open' || sending}
+            />
+
             <label htmlFor="say" className="sr-only">
               Say something
             </label>
@@ -159,18 +242,27 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 setDraft(e.target.value);
                 room.sendTyping();
               }}
-              placeholder="Say something"
+              placeholder={pending === null ? 'Say something' : 'Add a caption, or just send it'}
               autoComplete="off"
               disabled={room.connection !== 'open'}
             />
-            <button type="submit" disabled={room.connection !== 'open' || !draft.trim()}>
-              Send
+            <button
+              type="submit"
+              disabled={
+                room.connection !== 'open' || sending || (!draft.trim() && pending === null)
+              }
+            >
+              {sending ? 'Sending…' : 'Send'}
             </button>
           </form>
         </div>
 
         <div className="col-table">
-          <TableColumn onEvent={room.relayTableEvent} />
+          <TableColumn
+            onEvent={room.relayTableEvent}
+            wide={wideTable}
+            onToggleWide={() => setWideTable((v) => !v)}
+          />
         </div>
       </div>
 

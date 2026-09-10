@@ -10,6 +10,7 @@ import {
 } from '../shared/dadNight';
 import {
   MAX_MESSAGE_LENGTH,
+  type Attachment,
   parseClientFrame,
   type RoomMessage,
   type RosterEntry,
@@ -18,6 +19,7 @@ import {
 import { describeTableEvent } from '../shared/jaffre';
 import type { Env } from './env';
 import { newId } from './identity';
+import { mediaFor } from './media';
 import { todaysPrompt } from './prompts';
 
 /**
@@ -61,7 +63,10 @@ const LEAVE_GRACE_MS = 15_000;
  */
 const TABLE_DEDUPE_MS = 20_000;
 
-interface Attachment {
+/** What a live socket remembers about who is on the other end of it. Named
+ * for its job rather than for serializeAttachment, so it does not collide
+ * with a message's Attachment. */
+interface SocketIdentity {
   memberId: string;
   name: string;
 }
@@ -76,6 +81,7 @@ type TailRow = {
   body: string;
   created_at: number;
   prompt_id: string | null;
+  media_id: string | null;
 };
 
 export class RoomDO extends DurableObject<Env> {
@@ -94,7 +100,8 @@ export class RoomDO extends DurableObject<Env> {
           name       TEXT NOT NULL,
           body       TEXT NOT NULL,
           created_at INTEGER NOT NULL,
-          prompt_id  TEXT
+          prompt_id  TEXT,
+          media_id   TEXT
         );
         CREATE TABLE IF NOT EXISTS leaving (
           member_id TEXT PRIMARY KEY,
@@ -118,6 +125,9 @@ export class RoomDO extends DurableObject<Env> {
         .map((c) => c.name);
       if (!columns.includes('prompt_id')) {
         ctx.storage.sql.exec('ALTER TABLE tail ADD COLUMN prompt_id TEXT');
+      }
+      if (!columns.includes('media_id')) {
+        ctx.storage.sql.exec('ALTER TABLE tail ADD COLUMN media_id TEXT');
       }
     });
   }
@@ -186,13 +196,13 @@ export class RoomDO extends DurableObject<Env> {
 
     const wasPresent = this.isPresent(memberId);
     this.ctx.acceptWebSocket(server, [memberId]);
-    server.serializeAttachment({ memberId, name } satisfies Attachment);
+    server.serializeAttachment({ memberId, name } satisfies SocketIdentity);
 
     const hello: ServerFrame = {
       t: 'hello',
       you: { memberId, name },
       roster: this.roster(),
-      messages: this.backfill(Number.isFinite(after) && after > 0 ? after : null),
+      messages: await this.backfill(Number.isFinite(after) && after > 0 ? after : null),
     };
     server.send(JSON.stringify(hello));
 
@@ -212,7 +222,7 @@ export class RoomDO extends DurableObject<Env> {
   // --------------------------------------------------------------- sockets
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
-    const who = ws.deserializeAttachment() as Attachment | null;
+    const who = ws.deserializeAttachment() as SocketIdentity | null;
     if (!who) return;
 
     const frame = parseClientFrame(raw);
@@ -232,7 +242,10 @@ export class RoomDO extends DurableObject<Env> {
     }
 
     const body = frame.body.trim();
-    if (!body) return this.sendTo(ws, { t: 'error', code: 'empty' });
+    // An attachment is a message in its own right: a photo with no caption is
+    // still something said.
+    const mediaId = frame.t === 'chat' ? (frame.mediaId ?? null) : null;
+    if (!body && mediaId === null) return this.sendTo(ws, { t: 'error', code: 'empty' });
     if ([...body].length > MAX_MESSAGE_LENGTH)
       return this.sendTo(ws, { t: 'error', code: 'too_long' });
 
@@ -246,11 +259,29 @@ export class RoomDO extends DurableObject<Env> {
       return;
     }
 
-    await this.post('chat', who.memberId, who.name, body);
+    // Resolved here rather than trusted: an id belonging to another group
+    // must not become a way to pull a photo out of it.
+    const groupId = this.groupId();
+    const found = mediaId !== null && groupId ? await mediaFor(this.env, groupId, mediaId) : null;
+    if (mediaId !== null && found === null) {
+      return this.sendTo(ws, { t: 'error', code: 'no_media' });
+    }
+    const media: Attachment | null =
+      found === null
+        ? null
+        : {
+            id: found.id,
+            name: found.name,
+            contentType: found.contentType,
+            width: found.width,
+            height: found.height,
+          };
+
+    await this.post('chat', who.memberId, who.name, body, null, media);
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
-    const who = ws.deserializeAttachment() as Attachment | null;
+    const who = ws.deserializeAttachment() as SocketIdentity | null;
     if (!who) return;
     // The closing socket is still in getWebSockets() until the handshake
     // completes; exclude it explicitly when deciding whether the dad is gone.
@@ -412,7 +443,7 @@ export class RoomDO extends DurableObject<Env> {
   private roster(): RosterEntry[] {
     const seen = new Map<string, RosterEntry>();
     for (const ws of this.ctx.getWebSockets()) {
-      const who = ws.deserializeAttachment() as Attachment | null;
+      const who = ws.deserializeAttachment() as SocketIdentity | null;
       if (who && !seen.has(who.memberId)) seen.set(who.memberId, { ...who });
     }
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -422,7 +453,7 @@ export class RoomDO extends DurableObject<Env> {
     this.broadcast({ t: 'roster', roster: this.roster() });
   }
 
-  private async scheduleLeave(who: Attachment): Promise<void> {
+  private async scheduleLeave(who: SocketIdentity): Promise<void> {
     this.ctx.storage.sql.exec(
       'INSERT OR REPLACE INTO leaving (member_id, name, leave_at) VALUES (?, ?, ?)',
       who.memberId,
@@ -465,14 +496,15 @@ export class RoomDO extends DurableObject<Env> {
     name: string,
     body: string,
     promptId: string | null = null,
+    media: Attachment | null = null,
   ): Promise<void> {
     const id = newId('msg');
     const createdAt = Date.now();
 
     const seq = this.ctx.storage.sql
       .exec<{ seq: number }>(
-        `INSERT INTO tail (id, kind, member_id, name, body, created_at, prompt_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING seq`,
+        `INSERT INTO tail (id, kind, member_id, name, body, created_at, prompt_id, media_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING seq`,
         id,
         kind,
         memberId,
@@ -480,6 +512,7 @@ export class RoomDO extends DurableObject<Env> {
         body,
         createdAt,
         promptId,
+        media?.id ?? null,
       )
       .one().seq;
     this.ctx.storage.sql.exec(
@@ -487,7 +520,17 @@ export class RoomDO extends DurableObject<Env> {
       TAIL_LIMIT,
     );
 
-    const message: RoomMessage = { seq, id, kind, memberId, name, body, createdAt, promptId };
+    const message: RoomMessage = {
+      seq,
+      id,
+      kind,
+      memberId,
+      name,
+      body,
+      createdAt,
+      promptId,
+      media,
+    };
     // Fan out before the archive write: a dad should not wait on D1 to see
     // his own line appear.
     this.broadcast({ t: 'msg', message });
@@ -517,8 +560,8 @@ export class RoomDO extends DurableObject<Env> {
     if (!groupId) return;
     try {
       await this.env.DB.prepare(
-        `INSERT INTO messages (id, group_id, member_id, kind, body, created_at, prompt_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO messages (id, group_id, member_id, kind, body, created_at, prompt_id, media_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           message.id,
@@ -528,6 +571,7 @@ export class RoomDO extends DurableObject<Env> {
           message.body,
           message.createdAt,
           message.promptId ?? null,
+          message.media?.id ?? null,
         )
         .run();
     } catch (err) {
@@ -538,7 +582,13 @@ export class RoomDO extends DurableObject<Env> {
     }
   }
 
-  private backfill(after: number | null): RoomMessage[] {
+  /**
+   * Attachments are hydrated from D1 rather than stored in the tail on
+   * purpose: the ten-photo cap means a blob can be gone by the time anyone
+   * reconnects, and looking it up means that line quietly loses its picture
+   * instead of showing a broken one forever.
+   */
+  private async backfill(after: number | null): Promise<RoomMessage[]> {
     const rows =
       after === null
         ? this.ctx.storage.sql
@@ -548,6 +598,9 @@ export class RoomDO extends DurableObject<Env> {
         : this.ctx.storage.sql
             .exec<TailRow>('SELECT * FROM tail WHERE seq > ? ORDER BY seq ASC', after)
             .toArray();
+    const wanted = [...new Set(rows.map((r) => r.media_id).filter((id) => id !== null))];
+    const attachments = await this.attachmentsById(wanted);
+
     return rows.map((r) => ({
       seq: r.seq,
       id: r.id,
@@ -557,7 +610,39 @@ export class RoomDO extends DurableObject<Env> {
       body: r.body,
       createdAt: r.created_at,
       promptId: r.prompt_id,
+      media: r.media_id === null ? null : (attachments.get(r.media_id) ?? null),
     }));
+  }
+
+  private async attachmentsById(ids: string[]): Promise<Map<string, Attachment>> {
+    const found = new Map<string, Attachment>();
+    const groupId = this.groupId();
+    if (ids.length === 0 || !groupId) return found;
+
+    const placeholders = ids.map(() => '?').join(', ');
+    const { results } = await this.env.DB.prepare(
+      `SELECT id, name, content_type, width, height FROM media
+        WHERE group_id = ? AND id IN (${placeholders})`,
+    )
+      .bind(groupId, ...ids)
+      .all<{
+        id: string;
+        name: string;
+        content_type: string;
+        width: number | null;
+        height: number | null;
+      }>();
+
+    for (const row of results) {
+      found.set(row.id, {
+        id: row.id,
+        name: row.name,
+        contentType: row.content_type,
+        width: row.width,
+        height: row.height,
+      });
+    }
+    return found;
   }
 
   // ------------------------------------------------------------------ wire

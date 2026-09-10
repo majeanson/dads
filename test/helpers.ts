@@ -45,7 +45,7 @@ export async function seedGroup(
 /** Storage is per file, not per test: without this, groups and throttle buckets
  * pile up and each wrong guess costs a PBKDF2 run per accumulated group. */
 export async function resetTables(): Promise<void> {
-  for (const t of ['join_attempts', 'messages', 'members', 'groups']) {
+  for (const t of ['join_attempts', 'messages', 'media', 'members', 'groups']) {
     await env.DB.prepare(`DELETE FROM ${t}`).run();
   }
 }

@@ -17,7 +17,15 @@ const SILENCE_MS = 12_000;
  * instead. Anything the table says arrives by postMessage and is relayed into
  * the room by `onEvent`.
  */
-export function TableColumn({ onEvent }: { onEvent: (event: TableEvent) => void }) {
+export function TableColumn({
+  onEvent,
+  wide,
+  onToggleWide,
+}: {
+  onEvent: (event: TableEvent) => void;
+  wide: boolean;
+  onToggleWide: () => void;
+}) {
   const [table, setTable] = useState<TableInfo | null | 'loading'>('loading');
   const [blocked, setBlocked] = useState(false);
   /**
@@ -111,9 +119,16 @@ export function TableColumn({ onEvent }: { onEvent: (event: TableEvent) => void 
     <section className="table-frame" data-testid="table">
       <div className="table-head">
         <h2>The table</h2>
-        <a href={table.shareUrl} target="_blank" rel="noopener noreferrer">
-          Open in its own tab ↗
-        </a>
+        <span className="table-head-actions">
+          {/* Only where both columns are on screen: below that the table is
+              already the whole width. */}
+          <button type="button" className="link only-wide" onClick={onToggleWide}>
+            {wide ? 'Narrower' : 'Wider'}
+          </button>
+          <a href={table.shareUrl} target="_blank" rel="noopener noreferrer">
+            Open in its own tab ↗
+          </a>
+        </span>
       </div>
 
       {blocked ? (

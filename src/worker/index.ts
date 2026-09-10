@@ -2,6 +2,7 @@ import type { Env } from './env';
 import { IDENTITY_HEADERS } from './RoomDO';
 import { currentSession, join, leave, me } from './routes/auth';
 import { getBoard, putCheckIn, putCommitment, putCommitmentOutcome } from './routes/board';
+import { getMedia, listMedia, uploadMedia } from './routes/media';
 import { setNight } from './routes/night';
 import { getTable } from './routes/table';
 import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
@@ -82,6 +83,15 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'PUT /api/commitment-outcome':
       return putCommitmentOutcome(request, env, prod);
+
+    case 'POST /api/media':
+      return uploadMedia(request, env, prod);
+
+    case 'GET /api/media':
+      return getMedia(request, env, url, prod);
+
+    case 'GET /api/media-list':
+      return listMedia(request, env, prod);
 
     case 'GET /api/table':
       return getTable(request, env, prod);

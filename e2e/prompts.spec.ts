@@ -72,7 +72,9 @@ test('the whole library is browsable as a list, and a dad can add to it', async 
   // A dad adds one of his own; it appears immediately under Yours.
   const own = `What are you not saying to your kid? ${Date.now()}`;
   await marc.getByLabel('A question for the group').fill(own);
-  await marc.getByRole('button', { name: 'Add' }).click();
+  // Scoped: the composer's own attach control is also a button, and
+  // Playwright matches accessible names by substring.
+  await marc.getByTestId('prompt-list').getByRole('button', { name: 'Add', exact: true }).click();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toContainText('by Marc');
 

@@ -25,3 +25,8 @@ binding = "DB"
 database_name = "dads"
 database_id = "dads-test"
 migrations_dir = "migrations"
+
+# miniflare fakes the bucket locally; nothing here touches a real one.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "dads-media"

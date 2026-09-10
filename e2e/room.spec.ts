@@ -51,3 +51,39 @@ test('a dad who reloads keeps the evening’s lines', async ({ browser }) => {
 
   await marc.context().close();
 });
+
+test('a dad sends a photo and the others see it', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc');
+  const sam = await comeIn(browser, 'Sam');
+
+  // A real PNG, handed to the picker the way a phone hands one over.
+  await marc.setInputFiles('#attach', {
+    name: 'pool.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  });
+
+  // It waits for a caption rather than firing the moment it is picked.
+  await expect(marc.getByTestId('pending-media')).toContainText('pool.png');
+  await marc.getByLabel('Say something').fill('he finally jumped in');
+  await marc.getByRole('button', { name: 'Send' }).click();
+
+  const line = sam.getByTestId('line').filter({ hasText: 'he finally jumped in' });
+  await expect(line).toBeVisible();
+  const image = line.locator('img');
+  await expect(image).toBeVisible();
+  // The bytes really arrive: a broken image has no natural width.
+  await expect
+    .poll(() => image.evaluate((el: HTMLImageElement) => el.naturalWidth))
+    .toBeGreaterThan(0);
+
+  // And the composer is clear again.
+  await expect(marc.getByTestId('pending-media')).toHaveCount(0);
+  await expect(marc.getByLabel('Say something')).toHaveValue('');
+
+  await marc.context().close();
+  await sam.context().close();
+});
