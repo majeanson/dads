@@ -62,7 +62,7 @@ test('the day’s question is asked, answered, and seen by the others', async ({
   const answer = sam.getByTestId('line').filter({ hasText: 'It was not about shoes' });
   await expect(answer).toBeVisible();
   await expect(answer).toContainText('answered');
-  await expect(marc.getByTestId('prompt-card')).toContainText('You’ve answered');
+  await expect(marc.getByTestId('prompt-card')).toContainText('You answered');
 
   await marc.context().close();
   await sam.context().close();

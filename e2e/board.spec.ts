@@ -68,7 +68,7 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
 
   // The commitment is the same form and the same button: one Save, and only
   // what actually changed is sent.
-  await marc.getByLabel('One thing to try this week').fill('Phone in the drawer at six');
+  await marc.getByLabel('One thing to try').fill('Phone in the drawer at six');
   await marc.getByRole('button', { name: 'Save' }).click();
   await expect(
     marc.getByTestId('board-row').filter({ hasText: 'Marc (you)' }).first(),

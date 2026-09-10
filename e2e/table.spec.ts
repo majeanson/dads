@@ -75,7 +75,7 @@ test('the group gets its own table, addressed to the dad by name', async ({ brow
   expect(src).toContain('from=dads');
 
   // And a way out to its own tab, which must not carry his name with it.
-  const out = marc.getByRole('link', { name: /own tab/ });
+  const out = marc.getByRole('link', { name: /own tab/i });
   await expect(out).toHaveAttribute('href', /from=dads/);
   await expect(out).not.toHaveAttribute('href', /name=/);
 
@@ -146,7 +146,7 @@ test('a table that never speaks offers a way out', async ({ browser }) => {
   await expect(page.getByTestId('table-silent')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId('table').locator('iframe')).toBeVisible();
   await expect(
-    page.getByTestId('table-silent').getByRole('link', { name: /own tab/ }),
+    page.getByTestId('table-silent').getByRole('link', { name: /own tab/i }),
   ).toBeVisible();
 
   await page.context().close();

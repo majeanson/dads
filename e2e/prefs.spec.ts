@@ -21,7 +21,7 @@ test('a dad reads the room in French, and it stays French', async ({ page }) => 
 
   // The whole app turns over: the sheet he is standing in, the menu behind
   // it, and the room behind that.
-  await expect(page.getByTestId('settings')).toContainText('sur cet appareil');
+  await expect(page.getByTestId('settings')).toContainText('Sur cet appareil');
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
   await page.getByRole('button', { name: 'Menu' }).click();
   await expect(page.getByRole('button', { name: 'Ouvre la table' })).toBeVisible();
@@ -43,7 +43,7 @@ test('a dad reads the room in French, and it stays French', async ({ page }) => 
   await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Réglages' }).click();
   await page.getByRole('button', { name: 'EN', exact: true }).click();
-  await expect(page.getByTestId('settings')).toContainText('on this device');
+  await expect(page.getByTestId('settings')).toContainText('On this device');
 });
 
 test('a dad asks for dark, and gets dark', async ({ page }) => {

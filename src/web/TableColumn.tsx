@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { ExternalLink, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { JAFFRE_ORIGIN, parseTableEvent, type TableEvent } from '../shared/jaffre';
 import { fetchTable, type TableInfo } from './api';
@@ -130,12 +130,19 @@ export function TableColumn({
       <div className="table-head">
         <h2>{t('t.title')}</h2>
         <span className="table-head-actions">
-          <a href={table.shareUrl} target="_blank" rel="noopener noreferrer">
-            {t('t.own_tab')}
+          <a
+            href={table.shareUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm no-underline"
+            title={t('t.own_tab')}
+          >
+            <ExternalLink size={14} aria-hidden="true" />
+            <span className="max-[30rem]:sr-only">{t('t.own_tab')}</span>
           </a>
-          <Button look="quiet" size="sm" onClick={onClose}>
-            <X size={14} aria-hidden="true" />
-            {t('t.close')}
+          <Button look="quiet" size="iconSm" onClick={onClose} aria-label={t('t.close')}>
+            <X size={15} aria-hidden="true" />
+            <span className="sr-only">{t('t.close')}</span>
           </Button>
         </span>
       </div>

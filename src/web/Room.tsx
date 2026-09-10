@@ -277,7 +277,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                   ? t('room.opening')
                   : t('room.reconnecting')}
             </button>
-            {soon === null ? null : ` · ${soon}`}
+            {soon === null ? null : (
+              <span className="max-[26rem]:block max-[26rem]:pt-0.5">
+                <span className="max-[26rem]:hidden"> · </span>
+                {soon}
+              </span>
+            )}
           </p>
         </div>
         <span className="head-actions">

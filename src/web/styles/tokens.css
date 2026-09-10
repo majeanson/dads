@@ -561,8 +561,8 @@
    * cannot see. On a short screen the header gives up its padding first. */
   @media (max-width: 40rem) {
     main.room {
-      gap: 0.5rem;
-      padding: 0.6rem 0.75rem 0.75rem;
+      gap: 0.4rem;
+      padding: 0.5rem 0.6rem 0.6rem;
       padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
       padding-left: max(0.75rem, env(safe-area-inset-left));
       padding-right: max(0.75rem, env(safe-area-inset-right));
@@ -740,10 +740,6 @@
    * dad may change and all of them then see, and what THIS dad reads it in,
    * which is his and lives on his device.
    */
-  .settings section {
-    margin-bottom: 1.5rem;
-  }
-
   /* --- something picked, not yet sent ------------------------------------
    *
    * A thumbnail and an ×, sitting on the composer. The full photograph filled

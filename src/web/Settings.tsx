@@ -42,7 +42,7 @@ export function Settings({ night, rooms }: { night: DadNight | null; rooms: Room
   ];
 
   return (
-    <div className="settings" data-testid="settings">
+    <div className="settings grid gap-6" data-testid="settings">
       <section>
         <h2 className="mb-2 text-sm font-semibold text-muted">{t('n.title')}</h2>
         <NightEditor night={night} onDone={() => {}} />

@@ -60,7 +60,7 @@ export function CallBar({
           className={muted ? 'border-danger text-danger' : ''}
         >
           {muted ? <MicOff size={15} aria-hidden="true" /> : <Mic size={15} aria-hidden="true" />}
-          {muted ? t('call.unmute') : t('call.mute')}
+          <span className="max-[26rem]:sr-only">{muted ? t('call.unmute') : t('call.mute')}</span>
         </Button>
         <Button
           size="sm"
@@ -73,13 +73,17 @@ export function CallBar({
           ) : (
             <Video size={15} aria-hidden="true" />
           )}
-          {camera ? t('call.camera_off') : t('call.camera_on')}
+          <span className="max-[26rem]:sr-only">
+            {camera ? t('call.camera_off') : t('call.camera_on')}
+          </span>
         </Button>
-        <Button size="sm" look="danger" onClick={onLeave}>
+        <Button size="sm" look="danger" onClick={onLeave} aria-label={t('call.leave')}>
           <PhoneOff size={15} aria-hidden="true" />
-          {t('call.leave')}
+          <span className="max-[26rem]:sr-only">{t('call.leave')}</span>
         </Button>
-        <span className="ml-auto shrink text-sm text-muted">
+        {/* On a small phone the tiles and the listening line already say who
+            is on it, and this ran into the edge of the screen. */}
+        <span className="ml-auto shrink truncate text-sm text-muted max-[26rem]:sr-only">
           {peers.length === 0 ? t('call.alone') : t('call.count', { n: peers.length + 1 })}
         </span>
       </div>
