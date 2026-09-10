@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { DadNight } from '../shared/dadNight';
 import type { RoomMessage, RosterEntry, ServerFrame } from '../shared/protocol';
 
 export type Connection = 'connecting' | 'open' | 'reconnecting';
@@ -10,6 +11,9 @@ export interface RoomState {
   messages: RoomMessage[];
   /** memberId → name, of dads typing in the last few seconds. */
   typing: Map<string, string>;
+  /** Seeded from the session, then kept current by `night` frames, so a dad
+   * who changes it updates every open room without a reload. */
+  night: DadNight | null;
 }
 
 const PING_INTERVAL_MS = 30_000;
@@ -22,13 +26,14 @@ const RECONNECT_MAX_MS = 15_000;
  * what it missed (`after=<last seq>`), so a phone that hopped networks sees
  * the three lines it lost, not the whole evening again.
  */
-export function useRoom(enabled: boolean) {
+export function useRoom(enabled: boolean, initialNight: DadNight | null) {
   const [state, setState] = useState<RoomState>({
     connection: 'connecting',
     you: null,
     roster: [],
     messages: [],
     typing: new Map(),
+    night: initialNight,
   });
 
   const socket = useRef<WebSocket | null>(null);
@@ -92,6 +97,9 @@ export function useRoom(enabled: boolean) {
         }
         case 'roster':
           setState((s) => ({ ...s, roster: frame.roster }));
+          return;
+        case 'night':
+          setState((s) => ({ ...s, night: frame.night }));
           return;
         case 'msg': {
           lastSeq.current = Math.max(lastSeq.current, frame.message.seq);

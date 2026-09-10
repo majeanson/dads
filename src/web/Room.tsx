@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Session } from './api';
+import { DadNightBar } from './DadNightBar';
 import { useRoom } from './useRoom';
 
 function clock(ts: number): string {
@@ -11,7 +12,7 @@ function clock(ts: number): string {
  * composer at the bottom. The table column (M6) sits beside it.
  */
 export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
-  const room = useRoom(true);
+  const room = useRoom(true, session.group.dadNight);
   const [draft, setDraft] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -47,6 +48,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           Sign out
         </button>
       </header>
+
+      <DadNightBar night={room.night} />
 
       <ul className="roster" aria-label="Who's here">
         {room.roster.map((m) => (

@@ -1,3 +1,4 @@
+import type { DadNight } from '../../shared/dadNight';
 import { hashDeviceToken, randomToken, verifyInviteCode } from '../crypto';
 import type { Env } from '../env';
 import { sessionSecret } from '../env';
@@ -25,11 +26,25 @@ interface GroupRow {
   name: string;
   invite_code_salt: string;
   invite_code_hash: string;
+  dad_night_weekday: number | null;
+  dad_night_time: string | null;
+  dad_night_tz: string;
 }
 
 export interface Session {
-  group: { id: string; slug: string; name: string };
+  group: { id: string; slug: string; name: string; dadNight: DadNight | null };
   member: { id: string; displayName: string };
+}
+
+/** Columns → the shared shape. A group with no night set yet is null, not a
+ * half-filled object. */
+export function nightFrom(row: {
+  dad_night_weekday: number | null;
+  dad_night_time: string | null;
+  dad_night_tz: string;
+}): DadNight | null {
+  if (row.dad_night_weekday === null || row.dad_night_time === null) return null;
+  return { weekday: row.dad_night_weekday, time: row.dad_night_time, tz: row.dad_night_tz };
 }
 
 /**
@@ -66,7 +81,9 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
   }
 
   const { results } = await env.DB.prepare(
-    'SELECT id, slug, name, invite_code_salt, invite_code_hash FROM groups LIMIT ?',
+    `SELECT id, slug, name, invite_code_salt, invite_code_hash,
+            dad_night_weekday, dad_night_time, dad_night_tz
+       FROM groups LIMIT ?`,
   )
     .bind(GROUP_SCAN_LIMIT)
     .all<GroupRow>();
@@ -120,7 +137,12 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
 
   const cookie = await signIdentity(env, { groupId: group.id, memberId }, isProduction);
   const session: Session = {
-    group: { id: group.id, slug: group.slug, name: group.name },
+    group: {
+      id: group.id,
+      slug: group.slug,
+      name: group.name,
+      dadNight: nightFrom(group),
+    },
     member: { id: memberId, displayName },
   };
 
@@ -163,7 +185,8 @@ export async function currentSession(
   if (!identity) return null;
 
   const row = await env.DB.prepare(
-    `SELECT m.id AS member_id, m.display_name, g.id AS group_id, g.slug, g.name
+    `SELECT m.id AS member_id, m.display_name, g.id AS group_id, g.slug, g.name,
+            g.dad_night_weekday, g.dad_night_time, g.dad_night_tz
        FROM members m JOIN groups g ON g.id = m.group_id
       WHERE m.id = ? AND m.group_id = ?`,
   )
@@ -174,11 +197,14 @@ export async function currentSession(
       group_id: string;
       slug: string;
       name: string;
+      dad_night_weekday: number | null;
+      dad_night_time: string | null;
+      dad_night_tz: string;
     }>();
 
   if (!row) return null;
   return {
-    group: { id: row.group_id, slug: row.slug, name: row.name },
+    group: { id: row.group_id, slug: row.slug, name: row.name, dadNight: nightFrom(row) },
     member: { id: row.member_id, displayName: row.display_name },
   };
 }

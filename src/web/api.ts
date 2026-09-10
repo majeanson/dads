@@ -1,5 +1,7 @@
+import type { DadNight } from '../shared/dadNight';
+
 export interface Session {
-  group: { id: string; slug: string; name: string };
+  group: { id: string; slug: string; name: string; dadNight: DadNight | null };
   member: { id: string; displayName: string };
 }
 
@@ -68,4 +70,17 @@ export async function join(
 
 export async function leave(): Promise<void> {
   await fetch('/api/leave', { method: 'POST' });
+}
+
+/**
+ * Any dad can set the group's night; the room announces who did it. Throws on
+ * failure so the caller can say so rather than silently doing nothing.
+ */
+export async function setNight(night: DadNight | null): Promise<void> {
+  const res = await fetch('/api/night', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ night }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/night ${res.status}`);
 }

@@ -65,6 +65,23 @@ weakening `sessionSecret()`.
 - Ping/pong is `setWebSocketAutoResponse`, which never wakes a hibernating
   object. Do not replace it with a handled message.
 
+## Dad night (M3)
+
+- `src/shared/dadNight.ts` is pure and is the only place instants are computed.
+  A slot is `(weekday, "HH:MM", IANA zone)`, never a timestamp, so 21:00 stays
+  21:00 across DST. Do not "simplify" it to a stored UTC time.
+- The DO has exactly one alarm, so the `schedule` table multiplexes it
+  alongside the leave-grace `leaving` table. `rescheduleAlarm()` always arms
+  the earliest across both. Anything new that wants a timer goes in `schedule`.
+- `night_start` posts "the table's open" and arms `night_end`; `night_end`
+  counts the window from the **D1 archive** and posts the summary, then arms
+  next week. A group with no night arms nothing.
+- Any dad can set the night — no admin role — and the change is announced in
+  the room by name. `PUT /api/night` writes D1 then tells the DO, which
+  re-arms, announces, and pushes a `night` frame to open sockets.
+- Setting a night mid-evening arms that evening's end, so it means something
+  immediately instead of waiting a week.
+
 ## Test layout
 
 - vitest storage is per **file**, not per test. Tests that seed groups call
@@ -78,5 +95,12 @@ weakening `sessionSecret()`.
 - DO alarm tests fake only `Date` (`vi.useFakeTimers({ toFake: ['Date'] })`).
   The DO shares the test isolate, so this moves its clock too; faking timers
   wholesale would hang the frame-wait helpers.
+- **Alarms must be armed at real-future instants.** Faking `Date` does not move
+  workerd's alarm scheduler: an alarm armed at a past real time fires
+  immediately, re-arms itself off the faked clock, and spins forever. So
+  `test/night.test.ts` derives its schedule from the real clock
+  (`upcomingNight()`) and fakes `Date` only at the moment it fires the alarm.
+  For the same reason, a helper that waits must never reinstall fake timers —
+  that silently resets the system time to now.
 - Anything that shells out goes through `scripts/run.ts`, which quotes
   arguments on Windows. `execFileSync` with `shell: true` does not.

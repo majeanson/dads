@@ -117,7 +117,7 @@ button[type='submit']:disabled {
 main.room {
   max-width: 44rem;
   display: grid;
-  grid-template-rows: auto auto 1fr auto auto;
+  grid-template-rows: auto auto auto 1fr auto auto;
   min-height: 100dvh;
   padding-block: 1.25rem;
   gap: 0.5rem;
@@ -209,4 +209,59 @@ main.room {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* ---- dad night (M3) ---- */
+.dadnight {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--wood-light);
+  border-radius: var(--radius);
+  background: var(--felt-raised);
+}
+
+.dadnight-line {
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+.dadnight-line.is-live {
+  color: var(--accent);
+}
+
+.dadnight .link {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.night-editor {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.night-editor select,
+.night-editor input {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--felt);
+  color: var(--ink);
+  font: inherit;
+}
+
+.night-editor button[type='submit'] {
+  padding: 0.45rem 0.9rem;
+}
+
+.night-editor .error {
+  flex: 1 1 100%;
+  margin: 0;
 }

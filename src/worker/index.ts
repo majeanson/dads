@@ -1,6 +1,7 @@
 import type { Env } from './env';
 import { IDENTITY_HEADERS } from './RoomDO';
 import { currentSession, join, leave, me } from './routes/auth';
+import { setNight } from './routes/night';
 
 export { RoomDO } from './RoomDO';
 
@@ -63,6 +64,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'POST /api/leave':
       return leave(prod);
+
+    case 'PUT /api/night':
+      return setNight(request, env, prod);
   }
 
   return Response.json({ error: 'not_found' }, { status: 404 });
@@ -100,6 +104,9 @@ async function handleWs(
   headers.set(IDENTITY_HEADERS.groupId, session.group.id);
   headers.set(IDENTITY_HEADERS.memberId, session.member.id);
   headers.set(IDENTITY_HEADERS.name, session.member.displayName);
+  if (session.group.dadNight) {
+    headers.set(IDENTITY_HEADERS.night, JSON.stringify(session.group.dadNight));
+  }
 
   // Keyed on the group id, not the slug: renaming a group must not move its
   // room.

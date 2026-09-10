@@ -1,3 +1,5 @@
+import type { DadNight } from './dadNight';
+
 /**
  * The wire between a dad's browser and his group's RoomDO. Shared by both so
  * the two can never disagree about a field name. Every frame is one JSON
@@ -38,6 +40,7 @@ export type ServerFrame =
   | { t: 'roster'; roster: RosterEntry[] }
   | { t: 'msg'; message: RoomMessage }
   | { t: 'typing'; memberId: string; name: string }
+  | { t: 'night'; night: DadNight | null }
   | { t: 'error'; code: 'bad_frame' | 'too_long' | 'empty' };
 
 export function parseClientFrame(raw: unknown): ClientFrame | null {

@@ -1,5 +1,14 @@
 import { DurableObject } from 'cloudflare:workers';
 import {
+  currentWindow,
+  isValidNight,
+  nextStart,
+  NIGHT_DURATION_MS,
+  previousStart,
+  WEEKDAY_NAMES,
+  type DadNight,
+} from '../shared/dadNight';
+import {
   MAX_MESSAGE_LENGTH,
   parseClientFrame,
   type RoomMessage,
@@ -28,6 +37,8 @@ export const IDENTITY_HEADERS = {
   groupId: 'X-Dads-Group-Id',
   memberId: 'X-Dads-Member-Id',
   name: 'X-Dads-Name',
+  /** The group's dad night as JSON, or absent for a group with none set. */
+  night: 'X-Dads-Night',
 } as const;
 
 /** Rows kept in the local tail. Well beyond one evening of talk. */
@@ -79,6 +90,13 @@ export class RoomDO extends DurableObject<Env> {
           name      TEXT NOT NULL,
           leave_at  INTEGER NOT NULL
         );
+        -- Singleton timers by kind ('night_start', 'night_end'). A Durable
+        -- Object gets exactly one alarm, so everything that wants to happen
+        -- later queues here and rescheduleAlarm() always arms the earliest.
+        CREATE TABLE IF NOT EXISTS schedule (
+          kind   TEXT PRIMARY KEY,
+          due_at INTEGER NOT NULL
+        );
       `);
     });
   }
@@ -90,6 +108,20 @@ export class RoomDO extends DurableObject<Env> {
 
     if (url.pathname === '/health') {
       return Response.json({ ok: true, id: this.ctx.id.toString() });
+    }
+
+    // The group's night changed while dads were connected. Only the Worker
+    // can reach this.
+    if (url.pathname === '/night' && request.method === 'POST') {
+      const { night, byName } = (await request.json()) as {
+        night: DadNight | null;
+        byName: string;
+      };
+      this.applyNight(night);
+      this.broadcast({ t: 'night', night });
+      await this.post('system', null, byName, describeNightChange(byName, night));
+      await this.rescheduleAlarm();
+      return new Response(null, { status: 204 });
     }
 
     if (request.headers.get('Upgrade') !== 'websocket') {
@@ -108,6 +140,13 @@ export class RoomDO extends DurableObject<Env> {
       `INSERT OR REPLACE INTO meta (key, value) VALUES ('group_id', ?)`,
       groupId,
     );
+
+    // Every connection re-states the schedule. Cheap when unchanged, and it
+    // means a room whose night was set before it ever had a socket still
+    // arms itself the first time someone shows up.
+    const nightHeader = request.headers.get(IDENTITY_HEADERS.night);
+    this.applyNight(nightHeader ? (JSON.parse(nightHeader) as DadNight) : null);
+    await this.rescheduleAlarm();
 
     const after = Number(url.searchParams.get('after') ?? '');
 
@@ -193,7 +232,126 @@ export class RoomDO extends DurableObject<Env> {
       if (this.isPresent(row.member_id)) continue;
       await this.post('system', null, row.name, `${row.name} left`);
     }
+
+    const timers = this.ctx.storage.sql
+      .exec<{ kind: string }>('SELECT kind FROM schedule WHERE due_at <= ?', now)
+      .toArray();
+    for (const timer of timers) {
+      this.ctx.storage.sql.exec('DELETE FROM schedule WHERE kind = ?', timer.kind);
+      if (timer.kind === 'night_start') await this.openDadNight(now);
+      else if (timer.kind === 'night_end') await this.closeDadNight(now);
+    }
+
+    this.ensureNightScheduled();
     await this.rescheduleAlarm();
+  }
+
+  // ------------------------------------------------------------ dad night
+
+  private storedNight(): DadNight | null {
+    const raw = this.ctx.storage.sql
+      .exec<{ value: string }>(`SELECT value FROM meta WHERE key = 'night'`)
+      .toArray()[0]?.value;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as DadNight;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Point the room at a schedule. Re-applying the same one is a no-op, so the
+   * every-connection call costs nothing; a genuinely new night throws away the
+   * old timers and arms fresh ones.
+   */
+  private applyNight(night: DadNight | null): void {
+    const current = this.storedNight();
+    const same = JSON.stringify(current) === JSON.stringify(night);
+    if (!same) {
+      if (night) {
+        this.ctx.storage.sql.exec(
+          `INSERT OR REPLACE INTO meta (key, value) VALUES ('night', ?)`,
+          JSON.stringify(night),
+        );
+      } else {
+        this.ctx.storage.sql.exec(`DELETE FROM meta WHERE key = 'night'`);
+      }
+      this.ctx.storage.sql.exec(`DELETE FROM schedule WHERE kind IN ('night_start','night_end')`);
+    }
+    this.ensureNightScheduled();
+  }
+
+  /** Arm whichever end of the night comes next, if nothing is armed already. */
+  private ensureNightScheduled(now = Date.now()): void {
+    const night = this.storedNight();
+    if (!night || !isValidNight(night)) {
+      this.ctx.storage.sql.exec(`DELETE FROM schedule WHERE kind IN ('night_start','night_end')`);
+      return;
+    }
+    const armed = this.ctx.storage.sql.exec('SELECT 1 FROM schedule').toArray().length;
+    if (armed) return;
+
+    // Setting a night mid-evening should not wait a week to mean anything: if
+    // we are already inside a window, arm its end.
+    const window = currentWindow(night, now);
+    if (window) return this.arm('night_end', window.end);
+    const start = nextStart(night, now);
+    if (start !== null) this.arm('night_start', start);
+  }
+
+  private arm(kind: 'night_start' | 'night_end', at: number): void {
+    this.ctx.storage.sql.exec(
+      'INSERT OR REPLACE INTO schedule (kind, due_at) VALUES (?, ?)',
+      kind,
+      at,
+    );
+  }
+
+  private async openDadNight(now: number): Promise<void> {
+    await this.post('system', null, 'dad night', "Dad night. The table's open.");
+    const night = this.storedNight();
+    const window = night ? currentWindow(night, now) : null;
+    // If the alarm ran so late that the window already closed, there is
+    // nothing to close; ensureNightScheduled arms next week instead.
+    if (window) this.arm('night_end', window.end);
+  }
+
+  /**
+   * The point of the whole feature: the group finds out, in writing, whether
+   * it showed up. Counted from the D1 archive rather than the capped tail,
+   * because the archive is the record.
+   */
+  private async closeDadNight(now: number): Promise<void> {
+    const night = this.storedNight();
+    const start = night ? previousStart(night, now) : null;
+    if (start === null) return;
+
+    const groupId = this.groupId();
+    if (!groupId) return;
+
+    let dads = 0;
+    let lines = 0;
+    try {
+      const row = await this.env.DB.prepare(
+        `SELECT COUNT(*) AS lines, COUNT(DISTINCT member_id) AS dads
+           FROM messages
+          WHERE group_id = ? AND kind = 'chat' AND created_at >= ? AND created_at < ?`,
+      )
+        .bind(groupId, start, start + NIGHT_DURATION_MS)
+        .first<{ lines: number; dads: number }>();
+      dads = row?.dads ?? 0;
+      lines = row?.lines ?? 0;
+    } catch (err) {
+      console.error('dad night summary failed', { groupId }, err);
+      return;
+    }
+
+    const body =
+      dads === 0
+        ? 'Dad night done. Nobody made it this week.'
+        : `Dad night done — ${dads} dad${dads === 1 ? '' : 's'}, ${lines} line${lines === 1 ? '' : 's'}.`;
+    await this.post('system', null, 'dad night', body);
   }
 
   // -------------------------------------------------------------- presence
@@ -234,10 +392,17 @@ export class RoomDO extends DurableObject<Env> {
     return pending > 0;
   }
 
-  /** One alarm per object: always set it to the earliest pending leave. */
+  /** One alarm per object: always set it to the earliest thing pending, from
+   * either queue. */
   private async rescheduleAlarm(): Promise<void> {
     const next = this.ctx.storage.sql
-      .exec<{ at: number | null }>('SELECT MIN(leave_at) AS at FROM leaving')
+      .exec<{ at: number | null }>(
+        `SELECT MIN(at) AS at FROM (
+           SELECT MIN(leave_at) AS at FROM leaving
+           UNION ALL
+           SELECT MIN(due_at) AS at FROM schedule
+         )`,
+      )
       .one().at;
     if (next === null) await this.ctx.storage.deleteAlarm();
     else await this.ctx.storage.setAlarm(next);
@@ -278,10 +443,14 @@ export class RoomDO extends DurableObject<Env> {
     await this.archive(message);
   }
 
-  private async archive(message: RoomMessage): Promise<void> {
-    const groupId = this.ctx.storage.sql
+  private groupId(): string | undefined {
+    return this.ctx.storage.sql
       .exec<{ value: string }>(`SELECT value FROM meta WHERE key = 'group_id'`)
       .toArray()[0]?.value;
+  }
+
+  private async archive(message: RoomMessage): Promise<void> {
+    const groupId = this.groupId();
     if (!groupId) return;
     try {
       await this.env.DB.prepare(
@@ -340,4 +509,10 @@ export class RoomDO extends DurableObject<Env> {
       }
     }
   }
+}
+
+function describeNightChange(byName: string, night: DadNight | null): string {
+  return night
+    ? `${byName} set dad night to ${WEEKDAY_NAMES[night.weekday]}s at ${night.time}.`
+    : `${byName} cleared dad night.`;
 }
