@@ -1,12 +1,24 @@
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { hashInviteCode, normalizeInviteCode, timingSafeEqual } from '../src/worker/crypto';
+import {
+  hashInviteCode,
+  normalizeInviteCode,
+  PBKDF2_ITERATIONS,
+  timingSafeEqual,
+} from '../src/worker/crypto';
 import { identityCookie, signIdentity, verifyIdentity } from '../src/worker/identity';
 import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
 
 const worker = workerExports.default;
 
 describe('crypto', () => {
+  it('stays under the ceiling the Workers runtime actually enforces', () => {
+    // Local workerd allows more; production does not, and fails the request
+    // outright rather than degrading. This test is the only thing standing
+    // between a raised constant and a dead front door.
+    expect(PBKDF2_ITERATIONS).toBeLessThanOrEqual(100_000);
+  });
+
   it('normalizes invite codes so case and spacing never lock a dad out', () => {
     expect(normalizeInviteCode('  Maple   OTTER cedar\tFern ')).toBe('maple otter cedar fern');
   });

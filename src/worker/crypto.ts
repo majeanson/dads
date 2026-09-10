@@ -9,7 +9,14 @@
  *     every request.
  */
 
-const PBKDF2_ITERATIONS = 120_000;
+/**
+ * The Workers runtime refuses more than 100,000 PBKDF2 iterations
+ * ("Pbkdf2 failed: iteration counts above 100000 are not supported"). Local
+ * workerd does NOT enforce that ceiling, so a higher number passes every test
+ * here and then throws on the first real join in production — which is exactly
+ * what it did. Do not raise this; test/auth.test.ts pins it.
+ */
+export const PBKDF2_ITERATIONS = 100_000;
 
 const encoder = new TextEncoder();
 

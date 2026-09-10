@@ -169,6 +169,25 @@ weakening `sessionSecret()`.
 - Nothing in `tokens.css` is per-component colour: every rule reads a token,
   so a palette change is one block, not a search.
 
+## Production (M8)
+
+Live at **dads.marcportal.com**. D1 `dads`
+(`85eeefc6-39ed-4189-b2ea-a4c58dc8649c`), `SESSION_SECRET` set as a Worker
+secret, custom domain bound by the route in wrangler.toml.
+
+- **The Workers runtime caps PBKDF2 at 100,000 iterations** and throws
+  `NotSupportedError` above it. **Local workerd does not enforce that**, so
+  120,000 passed all 140 tests and then 500'd on the first real join.
+  `test/auth.test.ts` now pins the constant. Treat every other crypto
+  parameter the same way: local agreement is not production agreement.
+- Changing the iteration count invalidates every stored invite hash, because
+  the hash is the derivation. Rotating it means re-running
+  `group:create --code "<same code>"` for each group.
+- Deploy is `npm run deploy` (build then `wrangler deploy`). Migrations are
+  separate and go first: `npm run migrate:remote`.
+- `npx wrangler tail --format json` is how you find out what actually threw.
+  The Worker's `[observability]` block is what makes those logs exist at all.
+
 ## Test layout
 
 - vitest storage is per **file**, not per test. Tests that seed groups call

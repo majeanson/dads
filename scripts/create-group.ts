@@ -17,29 +17,30 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hashInviteCode, randomToken } from '../src/worker/crypto';
 import { run } from './run';
+import { WORDS } from './words';
 
 const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-
-/** Four common words beat sixteen random characters for something a dad has to
- * read out over the phone, and four words from this list is ~40 bits — far more
- * than the throttle allows anyone to work through. */
-const WORDS =
-  `amber anchor apple arrow autumn basil beacon birch bison bridge cedar cherry cinder clover
-comet copper cotton crane crimson dune ember fable falcon fern flint forest garnet gravel harbor hazel
-heron indigo island ivory juniper kettle lantern ledger lilac linen maple marble meadow mirror moss
-nectar oak onyx opal orchard otter pebble pepper pewter pigeon pine plum quarry quill raven rowan
-saffron sage sandy shale sienna silver sorrel spruce stone summit tandem teak thicket thistle timber
-topaz umber valley velvet walnut willow winter`
-    .split(/\s+/)
-    .filter(Boolean);
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
   return i === -1 ? undefined : process.argv[i + 1];
 }
 
-function generateCode(): string {
-  const picks = crypto.getRandomValues(new Uint32Array(4));
+/**
+ * A code you can say down a phone line.
+ *
+ * WORDS is exactly 256 long, and 256 divides 2^32 evenly, so the modulo is
+ * unbiased and every word carries a clean 8 bits.
+ *
+ * Two words is 16 bits — 65,536 codes. Against the join throttle (10 wrong
+ * guesses per IP per 10 minutes, each costing the server a 120k-iteration
+ * PBKDF2) that is ~45 days of continuous guessing from one address to cover
+ * the space, and the door is not published anywhere. Four words is 32 bits and
+ * out of reach entirely. Rotate to more words by running this again with
+ * --words 4.
+ */
+function generateCode(count: number): string {
+  const picks = crypto.getRandomValues(new Uint32Array(count));
   return [...picks].map((n) => WORDS[n % WORDS.length]).join(' ');
 }
 
@@ -47,7 +48,7 @@ const slug = arg('slug');
 const name = arg('name');
 if (!slug || !name) {
   console.error(
-    'usage: --slug <slug> --name "<name>" [--code "<code>"] [--night thu:21:00] [--tz <IANA>] [--remote]',
+    'usage: --slug <slug> --name "<name>" [--code "<code>"] [--words 4] [--night thu:21:00] [--tz <IANA>] [--remote]',
   );
   process.exit(1);
 }
@@ -56,7 +57,12 @@ if (!/^[a-z0-9-]+$/.test(slug)) {
   process.exit(1);
 }
 
-const code = arg('code') ?? generateCode();
+const wordCount = Number(arg('words') ?? 4);
+if (!Number.isInteger(wordCount) || wordCount < 1 || wordCount > 8) {
+  console.error('--words must be a whole number between 1 and 8');
+  process.exit(1);
+}
+const code = arg('code') ?? generateCode(wordCount);
 const tz = arg('tz') ?? 'America/Montreal';
 const remote = process.argv.includes('--remote');
 

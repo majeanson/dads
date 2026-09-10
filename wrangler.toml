@@ -44,5 +44,5 @@ new_sqlite_classes = ["RoomDO"]
 [[d1_databases]]
 binding = "DB"
 database_name = "dads"
-database_id = "PLACEHOLDER_SET_AT_M8"
+database_id = "85eeefc6-39ed-4189-b2ea-a4c58dc8649c"
 migrations_dir = "migrations"
