@@ -92,8 +92,10 @@ test('a check-in survives a reload, and the tabs still work', async ({ browser }
     dave.getByTestId('board-row').filter({ hasText: 'Dave (you)' }).first(),
   ).toContainText('Good week, for once.');
 
+  // Back to the conversation, which is all the Today tab is now.
   await tab(dave, 'Today').click();
-  await expect(dave.getByTestId('prompt-card')).toBeVisible();
+  await expect(dave.getByRole('button', { name: 'Send' })).toBeVisible();
+  await expect(dave.getByTestId('prompt-card')).toHaveCount(0);
 
   await dave.context().close();
 });

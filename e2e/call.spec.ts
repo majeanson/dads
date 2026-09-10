@@ -71,3 +71,41 @@ test('the call survives a reload without stranding anyone', async ({ browser }) 
 
   await marc.context().close();
 });
+
+test('a camera turned on reaches the other dad, and turning it off takes it away', async ({
+  browser,
+}) => {
+  const marc = await comeIn(browser, 'Marc');
+  const sam = await comeIn(browser, 'Sam');
+
+  await marc.getByRole('button', { name: 'Join the call' }).click();
+  await sam.getByRole('button', { name: 'Join the call' }).click();
+  await expect(marc.getByTestId('call')).toContainText('2 on the call');
+  await expect(sam.getByTestId('call')).toContainText('2 on the call');
+
+  // Nobody is showing anything yet: sound is the point, pictures are optional.
+  await expect(sam.getByTestId('call-tile')).toHaveCount(0);
+
+  // Adding a track has to renegotiate, and the offer comes from whichever
+  // side added it — the reason this is perfect negotiation and not one-sided
+  // offers. Before that fix this assertion was the one that failed.
+  await marc.getByRole('button', { name: 'Camera', exact: true }).click();
+  await expect(marc.getByTestId('call-tile').filter({ hasText: 'You' })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(sam.getByTestId('call-tile').filter({ hasText: 'Marc' })).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // Sam is still only heard, not seen.
+  await expect(marc.getByTestId('call-tile').filter({ hasText: 'Sam' })).toHaveCount(0);
+  await expect(marc.getByTestId('call')).toContainText('Sam');
+
+  // Off again, and the picture goes away without the call going with it.
+  await marc.getByRole('button', { name: 'Camera off' }).click();
+  await expect(sam.getByTestId('call-tile')).toHaveCount(0, { timeout: 20_000 });
+  await expect(sam.getByTestId('call')).toContainText('2 on the call');
+
+  await marc.context().close();
+  await sam.context().close();
+});

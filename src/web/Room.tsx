@@ -21,6 +21,10 @@ type Tab = 'today' | 'table' | 'prompts' | 'board';
 /**
  * Today's chat is where you are; everything else is a tab you visit.
  *
+ * The conversation is the room, so nothing competes with it above the message
+ * list. Today's question lives behind the Prompts tab with all the others;
+ * the tab's mark is what says one is waiting for you.
+ *
  * A tab carries a mark when something is waiting for YOU — a question you have
  * not answered, a week you have not filled in — so the room itself tells you
  * whether there is anywhere to go. A mark for something somebody else did
@@ -187,12 +191,6 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             onToggleCamera={() => void call.toggleCamera()}
           />
 
-          <PromptCard
-            messages={room.messages}
-            onAnswer={room.answerPrompt}
-            canAnswer={room.connection === 'open'}
-          />
-
           <ol className="lines" aria-label="Messages">
             {room.messages.length === 0 ? (
               <li className="lines-empty quiet">Nobody has said anything yet.</li>
@@ -307,7 +305,18 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
         {/* Mounted on demand, so each reads its data fresh every visit rather
             than showing what was true when the page loaded. */}
-        <div className="panel panel-prompts">{tab === 'prompts' ? <PromptList /> : null}</div>
+        <div className="panel panel-prompts">
+          {tab === 'prompts' ? (
+            <>
+              <PromptCard
+                messages={room.messages}
+                onAnswer={room.answerPrompt}
+                canAnswer={room.connection === 'open'}
+              />
+              <PromptList />
+            </>
+          ) : null}
+        </div>
         <div className="panel panel-board">
           {tab === 'board' ? <Board onChanged={refreshTodo} /> : null}
         </div>

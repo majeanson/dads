@@ -20,9 +20,10 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await sam.getByLabel('Code').fill(E2E_NIGHT_GROUP.code);
   await sam.getByLabel('Your name').fill('Sam');
   await sam.getByRole('button', { name: 'Come in' }).click();
-  await expect(sam.getByTestId('dad-night')).toContainText('No dad night set');
+  // With no night set the bar is one link and nothing else.
+  await expect(sam.getByTestId('dad-night')).toContainText('Set dad night');
 
-  await marc.getByRole('button', { name: 'Set one' }).click();
+  await marc.getByRole('button', { name: 'Set dad night' }).click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
   await marc.getByRole('button', { name: 'Save' }).click();

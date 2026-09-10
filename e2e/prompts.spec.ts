@@ -32,6 +32,13 @@ test('the day’s question is asked, answered, and seen by the others', async ({
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
+  // The question is not in the conversation's way: it waits behind the tab,
+  // which carries a mark until you have answered it.
+  await expect(marc.getByTestId('prompt-card')).toHaveCount(0);
+  await expect(marc.getByTestId('mark-prompts')).toBeVisible();
+  await tab(marc, 'Prompts').click();
+  await tab(sam, 'Prompts').click();
+
   // Both dads get the same question — it is the group's, not the browser's.
   const question = await marc.getByTestId('prompt-body').textContent();
   expect(question?.length).toBeGreaterThan(10);
@@ -41,6 +48,8 @@ test('the day’s question is asked, answered, and seen by the others', async ({
   await marc.getByLabel('Your answer').fill('I shouted about shoes. It was not about shoes.');
   await marc.getByRole('button', { name: 'Answer', exact: true }).click();
 
+  // The answer lands in the conversation, where the others read it.
+  await tab(sam, 'Today').click();
   const answer = sam.getByTestId('line').filter({ hasText: 'It was not about shoes' });
   await expect(answer).toBeVisible();
   await expect(answer).toContainText('answered');
@@ -79,7 +88,7 @@ test('the whole library is browsable as a list, and a dad can add to it', async 
   await tab(marc, 'Prompts').click();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await tab(marc, 'Today').click();
-  await expect(marc.getByTestId('prompt-card')).toBeVisible();
+  await expect(marc.getByRole('button', { name: 'Send' })).toBeVisible();
 
   await marc.context().close();
 });

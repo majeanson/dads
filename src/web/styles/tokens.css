@@ -210,14 +210,14 @@ main.room {
   font-size: 0.875rem;
 }
 
+/* One quiet line, no rule under it. Every row of chrome above the
+   conversation is a row of conversation you cannot see. */
 .dadnight {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.5rem 0.75rem;
-  padding-bottom: var(--gap);
-  border-bottom: 1px solid var(--border);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 }
 
 .dadnight-line {
@@ -246,11 +246,11 @@ main.room {
 
 .room[data-tab='today'] .col-talk {
   display: grid;
-  /* call, question, THE CONVERSATION, typing, composer. The 1fr belongs to
-     the conversation and to nothing else — when the call bar was added it
-     landed on the question instead, which stretched that card down the page
-     and stopped the messages scrolling at all. */
-  grid-template-rows: auto auto 1fr auto auto;
+  /* call, THE CONVERSATION, typing, composer. The 1fr belongs to the
+     conversation and to nothing else — when the call bar was added it landed
+     on the row above instead, which stretched that row down the page and
+     stopped the messages scrolling at all. */
+  grid-template-rows: auto 1fr auto auto;
   gap: 0.5rem;
   min-height: 0;
 }
@@ -354,9 +354,10 @@ main.room {
   content: ',';
 }
 
-/* --- today's question --- */
+/* --- today's question, at the top of the Prompts tab --- */
 
 .prompt-card {
+  margin-bottom: var(--gap);
   padding: var(--gap);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -925,7 +926,6 @@ main.room {
     font-size: 1.125rem;
   }
 
-  .dadnight,
   .tabs {
     padding-bottom: 0.5rem;
     font-size: 0.875rem;

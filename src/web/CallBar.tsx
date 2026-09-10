@@ -107,7 +107,7 @@ function Tile({ stream, name, muted }: { stream: MediaStream; name: string; mute
     if (video.current !== null) video.current.srcObject = stream;
   }, [stream]);
   return (
-    <figure className="call-tile">
+    <figure className="call-tile" data-testid="call-tile">
       {/* Always silent — your own because hearing yourself is unusable,
           everyone else's because their sound comes from an <audio>. */}
       <video ref={video} autoPlay playsInline muted={muted} />

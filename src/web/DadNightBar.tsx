@@ -45,12 +45,12 @@ export function DadNightBar({ night }: { night: DadNight | null }) {
           <strong>Dad night</strong> {formatNight(night!).toLowerCase()}
           {elsewhere ? ` (${night!.tz})` : ''} — {countdown(phase.startsIn)}
         </p>
-      ) : (
-        <p className="dadnight-line quiet">No dad night set.</p>
-      )}
+      ) : null}
 
+      {/* With no night set this line IS the whole bar: one link, not a
+          sentence announcing an absence. */}
       <button type="button" className="link" onClick={() => setEditing((v) => !v)}>
-        {editing ? 'Never mind' : night ? 'Change' : 'Set one'}
+        {editing ? 'Never mind' : night ? 'Change' : 'Set dad night'}
       </button>
 
       {editing ? <NightEditor night={night} onDone={() => setEditing(false)} /> : null}
