@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Session } from './api';
 import { Board } from './Board';
 import { DadNightBar } from './DadNightBar';
+import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
 import { TableColumn } from './TableColumn';
@@ -38,6 +39,11 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   useEffect(() => {
     if (view === 'room') bottom.current?.scrollIntoView({ block: 'end' });
   }, [room.messages.length, view]);
+
+  // The browser tab says which group you are in, not just "dads".
+  useEffect(() => {
+    document.title = session.group.name;
+  }, [session.group.name]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -102,27 +108,37 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           />
 
           <ol className="lines" aria-label="Messages">
-            {room.messages.map((m) => (
-              <li key={m.seq} className={`line line-${m.kind}`} data-testid="line">
-                {m.kind === 'chat' ? (
-                  <>
-                    <span className="who">{m.name}</span>
-                    <span className="body">{m.body}</span>
-                    <time className="when">{clock(m.createdAt)}</time>
-                  </>
-                ) : m.kind === 'prompt' ? (
-                  <>
-                    <span className="who">{m.name}</span>
-                    <span className="body">
-                      <span className="answer-tag">answered</span> {m.body}
-                    </span>
-                    <time className="when">{clock(m.createdAt)}</time>
-                  </>
-                ) : (
-                  <span className="body">{m.body}</span>
-                )}
-              </li>
-            ))}
+            {room.messages.length === 0 ? (
+              <li className="lines-empty quiet">Nobody has said anything yet.</li>
+            ) : null}
+            {toRows(room.messages).map((row) =>
+              row.kind === 'day' ? (
+                <li key={`day-${row.key}`} className="day" data-testid="day">
+                  <span>{row.label}</span>
+                </li>
+              ) : (
+                <li
+                  key={row.key}
+                  className={`line line-${row.message.kind}${row.showName ? '' : ' is-continued'}`}
+                  data-testid="line"
+                >
+                  {row.message.kind === 'chat' || row.message.kind === 'prompt' ? (
+                    <>
+                      <span className="who">{row.showName ? row.message.name : ''}</span>
+                      <span className="body">
+                        {row.message.kind === 'prompt' ? (
+                          <span className="answer-tag">answered</span>
+                        ) : null}
+                        {row.message.body}
+                      </span>
+                      <time className="when">{clock(row.message.createdAt)}</time>
+                    </>
+                  ) : (
+                    <span className="body">{row.message.body}</span>
+                  )}
+                </li>
+              ),
+            )}
             <div ref={bottom} />
           </ol>
 

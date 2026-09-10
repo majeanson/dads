@@ -166,6 +166,12 @@ weakening `sessionSecret()`.
 - `border` separates rows that read fine without it and is not gated;
   `border-strong` is what makes a control findable and is held to WCAG 1.4.11.
   Keep that distinction — it is why buttons and inputs use the stronger one.
+- The message list is bottom-anchored via `margin-top: auto` on its first
+  row, not `justify-content: flex-end` — the latter clips the top of a scroll
+  container once the content overflows.
+- `src/web/messageGroups.ts` turns messages into rows: consecutive lines from
+  the same dad drop the repeated name, and each day opens with a divider. It is
+  pure and tested; keep the rendering dumb.
 - Nothing in `tokens.css` is per-component colour: every rule reads a token,
   so a palette change is one block, not a search.
 

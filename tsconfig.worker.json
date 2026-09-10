@@ -8,6 +8,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/worker.tsbuildinfo"
   },
   "include": [
+    "src/web/messageGroups.ts",
     "src/shared/**/*.ts",
     "src/worker/**/*.ts",
     "test/**/*.ts",

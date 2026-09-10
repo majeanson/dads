@@ -55,6 +55,8 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
           autoComplete="off"
           autoCapitalize="none"
           spellCheck={false}
+          // The only thing anyone comes here to do.
+          autoFocus
         />
 
         <label htmlFor="name">Your name</label>

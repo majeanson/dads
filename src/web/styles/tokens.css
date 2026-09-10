@@ -14,14 +14,14 @@
  */
 
 :root {
-  --bg: #ffffff;
-  --bg-soft: #f5f5f5;
-  --text: #1a1a1a;
-  --muted: #5c5c5c;
+  --bg: #fffefc;
+  --bg-soft: #f4f2ee;
+  --text: #1c1a17;
+  --muted: #5a564f;
   /* `border` separates rows that read fine without it; `border-strong` is what
      makes a control findable, and is the one held to WCAG 1.4.11. */
-  --border: #d8d8d8;
-  --border-strong: #767676;
+  --border: #ddd8d0;
+  --border-strong: #747069;
   --accent: #0b57d0;
   --on-accent: #ffffff;
   --danger: #b3261e;
@@ -35,14 +35,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121212;
-    --bg-soft: #1c1c1c;
-    --text: #e8e8e8;
-    --muted: #a0a0a0;
-    --border: #2e2e2e;
-    --border-strong: #8a8a8a;
+    --bg: #131211;
+    --bg-soft: #1d1b19;
+    --text: #e9e6e1;
+    --muted: #a39e97;
+    --border: #302d2a;
+    --border-strong: #8b8680;
     --accent: #8ab4f8;
-    --on-accent: #121212;
+    --on-accent: #131211;
     --danger: #f2b8b5;
   }
 }
@@ -664,4 +664,56 @@ main.room {
 .rating label:has(input:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* --- the conversation ------------------------------------------------- */
+
+/* Messages sit at the BOTTOM of their space and grow upward, the way every
+ * chat a dad has ever used behaves. `margin-top: auto` on the first row does
+ * it without the clipping that justify-content: flex-end causes in a scroll
+ * container once the content overflows. */
+.lines {
+  display: flex;
+  flex-direction: column;
+}
+
+.lines > :first-child {
+  margin-top: auto;
+}
+
+.lines-empty {
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+/* A day divider: a hairline with the day sitting on it. */
+.day {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.6rem 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.day::before,
+.day::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* A dad still talking keeps his name off every line; the turn reads as one
+ * thought instead of five announcements. */
+.line.is-continued {
+  padding-top: 0;
+}
+
+.line.is-continued .when {
+  opacity: 0;
+}
+
+.line.is-continued:hover .when {
+  opacity: 1;
 }
