@@ -44,6 +44,14 @@ export function isVideo(type: string): boolean {
   return INLINE_VIDEO.has(type.toLowerCase());
 }
 
+/** What MediaRecorder hands back, which differs on every browser. Kept level
+ * with the server's list, which is what actually decides. */
+const INLINE_AUDIO = new Set(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac']);
+
+export function isAudio(type: string): boolean {
+  return INLINE_AUDIO.has(type.toLowerCase());
+}
+
 /** "2.4 MB" — what a person would say about a file's size. */
 export function readableSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

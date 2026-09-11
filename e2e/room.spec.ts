@@ -153,3 +153,48 @@ test('a line typed with no signal waits, and goes when the signal comes back', a
   await marcCtx.close();
   await sam.context().close();
 });
+
+test('a dad says it instead of typing it', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Hal');
+  const sam = await comeIn(browser, 'Ike');
+
+  // With nothing typed, the composer offers the microphone rather than a send
+  // button that would do nothing.
+  await marc.getByTestId('record').click();
+  await expect(marc.getByTestId('recording')).toBeVisible();
+
+  // Long enough not to be a thumb brushing the button.
+  await expect(marc.getByTestId('recording')).toContainText('0:01', { timeout: 5_000 });
+  await marc.getByRole('button', { name: 'Send' }).click();
+
+  // It lands as something playable, for him and for the room — no caption, no
+  // confirmation step.
+  await expect(marc.getByTestId('voice-note')).toHaveCount(1, { timeout: 15_000 });
+  await expect(sam.getByTestId('voice-note')).toHaveCount(1, { timeout: 15_000 });
+
+  // And the composer is back to normal.
+  await expect(marc.getByTestId('recording')).toHaveCount(0);
+  await expect(marc.getByTestId('record')).toBeVisible();
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
+test('a recording thrown away is not sent', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Jos');
+
+  // The room already holds whatever the earlier tests said; what matters is
+  // that nothing is ADDED to it.
+  const before = await marc.getByTestId('voice-note').count();
+
+  await marc.getByTestId('record').click();
+  await expect(marc.getByTestId('recording')).toBeVisible();
+  await expect(marc.getByTestId('recording')).toContainText('0:01', { timeout: 5_000 });
+  await marc.getByRole('button', { name: 'Throw it away' }).click();
+
+  await expect(marc.getByTestId('recording')).toHaveCount(0);
+  await marc.waitForTimeout(1500);
+  await expect(marc.getByTestId('voice-note')).toHaveCount(before);
+
+  await marc.context().close();
+});

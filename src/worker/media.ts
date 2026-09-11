@@ -76,9 +76,17 @@ const INLINE_IMAGES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/we
 /** quicktime is what an iPhone calls the .mov it hands you. */
 const INLINE_VIDEO = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 
+/**
+ * What a browser hands back from MediaRecorder, which is not the same on any
+ * two of them: Chrome and Firefox give webm (opus), Safari gives mp4 (aac).
+ * Same reasoning as video — a container, no script, no origin — and a voice
+ * note that downloads instead of playing is a voice note nobody hears.
+ */
+const INLINE_AUDIO = new Set(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac']);
+
 export function isInlineSafe(contentType: string): boolean {
   const type = contentType.toLowerCase();
-  return INLINE_IMAGES.has(type) || INLINE_VIDEO.has(type);
+  return INLINE_IMAGES.has(type) || INLINE_VIDEO.has(type) || INLINE_AUDIO.has(type);
 }
 
 export function isImage(contentType: string): boolean {
@@ -87,6 +95,10 @@ export function isImage(contentType: string): boolean {
 
 export function isVideo(contentType: string): boolean {
   return INLINE_VIDEO.has(contentType.toLowerCase());
+}
+
+export function isAudio(contentType: string): boolean {
+  return INLINE_AUDIO.has(contentType.toLowerCase());
 }
 
 /**

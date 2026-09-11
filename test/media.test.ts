@@ -146,6 +146,24 @@ describe('uploading', () => {
     expect(heic.media.contentType).toBe('application/octet-stream');
   });
 
+  it('lets a voice note play where it lands, whichever browser recorded it', async () => {
+    const cookie = await cookieFor(group);
+    // No two browsers agree: Chrome and Firefox hand back webm, Safari mp4.
+    // All of them have to play inline or the feature is a download button.
+    for (const declared of ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg', 'audio/aac']) {
+      const body = (await (await put(cookie, PNG, { 'Content-Type': declared })).json()) as {
+        media: { id: string; contentType: string };
+      };
+      expect(body.media.contentType).toBe(declared);
+
+      const fetched = await worker.fetch(`https://dads.test/api/media?id=${body.media.id}`, {
+        headers: { cookie },
+      });
+      expect(fetched.headers.get('Content-Type')).toBe(declared);
+      expect(fetched.headers.get('Content-Disposition')).toBeNull();
+    }
+  });
+
   it('never lets a filename escape its own directory', async () => {
     const cookie = await cookieFor(group);
     const body = (await (

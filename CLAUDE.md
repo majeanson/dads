@@ -453,6 +453,20 @@ secret, custom domain bound by the route in wrangler.toml.
 
 ## Media
 
+- **A voice note is the point of the composer, not a corner of it.** A dad
+  with a child on his hip does not type a paragraph, and the thing he wanted to
+  say goes unsaid. With nothing typed the composer offers the microphone; the
+  moment he types a letter it offers Send. Never both — four controls on a
+  phone row is three.
+- `src/web/recorder.ts` owns MediaRecorder. Two minutes and it stops itself,
+  under half a second is a thumb and is thrown away, and the track is stopped
+  every time rather than held open so the browser's recording indicator goes
+  off when he is finished. No two browsers agree on the container — Chrome and
+  Firefox give webm/opus, Safari mp4/aac — so the list is tried in order and
+  the browser's own default is the fallback. Audio is on the inline allowlist
+  for the same reason video is, and a test pins all five types.
+- It posts with no caption and no confirmation step: a voice note that has to
+  be approved is one more step between the man and the thing he wanted to say.
 - **Video is on the inline allowlist** (`video/mp4`, `video/webm`,
   `video/quicktime` — what an iPhone calls a .mov). A clip that downloads
   instead of playing is a clip nobody watches, and a container carries no

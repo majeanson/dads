@@ -12,9 +12,11 @@ import {
   CalendarClock,
   Menu as MenuIcon,
   MessageCircleQuestion,
+  Mic,
   Plus,
   SendHorizontal,
   Send,
+  Square,
   Settings as SettingsIcon,
   Spade,
   X,
@@ -26,6 +28,7 @@ import { parts } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { nightItem, nightSoon } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
+import { canRecord, clockOf, useRecorder } from './recorder';
 import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
@@ -83,6 +86,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   /** Reading the newest line, rather than back through the week. */
   const [pinned, setPinned] = useState(true);
   const [unseen, setUnseen] = useState(0);
+  const recorder = useRecorder();
   const picker = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
   const lines = useRef<HTMLOListElement>(null);
@@ -245,6 +249,31 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     setPending(null);
     if (picker.current !== null) picker.current.value = '';
   }
+
+  /**
+   * The thing he just said, straight into the room.
+   *
+   * No caption and no preview: a voice note that has to be confirmed is one
+   * more step between a man with a child on his hip and the thing he wanted
+   * to say, which is the entire reason this exists.
+   */
+  async function sendVoice() {
+    const spoken = await recorder.stop();
+    if (spoken === null) return;
+    setSending(true);
+    setUploadError(null);
+    const result = await upload(spoken);
+    setSending(false);
+    if (!result.ok) {
+      setUploadError(
+        result.error === 'too_large' ? t('composer.too_large') : t('composer.upload_failed'),
+      );
+      return;
+    }
+    room.send('', result.media.id);
+  }
+
+  const recording = recorder.state.kind === 'recording' || recorder.state.kind === 'asking';
 
   const typingNames = [...room.typing.entries()]
     .filter(([id]) => id !== session.member.id)
@@ -438,59 +467,119 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               </p>
             ) : null}
 
-            {uploadError !== null ? (
+            {uploadError !== null || recorder.state.kind === 'denied' ? (
               <p className="error" role="alert">
-                {uploadError}
+                {uploadError ?? t('composer.mic_denied')}
               </p>
             ) : null}
 
-            <label
-              htmlFor="attach"
-              className={cn(
-                'grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-app',
-                'border border-edge text-muted transition-colors duration-75',
-                'hover:border-accent hover:text-accent',
-                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
-              )}
-            >
-              <Plus size={18} aria-hidden="true" />
-              <span className="sr-only">{t('composer.attach')}</span>
-            </label>
-            <input
-              ref={picker}
-              id="attach"
-              className="sr-only"
-              type="file"
-              onChange={(e) => void pick(e.target.files?.[0])}
-              disabled={room.connection !== 'open' || sending}
-            />
+            {/* Recording takes the whole row: a red dot, how long he has been
+                talking, and the two things he can do about it. Nothing else on
+                the row can be pressed by accident while he is speaking. */}
+            {recording ? (
+              <>
+                <span
+                  className="flex min-w-0 flex-1 items-center gap-2 px-1 text-[0.9375rem]"
+                  aria-live="polite"
+                  data-testid="recording"
+                >
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full bg-danger"
+                    aria-hidden="true"
+                  />
+                  <span className="tabular-nums">
+                    {recorder.state.kind === 'recording' ? clockOf(recorder.state.ms) : '0:00'}
+                  </span>
+                  <span className="truncate text-muted">{t('composer.recording')}</span>
+                </span>
+                <Button
+                  look="danger"
+                  size="icon"
+                  aria-label={t('composer.cancel')}
+                  onClick={recorder.cancel}
+                >
+                  <X size={18} aria-hidden="true" />
+                  <span className="sr-only">{t('composer.cancel')}</span>
+                </Button>
+                <Button
+                  look="primary"
+                  size="icon"
+                  aria-label={t('composer.send')}
+                  disabled={sending}
+                  onClick={() => void sendVoice()}
+                >
+                  <Square size={16} aria-hidden="true" />
+                  <span className="sr-only">{t('composer.send')}</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <label
+                  htmlFor="attach"
+                  className={cn(
+                    'grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-app',
+                    'border border-edge text-muted transition-colors duration-75',
+                    'hover:border-accent hover:text-accent',
+                    'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
+                  )}
+                >
+                  <Plus size={18} aria-hidden="true" />
+                  <span className="sr-only">{t('composer.attach')}</span>
+                </label>
+                <input
+                  ref={picker}
+                  id="attach"
+                  className="sr-only"
+                  type="file"
+                  onChange={(e) => void pick(e.target.files?.[0])}
+                  disabled={room.connection !== 'open' || sending}
+                />
 
-            <label htmlFor="say" className="sr-only">
-              {t('composer.say')}
-            </label>
-            <input
-              id="say"
-              className="min-w-0 rounded-lg border-0 bg-transparent px-2 text-[0.9375rem] text-ink placeholder:text-muted/70 focus:outline-none"
-              value={draft}
-              onChange={(e) => {
-                setDraft(e.target.value);
-                room.sendTyping();
-              }}
-              placeholder={pending === null ? t('composer.say') : t('composer.caption')}
-              autoComplete="off"
-            />
-            <Button
-              type="submit"
-              look="primary"
-              size="icon"
-              aria-label={t('composer.send')}
-              disabled={sending || (!draft.trim() && pending === null)}
-            >
-              <SendHorizontal size={18} aria-hidden="true" />
-              <span className="sr-only">
-                {sending ? t('composer.sending') : t('composer.send')}
-              </span>
-            </Button>
+                <label htmlFor="say" className="sr-only">
+                  {t('composer.say')}
+                </label>
+                <input
+                  id="say"
+                  className="min-w-0 rounded-lg border-0 bg-transparent px-2 text-[0.9375rem] text-ink placeholder:text-muted/70 focus:outline-none"
+                  value={draft}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                    room.sendTyping();
+                  }}
+                  placeholder={pending === null ? t('composer.say') : t('composer.caption')}
+                  autoComplete="off"
+                />
+                {/* One or the other, never both: with nothing typed the room is
+                asking him to speak, and the moment he types a letter it is
+                asking him to send. Four controls on a phone row is three. */}
+                {draft.trim() === '' && pending === null && canRecord() ? (
+                  <Button
+                    look="plain"
+                    size="icon"
+                    aria-label={t('composer.record')}
+                    disabled={sending}
+                    onClick={() => void recorder.start()}
+                    data-testid="record"
+                  >
+                    <Mic size={18} aria-hidden="true" />
+                    <span className="sr-only">{t('composer.record')}</span>
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    look="primary"
+                    size="icon"
+                    aria-label={t('composer.send')}
+                    disabled={sending || (!draft.trim() && pending === null)}
+                  >
+                    <SendHorizontal size={18} aria-hidden="true" />
+                    <span className="sr-only">
+                      {sending ? t('composer.sending') : t('composer.send')}
+                    </span>
+                  </Button>
+                )}
+              </>
+            )}
           </form>
         </div>
 

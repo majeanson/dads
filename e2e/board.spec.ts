@@ -116,7 +116,7 @@ test('a check-in survives a reload, and the menu still works', async ({ browser 
 
   // Closing the sheet leaves the conversation, which is the whole room.
   await close(dave);
-  await expect(dave.getByRole('button', { name: 'Send' })).toBeVisible();
+  await expect(dave.getByLabel('Say something')).toBeVisible();
   await expect(dave.getByTestId('board')).toHaveCount(0);
 
   await dave.context().close();

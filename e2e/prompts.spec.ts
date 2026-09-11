@@ -100,7 +100,7 @@ test('what the group was asked before is readable, and a dad can add one', async
   await open(marc, 'Questions');
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await close(marc);
-  await expect(marc.getByRole('button', { name: 'Send' })).toBeVisible();
+  await expect(marc.getByLabel('Say something')).toBeVisible();
 
   await marc.context().close();
 });

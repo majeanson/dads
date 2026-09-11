@@ -13,7 +13,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 | **Get in**         | Follow a link, or type the code, and a name. Remembered on that device forever.       |
 | **Talk**           | Live chat with presence, typing, reconnect-and-backfill, day dividers.                |
 | **Be heard**       | Voice call in the room, camera optional. Full WebRTC mesh.                            |
-| **Show something** | Photos and files inline, ten to a room, shrunk in the browser.                        |
+| **Show something** | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.           |
 | **Answer**         | A curated question every day, answered in front of the others.                        |
 | **Be counted**     | Weekly 1–5, one honest line, one thing to try, and whether it happened.               |
 | **Play**           | Jaffre framed beside the conversation, name passed through, table events in the chat. |

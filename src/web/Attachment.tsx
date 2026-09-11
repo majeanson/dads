@@ -1,6 +1,6 @@
 import { Paperclip } from 'lucide-react';
 import type { Attachment as MessageAttachment } from '../shared/protocol';
-import { isImage, isVideo, mediaUrl } from './media';
+import { isAudio, isImage, isVideo, mediaUrl } from './media';
 
 /**
  * A photo or file on a line.
@@ -25,6 +25,21 @@ export function Attachment({ media }: { media: MessageAttachment }) {
         preload="metadata"
         width={media.width ?? undefined}
         height={media.height ?? undefined}
+      />
+    );
+  }
+
+  if (isAudio(media.contentType)) {
+    // The browser's own player: a scrubber, a clock and a play button that
+    // work the way every other one on the phone does. Nothing to build, and
+    // nothing a dad has to learn.
+    return (
+      <audio
+        className="mt-1.5 block w-full max-w-80"
+        src={href}
+        controls
+        preload="metadata"
+        data-testid="voice-note"
       />
     );
   }

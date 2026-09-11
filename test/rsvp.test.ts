@@ -22,8 +22,12 @@ describe('which evening is being answered', () => {
   const night = { weekday: 4, time: '21:00', tz: 'America/Montreal' };
 
   it('is the next start when the night is not on', () => {
-    const now = Date.now();
-    expect(occurrenceOf(night, now)).toBe(nextStart(night, now));
+    // An explicit instant, and one chosen to be nowhere near a Thursday
+    // evening: reading the real clock made this pass every day of the week
+    // except the one the night is on.
+    const quiet = nextStart(night, Date.now())! - 3 * 24 * 60 * 60 * 1000;
+    expect(occurrenceOf(night, quiet)).toBe(nextStart(night, quiet));
+    expect(currentWindow(night, quiet)).toBeNull();
   });
 
   it('is tonight while tonight is happening', () => {
