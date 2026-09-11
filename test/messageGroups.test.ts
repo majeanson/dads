@@ -111,3 +111,47 @@ describe('days', () => {
     expect(toRows([], NOON)).toEqual([]);
   });
 });
+
+describe('new since you were here', () => {
+  const since = { seq: 0, label: 'NEW' };
+  const kinds = (rows: ReturnType<typeof toRows>) =>
+    rows.map((r) => (r.kind === 'message' ? r.message.body : r.kind === 'new' ? 'NEW' : 'DAY'));
+
+  it('sits before the first line after the one he saw', () => {
+    const a = msg({ createdAt: NOON, body: 'one' });
+    const b = msg({ createdAt: NOON + 1000, body: 'two' });
+    const c = msg({ createdAt: NOON + 2000, body: 'three' });
+    const rows = toRows([a, b, c], NOON, undefined, { ...since, seq: a.seq });
+    expect(kinds(rows)).toEqual(['DAY', 'one', 'NEW', 'two', 'three']);
+  });
+
+  it('reintroduces the man he starts reading from', () => {
+    const a = msg({ createdAt: NOON, body: 'one' });
+    const b = msg({ createdAt: NOON + 1000, body: 'two' });
+    const rows = toRows([a, b], NOON, undefined, { ...since, seq: a.seq });
+    expect(names(rows)).toEqual(['DAY', 'Marc', 'DAY', 'Marc']);
+  });
+
+  it('is nothing when he has seen everything', () => {
+    const a = msg({ createdAt: NOON, body: 'one' });
+    const b = msg({ createdAt: NOON + 1000, body: 'two' });
+    expect(kinds(toRows([a, b], NOON, undefined, { ...since, seq: b.seq }))).toEqual([
+      'DAY',
+      'one',
+      'two',
+    ]);
+  });
+
+  it('is nothing at the very top of the list', () => {
+    // Everything on the screen is newer than what he saw: the whole list is
+    // new, and a divider above the first line says nothing a fresh list does
+    // not.
+    const a = msg({ createdAt: NOON, body: 'one' });
+    const b = msg({ createdAt: NOON + 1000, body: 'two' });
+    expect(kinds(toRows([a, b], NOON, undefined, { ...since, seq: a.seq - 1 }))).toEqual([
+      'DAY',
+      'one',
+      'two',
+    ]);
+  });
+});

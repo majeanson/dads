@@ -32,6 +32,7 @@ const EN = {
   'room.messages': 'Messages',
   'room.unseen_one': '1 new ↓',
   'room.unseen_other': '{n} new ↓',
+  'room.since': 'New since you were here',
   'day.today': 'Today',
   'day.yesterday': 'Yesterday',
 
@@ -284,6 +285,7 @@ const FR: Record<Key, string> = {
   'room.messages': 'Messages',
   'room.unseen_one': '1 nouveau ↓',
   'room.unseen_other': '{n} nouveaux ↓',
+  'room.since': 'Nouveau depuis ta dernière visite',
   'day.today': 'Aujourd’hui',
   'day.yesterday': 'Hier',
 

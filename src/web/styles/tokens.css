@@ -597,6 +597,19 @@
     background: var(--border);
   }
 
+  /* From here on is what he has not seen. The same hairline, in the accent,
+     so it reads as a place to start rather than as another date. */
+  .day-new {
+    color: var(--accent);
+    /* A hair of room above the first unseen line when the list lands here. */
+    scroll-margin-top: 0.5rem;
+  }
+
+  .day-new::before,
+  .day-new::after {
+    background: var(--accent);
+  }
+
   /* A dad still talking keeps his name off every line; the turn reads as one
    * thought instead of five announcements. */
   .line.is-continued {

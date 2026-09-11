@@ -29,6 +29,7 @@ import { describeSaid } from '../shared/said';
 import { nightItem, nightSoon } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
+import { lastSeen, markSeen } from './seen';
 import { useFreshBuild } from './useFreshBuild';
 import { useVisualViewport } from './useVisualViewport';
 import { toRows } from './messageGroups';
@@ -49,6 +50,8 @@ const TICK_MS = 15_000;
 
 /** Close enough to the newest line to count as reading it. */
 const NEAR_BOTTOM_PX = 80;
+/** Hidden for longer than this and coming back counts as coming back. */
+const AWAY_MS = 30 * 60_000;
 
 /** What is open over the room, if anything. */
 type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night' | 'invite' | 'settings';
@@ -88,6 +91,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   /** Reading the newest line, rather than back through the week. */
   const [pinned, setPinned] = useState(true);
   const [unseen, setUnseen] = useState(0);
+  /** The last line he saw before this sitting, or null on a first visit. */
+  const [since, setSince] = useState<number | null>(() => lastSeen(session.group.id));
   const recorder = useRecorder();
   const picker = useRef<HTMLInputElement>(null);
   const say = useRef<HTMLInputElement>(null);
@@ -171,14 +176,31 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   }, [pinned]);
   useVisualViewport(keepBottom);
 
-  // Coming back to the tab is seeing it.
+  // Coming back to the tab is seeing it. Coming back after long enough is
+  // coming back: the last line he saw becomes the boundary, and the divider
+  // below points at everything since.
+  const hiddenAt = useRef<number | null>(null);
   useEffect(() => {
     function seen() {
-      if (!document.hidden && atBottom()) setUnseen(0);
+      if (document.hidden) {
+        hiddenAt.current = Date.now();
+        return;
+      }
+      const away = hiddenAt.current !== null && Date.now() - hiddenAt.current > AWAY_MS;
+      hiddenAt.current = null;
+      if (away) setSince(lastSeen(session.group.id));
+      else if (atBottom()) setUnseen(0);
     }
     document.addEventListener('visibilitychange', seen);
     return () => document.removeEventListener('visibilitychange', seen);
-  }, [atBottom]);
+  }, [atBottom, session.group.id]);
+
+  // Looking at the newest line, with the tab showing, is having seen it.
+  useEffect(() => {
+    if (pinned && unseen === 0 && !document.hidden && lastSeq > 0) {
+      markSeen(session.group.id, lastSeq);
+    }
+  }, [pinned, unseen, lastSeq, session.group.id]);
 
   /**
    * The tab's own title carries the count while you are looking elsewhere.
@@ -312,6 +334,31 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     yesterday: t('day.yesterday'),
     locale: lang === 'fr' ? 'fr-CA' : 'en-CA',
   };
+  const rows = toRows(
+    room.messages,
+    Date.now(),
+    days,
+    since === null ? null : { seq: since, label: t('room.since') },
+  );
+  const hasNew = rows.some((r) => r.kind === 'new');
+
+  /**
+   * Land him on the divider, not the bottom.
+   *
+   * Once per boundary: the first time the list holds the divider after a
+   * cold open or a return from away, the list scrolls to it and the count
+   * says how many are below. From there he reads down like anyone else, and
+   * the arrival effect above goes back to following him.
+   */
+  const newMark = useRef<HTMLLIElement>(null);
+  const landedOn = useRef<number | null>(null);
+  useEffect(() => {
+    if (since === null || !hasNew || landedOn.current === since) return;
+    landedOn.current = since;
+    newMark.current?.scrollIntoView({ block: 'start' });
+    setPinned(false);
+    setUnseen(room.messages.filter((m) => m.seq > since).length);
+  }, [since, hasNew, room.messages]);
 
   return (
     <main
@@ -403,9 +450,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             {room.messages.length === 0 ? (
               <li className="lines-empty quiet">{t('room.empty')}</li>
             ) : null}
-            {toRows(room.messages, Date.now(), days).map((row) =>
+            {rows.map((row) =>
               row.kind === 'day' ? (
                 <li key={`day-${row.key}`} className="day" data-testid="day">
+                  <span>{row.label}</span>
+                </li>
+              ) : row.kind === 'new' ? (
+                <li key="new" ref={newMark} className="day day-new" data-testid="since">
                   <span>{row.label}</span>
                 </li>
               ) : (

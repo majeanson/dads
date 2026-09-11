@@ -10,6 +10,8 @@ import type { RoomMessage } from '../shared/protocol';
 
 export type Row =
   | { kind: 'day'; key: string; label: string }
+  /** From here on is what he has not seen. At most one, never first. */
+  | { kind: 'new'; key: 'new'; label: string }
   | {
       kind: 'message';
       key: number;
@@ -96,10 +98,23 @@ function supersedes(a: RoomMessage, b: RoomMessage): boolean {
   );
 }
 
+/**
+ * Where "new since you were here" goes: `seq` is the last line he saw, and
+ * the divider sits before the first line after it. Nothing is drawn when
+ * there is nothing after it, and nothing when there is nothing BEFORE it
+ * either — a divider at the very top of the list tells him nothing a fresh
+ * list does not.
+ */
+export interface Since {
+  seq: number;
+  label: string;
+}
+
 export function toRows(
   messages: RoomMessage[],
   now = Date.now(),
   names: DayNames = EN_DAYS,
+  since: Since | null = null,
 ): Row[] {
   // Drop a line the very next one makes untrue. Only ever the room's own, and
   // only ever a run of them with nothing said in between — a dad's message
@@ -112,6 +127,7 @@ export function toRows(
   const rows: Row[] = [];
   let lastDay: string | null = null;
   let previous: RoomMessage | null = null;
+  let marked = since === null || !messages.some((m) => m.seq <= since.seq);
 
   for (const message of messages) {
     const key = dayKey(message.createdAt);
@@ -119,6 +135,13 @@ export function toRows(
       rows.push({ kind: 'day', key, label: dayLabel(message.createdAt, now, names) });
       lastDay = key;
       // A new day always reintroduces whoever speaks first.
+      previous = null;
+    }
+
+    if (!marked && since !== null && message.seq > since.seq) {
+      rows.push({ kind: 'new', key: 'new', label: since.label });
+      marked = true;
+      // And so does the line he starts reading from.
       previous = null;
     }
 

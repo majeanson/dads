@@ -204,3 +204,32 @@ test('a recording thrown away is not sent', async ({ browser }) => {
 
   await marc.context().close();
 });
+
+test('a dad who was away lands on what he missed', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc Back');
+  const sam = await comeIn(browser, 'Sam Back');
+
+  await sam.getByLabel('Say something').fill('seen this one');
+  await sam.getByRole('button', { name: 'Send' }).click();
+  await expect(marc.getByTestId('line').filter({ hasText: 'seen this one' })).toBeVisible();
+  // A first sitting has nothing to divide.
+  await expect(marc.getByTestId('since')).toHaveCount(0);
+
+  await marc.goto('about:blank');
+  for (const text of ['missed this', 'and this']) {
+    await sam.getByLabel('Say something').fill(text);
+    await sam.getByRole('button', { name: 'Send' }).click();
+    await expect(sam.getByTestId('line').filter({ hasText: text })).toBeVisible();
+  }
+
+  await marc.goto('/');
+  await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  const since = marc.getByTestId('since');
+  await expect(since).toHaveCount(1);
+  await expect(since).toBeVisible();
+  // Before the first line he missed, and nowhere else.
+  await expect(since.locator('xpath=following-sibling::li[1]')).toContainText('missed this');
+
+  await marc.context().close();
+  await sam.context().close();
+});

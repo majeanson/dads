@@ -468,6 +468,15 @@ secret, custom domain bound by the route in wrangler.toml.
   anyone reading back through the week. `counted` is a ref, not state: only a
   change in the message COUNT does anything, or a dad scrolling would count as
   an arrival and cause the scroll he was trying to escape.
+- **"New since you were here" is a divider, not a badge.** `src/web/seen.ts`
+  keeps the last `seq` he was looking at, per device and per group, in
+  localStorage beside the theme — nothing is sent, because whether a man has
+  read a line is his business. A line counts as seen only while he is at the
+  bottom with the tab showing. `toRows` takes a `since` and puts at most ONE
+  divider before the first line after it, and none at the very top of the
+  list: a divider above everything says nothing a fresh list does not. Coming
+  back after half an hour hidden re-reads the boundary and lands him on it,
+  once per boundary, with the count saying how many are below.
 - The tab's own title carries the unseen count. No permission, no prompt, no
   service worker — the one free signal a browser gives.
 - **Links are split, never substituted.** `src/shared/linkify.ts` returns parts
