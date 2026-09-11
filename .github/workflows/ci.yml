@@ -64,19 +64,29 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run migrate:remote
-      - run: npm run deploy
+      # Tee'd for the workers.dev address: the custom domain's bot protection
+      # answers a runner's plain fetch with 403, and that host is the same
+      # Worker with nothing in front of it.
+      - run: |
+          set -o pipefail
+          npm run deploy 2>&1 | tee deploy.log
+          echo "WORKERS_DEV_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1)" >> "$GITHUB_ENV"
       # A deploy that returned 0 is not a deploy that landed. The live door
       # must name the bundle this build produced — the same check the app
-      # itself runs on every return to the foreground.
+      # itself runs on every return to the foreground. The custom domain is
+      # asked first; when it refuses the runner, workers.dev is the same
+      # answer from the same Worker.
       - name: Prove the live site serves this build
         run: |
           set -euo pipefail
           want=$(grep -oE '/assets/index-[^"]+\.js' dist/index.html | head -1)
           echo "built  $want"
           for i in 1 2 3 4 5 6; do
-            got=$(curl -fsS -H 'Cache-Control: no-cache' https://dads.marcportal.com/ | grep -oE '/assets/index-[^"]+\.js' | head -1 || true)
-            echo "live   ${got:-<nothing>}"
-            if [ "$got" = "$want" ]; then exit 0; fi
+            for host in https://dads.marcportal.com "${WORKERS_DEV_URL:-https://dads.marc-jeanson.workers.dev}"; do
+              got=$(curl -sS -H 'Cache-Control: no-cache' "$host/" | grep -oE '/assets/index-[^"]+\.js' | head -1 || true)
+              echo "live   $host  ${got:-<nothing>}"
+              if [ "$got" = "$want" ]; then exit 0; fi
+            done
             sleep 10
           done
           echo "the live site never served this build" >&2
