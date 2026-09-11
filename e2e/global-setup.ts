@@ -69,8 +69,28 @@ const GROUPS = [
   E2E_INVITE_GROUP,
 ];
 
+/**
+ * wrangler, with a second and third go at it.
+ *
+ * `d1 execute --local` has come back "SQLITE_BUSY: database is locked" on CI
+ * immediately after the migration step — the previous workerd had not let go
+ * of the file yet. Everything this runs is idempotent (drop by slug, then
+ * create), so trying again is the honest fix; turning CI red for a lock nobody
+ * can act on is not.
+ */
 function wrangler(...args: string[]): string {
-  return run('npx', ['wrangler', ...args]);
+  let last: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return run('npx', ['wrangler', ...args]);
+    } catch (err) {
+      last = err;
+      // Long enough for a file lock to be released, short enough that a real
+      // failure is still a fast one.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1500);
+    }
+  }
+  throw last;
 }
 
 /**
