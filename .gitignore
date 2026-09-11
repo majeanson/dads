@@ -8,3 +8,4 @@ playwright-report/
 
 # A copy of the database, tokens and all. Not large — sensitive.
 backups/
+push-state.json
