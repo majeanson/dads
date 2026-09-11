@@ -20,8 +20,9 @@ const JPEG_QUALITY = 0.82;
  *
  * Twenty-five rather than ten because of video: ten seconds off a modern phone
  * is fifteen megabytes and there is nothing the browser can do to shrink it,
- * so the old cap meant "no clips". The room keeps ten objects and throws the
- * eleventh away, so the ceiling on a group is bounded either way.
+ * so the old cap meant "no clips". The room keeps ten pictures and thirty
+ * voice notes and throws the rest away, so the ceiling on a group is bounded
+ * either way.
  */
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 

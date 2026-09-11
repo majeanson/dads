@@ -487,8 +487,14 @@ secret, custom domain bound by the route in wrangler.toml.
   `X-Content-Type-Options: nosniff` and `Content-Disposition: attachment`.
   Do not "fix" a file that downloads instead of rendering by widening this.
 
-- Ten to a room; the eleventh silently pushes the oldest out, blob and record
-  together. The cap is the feature.
+- **Two shelves, and they cannot push each other off.** Ten pictures to a
+  room, thirty voice notes; past either, the oldest of THAT kind goes, blob and
+  record together. One shelf is what it was until voice notes arrived and a
+  chatty week started deleting photographs — the one thing in here nobody would
+  ever expect to be thrown away, and two orders of magnitude bigger per object.
+  The partition is the stored content type, so anything not on the allowlist is
+  `application/octet-stream` and shares the tighter cap with the pictures.
+  The cap is still the feature.
 - Images are shrunk in the **browser** (long side 1600, JPEG 0.82) before
   upload. Every failure path falls back to the original file: a large upload
   beats a failed one.

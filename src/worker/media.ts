@@ -1,17 +1,28 @@
 import type { Env } from './env';
 
 /**
- * Shared photos and files.
+ * Shared photos, clips, voice notes and files.
  *
- * A room keeps the ten most recent. The eleventh silently pushes the oldest
- * out — blob and record together — because the point of this is showing
- * somebody a picture, not keeping one. Nothing here is ever public: objects
- * are served through the Worker behind the same session check as the rest of
- * the app, because these are pictures of people's children.
+ * A room keeps the ten most recent pictures. The eleventh silently pushes the
+ * oldest out — blob and record together — because the point of this is showing
+ * somebody a picture, not keeping one. Nothing here is ever public: objects are
+ * served through the Worker behind the same session check as the rest of the
+ * app, because these are pictures of people's children.
+ *
+ * Voice notes are counted SEPARATELY, and this is not a detail. They arrived
+ * after the cap did and went straight onto the same shelf, which meant a
+ * chatty week quietly deleted the photographs — the one thing in here nobody
+ * would ever expect to be thrown away. They are also two orders of magnitude
+ * smaller: thirty of them is a couple of megabytes, where ten photographs is
+ * three. A shelf each, and neither can push the other off.
  */
 
-/** How many a room holds. The cap is the feature, not a limitation of it. */
+/** How many pictures a room holds. The cap is the feature, not a limitation. */
 export const MEDIA_PER_GROUP = 10;
+
+/** And how many voice notes. Higher because they are small, and because what
+ * they are worth is being able to scroll back through the evening. */
+export const VOICE_PER_GROUP = 30;
 
 /** Anything larger is refused outright. Images are shrunk in the browser long
  * before they get here; this is the backstop for everything else. */
@@ -114,20 +125,40 @@ export function safeContentType(declared: string): string {
 }
 
 /**
- * Drops everything past the newest `MEDIA_PER_GROUP`.
+ * Drops everything past the newest on each shelf.
  *
  * The R2 objects go first: a record with no blob renders as a missing
  * attachment, which is recoverable, while a blob with no record is invisible
  * and pays rent forever.
  */
 export async function pruneMedia(env: Env, groupId: string): Promise<number> {
+  const shelves = await Promise.all([
+    pruneShelf(env, groupId, false, MEDIA_PER_GROUP),
+    pruneShelf(env, groupId, true, VOICE_PER_GROUP),
+  ]);
+  return shelves[0] + shelves[1];
+}
+
+/**
+ * One shelf: the pictures, or the voice notes.
+ *
+ * The partition is the stored content type, which is the one the allowlist
+ * already decided — a file that is not on it is `application/octet-stream` and
+ * belongs with the pictures, where the tighter cap is.
+ */
+async function pruneShelf(
+  env: Env,
+  groupId: string,
+  voice: boolean,
+  keep: number,
+): Promise<number> {
   const { results } = await env.DB.prepare(
     `SELECT id, r2_key FROM media
-      WHERE group_id = ?1
+      WHERE group_id = ?1 AND (content_type LIKE 'audio/%') = ?3
       ORDER BY created_at DESC, id DESC
       LIMIT -1 OFFSET ?2`,
   )
-    .bind(groupId, MEDIA_PER_GROUP)
+    .bind(groupId, keep, voice ? 1 : 0)
     .all<{ id: string; r2_key: string }>();
 
   if (results.length === 0) return 0;

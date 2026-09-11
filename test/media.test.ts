@@ -1,7 +1,7 @@
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ServerFrame } from '../src/shared/protocol';
-import { MEDIA_PER_GROUP, MAX_UPLOAD_BYTES } from '../src/worker/media';
+import { MEDIA_PER_GROUP, MAX_UPLOAD_BYTES, VOICE_PER_GROUP } from '../src/worker/media';
 import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
 
 const worker = workerExports.default;
@@ -68,6 +68,17 @@ async function uploadOne(cookie: string, name = 'photo.png') {
   const res = await put(cookie, PNG, { 'X-Dads-Filename': encodeURIComponent(name) });
   expect(res.status).toBe(200);
   return (await res.json()) as { media: { id: string; name: string }; dropped: number };
+}
+
+/** A voice note. The bytes do not matter here; the declared type is what puts
+ * it on the other shelf. */
+async function sayOne(cookie: string, name = 'voice.webm') {
+  const res = await put(cookie, PNG, {
+    'Content-Type': 'audio/webm',
+    'X-Dads-Filename': encodeURIComponent(name),
+  });
+  expect(res.status).toBe(200);
+  return (await res.json()) as { media: { id: string }; dropped: number };
 }
 
 describe('uploading', () => {
@@ -260,6 +271,52 @@ describe('the ten-photo cap', () => {
       headers: { Cookie: cookie },
     });
     expect(newest.status).toBe(200);
+  });
+
+  it('never lets a voice note push a photograph off the end', async () => {
+    const cookie = await cookieFor(group);
+    const photos: string[] = [];
+    for (let i = 0; i < MEDIA_PER_GROUP; i++) {
+      photos.push((await uploadOne(cookie, `photo-${i}.png`)).media.id);
+      await settle(2);
+    }
+
+    // Two shelves. A week of talking is not a reason to throw away pictures of
+    // somebody's children, which is what one shelf would have meant.
+    for (let i = 0; i < 12; i++) {
+      const said = await sayOne(cookie, `voice-${i}.webm`);
+      expect(said.dropped).toBe(0);
+      await settle(2);
+    }
+
+    const still = await worker.fetch(`https://dads.test/api/media?id=${photos[0]}`, {
+      headers: { Cookie: cookie },
+    });
+    expect(still.status).toBe(200);
+
+    const kept = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM media
+        WHERE group_id = ? AND content_type LIKE 'image/%'`,
+    )
+      .bind(group.id)
+      .first<{ n: number }>();
+    expect(kept?.n).toBe(MEDIA_PER_GROUP);
+  });
+
+  it('holds thirty voice notes and then lets the oldest go', async () => {
+    const cookie = await cookieFor(group);
+    const first = (await sayOne(cookie, 'voice-0.webm')).media.id;
+    await settle(2);
+    for (let i = 1; i < VOICE_PER_GROUP; i++) {
+      expect((await sayOne(cookie, `voice-${i}.webm`)).dropped).toBe(0);
+      await settle(2);
+    }
+
+    expect((await sayOne(cookie, 'voice-last.webm')).dropped).toBe(1);
+    const gone = await worker.fetch(`https://dads.test/api/media?id=${first}`, {
+      headers: { Cookie: cookie },
+    });
+    expect(gone.status).toBe(404);
   });
 
   it('counts each group’s ten separately', async () => {
