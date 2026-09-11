@@ -70,7 +70,7 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
           whole product and it is here because a stranger who has been handed
           a code should recognise where he has landed. */}
       <img src="/icon.svg" alt="" width={56} height={56} className="mb-5 rounded-2xl shadow-sm" />
-      <h1 className="m-0 text-3xl font-semibold tracking-tight">dads</h1>
+      <h1 className="display m-0 text-3xl">dads</h1>
       <p className="mt-2 mb-8 text-[0.9375rem] text-muted">
         {invite ? t('join.invited') : t('join.lede')}
       </p>

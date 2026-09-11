@@ -193,7 +193,10 @@ export function TableColumn({
   return (
     <section className="table-frame" data-testid="table">
       <div className="table-head">
-        <h2>{t('t.title')}</h2>
+        {/* On a phone the panel IS the table, and a label saying so costs a
+            row of a game that wants every pixel. Kept for anything reading
+            the page aloud, where the section still needs its name. */}
+        <h2 className="max-[30rem]:sr-only">{t('t.title')}</h2>
         {note === null ? null : (
           <span className="table-note" role="status" data-testid="table-note">
             {noteText(t, note, now)}

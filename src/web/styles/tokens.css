@@ -26,10 +26,18 @@
 /*
  * dads — the stylesheet.
  *
- * Plain on purpose. No webfont, no gradient, no shadow, no pill, no uppercase
- * label: the app is a group of friends talking, and every decoration is one
- * more thing between them and that. One font stack, seven colours, hairline
- * rules, and the browser's own defaults wherever they are already right.
+ * Plain on purpose. No gradient, no shadow, no pill, no uppercase label: the
+ * app is a group of friends talking, and every decoration is one more thing
+ * between them and that. Seven colours, hairline rules, and the browser's own
+ * defaults wherever they are already right.
+ *
+ * The palette is "Ink and Salt" (2026-09-11): near-monochrome, with the one
+ * colour spent on what means something rather than on chrome. It replaced a
+ * set whose accent was #0b57d0 — Google's blue, out of Material — and whose
+ * error red was Material's too. Borrowed values are why the app looked like
+ * nothing; these are ours, and they pass the same audit the old ones did.
+ *
+ * One webfont, for names and titles only. See the @font-face below.
  *
  * Light and dark both ship and the operating system is the default, which is
  * the right answer for nearly everyone. A dad can still ask for one outright —
@@ -43,17 +51,17 @@
  */
 
 :root {
-  --bg: #fffefc;
-  --bg-soft: #f4f2ee;
-  --text: #1c1a17;
-  --muted: #5a564f;
+  --bg: #fcfcfb;
+  --bg-soft: #edeeec;
+  --text: #16181a;
+  --muted: #52585c;
   /* `border` separates rows that read fine without it; `border-strong` is what
      makes a control findable, and is the one held to WCAG 1.4.11. */
-  --border: #ddd8d0;
-  --border-strong: #747069;
-  --accent: #0b57d0;
+  --border: #dcdedd;
+  --border-strong: #6d7376;
+  --accent: #28486b;
   --on-accent: #ffffff;
-  --danger: #b3261e;
+  --danger: #a72f22;
 
   --radius: 4px;
   --gap: 0.75rem;
@@ -64,15 +72,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #131211;
-    --bg-soft: #1d1b19;
-    --text: #e9e6e1;
-    --muted: #a39e97;
-    --border: #302d2a;
-    --border-strong: #8b8680;
-    --accent: #8ab4f8;
-    --on-accent: #131211;
-    --danger: #f2b8b5;
+    --bg: #121314;
+    --bg-soft: #1c1e1f;
+    --text: #e7e8e6;
+    --muted: #9ba09f;
+    --border: #2b2d2e;
+    --border-strong: #848887;
+    --accent: #9dbedd;
+    --on-accent: #121314;
+    --danger: #f2b3ab;
   }
 }
 
@@ -81,31 +89,57 @@
    another — so `audit:contrast` checks these two blocks against the two
    above and fails on any drift. The duplication is policed, not trusted. */
 :root[data-theme='light'] {
-  --bg: #fffefc;
-  --bg-soft: #f4f2ee;
-  --text: #1c1a17;
-  --muted: #5a564f;
-  --border: #ddd8d0;
-  --border-strong: #747069;
-  --accent: #0b57d0;
+  --bg: #fcfcfb;
+  --bg-soft: #edeeec;
+  --text: #16181a;
+  --muted: #52585c;
+  --border: #dcdedd;
+  --border-strong: #6d7376;
+  --accent: #28486b;
   --on-accent: #ffffff;
-  --danger: #b3261e;
+  --danger: #a72f22;
 
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-  --bg: #131211;
-  --bg-soft: #1d1b19;
-  --text: #e9e6e1;
-  --muted: #a39e97;
-  --border: #302d2a;
-  --border-strong: #8b8680;
-  --accent: #8ab4f8;
-  --on-accent: #131211;
-  --danger: #f2b8b5;
+  --bg: #121314;
+  --bg-soft: #1c1e1f;
+  --text: #e7e8e6;
+  --muted: #9ba09f;
+  --border: #2b2d2e;
+  --border-strong: #848887;
+  --accent: #9dbedd;
+  --on-accent: #121314;
+  --danger: #f2b3ab;
 
   color-scheme: dark;
+}
+
+/*
+ * The one typeface, and the one thing it is allowed to touch.
+ *
+ * Ink and Salt spends almost no colour, so the identity has to come from
+ * somewhere — and this is it. Self-hosted rather than fetched from Google:
+ * a private room should not tell a third party who opened it and when, and
+ * one file on our own origin is faster than a DNS lookup anyway.
+ *
+ * NAMES AND TITLES ONLY. The door's wordmark, the group's name, a sheet's
+ * heading — things read at a glance, two or three words at a time. Nothing a
+ * dad reads a sentence of ever changes face: the conversation, the composer,
+ * the week and the questions all stay on the stack the phone renders best,
+ * which is the readable answer and also the free one. `swap` and a real
+ * fallback mean a slow network costs a reflow, never a blank header.
+ */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/bricolage-700-latin.woff2') format('woff2');
+  /* Latin-1 covers every accent French needs, œ included. Anything outside
+     it — a name in another script — falls back per character. */
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212;
 }
 
 /*
@@ -158,6 +192,20 @@
     margin: 0;
     font-size: 1.375rem;
     font-weight: 600;
+  }
+
+  /* The app's own voice. Carried by a class rather than by `h1`, because not
+     every heading is a name and nothing here dresses a bare element. */
+  .display {
+    font-family:
+      'Bricolage Grotesque',
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.015em;
   }
 
   h2 {

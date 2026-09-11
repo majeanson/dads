@@ -237,7 +237,16 @@ function Tile({
       </button>
       <figcaption>
         {name}
-        {quiet ? <span title={t('call.is_muted')}> ✕</span> : null}
+        {/* The glyph and its words, not a bare ✕ named only by a `title` — a
+            screen reader may never announce one and a phone never shows it.
+            currentColor on purpose: the ground behind this is a moving
+            picture, and the caption's own pair is the only audited one. */}
+        {quiet ? (
+          <span className="ml-1 inline-flex items-center align-[-0.1em]">
+            <MicOff size={12} aria-hidden="true" />
+            <span className="sr-only"> — {t('call.is_muted')}</span>
+          </span>
+        ) : null}
       </figcaption>
     </figure>
   );

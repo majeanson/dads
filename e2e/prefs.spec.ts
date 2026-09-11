@@ -61,7 +61,10 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   const dark = await page.evaluate(() =>
     getComputedStyle(document.body).backgroundColor.replace(/\s/g, ''),
   );
-  expect(dark).toBe('rgb(19,18,17)');
+  // --bg, dark. Pinned as a value rather than "not white": the theme-color
+  // metas and the manifest carry the same hex by hand, and a palette change
+  // that misses one of them is exactly what this is here to catch.
+  expect(dark).toBe('rgb(18,19,20)');
 
   // Stamped before the first paint by the shell's own script, so there is no
   // white flash on the way into the room — not after React has mounted.
@@ -180,10 +183,10 @@ test('the phone’s own chrome follows the theme it was asked for', async ({ pag
   await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Dark' }).click();
-  expect(await bar()).toBe('#131211');
+  expect(await bar()).toBe('#121314');
 
   await page.getByRole('button', { name: 'Light' }).click();
-  expect(await bar()).toBe('#fffefc');
+  expect(await bar()).toBe('#fcfcfb');
 
   await page.getByRole('button', { name: 'Follow the phone' }).click();
   expect(await bar()).toBeNull();

@@ -369,7 +369,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     >
       <header className="room-head border-b border-line pb-2.5">
         <div className="min-w-0">
-          <h1 className="truncate text-base font-semibold text-muted">{session.group.name}</h1>
+          <h1 className="display truncate text-base text-muted">{session.group.name}</h1>
           {/* The count is also the door to the roster and to who has been
               about. A button, because it does something — but not a blue
               underlined link, which is three times louder than a group of five

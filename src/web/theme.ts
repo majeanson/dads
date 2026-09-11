@@ -28,7 +28,7 @@ export function storedTheme(): Theme {
 }
 
 /** --bg, light and dark. The one place outside tokens.css that needs them. */
-const BAR = { light: '#fffefc', dark: '#131211' };
+const BAR = { light: '#fcfcfb', dark: '#121314' };
 
 function apply(theme: Theme): void {
   const root = document.documentElement;

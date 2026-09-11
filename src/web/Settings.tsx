@@ -64,8 +64,12 @@ export function Settings({ rooms, onSignOut }: { rooms: RoomsOpen; onSignOut: ()
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-muted">{t('set.yours')}</h2>
-        <Toggles />
-        <Remind />
+        {/* One list, one shape. Language, theme and the reminder are three
+            answers to three questions, and they now look like it. */}
+        <div className="border-t border-line">
+          <Toggles />
+          <Remind />
+        </div>
       </section>
 
       {/* Last, and quiet: a dad signs out of this app about once. */}

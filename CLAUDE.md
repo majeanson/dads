@@ -289,7 +289,30 @@ weakening `sessionSecret()`.
   and the attachments. `tokens.css` is down from 1030 lines to ~860, and what
   is left is layout that Tailwind would have expressed worse: the room's grid,
   the message rows, the bottom-anchored list, the table frame.
-- **Plain is still the brief for words.** No webfont, no gradient, no
+- **The palette is "Ink and Salt"** (2026-09-11), and it is the app's own.
+  What it replaced was borrowed: `#0b57d0` is Google's blue out of Material
+  and `#b3261e` is Material's error red, which is most of why the app looked
+  like nothing in particular. Near-monochrome now, with the one colour
+  (`#28486b` light, `#9dbedd` dark) spent on what means something — a link, a
+  filled button, the focus ring, the mark on the menu — and never on chrome.
+  Changing a hex means changing it in FIVE places by hand: `tokens.css`,
+  `index.html`'s two theme-color metas and its pre-paint script,
+  `src/web/theme.ts`, `public/manifest.webmanifest` and `public/icon.svg`
+  (then `npm run icons`). An e2e pins the dark `--bg` as an rgb triple for
+  exactly that reason.
+- **One webfont, on names and titles only.** Bricolage Grotesque 700, the
+  latin subset, ~40 KB, self-hosted in `public/fonts/` — a private room should
+  not tell Google who opened it and when. It is carried by the `.display`
+  class and reaches three things: the door's wordmark, the group's name in the
+  room header, and a sheet's title. **Nothing a dad reads a sentence of ever
+  changes face** — the conversation, the composer, the week and the questions
+  stay on the system stack, which is both the readable answer and the free
+  one. This reverses the earlier "no webfont" rule: a near-monochrome palette
+  has to get its identity from somewhere, and this is the cheapest somewhere.
+  It is preloaded in `index.html`, `crossorigin` even though it is same-origin,
+  because a font is always fetched in CORS mode and without it the browser
+  downloads the file twice.
+- **Plain is still the brief for words.** No gradient, no
   shadow, no pill, no uppercase label — and no box, eyebrow, badge or count
   where the words alone do the job. One system font stack, seven colours,
   hairline rules, and the browser's own defaults wherever they are already

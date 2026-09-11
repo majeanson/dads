@@ -42,7 +42,7 @@ export function Sheet({
           ].join(' ')}
         >
           <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-4 py-3">
-            <Dialog.Title className="m-0 text-base font-semibold">{title}</Dialog.Title>
+            <Dialog.Title className="display m-0 text-base">{title}</Dialog.Title>
             <Dialog.Close asChild>
               {/* The word is still there for anything reading the page aloud,
                   and for a test: an icon with no name is a button nobody can

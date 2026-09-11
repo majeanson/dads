@@ -1,4 +1,5 @@
 import { Moon, Sun, SunMoon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useT, type Lang } from './i18n';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
@@ -36,13 +37,23 @@ export function LangToggle() {
 }
 
 /**
- * Language and theme, as two rows of small buttons.
+ * One row per question, named on the left and answered on the right.
  *
- * Not selects, not switches, not a settings screen: four things a dad might
- * ever change, all visible at once, and the one that is on shows it. The
- * glyphs carry the meaning for the theme — a sun, a moon, a phone — and each
- * has its words underneath for anything that reads the page aloud.
+ * The same shape as a `Switch` row, because they sit in the same list and a
+ * settings screen that answers three questions in three different shapes
+ * makes a dad work out which is which. It also gives these two a visible
+ * name: a bare row of EN / FR and three glyphs was a group label only a
+ * screen reader ever heard.
  */
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-line py-2.5">
+      <span className="text-[0.9375rem] text-muted">{label}</span>
+      {children}
+    </div>
+  );
+}
+
 export function Toggles() {
   const { t } = useT();
   const [theme, setTheme] = useTheme();
@@ -54,24 +65,29 @@ export function Toggles() {
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-      <LangToggle />
-
-      <div className="flex gap-1.5" role="group" aria-label={t('menu.theme')}>
-        {themes.map((th) => (
-          <Button
-            key={th.id}
-            size="icon"
-            aria-pressed={theme === th.id}
-            onClick={() => setTheme(th.id)}
-            title={th.label}
-            className={theme === th.id ? 'border-accent text-accent' : 'text-muted'}
-          >
-            <th.Icon size={16} aria-hidden="true" />
-            <span className="sr-only">{th.label}</span>
-          </Button>
-        ))}
-      </div>
-    </div>
+    <>
+      <Row label={t('menu.language')}>
+        <LangToggle />
+      </Row>
+      <Row label={t('menu.theme')}>
+        {/* The glyphs carry the meaning — a sun, a moon, a phone — and each
+            has its words underneath for anything reading the page aloud. */}
+        <div className="flex gap-1.5" role="group" aria-label={t('menu.theme')}>
+          {themes.map((th) => (
+            <Button
+              key={th.id}
+              size="icon"
+              aria-pressed={theme === th.id}
+              onClick={() => setTheme(th.id)}
+              title={th.label}
+              className={theme === th.id ? 'border-accent text-accent' : 'text-muted'}
+            >
+              <th.Icon size={16} aria-hidden="true" />
+              <span className="sr-only">{th.label}</span>
+            </Button>
+          ))}
+        </div>
+      </Row>
+    </>
   );
 }

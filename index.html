@@ -15,10 +15,22 @@
     <meta name="color-scheme" content="light dark" />
     <!-- The real palette, not an approximation of it: these are --bg from
          tokens.css, light and dark. -->
-    <meta name="theme-color" content="#fffefc" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#131211" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121314" media="(prefers-color-scheme: dark)" />
     <!-- A private room on a public domain. Nothing to index. -->
     <meta name="robots" content="noindex, nofollow" />
+
+    <!-- The one face, on the critical path because it sets the door's wordmark
+         and the room's own name. crossorigin even same-origin: a font is
+         always fetched in CORS mode, and without it the preload is wasted and
+         the file is downloaded twice. -->
+    <link
+      rel="preload"
+      href="/fonts/bricolage-700-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
 
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
@@ -45,7 +57,7 @@
             bar.setAttribute('name', 'theme-color');
             document.head.appendChild(bar);
           }
-          bar.setAttribute('content', theme === 'dark' ? '#131211' : '#fffefc');
+          bar.setAttribute('content', theme === 'dark' ? '#121314' : '#fcfcfb');
         }
         var lang = localStorage.getItem('dads.lang');
         if (lang === 'en' || lang === 'fr') document.documentElement.lang = lang;
