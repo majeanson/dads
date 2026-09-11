@@ -192,6 +192,29 @@ export class RoomDO extends DurableObject<Env> {
       return new Response(null, { status: 204 });
     }
 
+    /**
+     * Take something back out of the room's own memory.
+     *
+     * The archive in D1 can be edited with a SQL statement; this cannot. The
+     * object keeps its own capped tail and serves the backfill from it, so a
+     * line deleted from D1 goes on appearing for everybody until 500 more have
+     * been said — which for five friends is never.
+     *
+     * Only the Worker can reach this, and the Worker only exposes it behind an
+     * ops secret that is not set unless somebody deliberately sets it.
+     */
+    if (url.pathname === '/forget' && request.method === 'POST') {
+      const { like } = (await request.json()) as { like?: unknown };
+      if (typeof like !== 'string' || like.length < 4 || like.length > 200) {
+        return new Response('bad pattern', { status: 400 });
+      }
+      const before = this.ctx.storage.sql
+        .exec<{ n: number }>('SELECT COUNT(*) AS n FROM tail WHERE body LIKE ?', like)
+        .one().n;
+      this.ctx.storage.sql.exec('DELETE FROM tail WHERE body LIKE ?', like);
+      return Response.json({ dropped: before });
+    }
+
     // Something happened outside the socket that the room should know about:
     // a check-in, a commitment, how last week went. Only the Worker can reach
     // this. The board is where the detail lives; this is what makes anyone

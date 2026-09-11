@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { comeIn, named } from './names';
+import { comeIn, named, note } from './names';
 
 /**
  * The standing night, without moving it.
@@ -54,7 +54,7 @@ test('what we should get into survives to the night, and is only its author’s 
   const marc = await comeIn(browser, 'asker');
   const sam = await comeIn(browser, 'reader');
 
-  const thing = `prove: something to bring up ${Date.now()}`;
+  const thing = note('something to bring up');
   await marc.getByRole('button', { name: 'Menu' }).click();
   await marc.getByTestId('dad-night').click();
   await marc.getByLabel('Add', { exact: true }).fill(thing);

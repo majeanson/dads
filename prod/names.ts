@@ -31,6 +31,17 @@ export function named(what: string): string {
   return `${MARK}${what}-${RUN}`;
 }
 
+/**
+ * Anything this suite SAYS carries the marker too, not just anyone it invents.
+ *
+ * The sweep is a body match, and the first version of this used "prove:" for
+ * lines and "prove-" for names — so four lines stayed in the dads' room after
+ * a run that reported itself clean. One marker, everywhere.
+ */
+export function note(what: string): string {
+  return `${MARK}${what} ${Date.now()}`;
+}
+
 /** A new dad in the real room. */
 export async function comeIn(browser: Browser, what: string): Promise<Page> {
   const context = await browser.newContext();

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { comeIn, named } from './names';
+import { comeIn, named, note } from './names';
 
 /**
  * The room itself, against the real Durable Object, D1 and R2.
@@ -15,7 +15,7 @@ test('two dads see each other, and what each other says', async ({ browser }) =>
 
   await expect(marc.getByTestId('connection')).toContainText(/[2-9]|\d\d/);
 
-  const said = `prove: a line at ${Date.now()}`;
+  const said = note('a line');
   await marc.getByLabel('Say something').fill(said);
   await marc.getByRole('button', { name: 'Send' }).click();
 
@@ -152,7 +152,7 @@ test('a line typed with no signal is not lost', async ({ browser }) => {
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
 
   swallow = true;
-  const said = `prove: from a dead spot at ${Date.now()}`;
+  const said = note('from a dead spot');
   await page.getByLabel('Say something').fill(said);
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page.getByText(/waiting for a signal/)).toBeVisible();

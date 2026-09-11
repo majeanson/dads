@@ -30,5 +30,17 @@ declare namespace Cloudflare {
      */
     VAPID_PUBLIC_KEY?: string;
     VAPID_PRIVATE_KEY?: string;
+
+    /**
+     * Lets a line be taken back out of the room, archive and tail together.
+     *
+     * Optional, like everything else here, and absent by default: without it
+     * /api/ops/forget does not exist. It is set in production so that the
+     * suite which runs against the live room can sweep up after itself — and
+     * because five friends will eventually post something they wish they had
+     * not.
+     *   wrangler secret put OPS_SECRET
+     */
+    OPS_SECRET?: string;
   }
 }

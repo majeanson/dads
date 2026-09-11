@@ -591,8 +591,21 @@ people use.
   switches are the group's to set; a suite that demanded Questions be on would
   fail on a Friday because somebody turned them off. Assert against
   `/api/me`, and `test.skip` what is switched off.
-- **Every dad it invents is named `prove-<what>-<run>`** and the teardown
-  deletes exactly those. The run suffix matters: the room's own lines ("X is
+- **Deleting from D1 is only half of a cleanup.** The room serves its backfill
+  from the Durable Object's own capped tail, so a line removed from the archive
+  goes on appearing for everybody until five hundred more have been said —
+  which for five friends is never. The first version of this teardown reported
+  itself clean while sixteen test lines sat in the dads' room.
+- `POST /api/ops/forget` is the half that reaches the object: archive and tail
+  together, matched on a LIKE pattern because the lines it has to reach are the
+  ROOM's own and carry no author. Gated on `OPS_SECRET`, which is absent by
+  default — without it the route answers 404, and it answers 404 for a wrong
+  secret too, so it cannot be found by the shape of its refusal. The pattern is
+  bounded at four characters so `%` cannot empty a room by accident.
+- **Every dad it invents is named `prove-<what>-<run>`, and everything it SAYS
+  carries the same marker** — `note()`, not a hand-written string. The first
+  version used `prove-` for names and `prove:` for lines, and four lines
+  survived a run that reported itself clean. The run suffix matters: the room's own lines ("X is
   in.") carry NO member id, so they cannot be swept by member — they are
   deleted by a body match on the marker, and without a per-run suffix one run
   reads the last one's announcements.

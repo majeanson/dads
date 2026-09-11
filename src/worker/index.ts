@@ -3,6 +3,7 @@ import { IDENTITY_HEADERS } from './RoomDO';
 import { currentSession, join, leave, me } from './routes/auth';
 import { getBoard, putCheckIn, putCommitment, putCommitmentOutcome } from './routes/board';
 import { getNightIcs } from './routes/calendar';
+import { forget } from './routes/ops';
 import { getIce } from './routes/ice';
 import { createInvite } from './routes/invite';
 import { getTodo } from './routes/todo';
@@ -78,6 +79,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'POST /api/leave':
       return leave(prod);
+
+    case 'POST /api/ops/forget':
+      return forget(request, env);
 
     case 'POST /api/invite':
       return createInvite(request, env, prod);

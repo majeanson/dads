@@ -1,5 +1,46 @@
+import { readFileSync } from 'node:fs';
 import { run } from '../scripts/run';
 import { MARK } from './names';
+
+/**
+ * The ops secret, from the environment or from .dev.vars.
+ *
+ * .dev.vars is gitignored and is already where this machine keeps the things
+ * production knows and the repo must not.
+ */
+function opsSecret(): string | null {
+  if (process.env.DADS_OPS_SECRET) return process.env.DADS_OPS_SECRET;
+  try {
+    const line = readFileSync('.dev.vars', 'utf8')
+      .split(/\r?\n/)
+      .find((l) => l.startsWith('OPS_SECRET='));
+    return line ? line.slice('OPS_SECRET='.length).trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Deleting from D1 is only half of it.
+ *
+ * The room serves its backfill from the Durable Object's own capped tail, so a
+ * line taken out of the archive goes on appearing for everybody until five
+ * hundred more have been said — which for five friends is never. This is the
+ * half that reaches the object.
+ */
+async function forgetInTheRoom(base: string, secret: string): Promise<void> {
+  const res = await fetch(`${base}/api/ops/forget`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Dads-Ops': secret },
+    body: JSON.stringify({ like: `%${MARK}%` }),
+  });
+  if (!res.ok) {
+    console.error(`prod teardown: /api/ops/forget answered ${res.status}`);
+    return;
+  }
+  const { archive, tail } = (await res.json()) as { archive: number; tail: number };
+  console.log(`prod: forgot ${archive} archived and ${tail} remembered lines`);
+}
 
 /**
  * Puts the room back.
@@ -14,7 +55,16 @@ import { MARK } from './names';
  * members, so the members go last; the R2 blobs behind any uploads are left
  * to the media cap, which is the thing that owns them.
  */
-export default function globalTeardown(): void {
+export default async function globalTeardown(): Promise<void> {
+  // The room's own memory first, while the members are still there to be
+  // matched: the lines this reaches say their names.
+  const secret = opsSecret();
+  if (secret === null) {
+    console.error('prod teardown: no OPS_SECRET, so the room will keep the lines this run said');
+  } else {
+    await forgetInTheRoom(process.env.PROD_URL ?? 'https://dads.marcportal.com', secret);
+  }
+
   const like = `'${MARK}%'`;
   const mine = `SELECT id FROM members WHERE display_name LIKE ${like}`;
 
