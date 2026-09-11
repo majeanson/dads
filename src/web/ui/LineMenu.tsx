@@ -48,15 +48,26 @@ export function LineMenu({
       <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Content
+          /*
+           * `--radix-popper-available-width` is the room actually left at the
+           * point he pressed, and it is the only honest ceiling here: a menu
+           * opened near the right-hand edge of a 430px phone has about 200px,
+           * and a fixed width ignored that and put the fifth mark off the
+           * screen where nobody could reach it. Capped by the variable and
+           * allowed to wrap, it is never clipped wherever he presses.
+           */
           className={[
-            'z-50 min-w-44 rounded-lg border border-line bg-paper p-1 text-ink shadow-lg',
+            'z-50 w-max max-w-[var(--radix-popper-available-width)] rounded-lg',
+            'border border-line bg-paper p-1 text-ink shadow-lg',
             'data-[state=open]:animate-in data-[state=open]:fade-in',
           ].join(' ')}
+          collisionPadding={12}
           data-testid="line-menu"
         >
-          {/* The marks first, because it is the one anybody presses. A row of
-              five at a thumb's size, the ones already yours outlined. */}
-          <div className="flex gap-1 p-1" role="group" aria-label={t('line.react')}>
+          {/* The marks first, because it is the one anybody presses. They
+              share the row and wrap rather than shrinking to nothing when the
+              menu is squeezed; the ones already yours are outlined. */}
+          <div className="flex flex-wrap gap-0.5" role="group" aria-label={t('line.react')}>
             {REACTIONS.map((emoji) => {
               const on = mine.includes(emoji);
               return (
@@ -68,8 +79,8 @@ export function LineMenu({
                   data-testid={`react-${emoji}`}
                   onClick={() => onReact(emoji, !on)}
                   className={cn(
-                    'grid h-11 w-11 cursor-pointer place-items-center rounded-app text-lg',
-                    'border transition-colors duration-75',
+                    'grid h-10 min-w-9 flex-1 cursor-pointer place-items-center rounded-app',
+                    'border text-lg transition-colors duration-75',
                     on ? 'border-accent bg-panel' : 'border-transparent hover:border-edge',
                   )}
                 >
@@ -97,12 +108,18 @@ export function LineMenu({
 
           {onRetract === undefined ? null : (
             <ContextMenu.Item
-              className={`${ITEM} text-danger`}
+              // Armed, the row fills rather than merely changing its words:
+              // colour is the fastest thing to read, and the menu keeps one
+              // width so nothing moves under the thumb between the two taps.
+              className={cn(
+                ITEM,
+                armed ? 'bg-danger text-paper data-[highlighted]:bg-danger' : 'text-danger',
+              )}
               data-testid="line-retract"
               onSelect={(event) => {
                 if (!armed) {
-                  // Keep the menu open and change what the item says, rather
-                  // than throwing a dialog over the conversation.
+                  // Keep the menu open rather than throwing a dialog over the
+                  // conversation.
                   event.preventDefault();
                   setArmed(true);
                   return;

@@ -133,8 +133,11 @@ export function You({
             data-testid="face-input"
           />
 
+          {/* Quiet, not danger: taking off a picture you can put back in ten
+              seconds is not the same act as taking back something you said,
+              and two red buttons in one app teaches nobody anything. */}
           {hasFace ? (
-            <Button look="danger" disabled={busy} onClick={() => void remove()}>
+            <Button look="quiet" disabled={busy} onClick={() => void remove()}>
               <Trash2 size={16} aria-hidden="true" />
               {t('you.remove_face')}
             </Button>
@@ -159,15 +162,15 @@ export function You({
             onChange={(e) => setDraft(e.target.value)}
             data-testid="my-name"
           />
-          <Button
-            type="submit"
-            look="primary"
-            className="h-11 shrink-0"
-            disabled={busy || draft.trim() === '' || draft.trim() === name}
-          >
-            <Check size={16} aria-hidden="true" />
-            {t('you.save')}
-          </Button>
+          {/* Only once there is something to save. A permanently greyed-out
+              button beside a field he is not editing is a control that spends
+              a row of the screen saying nothing. */}
+          {draft.trim() !== '' && draft.trim() !== name ? (
+            <Button type="submit" look="primary" className="h-11 shrink-0" disabled={busy}>
+              <Check size={16} aria-hidden="true" />
+              {t('you.save')}
+            </Button>
+          ) : null}
         </div>
       </form>
 

@@ -53,6 +53,14 @@ export function Settings({
 
   return (
     <div className="settings grid gap-6" data-testid="settings">
+      {/* First, because it is the only thing in here that is about HIM rather
+          than about the software, and because a man's own name above the
+          group's switches is the right way round. */}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-muted">{t('you.title')}</h2>
+        <You memberId={you.memberId} name={you.name} face={you.face} />
+      </section>
+
       <section>
         <h2 className="mb-2 text-sm font-semibold text-muted">{t('set.rooms')}</h2>
         {/* Any dad, like the night: there is no admin in a room of five
@@ -70,13 +78,6 @@ export function Settings({
             />
           ))}
         </div>
-      </section>
-
-      {/* First, because it is the only thing in here that is about him rather
-          than about the software. */}
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-muted">{t('you.title')}</h2>
-        <You memberId={you.memberId} name={you.name} face={you.face} />
       </section>
 
       <section>

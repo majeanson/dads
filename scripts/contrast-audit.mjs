@@ -27,6 +27,9 @@ const PAIRS = [
   ['danger', 'bg', 4.5, 'an error'],
   ['danger', 'bg-soft', 4.5, 'an error on a panel'],
   ['on-accent', 'accent', 4.5, 'the label on a filled button'],
+  // The one filled danger surface in the app: a "take it back" row once it is
+  // armed. `bg` is the label on it, the way `on-accent` is on the accent.
+  ['bg', 'danger', 4.5, 'the label on an armed destructive row'],
   ['border-strong', 'bg', 3.0, 'the border that makes a control findable'],
   ['border-strong', 'bg-soft', 3.0, 'that border on a panel'],
   ['accent', 'bg', 3.0, 'the focus ring'],

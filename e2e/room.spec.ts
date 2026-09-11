@@ -252,7 +252,7 @@ test('a dad takes a line back, and it goes for everyone', async ({ browser }) =>
 
   // It arms before it fires, because this is irreversible.
   await marc.getByTestId('line-retract').click();
-  await expect(marc.getByTestId('line-retract')).toContainText('sure?');
+  await expect(marc.getByTestId('line-retract')).toContainText('Yes, take it back');
   await marc.getByTestId('line-retract').click();
 
   await expect(his).toHaveCount(0);
@@ -319,4 +319,36 @@ test('a mark says you read it without spending a line', async ({ browser }) => {
 
   await marc.context().close();
   await sam.context().close();
+});
+
+test('every mark is reachable wherever on the line he presses', async ({ browser }) => {
+  // The menu is anchored at the point he pressed, so pressing near the right
+  // edge of a phone leaves it about two hundred pixels — and a fixed width
+  // put the fifth mark off the screen where nobody could reach it. It is
+  // capped by Radix's own available-width now, and wraps rather than clips.
+  const context = await browser.newContext({ viewport: { width: 430, height: 900 } });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill('Otto Edge');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+
+  await page.getByLabel('Say something').fill('pressed at the edge');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const line = page.getByTestId('line').filter({ hasText: 'pressed at the edge' });
+  await expect(line).toBeVisible();
+
+  const box = (await line.boundingBox())!;
+  await page.mouse.click(box.x + box.width - 6, box.y + 10, { button: 'right' });
+  await expect(page.getByTestId('line-menu')).toBeVisible();
+
+  for (const emoji of ['👍', '❤️', '😂', '💪', '🙏']) {
+    const mark = await page.getByTestId(`react-${emoji}`).boundingBox();
+    expect(mark, `${emoji} is not on the screen at all`).not.toBeNull();
+    expect(mark!.x, `${emoji} is off the left`).toBeGreaterThanOrEqual(0);
+    expect(mark!.x + mark!.width, `${emoji} is off the right`).toBeLessThanOrEqual(430);
+  }
+
+  await context.close();
 });

@@ -129,6 +129,12 @@ weakening `sessionSecret()`.
   rule twice: a mark that fails costs nothing and the next frame corrects it,
   where a retraction that vanished locally and survived on the wire would be
   the worst possible lie.
+- **The menu is capped by `--radix-popper-available-width`, never a fixed
+  width.** It is anchored at the point he pressed, so near the right-hand edge
+  of a 430px phone there is about 200px — and a fixed 240px put the fifth mark
+  off the screen where nobody could reach it. Capped by the variable Radix
+  publishes for exactly this, and the marks wrap rather than shrink. Pinned by
+  an e2e that presses the far edge of a line and checks all five.
 - **`LineMenu` is a Radix context menu** — right-click on a laptop and a long
   press on a phone from one primitive, keyboard route included. It wraps only
   chat and prompt lines. The destructive item ARMS on the first select
