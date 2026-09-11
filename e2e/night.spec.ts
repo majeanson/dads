@@ -22,7 +22,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await sam.getByRole('button', { name: 'Come in' }).click();
   await expect(sam.getByTestId('connection')).toHaveText(/here$/);
   // With no night set the room says nothing about it anywhere.
-  await expect(sam.locator('.room-head')).not.toContainText('dad night');
+  await expect(sam.getByTestId('night-soon')).toHaveCount(0);
 
   // It is set where it is answered: the menu's own dad-night item.
   await marc.getByRole('button', { name: 'Menu' }).click();
@@ -33,22 +33,21 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
 
   // Both headers carry it without a reload: "when is it again" should not
   // cost anybody a tap.
-  await expect(marc.locator('.room-head')).toContainText(/dad night/);
-  await expect(sam.locator('.room-head')).toContainText(/dad night/);
+  // Asserted on the control, not on its words: what it says depends on how
+  // close the night is, and this test runs on every day of the week.
+  await expect(marc.getByTestId('night-soon')).toBeVisible();
+  await expect(sam.getByTestId('night-soon')).toBeVisible();
   await expect(
     sam.getByTestId('line').filter({ hasText: 'Marc set dad night to Thursdays at 21:00.' }),
   ).toBeVisible();
 
   // It survives a reload, because it lives in D1 and not in the tab.
   await marc.reload();
-  await expect(marc.locator('.room-head')).toContainText(/dad night/);
+  await expect(marc.getByTestId('night-soon')).toBeVisible();
 
   // And the question the standing slot never answered: who is actually
   // coming. Marc says he is, in front of Sam.
-  await marc
-    .locator('.room-head')
-    .getByRole('button', { name: /dad night/ })
-    .click();
+  await marc.getByTestId('night-soon').click();
   await marc.getByTestId('rsvp-in').click();
   await expect(marc.getByTestId('rsvp-who')).toContainText('In: Marc');
   await expect(sam.getByTestId('line').filter({ hasText: 'Marc is in.' })).toBeVisible();

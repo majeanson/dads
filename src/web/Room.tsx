@@ -315,9 +315,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                   : t('room.reconnecting')}
             </button>
             {soon === null ? null : (
-              <span className="max-[26rem]:block max-[26rem]:pt-0.5">
-                <span className="max-[26rem]:hidden"> · </span>
-                <button type="button" className="count-in" onClick={() => setSheet('night')}>
+              <span className="max-[30rem]:block max-[30rem]:pt-0.5">
+                <span className="max-[30rem]:hidden"> · </span>
+                <button
+                  type="button"
+                  className="count-in max-[30rem]:block max-[30rem]:text-left"
+                  data-testid="night-soon"
+                  onClick={() => setSheet('night')}
+                >
                   {soon}
                 </button>
               </span>
