@@ -814,6 +814,17 @@
     gap: 0.5rem;
   }
 
+  /* A thumbnail, not the photograph: he chose it a second ago and knows what
+     it is. Full size it took the whole width of a phone and pushed the
+     conversation off the top while he typed the caption. */
+  .composer .pending img {
+    flex-shrink: 0;
+    width: 3rem;
+    height: 3rem;
+    object-fit: cover;
+    border-radius: 0.375rem;
+  }
+
   .pending-what {
     flex: 1 1 auto;
     overflow: hidden;
