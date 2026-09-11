@@ -26,7 +26,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
   typing, the call's signalling, the leave-grace and dad-night alarms.
 - **D1** owns everything that must outlive an eviction: members, the message
   archive, prompts, check-ins, commitments, media records.
-- **R2** holds the photos, never publicly — always through the Worker, behind
+- **R2** holds the photos, the clips and the voice notes, never publicly — always through the Worker, behind
   the session check, scoped to the caller's own group.
 
 ## Checks
@@ -34,8 +34,8 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 183, in workerd against the real migrations
-npm run e2e           # 32, against the built stack
+npm test              # 206, in workerd against the real migrations
+npm run e2e           # 36, against the built stack
 npm run audit:contrast  # 24 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run backup        # every D1 table into backups/, gitignored
@@ -116,9 +116,12 @@ made the first summary never arrive.
 
 ## Notes
 
-- There is a member called `abc` in production from a live test. Signing in
-  again on that same device with a real name renames it rather than adding a
-  second dad.
-- Two words is 16 bits. Against the throttle that is weeks of guessing from
-  one address, and the URL is not published anywhere. To rotate:
-  `npm run group:create -- --slug the-dads --name "The Dads" --words 4 --remote`
+- The code is one word, so the only thing behind it is the join throttle: ten
+  wrong guesses per IP per ten minutes, each costing a 100k-iteration PBKDF2.
+  Real friction for a casual guesser, not much against somebody determined who
+  knows the address. The invite links are the better way in. To rotate without
+  costing the group its history:
+  `npm run group:create -- --slug the-dads --rotate --code "<code>" --remote`
+- Every driven check against production joins as a new member, because a fresh
+  browser is a fresh dad. Sweeping them up afterwards:
+  `delete from members where id not in (select distinct member_id from messages)`
