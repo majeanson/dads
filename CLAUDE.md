@@ -475,6 +475,31 @@ secret, custom domain bound by the route in wrangler.toml.
   now, then the comings and goings, newest first (`GET /api/presence`, capped
   at 60). The 15s leave grace still applies, so a wifi→LTE hop records nothing.
 - The roster itself is no longer in the menu — one place to look, not two.
+- **A dad has a name he can change and a face.** Both were fixed at the door,
+  and changing a name meant signing out and rejoining — which here means
+  arriving as a stranger with none of your history. `PUT /api/me/name` writes
+  D1 then tells the room, which re-stamps his open sockets' attachments (the
+  roster is built from those, so without it the other four keep the old name
+  until he reconnects) and says one line. A face changing is not news and says
+  nothing.
+- **A face is NOT a `media` row.** One R2 object per dad at
+  `faces/<group>/<member>`, overwritten in place, with the key on
+  `members.avatar_key`. A photograph posted to the room counts against a shelf
+  of ten and gets pruned, and a man's own face must never be thrown away to
+  make room for a picture of somebody's barbecue. It also means a group of
+  five owns five objects for ever, however often they change them.
+- **`avatar_at` is a version, and it lives in the URL.** It rides the roster
+  as `RosterEntry.face`, and the client builds `/api/face?member=…&v=…`. That
+  is what lets a face be `immutable` for a year and still change the instant a
+  dad sets a new one. `private`, because whatever sits in between is not
+  entitled to keep a photograph of somebody.
+- **Cropped and shrunk in the browser** (`prepareFace`, 320 square, centre
+  crop). Unlike a photograph there is NO fallback to the original: a face the
+  browser cannot decode is a face this app cannot show, and a twelve-megapixel
+  one is not a face.
+- **A dad with no face gets his initials, never an empty circle.** The whole
+  job is telling five men apart and a blank is worse at that than two letters.
+  Split on whitespace, so "Marc-antoine" is M and not MA.
 - **The roster answers the question; the log is behind one more tap.** "In
   and out" is a disclosure button, collapsed by default. Tests that want a
   row from it click `comings` first.

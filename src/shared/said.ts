@@ -26,6 +26,9 @@ export type Said =
   | { k: 'check_in'; name: string; rating: number; note: string }
   | { k: 'commitment'; name: string; body: string }
   | { k: 'outcome'; name: string; body: string; note: string; done: boolean }
+  /** A dad changed the name he goes by. In a room of five, a name changing
+   * with nothing said is four men wondering who the new bloke is. */
+  | { k: 'renamed'; was: string; now: string }
   | { k: 'table_seated'; name: string }
   | { k: 'table_left'; name: string }
   | { k: 'table_started' }
@@ -93,6 +96,11 @@ export function parseSaid(raw: unknown): Said | null {
       return name && body
         ? { k: 'outcome', name, body, note: str(said.note) ?? '', done: said.done === true }
         : null;
+    }
+    case 'renamed': {
+      const was = str(said.was);
+      const now = str(said.now);
+      return was && now ? { k: 'renamed', was, now } : null;
     }
     case 'table_seated':
     case 'table_left': {
@@ -164,6 +172,8 @@ export function describeSaid(t: T, lang: Lang, said: Said, joined = false): stri
           : 'sys.missed';
       return t(key, { name: said.name, body: said.body, note: said.note });
     }
+    case 'renamed':
+      return t('sys.renamed', { was: said.was, now: said.now });
     case 'table_seated':
       return t('sys.table_seated', { name: said.name });
     case 'table_left':

@@ -4,6 +4,7 @@ import { setRooms } from './api';
 import { useT } from './i18n';
 import { Remind } from './Remind';
 import { Toggles } from './Toggles';
+import { You } from './You';
 import { Button } from './ui/Button';
 import { Switch } from './ui/Switch';
 import type { RoomsOpen } from '../shared/protocol';
@@ -15,7 +16,16 @@ import type { RoomsOpen } from '../shared/protocol';
  * what the GROUP has open, which any dad may change and all of them then see,
  * and what THIS dad reads it in, which is his alone and lives on his device.
  */
-export function Settings({ rooms, onSignOut }: { rooms: RoomsOpen; onSignOut: () => void }) {
+export function Settings({
+  rooms,
+  you,
+  onSignOut,
+}: {
+  rooms: RoomsOpen;
+  /** Him, from the roster — which is where his face's version lives. */
+  you: { memberId: string; name: string; face?: number };
+  onSignOut: () => void;
+}) {
   const { t } = useT();
   // Optimistic: the switch answers the finger, and the socket brings everyone
   // else's copy along a moment later.
@@ -60,6 +70,13 @@ export function Settings({ rooms, onSignOut }: { rooms: RoomsOpen; onSignOut: ()
             />
           ))}
         </div>
+      </section>
+
+      {/* First, because it is the only thing in here that is about him rather
+          than about the software. */}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-muted">{t('you.title')}</h2>
+        <You memberId={you.memberId} name={you.name} face={you.face} />
       </section>
 
       <section>

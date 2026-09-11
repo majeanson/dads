@@ -8,6 +8,7 @@ import { getIce } from './routes/ice';
 import { createInvite } from './routes/invite';
 import { getTodo } from './routes/todo';
 import { getMedia, listMedia, uploadMedia } from './routes/media';
+import { deleteFace, getFace, putFace, putName } from './routes/me';
 import { setNight } from './routes/night';
 import { getPresence } from './routes/presence';
 import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
@@ -76,6 +77,18 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/me':
       return me(request, env, prod);
+
+    case 'PUT /api/me/name':
+      return putName(request, env, prod);
+
+    case 'PUT /api/me/face':
+      return putFace(request, env, prod);
+
+    case 'DELETE /api/me/face':
+      return deleteFace(request, env, prod);
+
+    case 'GET /api/face':
+      return getFace(request, env, url, prod);
 
     case 'POST /api/leave':
       return leave(prod);
@@ -197,6 +210,9 @@ async function handleWs(
   headers.set(IDENTITY_HEADERS.groupId, session.group.id);
   headers.set(IDENTITY_HEADERS.memberId, session.member.id);
   headers.set(IDENTITY_HEADERS.name, session.member.displayName);
+  if (session.member.avatarAt !== null) {
+    headers.set(IDENTITY_HEADERS.face, String(session.member.avatarAt));
+  }
   if (session.group.dadNight) {
     headers.set(IDENTITY_HEADERS.night, JSON.stringify(session.group.dadNight));
   }

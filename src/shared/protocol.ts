@@ -84,6 +84,14 @@ export interface RoomsOpen {
 export interface RosterEntry {
   memberId: string;
   name: string;
+  /**
+   * When this dad last set his face, or absent if he has none.
+   *
+   * A version rather than a URL: the client builds `/api/face?member=…&v=…`
+   * from it, which is what lets the picture be cached for a year and still
+   * change the moment he sets a new one.
+   */
+  face?: number;
 }
 
 /**

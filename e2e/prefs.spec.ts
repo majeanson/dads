@@ -191,3 +191,42 @@ test('the phone’s own chrome follows the theme it was asked for', async ({ pag
   await page.getByRole('button', { name: 'Follow the phone' }).click();
   expect(await bar()).toBeNull();
 });
+
+test('a dad changes the name he goes by, and the others are told', async ({ browser }) => {
+  const marc = await browser.newContext();
+  const marcPage = await marc.newPage();
+  await comeIn(marcPage, 'Gus');
+  const sam = await browser.newContext();
+  const samPage = await sam.newPage();
+  await comeIn(samPage, 'Hank');
+
+  await marcPage.getByRole('button', { name: 'Menu' }).click();
+  await marcPage.getByRole('button', { name: 'Settings' }).click();
+  await marcPage.getByTestId('my-name').fill('Gus-antoine');
+  await marcPage.getByTestId('you').getByRole('button', { name: 'Save' }).click();
+
+  // The other dad hears it by name rather than watching a stranger appear in
+  // the roster.
+  await expect(
+    samPage.getByTestId('line').filter({ hasText: 'Gus goes by Gus-antoine now' }),
+  ).toBeVisible();
+
+  // And the roster changes without anybody reconnecting.
+  await samPage.getByTestId('connection').click();
+  await expect(
+    samPage.getByTestId('roster-entry').filter({ hasText: 'Gus-antoine' }),
+  ).toBeVisible();
+
+  await marc.close();
+  await sam.close();
+});
+
+test('a dad with no face still gets his initials', async ({ page }) => {
+  await comeIn(page, 'Ivan Nash');
+  await page.getByTestId('connection').click();
+  // Never an empty grey circle: the whole point is telling five men apart,
+  // and a blank is worse at that than two letters.
+  await expect(page.getByTestId('roster-entry').filter({ hasText: 'Ivan Nash' })).toContainText(
+    'IN',
+  );
+});

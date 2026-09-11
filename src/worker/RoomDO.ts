@@ -45,6 +45,8 @@ export const IDENTITY_HEADERS = {
   groupId: 'X-Dads-Group-Id',
   memberId: 'X-Dads-Member-Id',
   name: 'X-Dads-Name',
+  /** When he last set his face, so the roster can carry it. Absent: no face. */
+  face: 'X-Dads-Face',
   /** The group's dad night as JSON, or absent for a group with none set. */
   night: 'X-Dads-Night',
 } as const;
@@ -99,6 +101,8 @@ const REMIND_BEFORE_MS = 24 * 60 * 60 * 1000;
 interface SocketIdentity {
   memberId: string;
   name: string;
+  /** The version of his face, for the roster. Absent means he has none. */
+  face?: number;
   /** His microphone is off. Held with `inCall` and for the same reason: it is
    * true only while this socket is. */
   muted?: boolean;
@@ -224,6 +228,48 @@ export class RoomDO extends DurableObject<Env> {
      * Only the Worker can reach this, and the Worker only exposes it behind an
      * ops secret that is not set unless somebody deliberately sets it.
      */
+    /**
+     * A dad changed his name or his face.
+     *
+     * His own open sockets are carrying the old one, and the roster is built
+     * from those attachments — so without this the other four would go on
+     * seeing the old name until he happened to reconnect. Only the Worker can
+     * reach this, and it has already written the change to D1.
+     */
+    if (url.pathname === '/member' && request.method === 'POST') {
+      const { groupId, memberId, name, face, was } = (await request.json()) as {
+        groupId: string;
+        memberId: string;
+        name: string;
+        face: number | null;
+        was?: string;
+      };
+      // The object learns its group id from a socket upgrade, and this can be
+      // the first thing it ever hears — a dad who renames himself before any
+      // connection would otherwise get a line the archive never sees.
+      this.ctx.storage.sql.exec(
+        `INSERT OR REPLACE INTO meta (key, value) VALUES ('group_id', ?)`,
+        groupId,
+      );
+      for (const ws of this.ctx.getWebSockets(memberId)) {
+        const who = ws.deserializeAttachment() as SocketIdentity | null;
+        if (who !== null) {
+          ws.serializeAttachment({
+            ...who,
+            name,
+            face: face ?? undefined,
+          } satisfies SocketIdentity);
+        }
+      }
+      this.broadcastRoster();
+      // A name changing with nothing said is four men wondering who the new
+      // bloke is. A face changing is not news.
+      if (typeof was === 'string' && was !== '' && was !== name) {
+        await this.say(name, { k: 'renamed', was, now: name });
+      }
+      return Response.json({ ok: true });
+    }
+
     if (url.pathname === '/forget' && request.method === 'POST') {
       const { like } = (await request.json()) as { like?: unknown };
       if (typeof like !== 'string' || like.length < 4 || like.length > 200) {
@@ -279,7 +325,9 @@ export class RoomDO extends DurableObject<Env> {
 
     const wasPresent = this.isPresent(memberId);
     this.ctx.acceptWebSocket(server, [memberId]);
-    server.serializeAttachment({ memberId, name } satisfies SocketIdentity);
+    const faceHeader = Number(request.headers.get(IDENTITY_HEADERS.face) ?? '');
+    const face = Number.isFinite(faceHeader) && faceHeader > 0 ? faceHeader : undefined;
+    server.serializeAttachment({ memberId, name, face } satisfies SocketIdentity);
 
     const resuming = Number.isFinite(after) && after > 0;
     const hello: ServerFrame = {

@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight, LogIn, LogOut, MicOff, Phone } from 'lucide-
 import { useEffect, useState } from 'react';
 import type { CallMember } from '../shared/protocol';
 import { fetchPresence, type PresenceEvent } from './api';
+import { Face } from './Face';
 import { useT } from './i18n';
 
 /** Long enough to be free, short enough that a leave lands while you look. */
@@ -37,7 +38,7 @@ export function Here({
   roster,
   call,
 }: {
-  roster: { memberId: string; name: string; you: boolean }[];
+  roster: { memberId: string; name: string; you: boolean; face?: number }[];
   call: CallMember[];
 }) {
   const { t, lang } = useT();
@@ -79,10 +80,12 @@ export function Here({
                 key={m.memberId}
                 data-testid="roster-entry"
                 data-on-call={c ? 'yes' : undefined}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel px-3 py-1.5 text-sm"
+                className="inline-flex items-center gap-2 rounded-full border border-line bg-paper py-1 pr-3 pl-1 text-sm"
               >
-                {/* A dot, not a word: the list is of people who are here. */}
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+                {/* His face, or his initials. The dot went with it: a list
+                    titled "Who's here" did not need a mark on every row
+                    saying each of them was here. */}
+                <Face memberId={m.memberId} name={m.name} version={m.face} size={26} />
                 {m.name}
                 {m.you ? t('here.you') : ''}
                 {c ? (

@@ -804,6 +804,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             roster={room.roster.map((m) => ({
               memberId: m.memberId,
               name: m.name,
+              face: m.face,
               you: m.memberId === session.member.id,
             }))}
             call={room.call}
@@ -844,7 +845,17 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
       {sheet === 'settings' ? (
         <Sheet title={t('set.title')} onClose={() => setSheet(null)}>
-          <Settings rooms={room.rooms} onSignOut={onSignOut} />
+          <Settings
+            rooms={room.rooms}
+            // From the roster rather than the session: the session was
+            // written at the door and does not know about a face set since.
+            you={{
+              memberId: session.member.id,
+              name: room.you?.name ?? session.member.displayName,
+              face: room.roster.find((m) => m.memberId === session.member.id)?.face,
+            }}
+            onSignOut={onSignOut}
+          />
         </Sheet>
       ) : null}
     </main>

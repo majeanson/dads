@@ -1,0 +1,73 @@
+import { faceUrl } from './api';
+import { cn } from './ui/cn';
+
+/**
+ * A dad, at a glance.
+ *
+ * His picture when he has set one, and his initials when he has not — never
+ * an empty grey circle, because the whole point is telling five men apart and
+ * a blank is worse at that than two letters. The letters come from the name,
+ * so a dad who never sets a face still gets something that is his.
+ *
+ * Decorative by default: wherever this appears the name is already beside it,
+ * and a screen reader announcing "Marc, photo of Marc, Marc" is worse than
+ * silence.
+ */
+export function Face({
+  memberId,
+  name,
+  version,
+  size = 28,
+  className,
+}: {
+  memberId: string;
+  name: string;
+  version: number | undefined;
+  size?: number;
+  className?: string;
+}) {
+  const src = faceUrl(memberId, version);
+  const box = { width: size, height: size } as const;
+
+  return src === null ? (
+    <span
+      aria-hidden="true"
+      style={{ ...box, fontSize: Math.round(size * 0.4) }}
+      className={cn(
+        'inline-grid shrink-0 place-items-center rounded-full',
+        'bg-panel font-semibold text-muted uppercase',
+        className,
+      )}
+    >
+      {initials(name)}
+    </span>
+  ) : (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={size}
+      loading="lazy"
+      decoding="async"
+      style={box}
+      className={cn('inline-block shrink-0 rounded-full object-cover', className)}
+    />
+  );
+}
+
+/**
+ * One letter, or two for a name with a second word.
+ *
+ * Split on whitespace rather than taking the first two characters, so
+ * "Marc-antoine" is M and not MA — a hyphen is one name, a space is two.
+ * Code points, not char codes: a name can start outside the basic plane.
+ */
+export function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  const first = [...words[0]!][0] ?? '';
+  if (words.length === 1) return first;
+  const last = [...words[words.length - 1]!][0] ?? '';
+  return first + last;
+}

@@ -44,7 +44,7 @@ export interface Session {
     dadNight: DadNight | null;
     rooms: RoomsOpen;
   };
-  member: { id: string; displayName: string };
+  member: { id: string; displayName: string; avatarAt: number | null };
 }
 
 /** Columns to the shared shape. Absent means on: a group made before these
@@ -188,7 +188,9 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
       dadNight: nightFrom(group),
       rooms: roomsFrom(group),
     },
-    member: { id: memberId, displayName },
+    // A dad coming through the door has no face yet, and a returning one is
+    // about to be handed his by the roster anyway.
+    member: { id: memberId, displayName, avatarAt: null },
   };
 
   return Response.json(
@@ -232,7 +234,7 @@ export async function currentSession(
   const row = await env.DB.prepare(
     `SELECT m.id AS member_id, m.display_name, g.id AS group_id, g.slug, g.name,
             g.dad_night_weekday, g.dad_night_time, g.dad_night_tz,
-            g.questions_on, g.week_on, g.table_on
+            g.questions_on, g.week_on, g.table_on, m.avatar_at
        FROM members m JOIN groups g ON g.id = m.group_id
       WHERE m.id = ? AND m.group_id = ?`,
   )
@@ -249,6 +251,7 @@ export async function currentSession(
       questions_on: number;
       week_on: number;
       table_on: number;
+      avatar_at: number | null;
     }>();
 
   if (!row) return null;
@@ -260,6 +263,6 @@ export async function currentSession(
       dadNight: nightFrom(row),
       rooms: roomsFrom(row),
     },
-    member: { id: row.member_id, displayName: row.display_name },
+    member: { id: row.member_id, displayName: row.display_name, avatarAt: row.avatar_at },
   };
 }

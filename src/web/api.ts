@@ -343,3 +343,46 @@ export async function fetchPresence(): Promise<PresenceEvent[]> {
   if (!res.ok) throw new Error(`GET /api/presence ${res.status}`);
   return ((await res.json()) as { events: PresenceEvent[] }).events;
 }
+
+/**
+ * A dad's own name, changed after the door.
+ *
+ * It was settable exactly once, and changing it meant signing out and
+ * rejoining — which in this app means arriving as a stranger with none of
+ * your history. The room announces it by name, because a name changing with
+ * nothing said is four men wondering who the new bloke is.
+ */
+export async function setMyName(name: string): Promise<void> {
+  const res = await fetch('/api/me/name', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/me/name ${res.status}`);
+}
+
+/** His face. Square, shrunk in the browser, replacing whatever was there. */
+export async function setMyFace(blob: Blob): Promise<void> {
+  const res = await fetch('/api/me/face', {
+    method: 'PUT',
+    headers: { 'Content-Type': blob.type || 'image/jpeg' },
+    body: blob,
+  });
+  if (!res.ok) throw new Error(`PUT /api/me/face ${res.status}`);
+}
+
+export async function clearMyFace(): Promise<void> {
+  const res = await fetch('/api/me/face', { method: 'DELETE' });
+  if (!res.ok) throw new Error(`DELETE /api/me/face ${res.status}`);
+}
+
+/**
+ * Where a dad's face lives, or null for a dad who has not set one.
+ *
+ * The version is in the URL rather than in a header, which is what lets the
+ * picture be cached for a year: a new face is a new `v` and therefore a new
+ * URL, so nothing is ever revalidated and nothing is ever stale.
+ */
+export function faceUrl(memberId: string, version: number | undefined): string | null {
+  return version === undefined ? null : `/api/face?member=${memberId}&v=${version}`;
+}
