@@ -123,9 +123,23 @@
     box-sizing: border-box;
   }
 
+  /* From the home screen this has to feel like an app, not a page in a
+     browser. No rubber-band at either end of the document, no pull-to-refresh
+     — the message list is what scrolls, and it keeps its bounce to itself
+     (`overscroll-behavior: contain` below). Nothing zooms on a double tap and
+     nothing flashes grey under a thumb; pinch-zoom is left alone on purpose,
+     because a man who cannot read the text is not a design goal. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
   body {
     margin: 0;
     min-height: 100dvh;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
     background: var(--bg);
     color: var(--text);
     font-family:
@@ -232,7 +246,10 @@
        included, is half off the right-hand side and the room scrolls sideways
        for the rest of the evening. */
     width: 100%;
-    height: 100dvh;
+    /* As tall as what he can see, not as tall as the screen: with the
+       keyboard up the two differ by a third, and it is the conversation that
+       should give up the space, not the composer. See useVisualViewport. */
+    height: var(--app-h, 100dvh);
     overflow-x: clip;
     /* viewport-fit=cover lets the page under the rounded corners and the
        status bar, and these are what pay that back: the home indicator at the
@@ -359,14 +376,23 @@
     padding: 0;
     list-style: none;
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .line {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    align-items: baseline;
+    /* Start, not baseline. Baseline lines the name up with the LAST line of
+       what he said — which for a photograph puts "Marc-antoine" underneath it,
+       as if he were captioning somebody else's picture. The clock takes a hair
+       of padding so it still sits on the first line of text. */
+    align-items: start;
     gap: 0.6rem;
     padding: 0.25rem 0;
+  }
+
+  .line .when {
+    padding-top: 0.2em;
   }
 
   .line .who {
@@ -752,6 +778,12 @@
   /* The head-count is a way in, not a link: a group of five men does not need
      its own number underlined in blue. */
   .count-in {
+    display: inline-flex;
+    align-items: center;
+    /* A thumb's worth of height without a thumb's worth of header: the hit
+       area reaches into the space above and below, the layout does not. */
+    min-height: 2.75rem;
+    margin-block: -0.75rem;
     padding: 0;
     border: 0;
     background: none;

@@ -134,7 +134,7 @@ export function TableColumn({
             href={table.shareUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm no-underline"
+            className="inline-flex h-8 items-center gap-1.5 rounded-app border border-edge px-2.5 text-sm text-ink no-underline transition-colors duration-75 hover:border-accent hover:text-accent max-[30rem]:w-8 max-[30rem]:justify-center max-[30rem]:px-0"
             title={t('t.own_tab')}
           >
             <ExternalLink size={14} aria-hidden="true" />

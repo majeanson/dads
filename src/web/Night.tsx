@@ -70,7 +70,7 @@ export function Night({ night, you }: { night: DadNight | null; you: string }) {
                   decision actually gets made. */}
               <a
                 href="/api/night.ics"
-                className="shrink-0 text-muted"
+                className="inline-grid h-9 w-9 shrink-0 place-items-center rounded-app border border-edge text-muted no-underline transition-colors duration-75 hover:border-accent hover:text-accent"
                 title={t('n.calendar')}
                 data-testid="night-ics"
               >

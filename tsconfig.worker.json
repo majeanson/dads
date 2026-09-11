@@ -9,6 +9,7 @@
   },
   "include": [
     "src/web/messageGroups.ts",
+    "src/web/fresh.ts",
     "src/shared/**/*.ts",
     "src/worker/**/*.ts",
     "test/**/*.ts",

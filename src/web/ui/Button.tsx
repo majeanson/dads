@@ -40,7 +40,7 @@ const button = cva(
         sm: 'h-8 px-2.5 text-sm',
         md: 'h-10 px-3.5 text-[0.9375rem]',
         /** Square, for a control that is an icon and nothing else. */
-        icon: 'h-9 w-9 p-0',
+        icon: 'h-10 w-10 p-0',
         iconSm: 'h-7 w-7 p-0 text-sm',
       },
       /** Fills its row, for a list of choices. */

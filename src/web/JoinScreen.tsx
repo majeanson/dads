@@ -4,6 +4,7 @@ import { join, type JoinFailure, type Session } from './api';
 import { plural, useT, type Key, type T } from './i18n';
 import { LangToggle } from './Toggles';
 import { Button } from './ui/Button';
+import { useFreshBuild } from './useFreshBuild';
 import { FIELD } from './ui/field';
 
 // One message for a wrong code and for a code that belongs to no group: the
@@ -43,6 +44,8 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
   const [invite] = useState(inviteFromUrl);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
+  // The door too, held back while he is typing into it.
+  useFreshBuild(code !== '' || name !== '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -88,7 +91,9 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
               onChange={(e) => setCode(e.target.value)}
               autoComplete="off"
               autoCapitalize="none"
+              autoCorrect="off"
               spellCheck={false}
+              enterKeyHint="next"
               className={FIELD}
               // The only thing anyone comes here to do.
               autoFocus
@@ -106,13 +111,15 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoComplete="given-name"
+            autoCapitalize="words"
+            enterKeyHint="go"
             maxLength={32}
             className={FIELD}
             autoFocus={invite !== ''}
           />
         </div>
 
-        <Button type="submit" look="primary" disabled={busy} className="mt-1 justify-center">
+        <Button type="submit" look="primary" disabled={busy} className="mt-1 h-11 justify-center">
           {busy ? t('join.opening') : t('join.come_in')}
           <ArrowRight size={16} aria-hidden="true" />
         </Button>

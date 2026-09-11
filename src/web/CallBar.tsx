@@ -54,7 +54,7 @@ export function CallBar({
     <div className="call" data-testid="call" data-big={enlarged === null ? undefined : 'yes'}>
       <div className="call-actions">
         <Button
-          size="sm"
+          size="md"
           aria-pressed={muted}
           onClick={onToggleMute}
           className={muted ? 'border-danger text-danger' : ''}
@@ -63,7 +63,7 @@ export function CallBar({
           <span className="max-[26rem]:sr-only">{muted ? t('call.unmute') : t('call.mute')}</span>
         </Button>
         <Button
-          size="sm"
+          size="md"
           aria-pressed={camera}
           onClick={onToggleCamera}
           className={camera ? 'border-accent text-accent' : ''}
@@ -77,7 +77,7 @@ export function CallBar({
             {camera ? t('call.camera_off') : t('call.camera_on')}
           </span>
         </Button>
-        <Button size="sm" look="danger" onClick={onLeave} aria-label={t('call.leave')}>
+        <Button size="md" look="danger" onClick={onLeave} aria-label={t('call.leave')}>
           <PhoneOff size={15} aria-hidden="true" />
           <span className="max-[26rem]:sr-only">{t('call.leave')}</span>
         </Button>
@@ -168,7 +168,7 @@ export function JoinCall({
         onClick={onJoin}
         title={t(`call.${state}`)}
         aria-label={t('call.retry')}
-        className="max-[48rem]:w-9 max-[48rem]:px-0"
+        className="max-[48rem]:h-10 max-[48rem]:w-10 max-[48rem]:px-0"
       >
         <MicOff size={15} aria-hidden="true" />
         <span className="max-[48rem]:sr-only">{t('call.retry')}</span>
@@ -183,7 +183,7 @@ export function JoinCall({
       onClick={onJoin}
       disabled={state === 'joining'}
       aria-label={t('call.join')}
-      className="max-[48rem]:w-9 max-[48rem]:px-0"
+      className="max-[48rem]:h-10 max-[48rem]:w-10 max-[48rem]:px-0"
     >
       <Phone size={15} aria-hidden="true" />
       <span className="max-[48rem]:sr-only">

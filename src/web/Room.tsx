@@ -29,6 +29,8 @@ import { describeSaid } from '../shared/said';
 import { nightItem, nightSoon } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
+import { useFreshBuild } from './useFreshBuild';
+import { useVisualViewport } from './useVisualViewport';
 import { toRows } from './messageGroups';
 import { PromptCard } from './PromptCard';
 import { PromptList } from './PromptList';
@@ -88,7 +90,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const [unseen, setUnseen] = useState(0);
   const recorder = useRecorder();
   const picker = useRef<HTMLInputElement>(null);
-  const bottom = useRef<HTMLDivElement>(null);
+  const say = useRef<HTMLInputElement>(null);
+  const bottom = useRef<HTMLLIElement>(null);
   const lines = useRef<HTMLOListElement>(null);
 
   const call = useCall({
@@ -161,6 +164,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     setUnseen(0);
   }, []);
 
+  // The keyboard coming up takes a third of the list. If he was reading the
+  // newest line, he still is.
+  const keepBottom = useCallback(() => {
+    if (pinned) bottom.current?.scrollIntoView({ block: 'end' });
+  }, [pinned]);
+  useVisualViewport(keepBottom);
+
   // Coming back to the tab is seeing it.
   useEffect(() => {
     function seen() {
@@ -230,6 +240,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     if (pending === null) {
       room.send(body);
       setDraft('');
+      // The keyboard stays up: he said one thing, he is probably saying
+      // another. Blurring here would drop it after every line on a phone.
+      say.current?.focus();
       return;
     }
 
@@ -248,6 +261,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     setDraft('');
     setPending(null);
     if (picker.current !== null) picker.current.value = '';
+    say.current?.focus();
   }
 
   /**
@@ -274,6 +288,18 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   }
 
   const recording = recorder.state.kind === 'recording' || recorder.state.kind === 'asking';
+
+  // A new build waits for his hands to be free: a line half typed, a voice
+  // note going, a photo chosen, a call in progress — none of these survive a
+  // reload, and none of them is worth losing for one.
+  useFreshBuild(
+    draft.trim() !== '' ||
+      pending !== null ||
+      sending ||
+      recording ||
+      call.state === 'joining' ||
+      call.state === 'in',
+  );
 
   const typingNames = [...room.typing.entries()]
     .filter(([id]) => id !== session.member.id)
@@ -335,7 +361,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             size="sm"
             onClick={() => setSheet('menu')}
             aria-label={t('room.menu')}
-            className="relative max-[48rem]:w-9 max-[48rem]:px-0"
+            // A thumb's square on a phone: this and the call are the two
+            // things pressed most, and they sit under the notch.
+            className="relative max-[48rem]:h-10 max-[48rem]:w-10 max-[48rem]:px-0"
           >
             <MenuIcon size={16} aria-hidden="true" />
             <span className="max-[48rem]:sr-only">{t('room.menu')}</span>
@@ -426,7 +454,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 </li>
               ),
             )}
-            <div ref={bottom} />
+            {/* The scroll target, and nothing else: an item so the list is
+                still a list to a screen reader, hidden so it is not counted. */}
+            <li ref={bottom} aria-hidden="true" className="m-0 h-0 p-0" />
           </ol>
 
           {!pinned && unseen > 0 ? (
@@ -505,6 +535,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 <Button
                   look="danger"
                   size="icon"
+                  className="h-11 w-11"
                   aria-label={t('composer.cancel')}
                   onClick={recorder.cancel}
                 >
@@ -514,6 +545,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 <Button
                   look="primary"
                   size="icon"
+                  className="h-11 w-11"
                   aria-label={t('composer.send')}
                   disabled={sending}
                   onClick={() => void sendVoice()}
@@ -527,7 +559,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 <label
                   htmlFor="attach"
                   className={cn(
-                    'grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-app',
+                    'grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-app',
                     'border border-edge text-muted transition-colors duration-75',
                     'hover:border-accent hover:text-accent',
                     'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
@@ -549,8 +581,11 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                   {t('composer.say')}
                 </label>
                 <input
+                  ref={say}
                   id="say"
-                  className="min-w-0 rounded-lg border-0 bg-transparent px-2 text-[0.9375rem] text-ink placeholder:text-muted/70 focus:outline-none"
+                  // 16px: anything smaller and iOS zooms the page in when he
+                  // taps the field, and does not zoom it back out.
+                  className="h-11 min-w-0 rounded-lg border-0 bg-transparent px-2 text-base text-ink placeholder:text-muted/70 focus:outline-none"
                   value={draft}
                   onChange={(e) => {
                     setDraft(e.target.value);
@@ -558,6 +593,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                   }}
                   placeholder={pending === null ? t('composer.say') : t('composer.caption')}
                   autoComplete="off"
+                  autoCapitalize="sentences"
+                  // The keyboard's own return key says what it does here.
+                  enterKeyHint="send"
                 />
                 {/* One or the other, never both: with nothing typed the room is
                 asking him to speak, and the moment he types a letter it is
@@ -566,6 +604,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                   <Button
                     look="plain"
                     size="icon"
+                    className="h-11 w-11"
                     aria-label={t('composer.record')}
                     disabled={sending}
                     onClick={() => void recorder.start()}
@@ -579,8 +618,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                     type="submit"
                     look="primary"
                     size="icon"
+                    className="h-11 w-11"
                     aria-label={t('composer.send')}
                     disabled={sending || (!draft.trim() && pending === null)}
+                    // Pressing Send must not take focus off the field: on a
+                    // phone that is the keyboard folding away after every
+                    // line, and on iOS it is the composer jumping too.
+                    onMouseDown={(e) => e.preventDefault()}
                   >
                     <SendHorizontal size={18} aria-hidden="true" />
                     <span className="sr-only">

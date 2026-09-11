@@ -56,6 +56,16 @@ export const E2E_INVITE_GROUP = {
   name: 'The E2E Invite',
   code: 'clover ferry basalt wren',
 };
+export const E2E_FRESH_GROUP = {
+  slug: 'e2e-fresh',
+  name: 'The E2E Fresh',
+  code: 'ember quartz willow lark',
+};
+export const E2E_A11Y_GROUP = {
+  slug: 'e2e-a11y',
+  name: 'The E2E Access',
+  code: 'moss falcon tundra reed',
+};
 const GROUPS = [
   E2E_CALL_GROUP,
   E2E_GROUP,
@@ -67,6 +77,8 @@ const GROUPS = [
   E2E_PREFS_GROUP,
   E2E_LEAVE_GROUP,
   E2E_INVITE_GROUP,
+  E2E_FRESH_GROUP,
+  E2E_A11Y_GROUP,
 ];
 
 /**

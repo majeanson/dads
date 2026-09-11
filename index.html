@@ -5,7 +5,13 @@
     <!-- viewport-fit=cover so the page owns the whole screen on a notched
          phone; tokens.css pays that back with safe-area padding, which is what
          keeps the Send button off the home indicator. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- interactive-widget=resizes-content: on Android the keyboard shrinks
+         the page rather than covering it, so the composer stays above the
+         keys. iOS ignores it; useVisualViewport does the same job there. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="color-scheme" content="light dark" />
     <!-- The real palette, not an approximation of it: these are --bg from
          tokens.css, light and dark. -->

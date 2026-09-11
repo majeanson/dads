@@ -37,6 +37,9 @@ test('two dads see each other and each other’s lines', async ({ browser }) => 
   await expect(sam.getByTestId('line').filter({ hasText: 'rough bedtime tonight' })).toBeVisible();
   await expect(marc.getByTestId('line').filter({ hasText: 'rough bedtime tonight' })).toBeVisible();
   await expect(marc.getByLabel('Say something')).toHaveValue('');
+  // Still his: pressing Send did not take the keyboard away. On a phone that
+  // is the difference between a conversation and a form.
+  await expect(marc.getByLabel('Say something')).toBeFocused();
 
   await sam.getByLabel('Say something').fill('same here, twice');
   await sam.getByLabel('Say something').press('Enter');

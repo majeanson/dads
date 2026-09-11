@@ -537,6 +537,42 @@ icons` rasterises the favicon, the 192/512 and the apple-touch-icon from it
 - **The door carries the language toggle** and nothing else: a francophone
   whose browser says English could not say otherwise until he was inside.
 
+## From the home screen
+
+- **A home-screen app is not loaded fresh; it is woken.** Nothing is cached
+  (the service worker keeps no shell, every asset revalidates), so a cold load
+  is always the newest build — but iOS keeps the page alive for days, and a
+  dad goes on running last week's build while the room runs this one.
+  `useFreshBuild` asks the door for its bundle name (`bundleOf`, pure and
+  tested) on every return to the foreground, at most once a minute, and
+  reloads when it differs. It holds back while he is busy — a draft, a photo
+  chosen, a recording, a call — and remembers the answer so the next return
+  reloads without asking again. A cold load is never checked: `pageshow`
+  counts only with `persisted`. Covered by `e2e/fresh.spec.ts`.
+- **The keyboard covers the page on iOS; it does not shrink it.** `100dvh` is
+  still the whole screen with the keys up, so `main.room` is
+  `var(--app-h, 100dvh)` and `useVisualViewport` keeps that at the visual
+  viewport's height. Android is told `interactive-widget=resizes-content` in
+  the viewport meta instead. Do not go back to a bare `100dvh`.
+- **Text fields are 16px, never 15.** Under 16px iOS zooms the page in on
+  focus and does not zoom it back. `FIELD` and the composer both say
+  `text-base` for that reason; it is not a taste.
+- **Send keeps the keyboard.** `onMouseDown` preventDefault on the Send button
+  and a refocus after posting — otherwise every line on a phone ends with the
+  keyboard folding away. `room.spec.ts` asserts the field is still focused.
+- **Nothing bounces and nothing zooms on a double tap.** `overscroll-behavior:
+none` on html and body, `contain` on the list and the sheets, and
+  `touch-action: manipulation`. Pinch zoom is left alone on purpose. The app
+  has one history entry, so there is nothing for an edge-swipe to go back to;
+  jaffre's hash navigation inside the frame is the one exception and is its own.
+- **A thumb is 44px.** The composer's three controls and its field are `h-11`,
+  the header's two icons are `h-10 w-10` on a phone, the in-call row is `md`,
+  and the head-count's hit area reaches beyond its line. `prod/screens.spec.ts`
+  refuses anything under 28px; the number here is the goal, that is the floor.
+- **`e2e/a11y.spec.ts` runs axe over every scene, both themes**, and fails on
+  serious or critical. It found the scroll sentinel `div` inside the `ol` on
+  its first run; it is an empty hidden `li` now.
+
 ## The talk column is flex, not grid rows
 
 The call bar renders only while there IS a call, and with named grid rows the
