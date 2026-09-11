@@ -181,6 +181,25 @@ async function pruneShelf(
   return results.length;
 }
 
+/**
+ * One piece of media, gone: the blob and the record together.
+ *
+ * For a line taken back. A photo that outlived the line it was on is the
+ * whole reason anybody wants to take one back, so this is not optional
+ * tidying — it is the feature. Scoped to the group like everything else that
+ * touches the bucket, so an id from another room reaches nothing.
+ */
+export async function forgetMedia(env: Env, groupId: string, id: string): Promise<void> {
+  const key = await keyFor(env, groupId, id);
+  if (key === null) return;
+  await env.MEDIA.delete(key).catch((err: unknown) => {
+    // Same trade as the pruner: a blob that refuses to die is a bill, not a
+    // broken room, and the record still goes.
+    console.error('media: could not delete blob', { key }, err);
+  });
+  await env.DB.prepare('DELETE FROM media WHERE id = ? AND group_id = ?').bind(id, groupId).run();
+}
+
 export async function mediaFor(env: Env, groupId: string, id: string): Promise<Media | null> {
   const row = await env.DB.prepare(
     `SELECT id, name, content_type, size, width, height, member_id, created_at

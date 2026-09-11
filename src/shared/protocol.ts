@@ -88,6 +88,14 @@ export type ClientFrame =
   | { t: 'rtc'; to: string; payload: unknown }
   | { t: 'prompt'; body: string }
   | { t: 'table'; event: TableEvent }
+  /**
+   * Take back something you said. Only your own, only what you typed, and it
+   * goes from the archive, the room's own tail and every open phone — along
+   * with any photo on it. There is no time limit: the case this exists for is
+   * a picture of somebody's child in the wrong room, and a man might notice
+   * that a week later.
+   */
+  | { t: 'retract'; id: string }
   | { t: 'typing' };
 
 export type ServerFrame =
@@ -99,6 +107,12 @@ export type ServerFrame =
       call: CallMember[];
       /** Messages after the client's `after`, oldest first. */
       messages: RoomMessage[];
+      /**
+       * Lines taken back while this socket was away, for a client resuming
+       * from its last seq rather than reloading — it still holds them, and
+       * everyone else has lost them. Empty on a fresh load.
+       */
+      gone: string[];
     }
   | { t: 'roster'; roster: RosterEntry[] }
   /** Who is on the call right now. Separate from the roster: being in the room
@@ -108,6 +122,8 @@ export type ServerFrame =
   /** `cid` is echoed back to everyone, and means something only to the browser
    * that chose it: its line arrived and can stop being held. */
   | { t: 'msg'; message: RoomMessage; cid?: string }
+  /** A line somebody took back. Drop it: it is gone from the archive too. */
+  | { t: 'gone'; id: string }
   | { t: 'typing'; memberId: string; name: string }
   | { t: 'night'; night: DadNight | null }
   | { t: 'rooms'; rooms: RoomsOpen }
@@ -134,6 +150,11 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   }
   if (frame.t === 'prompt' && typeof frame.body === 'string')
     return { t: 'prompt', body: frame.body };
+  if (frame.t === 'retract') {
+    const { id } = value as { id?: unknown };
+    // Bounded like a cid: an id is ours, and nothing this long is one.
+    return typeof id === 'string' && id !== '' && id.length <= 64 ? { t: 'retract', id } : null;
+  }
   if (frame.t === 'call' && typeof (value as { join?: unknown }).join === 'boolean') {
     const { join, muted } = value as { join: boolean; muted?: unknown };
     return { t: 'call', join, muted: muted === true };

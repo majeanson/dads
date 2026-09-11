@@ -233,3 +233,55 @@ test('a dad who was away lands on what he missed', async ({ browser }) => {
   await marc.context().close();
   await sam.context().close();
 });
+
+test('a dad takes a line back, and it goes for everyone', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc Back2');
+  const sam = await comeIn(browser, 'Sam Back2');
+
+  await marc.getByLabel('Say something').fill('wrong room, sorry');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const his = sam.getByTestId('line').filter({ hasText: 'wrong room, sorry' });
+  await expect(his).toBeVisible();
+
+  // Right-click on a laptop, a long press on a phone: the same menu.
+  await marc
+    .getByTestId('line')
+    .filter({ hasText: 'wrong room, sorry' })
+    .click({ button: 'right' });
+  await expect(marc.getByTestId('line-menu')).toBeVisible();
+
+  // It arms before it fires, because this is irreversible.
+  await marc.getByTestId('line-retract').click();
+  await expect(marc.getByTestId('line-retract')).toContainText('sure?');
+  await marc.getByTestId('line-retract').click();
+
+  await expect(his).toHaveCount(0);
+  await expect(marc.getByTestId('line').filter({ hasText: 'wrong room, sorry' })).toHaveCount(0);
+
+  // And it is not handed to the next dad through the door.
+  const dave = await comeIn(browser, 'Dave Back2');
+  await expect(dave.getByTestId('line').filter({ hasText: 'wrong room, sorry' })).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
+  await dave.context().close();
+});
+
+test('a line that is not yours offers no way to take it back', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc Back3');
+  const sam = await comeIn(browser, 'Sam Back3');
+
+  await marc.getByLabel('Say something').fill('this one stays');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const his = sam.getByTestId('line').filter({ hasText: 'this one stays' });
+  await expect(his).toBeVisible();
+
+  await his.click({ button: 'right' });
+  await expect(sam.getByTestId('line-menu')).toBeVisible();
+  // Copy, and nothing else: what a man said is his.
+  await expect(sam.getByTestId('line-menu')).toContainText('Copy');
+  await expect(sam.getByTestId('line-retract')).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
+});

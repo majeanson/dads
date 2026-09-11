@@ -22,7 +22,7 @@ import { englishOf, parseSaid, type Said } from '../shared/said';
 import { notifyGroup, notifyMember } from './push';
 import type { Env } from './env';
 import { newId } from './identity';
-import { mediaFor } from './media';
+import { forgetMedia, mediaFor } from './media';
 import { todaysPrompt } from './prompts';
 
 /**
@@ -78,6 +78,16 @@ const TURN_NUDGE_EVERY_MS = 3 * 60_000;
  */
 const CID_MEMORY_MS = 5 * 60_000;
 
+/**
+ * How long the room remembers that a line was taken back.
+ *
+ * Only for the socket that reconnects WITHOUT reloading — it resumes from its
+ * last seq and would otherwise keep a line everyone else has lost. A reload
+ * needs nothing: the line is out of the tail, so a fresh backfill cannot
+ * mention it. A day is far longer than any dead spot.
+ */
+const RETRACTED_MEMORY_MS = 24 * 60 * 60 * 1000;
+
 /** How long before the table opens the phones are told. The evening before,
  * while a man can still move something. */
 const REMIND_BEFORE_MS = 24 * 60 * 60 * 1000;
@@ -130,6 +140,14 @@ export class RoomDO extends DurableObject<Env> {
           prompt_id  TEXT,
           media_id   TEXT,
           meta       TEXT
+        );
+        -- Lines taken back, so a socket that reconnects without reloading is
+        -- told about the ones it missed. A reload needs none of this: the
+        -- line is gone from the tail, so a fresh backfill never mentions it.
+        -- Swept in retract(), because that is the only thing that adds a row.
+        CREATE TABLE IF NOT EXISTS retracted (
+          id TEXT PRIMARY KEY,
+          at INTEGER NOT NULL
         );
         CREATE TABLE IF NOT EXISTS leaving (
           member_id TEXT PRIMARY KEY,
@@ -262,12 +280,16 @@ export class RoomDO extends DurableObject<Env> {
     this.ctx.acceptWebSocket(server, [memberId]);
     server.serializeAttachment({ memberId, name } satisfies SocketIdentity);
 
+    const resuming = Number.isFinite(after) && after > 0;
     const hello: ServerFrame = {
       t: 'hello',
       you: { memberId, name },
       roster: this.roster(),
       call: this.callRoster(),
-      messages: await this.backfill(Number.isFinite(after) && after > 0 ? after : null),
+      messages: await this.backfill(resuming ? after : null),
+      // Only for a resume. A fresh load is backfilled from a tail the line is
+      // already out of, so there is nothing on that screen to take back.
+      gone: resuming ? this.retractedSince() : [],
     };
     server.send(JSON.stringify(hello));
 
@@ -347,6 +369,11 @@ export class RoomDO extends DurableObject<Env> {
       // His turn has sat for twenty seconds: the one line of this that goes
       // to a phone, and only to his.
       if (frame.event.t === 'turn') await this.nudgeTurn(frame.event.name);
+      return;
+    }
+
+    if (frame.t === 'retract') {
+      await this.retract(frame.id, who.memberId);
       return;
     }
 
@@ -772,6 +799,92 @@ export class RoomDO extends DurableObject<Env> {
     } catch (err) {
       console.error('turn nudge failed', { name }, err);
     }
+  }
+
+  /**
+   * A line taken back, everywhere it exists.
+   *
+   * The ARCHIVE is the authority on who said what: the tail holds the last
+   * five hundred lines and the photograph a man regrets may be older than
+   * that. The tail is consulted as well, because an archive write can fail
+   * and a line that only ever made it into the room is still his to withdraw.
+   *
+   * Only what he typed — `chat` and `prompt`. The room's own lines carry no
+   * member id and are nobody's to edit; the check is belt and braces.
+   *
+   * Silence on refusal, deliberately: this is not a route a stranger can
+   * reach, and telling a caller whether an id exists in somebody else's room
+   * is information it has no reason to have.
+   */
+  private async retract(id: string, memberId: string): Promise<void> {
+    const groupId = this.groupId();
+    const own = (kind: string | undefined, owner: string | null | undefined) =>
+      owner === memberId && (kind === 'chat' || kind === 'prompt');
+
+    let mediaId: string | null = null;
+    let mine = false;
+
+    if (groupId !== undefined) {
+      const row = await this.env.DB.prepare(
+        'SELECT member_id, media_id, kind FROM messages WHERE id = ? AND group_id = ?',
+      )
+        .bind(id, groupId)
+        .first<{ member_id: string | null; media_id: string | null; kind: string }>();
+      if (row !== null) {
+        mine = own(row.kind, row.member_id);
+        mediaId = row.media_id;
+      }
+    }
+
+    const local = this.ctx.storage.sql
+      .exec<{ member_id: string | null; media_id: string | null; kind: string }>(
+        'SELECT member_id, media_id, kind FROM tail WHERE id = ?',
+        id,
+      )
+      .toArray()[0];
+    if (!mine && local !== undefined) {
+      mine = own(local.kind, local.member_id);
+      mediaId ??= local.media_id;
+    }
+    if (!mine) return;
+
+    if (groupId !== undefined) {
+      await this.env.DB.prepare(
+        'DELETE FROM messages WHERE id = ? AND group_id = ? AND member_id = ?',
+      )
+        .bind(id, groupId, memberId)
+        .run();
+    }
+    this.ctx.storage.sql.exec('DELETE FROM tail WHERE id = ? AND member_id = ?', id, memberId);
+
+    // The picture goes with the line it was on. Half the reason for taking a
+    // line back is the thing attached to it.
+    if (mediaId !== null && groupId !== undefined) {
+      await forgetMedia(this.env, groupId, mediaId).catch((err: unknown) => {
+        console.error('retract: media survived', { mediaId }, err);
+      });
+    }
+
+    const now = Date.now();
+    this.ctx.storage.sql.exec('DELETE FROM retracted WHERE at < ?', now - RETRACTED_MEMORY_MS);
+    this.ctx.storage.sql.exec(
+      'INSERT OR REPLACE INTO retracted (id, at) VALUES (?, ?)',
+      id,
+      now,
+    );
+
+    this.broadcast({ t: 'gone', id });
+  }
+
+  /** Everything taken back recently, for a socket resuming where it left off. */
+  private retractedSince(): string[] {
+    return this.ctx.storage.sql
+      .exec<{ id: string }>(
+        'SELECT id FROM retracted WHERE at >= ?',
+        Date.now() - RETRACTED_MEMORY_MS,
+      )
+      .toArray()
+      .map((r) => r.id);
   }
 
   private async say(name: string, said: Said, kind: 'system' | 'table' = 'system'): Promise<void> {

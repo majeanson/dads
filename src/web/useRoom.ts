@@ -190,16 +190,25 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
         case 'hello': {
           const last = frame.messages.at(-1);
           if (last) lastSeq.current = last.seq;
+          // A socket that resumed rather than reloaded is still holding lines
+          // the room has lost. `gone` is how it finds out.
+          const lost = new Set(frame.gone ?? []);
           setState((s) => ({
             ...s,
             connection: 'open',
             you: frame.you,
             roster: frame.roster,
             call: frame.call,
-            messages: merge(s.messages, frame.messages),
+            messages: merge(
+              lost.size === 0 ? s.messages : s.messages.filter((m) => !lost.has(m.id)),
+              frame.messages,
+            ),
           }));
           return;
         }
+        case 'gone':
+          setState((s) => ({ ...s, messages: s.messages.filter((m) => m.id !== frame.id) }));
+          return;
         case 'roster':
           setState((s) => ({ ...s, roster: frame.roster }));
           return;
@@ -351,9 +360,24 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
     ws.send(JSON.stringify({ t: 'typing' }));
   }, []);
 
+  /**
+   * Take a line back.
+   *
+   * Not optimistic, and that is the point: the line stays on his own screen
+   * until the room says it is gone, so what he sees is the truth about what
+   * everyone else sees. A retraction that vanished locally and failed on the
+   * wire would be the worst possible lie for this particular feature.
+   */
+  const retract = useCallback((id: string) => {
+    const ws = socket.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ t: 'retract', id }));
+  }, []);
+
   return {
     ...state,
     send,
+    retract,
     answerPrompt,
     relayTableEvent,
     sendTyping,

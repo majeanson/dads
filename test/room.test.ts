@@ -48,6 +48,10 @@ class Dad {
     );
   }
 
+  retract(id: string) {
+    this.ws.send(JSON.stringify({ t: 'retract', id }));
+  }
+
   close() {
     this.ws.close(1000, 'bye');
   }
@@ -313,5 +317,70 @@ describe('RoomDO', () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(stranger.frames.some((f) => f.t === 'msg' && f.message.body === 'just us')).toBe(false);
     expect((await stranger.next('hello')).roster.map((r) => r.name)).toEqual(['Stranger']);
+  });
+  describe('taking a line back', () => {
+    it('takes it from the room, from everyone, and from the archive', async () => {
+      const marc = await enter(group, 'Marc');
+      const sam = await enter(group, 'Sam');
+      open.push(marc, sam);
+      marc.say('wrong room, sorry');
+      const posted = await sam.next('msg', (f) => f.message.body === 'wrong room, sorry');
+      const id = posted.message.id;
+
+      marc.retract(id);
+      // Everyone is told, including the man who did it: nothing is optimistic
+      // here, because a line that vanished locally and survived on the wire
+      // would be the worst possible lie for this particular feature.
+      expect((await sam.next('gone', (f) => f.id === id)).id).toBe(id);
+      await marc.next('gone', (f) => f.id === id);
+
+      const row = await env.DB.prepare('SELECT id FROM messages WHERE id = ?').bind(id).first();
+      expect(row).toBeNull();
+
+      // And it is not in what the next dad is handed on his way in.
+      const dave = await enter(group, 'Dave');
+      open.push(dave);
+      expect(bodies((await dave.next('hello')).messages)).not.toContain('wrong room, sorry');
+    });
+
+    it('is his own to take back and nobody else’s', async () => {
+      const marc = await enter(group, 'Marc');
+      const sam = await enter(group, 'Sam');
+      open.push(marc, sam);
+      marc.say('this one stays');
+      const posted = await sam.next('msg', (f) => f.message.body === 'this one stays');
+
+      sam.retract(posted.message.id);
+      await new Promise((r) => setTimeout(r, 80));
+      expect(sam.frames.some((f) => f.t === 'gone')).toBe(false);
+      const row = await env.DB.prepare('SELECT id FROM messages WHERE id = ?')
+        .bind(posted.message.id)
+        .first();
+      expect(row).not.toBeNull();
+    });
+
+    it('tells a socket that resumed rather than reloaded', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      marc.say('said and regretted');
+      const posted = await marc.next('msg', (f) => f.message.body === 'said and regretted');
+
+      // Sam is here, goes quiet, and comes back from where he left off.
+      const sam = await enter(group, 'Sam');
+      await sam.next('hello');
+      const at = posted.message.seq;
+      sam.close();
+      await new Promise((r) => setTimeout(r, 30));
+
+      marc.retract(posted.message.id);
+      await marc.next('gone');
+
+      const back = await enter(group, 'Sam', sam.cookie, at);
+      open.push(back);
+      const hello = await back.next('hello');
+      // He is holding it from before, so the room has to say so; a reload
+      // would have needed nothing, because the tail no longer has it.
+      expect(hello.gone).toContain(posted.message.id);
+    });
   });
 });

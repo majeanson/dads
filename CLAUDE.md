@@ -97,6 +97,27 @@ weakening `sessionSecret()`.
 - Three things stop the outbox growing for ever: 20 lines held, 3 tries each,
   and an `error` frame drops the oldest — a body the room refuses would
   otherwise be re-sent all evening.
+- **A line can be taken back, and then it is gone.** `{ t: 'retract', id }` in,
+  `{ t: 'gone', id }` out. Only your own and only what you TYPED — `chat` and
+  `prompt`; the room's own lines are facts about the evening and nobody's to
+  edit. The archive is the authority on who said what, because the tail holds
+  five hundred lines and the photograph a man regrets may be older; the tail is
+  consulted too, so a line whose archive write failed is still his to withdraw.
+  **The attached media goes with it**, blob and record — a photo that outlived
+  its line is the whole reason anyone wants this. No time limit, for the same
+  reason. Refusal is silent.
+- **`retracted` in the DO is only for a socket that resumes without
+  reloading.** It holds a day of ids and rides along on `hello.gone`. A reload
+  needs none of it: the line is out of the tail, so a fresh backfill cannot
+  mention it.
+- **Taking it back is not optimistic.** The line stays on his own screen until
+  the room says it is gone. For this one feature, a local vanish that failed on
+  the wire would be the worst possible lie.
+- **`LineMenu` is a Radix context menu** — right-click on a laptop and a long
+  press on a phone from one primitive, keyboard route included. It wraps only
+  chat and prompt lines. The destructive item ARMS on the first select
+  (`event.preventDefault()` keeps the menu open) and fires on the second,
+  because a long press is a gesture a thumb makes by accident.
 - The composer stays live while the socket is down. Taking the keyboard off a
   man because the network went is the app making its problem his.
 

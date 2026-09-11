@@ -30,6 +30,7 @@ import { nightItem, nightSoon } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
 import { lastSeen, markSeen } from './seen';
+import { LineMenu } from './ui/LineMenu';
 import { useFreshBuild } from './useFreshBuild';
 import { useVisualViewport } from './useVisualViewport';
 import { toRows } from './messageGroups';
@@ -459,51 +460,64 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 <li key="new" ref={newMark} className="day day-new" data-testid="since">
                   <span>{row.label}</span>
                 </li>
+              ) : row.message.kind === 'chat' || row.message.kind === 'prompt' ? (
+                // Only what a dad typed gets a menu: the room's own lines are
+                // facts about the evening, not quotes, and nobody's to take
+                // back. Yours also carries the way to take it back.
+                <LineMenu
+                  key={row.key}
+                  body={row.message.body}
+                  onRetract={
+                    row.message.memberId === session.member.id
+                      ? () => room.retract(row.message.id)
+                      : undefined
+                  }
+                >
+                  <li
+                    className={`line line-${row.message.kind}${
+                      row.showName ? '' : ' is-continued'
+                    }`}
+                    data-testid="line"
+                  >
+                    <span className="who">{row.showName ? row.message.name : ''}</span>
+                    <span className="body">
+                      {row.message.kind === 'prompt' ? (
+                        <span className="answer-tag">{t('line.answered')}</span>
+                      ) : null}
+                      {parts(row.message.body).map((part, i) =>
+                        part.link ? (
+                          <a
+                            key={i}
+                            href={part.href}
+                            title={part.href}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                          >
+                            {shortLink(part.text)}
+                          </a>
+                        ) : (
+                          <span key={i}>{part.text}</span>
+                        ),
+                      )}
+                      {row.message.media ? <Attachment media={row.message.media} /> : null}
+                    </span>
+                    <time className="when">{clock(row.message.createdAt)}</time>
+                  </li>
+                </LineMenu>
               ) : (
+                // The room talking. It carries what happened, not a sentence,
+                // so it can be read in either language — and falls back to
+                // the English body for a line written before that was true.
                 <li
                   key={row.key}
-                  className={`line line-${row.message.kind}${row.showName ? '' : ' is-continued'}${
-                    row.joined ? ' is-joined' : ''
-                  }`}
+                  className={`line line-${row.message.kind}${row.joined ? ' is-joined' : ''}`}
                   data-testid="line"
                 >
-                  {row.message.kind === 'chat' || row.message.kind === 'prompt' ? (
-                    <>
-                      <span className="who">{row.showName ? row.message.name : ''}</span>
-                      <span className="body">
-                        {row.message.kind === 'prompt' ? (
-                          <span className="answer-tag">{t('line.answered')}</span>
-                        ) : null}
-                        {parts(row.message.body).map((part, i) =>
-                          part.link ? (
-                            <a
-                              key={i}
-                              href={part.href}
-                              title={part.href}
-                              target="_blank"
-                              rel="noopener noreferrer nofollow"
-                            >
-                              {shortLink(part.text)}
-                            </a>
-                          ) : (
-                            <span key={i}>{part.text}</span>
-                          ),
-                        )}
-                        {row.message.media ? <Attachment media={row.message.media} /> : null}
-                      </span>
-                      <time className="when">{clock(row.message.createdAt)}</time>
-                    </>
-                  ) : (
-                    // The room talking. It carries what happened, not a
-                    // sentence, so it can be read in either language — and
-                    // falls back to the English body for a line written
-                    // before that was true.
-                    <span className="body">
-                      {row.message.said
-                        ? describeSaid(t, lang, row.message.said, row.joined)
-                        : row.message.body}
-                    </span>
-                  )}
+                  <span className="body">
+                    {row.message.said
+                      ? describeSaid(t, lang, row.message.said, row.joined)
+                      : row.message.body}
+                  </span>
                 </li>
               ),
             )}

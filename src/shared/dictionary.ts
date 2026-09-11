@@ -49,6 +49,9 @@ const EN = {
   'composer.too_large': 'That one is too big — 25 MB is the limit.',
   'composer.upload_failed': 'Couldn’t send that. Try again.',
   'line.answered': 'answered',
+  'line.copy': 'Copy',
+  'line.retract': 'Take it back',
+  'line.retract_sure': 'Take it back — sure?',
 
   // ------------------------------------------------------------- the call
   'call.join': 'Join the call',
@@ -302,6 +305,9 @@ const FR: Record<Key, string> = {
   'composer.too_large': 'Celui-là est trop gros — 25 Mo maximum.',
   'composer.upload_failed': 'Ça n’a pas passé. Réessaie.',
   'line.answered': 'a répondu',
+  'line.copy': 'Copie',
+  'line.retract': 'Reprends-le',
+  'line.retract_sure': 'Reprends-le — certain ?',
 
   // ------------------------------------------------------------ l'appel
   'call.join': 'Embarque dans l’appel',
