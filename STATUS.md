@@ -38,6 +38,7 @@ npm test              # 206, in workerd against the real migrations
 npm run e2e           # 36, against the built stack
 npm run audit:contrast  # 24 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
+npm run prove         # 30, against dads.marcportal.com itself
 npm run backup        # every D1 table into backups/, gitignored
 ```
 

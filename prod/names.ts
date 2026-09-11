@@ -1,0 +1,44 @@
+import { expect, type Browser, type Page } from '@playwright/test';
+
+/**
+ * The code the real group uses. Changing it means changing this, which is the
+ * right amount of friction: a suite that writes into a live room should not be
+ * runnable by accident.
+ */
+export const CODE = process.env.PROD_CODE ?? 'daddy';
+
+/**
+ * Every dad this suite invents is named with this prefix, and the teardown
+ * deletes exactly those.
+ *
+ * A fresh browser context is a fresh member — that is how identity works here
+ * — so a suite like this leaves a trail of people behind it unless somebody
+ * sweeps up. The prefix is the sweeping instruction.
+ */
+export const MARK = 'prove-';
+
+/**
+ * A suffix that is different every run.
+ *
+ * Without it the second run reads the first one's announcements: "prove-coming
+ * is in." is written by the ROOM, not by him, so it has no member to delete it
+ * by — and the room's own supersede rule then collapses this run's answer into
+ * last run's. Unique names make every run's lines its own.
+ */
+const RUN = Math.random().toString(36).slice(2, 6);
+
+export function named(what: string): string {
+  return `${MARK}${what}-${RUN}`;
+}
+
+/** A new dad in the real room. */
+export async function comeIn(browser: Browser, what: string): Promise<Page> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('Code').fill(CODE);
+  await page.getByLabel('Your name').fill(named(what));
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  return page;
+}

@@ -162,9 +162,16 @@ export function JoinCall({
 
   if (state === 'denied' || state === 'failed') {
     return (
-      <Button size="sm" look="danger" onClick={onJoin} title={t(`call.${state}`)}>
+      <Button
+        size="sm"
+        look="danger"
+        onClick={onJoin}
+        title={t(`call.${state}`)}
+        aria-label={t('call.retry')}
+        className="max-[48rem]:w-9 max-[48rem]:px-0"
+      >
         <MicOff size={15} aria-hidden="true" />
-        {t('call.retry')}
+        <span className="max-[48rem]:sr-only">{t('call.retry')}</span>
         <span className="sr-only"> — {t(`call.${state}`)}</span>
       </Button>
     );
@@ -176,10 +183,10 @@ export function JoinCall({
       onClick={onJoin}
       disabled={state === 'joining'}
       aria-label={t('call.join')}
-      className="max-[26rem]:w-9 max-[26rem]:px-0"
+      className="max-[48rem]:w-9 max-[48rem]:px-0"
     >
       <Phone size={15} aria-hidden="true" />
-      <span className="max-[26rem]:sr-only">
+      <span className="max-[48rem]:sr-only">
         {state === 'joining' ? t('call.opening') : t('call.join')}
       </span>
     </Button>

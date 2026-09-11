@@ -557,6 +557,47 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   the migration is safe. Five friends and one database is not a service with a
   rollback plan.
 
+## The room on a phone
+
+- **The header is an app bar and must be structurally incapable of
+  overflowing.** The name gives way (`min-width: 0` on the left, `flex-shrink:
+0` on the actions); `main.room` is `width: 100%` with `overflow-x: clip`.
+  Without that an over-long header does not wrap — it makes the whole PAGE
+  wider, and the composer ends up half off the right-hand side.
+- **A breakpoint cannot be trusted with this.** "Join the call" fits a 390px
+  phone and "Embarque dans l'appel" does not; the phone that found it was 430,
+  and the guard was written at 26rem. The header's controls are icons below
+  48rem in every language, and the structural rules above are what actually
+  hold.
+- **Safe areas on all four sides.** `viewport-fit=cover` puts the page under
+  the notch and the home indicator; the padding pays it back. The top one is
+  not optional — without it the group's name sits under the clock.
+- **A message on a phone is two rows, not three columns.** Who and when above,
+  what he said across the full width. Three columns means a photograph wins and
+  the name and the clock are crushed: "Marc-antoine" became "M…". A run from
+  the same dad drops the repeated clock as well as the repeated name.
+
+## Proving it in production
+
+`npm run prove` runs `prod/` against **dads.marcportal.com**. It is not in CI
+and is not part of `npm run e2e`, because it writes into the room five real
+people use.
+
+- It proves the DEPLOYMENT, not the code: the custom domain, the assets binding
+  answering before the Worker, the headers that only exist because
+  `public/_headers` shipped, the secrets that are only set in production, and a
+  D1, an R2 and a Durable Object that are not fakes.
+- **It reads the group's state rather than assuming it.** The three room
+  switches are the group's to set; a suite that demanded Questions be on would
+  fail on a Friday because somebody turned them off. Assert against
+  `/api/me`, and `test.skip` what is switched off.
+- **Every dad it invents is named `prove-<what>-<run>`** and the teardown
+  deletes exactly those. The run suffix matters: the room's own lines ("X is
+  in.") carry NO member id, so they cannot be swept by member — they are
+  deleted by a body match on the marker, and without a per-run suffix one run
+  reads the last one's announcements.
+- It never moves the night. Five people turn up on it.
+
 ## Test layout
 
 - vitest storage is per **file**, not per test. Tests that seed groups call

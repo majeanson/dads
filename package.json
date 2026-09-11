@@ -21,7 +21,8 @@
     "audit:contrast": "node scripts/contrast-audit.mjs",
     "icons": "node scripts/icons.mjs",
     "vapid": "node scripts/vapid.mjs",
-    "backup": "tsx scripts/backup.ts"
+    "backup": "tsx scripts/backup.ts",
+    "prove": "playwright test --config playwright.prod.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",

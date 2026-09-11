@@ -331,9 +331,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         </div>
         <span className="head-actions">
           <JoinCall state={call.state} onJoin={() => void call.join()} />
-          <Button size="sm" onClick={() => setSheet('menu')} className="relative">
+          <Button
+            size="sm"
+            onClick={() => setSheet('menu')}
+            aria-label={t('room.menu')}
+            className="relative max-[48rem]:w-9 max-[48rem]:px-0"
+          >
             <MenuIcon size={16} aria-hidden="true" />
-            {t('room.menu')}
+            <span className="max-[48rem]:sr-only">{t('room.menu')}</span>
             {waiting ? (
               <span
                 className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent"
