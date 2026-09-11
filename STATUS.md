@@ -1,7 +1,7 @@
 # Where dads stands
 
 Live at **https://dads.marcportal.com**. Invite code for **The Dads**:
-`buckle daisy` (two words, case and spacing don't matter).
+`daddy` — one word, and case and spacing don't matter.
 
 Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 [CLAUDE.md](CLAUDE.md) for the rules that hold it together.

@@ -7,7 +7,6 @@ import {
   timingSafeEqual,
 } from '../src/worker/crypto';
 import { identityCookie, signIdentity, verifyIdentity } from '../src/worker/identity';
-import { join } from '../src/worker/routes/auth';
 import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
 
 const worker = workerExports.default;
@@ -235,39 +234,5 @@ describe('GET /api/me and POST /api/leave', () => {
     const res = await worker.fetch('https://dads.test/api/leave', { method: 'POST' });
     expect(res.status).toBe(204);
     expect(res.headers.get('Set-Cookie')).toMatch(/^dads_id=; .*Max-Age=0/);
-  });
-});
-
-describe('the door, temporarily unlocked', () => {
-  // TEMPORARY, and tested so that it is deliberate rather than an accident:
-  // with OPEN_DOOR set, whatever is typed in the code box opens the only group
-  // there is. Delete the var in wrangler.toml and every test above still
-  // stands — the lock itself was never touched.
-  const open = { ...env, OPEN_DOOR: 'yes' };
-
-  beforeEach(resetTables);
-
-  it('takes any code at all, and none', async () => {
-    const group = await seedGroup();
-
-    const wrong = await join(postJoin({ code: 'not the code', displayName: 'Sam' }), open, false);
-    expect(wrong.status).toBe(200);
-    expect(((await wrong.json()) as { group: { id: string } }).group.id).toBe(group.id);
-
-    const none = await join(postJoin({ displayName: 'Dave' }), open, false);
-    expect(none.status).toBe(200);
-  });
-
-  it('still wants a name', async () => {
-    await seedGroup();
-    const res = await join(postJoin({ code: 'anything' }), open, false);
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: 'missing_name' });
-  });
-
-  it('locks again the moment the var is gone', async () => {
-    await seedGroup();
-    const res = await join(postJoin({ code: 'not the code', displayName: 'Sam' }), env, false);
-    expect(res.status).toBe(401);
   });
 });

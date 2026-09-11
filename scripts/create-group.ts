@@ -8,9 +8,15 @@
  *
  *   npm run group:create -- --slug the-dads --name "The Dads" --night thu:21:00
  *   npm run group:create -- --slug the-dads --name "The Dads" --remote
+ *   npm run group:create -- --slug the-dads --rotate --code "daddy" --remote
  *
  * Prints the plaintext code once. It is not recoverable afterwards — only its
- * PBKDF2 hash is stored — so rotating means running this again with --code.
+ * PBKDF2 hash is stored — so changing it means --rotate.
+ *
+ * --rotate UPDATEs the hash and salt in place and touches nothing else. The
+ * members, the archive, the questions and the board are the group's history;
+ * they must not be collateral damage from changing a passphrase, which is
+ * what re-creating the group would make them.
  */
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -45,10 +51,12 @@ function generateCode(count: number): string {
 }
 
 const slug = arg('slug');
-const name = arg('name');
-if (!slug || !name) {
+const rotate = process.argv.includes('--rotate');
+const name = arg('name') ?? (rotate ? '' : undefined);
+if (!slug || name === undefined) {
   console.error(
-    'usage: --slug <slug> --name "<name>" [--code "<code>"] [--words 4] [--night thu:21:00] [--tz <IANA>] [--remote]',
+    'usage: --slug <slug> --name "<name>" [--code "<code>"] [--words 4] [--night thu:21:00] [--tz <IANA>] [--remote]\n' +
+      '       --slug <slug> --rotate [--code "<code>"] [--words 4] [--remote]',
   );
   process.exit(1);
 }
@@ -87,7 +95,11 @@ const id = `grp_${randomToken(12)}`;
 const now = Date.now();
 
 const quote = (v: string) => `'${v.replace(/'/g, "''")}'`;
-const sql = `INSERT INTO groups
+const sql = rotate
+  ? `UPDATE groups
+        SET invite_code_hash = ${quote(hash)}, invite_code_salt = ${quote(salt)}
+      WHERE slug = ${quote(slug)};`
+  : `INSERT INTO groups
   (id, slug, name, invite_code_hash, invite_code_salt,
    dad_night_weekday, dad_night_time, dad_night_tz, jaffre_room_code, created_at)
 VALUES (${quote(id)}, ${quote(slug)}, ${quote(name)}, ${quote(hash)}, ${quote(salt)},
@@ -102,7 +114,11 @@ run(
   'inherit',
 );
 
-console.log(`\nGroup "${name}" created ${remote ? 'in production' : 'locally'}.`);
+console.log(
+  rotate
+    ? `\nCode rotated for "${slug}" ${remote ? 'in production' : 'locally'}.`
+    : `\nGroup "${name}" created ${remote ? 'in production' : 'locally'}.`,
+);
 console.log(`  slug        ${slug}`);
 console.log(`  invite code ${code}`);
 console.log('\nThis code is shown once. Only its hash is stored.');

@@ -14,16 +14,6 @@ routes = [{ pattern = "dads.marcportal.com", custom_domain = true }]
 [vars]
 ENVIRONMENT = "production"
 
-# TEMPORARY — the door is unlocked. Anything typed in the code box opens the
-# only group there is, and the box may be left empty. It is here so the dads
-# can be got in without a passphrase changing hands; it also means ANYONE who
-# finds the address is in the room, and those are photographs of people's
-# children.
-#
-# To lock it again: delete this line and deploy. Nothing else changes — the
-# codes are still hashed and still verified whenever this is absent.
-OPEN_DOOR = "yes"
-
 
 # Opt-in, sampled at 1. This is a handful of dads: total log volume is a few
 # lines per session. A sampled-away error during the one week someone says

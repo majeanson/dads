@@ -2,7 +2,7 @@ import type { DadNight } from '../../shared/dadNight';
 import type { RoomsOpen } from '../../shared/protocol';
 import { hashDeviceToken, randomToken, verifyInviteCode } from '../crypto';
 import type { Env } from '../env';
-import { doorIsOpen, sessionSecret } from '../env';
+import { sessionSecret } from '../env';
 import {
   clearedIdentityCookie,
   COOKIE_NAME,
@@ -105,12 +105,7 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
   const invite = typeof body.invite === 'string' ? body.invite : '';
   const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
 
-  // TEMPORARY: with the door open the code box is decoration — see
-  // doorIsOpen(). Locked, an empty code is the error it always was.
-  const open = doorIsOpen(env);
-  if (!code.trim() && !invite && !open) {
-    return Response.json({ error: 'missing_code' }, { status: 400 });
-  }
+  if (!code.trim() && !invite) return Response.json({ error: 'missing_code' }, { status: 400 });
   if (!displayName) return Response.json({ error: 'missing_name' }, { status: 400 });
   if ([...displayName].length > MAX_NAME_LENGTH) {
     return Response.json({ error: 'name_too_long' }, { status: 400 });
@@ -133,16 +128,10 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
     const { results } = await env.DB.prepare(`SELECT ${columns} FROM groups LIMIT ?`)
       .bind(GROUP_SCAN_LIMIT)
       .all<GroupRow>();
-    // TEMPORARY: the door is unlocked, so whatever he typed opens the only
-    // group there is. With more than one group this would be meaningless,
-    // which is another reason it is temporary.
-    if (open) group = results[0];
-    else {
-      for (const candidate of results) {
-        if (await verifyInviteCode(code, candidate.invite_code_salt, candidate.invite_code_hash)) {
-          group = candidate;
-          break;
-        }
+    for (const candidate of results) {
+      if (await verifyInviteCode(code, candidate.invite_code_salt, candidate.invite_code_hash)) {
+        group = candidate;
+        break;
       }
     }
   }

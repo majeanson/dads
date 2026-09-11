@@ -47,20 +47,6 @@ webServer pass `--var ENVIRONMENT:development`. If a local run 500s with
 "SESSION_SECRET is not set", that override is missing — do not fix it by
 weakening `sessionSecret()`.
 
-## TEMPORARY: the door is unlocked
-
-`OPEN_DOOR = "yes"` in wrangler.toml means anything typed in the code box —
-including nothing — opens the only group there is. It is read in ONE place
-(`doorIsOpen`, used once in `join`), so locking it again is deleting that line
-and deploying. Nothing about the code itself changed: it is still PBKDF2'd at
-rest and still verified the moment the var is absent, and a test pins that.
-
-The e2e stack passes `--var OPEN_DOOR:no` on purpose — the suite's job is to
-keep the LOCKED behaviour honest so it still works when the line comes out.
-
-While it is on, anyone who finds the address is in the room, and the room has
-photographs of people's children in it.
-
 ## Identity model
 
 - One invite code per group, PBKDF2-hashed with a per-group salt. Codes are
@@ -70,7 +56,10 @@ photographs of people's children in it.
   browser rejoin as the same member if the cookie is gone.
 - Failed joins are throttled per IP in `join_attempts` (10 per 10 minutes).
   A success clears the bucket. Only the IP's HMAC is stored.
-- `scripts/create-group.ts` is the only way a group comes to exist.
+- `scripts/create-group.ts` is the only way a group comes to exist, and
+  `--rotate` is how a code changes. Rotating UPDATEs the hash and salt in
+  place: the members, the archive and the board are the group's history and
+  must not be collateral damage from changing a passphrase.
 - **An invite link carries its own secret, never the code.** The code is stored
   only as a PBKDF2 hash, so the app cannot put it in a link — it does not know
   it. `POST /api/invite` mints 256 random bits, HMAC'd at rest like a device
