@@ -867,11 +867,7 @@ export class RoomDO extends DurableObject<Env> {
 
     const now = Date.now();
     this.ctx.storage.sql.exec('DELETE FROM retracted WHERE at < ?', now - RETRACTED_MEMORY_MS);
-    this.ctx.storage.sql.exec(
-      'INSERT OR REPLACE INTO retracted (id, at) VALUES (?, ?)',
-      id,
-      now,
-    );
+    this.ctx.storage.sql.exec('INSERT OR REPLACE INTO retracted (id, at) VALUES (?, ?)', id, now);
 
     this.broadcast({ t: 'gone', id });
   }
