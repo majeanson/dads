@@ -1,4 +1,4 @@
-import { CalendarPlus, Check, Plus, Trash2, X } from 'lucide-react';
+import { CalendarPlus, Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   addNightItem,
@@ -10,7 +10,7 @@ import {
   type Rsvp,
 } from './api';
 import { useT } from './i18n';
-import { nightItem, NightEditor } from './NightEditor';
+import { nightDetail, NightEditor } from './NightEditor';
 import { Button } from './ui/Button';
 import { FIELD } from './ui/field';
 import type { DadNight } from '../shared/dadNight';
@@ -63,8 +63,20 @@ export function Night({ night, you }: { night: DadNight | null; you: string }) {
       ) : (
         <>
           <div className="grid gap-3">
-            <p className="m-0 text-[0.9375rem]" data-testid="night-when">
-              {nightItem(t, lang, night, Date.now())}
+            <p className="m-0 flex items-center gap-2 text-[0.9375rem]" data-testid="night-when">
+              <span className="min-w-0 flex-1">{nightDetail(t, lang, night, Date.now())}</span>
+              {/* The countdown only reaches a dad who has opened the room. His
+                  own calendar reaches him on Thursday afternoon, where the
+                  decision actually gets made. */}
+              <a
+                href="/api/night.ics"
+                className="shrink-0 text-muted"
+                title={t('n.calendar')}
+                data-testid="night-ics"
+              >
+                <CalendarPlus size={17} aria-hidden="true" />
+                <span className="sr-only">{t('n.calendar')}</span>
+              </a>
             </p>
 
             <Coming
@@ -73,18 +85,6 @@ export function Night({ night, you }: { night: DadNight | null; you: string }) {
               busy={busy}
               onAnswer={(coming) => void act(setRsvp(coming))}
             />
-
-            {/* The countdown only reaches a dad who has opened the room. His
-                own calendar reaches him on Thursday afternoon, where the
-                decision actually gets made. */}
-            <a
-              href="/api/night.ics"
-              className="inline-flex items-center gap-1.5 text-sm"
-              data-testid="night-ics"
-            >
-              <CalendarPlus size={15} aria-hidden="true" />
-              {t('n.calendar')}
-            </a>
           </div>
 
           <Agenda
@@ -97,14 +97,25 @@ export function Night({ night, you }: { night: DadNight | null; you: string }) {
         </>
       )}
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-muted">
-          {night === null ? t('n.set') : t('n.change')}
-        </h2>
-        <NightEditor night={night} onDone={() => {}} />
-      </section>
+      <Change night={night} />
     </div>
   );
+}
+
+/** The editor, out of the way until it is wanted. A night with none set is
+ * the exception: there, setting one IS the sheet. */
+function Change({ night }: { night: DadNight | null }) {
+  const { t } = useT();
+  const [open, setOpen] = useState(night === null);
+  if (!open) {
+    return (
+      <Button look="quiet" className="justify-self-start px-0" onClick={() => setOpen(true)}>
+        <Pencil size={15} aria-hidden="true" />
+        {t('n.change')}
+      </Button>
+    );
+  }
+  return <NightEditor night={night} onDone={() => {}} />;
 }
 
 /** Two buttons and the names of everyone who has pressed one. */
@@ -150,18 +161,18 @@ function Coming({
       {/* Names, not a count. "3 coming" is a number a man reads as a quorum;
           the names tell him whether HIS friend is coming, which is the thing
           that actually decides it. */}
-      <p className="m-0 text-[0.9375rem] text-muted" data-testid="rsvp-who">
-        {answers.length === 0
-          ? t('n.nobody_yet')
-          : [
-              coming.length > 0
-                ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
-                : '',
-              not.length > 0 ? t('n.out_list', { names: not.map((a) => a.name).join(', ') }) : '',
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-      </p>
+      {answers.length === 0 ? null : (
+        <p className="m-0 text-[0.9375rem] text-muted" data-testid="rsvp-who">
+          {[
+            coming.length > 0
+              ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
+              : '',
+            not.length > 0 ? t('n.out_list', { names: not.map((a) => a.name).join(', ') }) : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
     </>
   );
 }
@@ -202,9 +213,7 @@ function Agenda({
     <section data-testid="agenda">
       <h2 className="mb-2 text-sm font-semibold text-muted">{t('n.agenda')}</h2>
 
-      {items.length === 0 ? (
-        <p className="m-0 mb-2 text-[0.9375rem] text-muted">{t('n.agenda_empty')}</p>
-      ) : (
+      {items.length === 0 ? null : (
         <ul className="m-0 mb-2 list-none border-t border-line p-0">
           {items.map((item) => (
             <li

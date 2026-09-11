@@ -47,6 +47,20 @@ webServer pass `--var ENVIRONMENT:development`. If a local run 500s with
 "SESSION_SECRET is not set", that override is missing — do not fix it by
 weakening `sessionSecret()`.
 
+## TEMPORARY: the door is unlocked
+
+`OPEN_DOOR = "yes"` in wrangler.toml means anything typed in the code box —
+including nothing — opens the only group there is. It is read in ONE place
+(`doorIsOpen`, used once in `join`), so locking it again is deleting that line
+and deploying. Nothing about the code itself changed: it is still PBKDF2'd at
+rest and still verified the moment the var is absent, and a test pins that.
+
+The e2e stack passes `--var OPEN_DOOR:no` on purpose — the suite's job is to
+keep the LOCKED behaviour honest so it still works when the line comes out.
+
+While it is on, anyone who finds the address is in the room, and the room has
+photographs of people's children in it.
+
 ## Identity model
 
 - One invite code per group, PBKDF2-hashed with a per-group salt. Codes are

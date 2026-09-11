@@ -41,12 +41,27 @@ export function nightSoon(t: T, lang: Lang, night: DadNight | null, now: number)
 export function nightItem(t: T, lang: Lang, night: DadNight | null, now: number): string {
   if (night === null) return t('n.set');
   const phase = phaseOf(night, now);
-  const when = nightWhen(lang, night);
-  if (phase?.kind === 'live') return t('n.item_live', { when });
+  if (phase?.kind === 'live') return t('n.item_live');
   if (phase?.kind === 'upcoming') {
-    return t('n.item', { when, countdown: countdownIn(t, lang, phase.startsIn) });
+    return t('n.item', { countdown: countdownIn(t, lang, phase.startsIn) });
   }
-  return t('n.item_plain', { when });
+  return t('n.item_plain', { when: nightWhen(lang, night) });
+}
+
+/**
+ * The sheet's own line: the day and the hour, and how far off it is.
+ *
+ * It does NOT say "dad night" — the sheet it sits in is titled that, and a
+ * heading followed by itself is the panel stuttering.
+ */
+export function nightDetail(t: T, lang: Lang, night: DadNight, now: number): string {
+  const phase = phaseOf(night, now);
+  const when = nightWhen(lang, night);
+  if (phase?.kind === 'live') return t('n.detail_live', { when });
+  if (phase?.kind === 'upcoming') {
+    return t('n.detail', { when, countdown: countdownIn(t, lang, phase.startsIn) });
+  }
+  return when;
 }
 
 /**

@@ -67,7 +67,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await expect(marc.getByTestId('agenda-item')).toContainText('How do you handle bedtime?');
   await expect(marc.getByTestId('agenda-item')).toContainText('Marc');
   await expect(
-    sam.getByTestId('line').filter({ hasText: 'put something up for dad night' }),
+    sam.getByTestId('line').filter({ hasText: 'Marc, for dad night: How do you handle bedtime?' }),
   ).toBeVisible();
 
   // Sam sees it in his own sheet, and cannot take back what he did not write.

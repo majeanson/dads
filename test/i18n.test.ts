@@ -26,7 +26,9 @@ describe('the dictionary', () => {
     // across and never looked at again. A handful of words really are the same
     // in both languages, and those are named here rather than waved through by
     // a rule that would also wave through a whole untranslated screen.
-    const SAME_IN_BOTH = ['Code', 'Menu', 'Messages', '…'];
+    // '{when} · {countdown}' is punctuation and two holes: there is nothing
+    // in it to translate, and both sides fill it from translated parts.
+    const SAME_IN_BOTH = ['Code', 'Menu', 'Messages', '…', '{when} · {countdown}'];
     const suspicious = EN_KEYS.filter(
       (key) => TABLES.en[key] === TABLES.fr[key] && !SAME_IN_BOTH.includes(TABLES.en[key]),
     );

@@ -49,8 +49,6 @@ export function Invite() {
 
   return (
     <div className="grid gap-3" data-testid="invite">
-      <p className="m-0 text-[0.9375rem] text-muted">{t('inv.lede')}</p>
-
       <label htmlFor="invite-link" className="sr-only">
         {t('inv.link')}
       </label>
@@ -79,6 +77,8 @@ export function Invite() {
           </Button>
         ) : null}
       </div>
+
+      <p className="m-0 text-sm text-muted">{t('inv.week')}</p>
     </div>
   );
 }

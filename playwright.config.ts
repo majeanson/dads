@@ -33,7 +33,10 @@ export default defineConfig({
     // about the assets binding or the run_worker_first routing.
     // ENVIRONMENT overridden: wrangler.toml declares production, and in production
     // a missing SESSION_SECRET is fatal by design. The e2e stack is not production.
-    command: `npm run build && npx wrangler dev --port ${PORT} --var ENVIRONMENT:development`,
+    // OPEN_DOOR too: the unlocked door is a temporary production switch, and the
+    // suite's job is to keep the LOCKED behaviour honest so it still works when
+    // the line comes back out.
+    command: `npm run build && npx wrangler dev --port ${PORT} --var ENVIRONMENT:development --var OPEN_DOOR:no`,
     url: `http://127.0.0.1:${PORT}/api/health`,
     // Never adopt a server this run did not start: a leftover process from an
     // interrupted run can be serving stale code, and a silently reused one is

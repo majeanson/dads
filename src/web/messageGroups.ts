@@ -87,6 +87,10 @@ function supersedes(a: RoomMessage, b: RoomMessage): boolean {
   const ka = a.said?.k;
   const kb = b.said?.k;
   if (ka === undefined || kb === undefined) return false;
+  // A dad who says he is in and then that he cannot has not said two things.
+  if (ka === 'rsvp' && kb === 'rsvp') {
+    return (a.said as { name: string }).name === (b.said as { name: string }).name;
+  }
   return (
     (ka === 'night_set' || ka === 'night_cleared') && (kb === 'night_set' || kb === 'night_cleared')
   );
