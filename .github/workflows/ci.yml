@@ -9,13 +9,6 @@ on:
 # cheap enough to run on every push.
 #
 # The browser suite lives in e2e.yml, which this workflow triggers on main.
-#
-# There is deliberately NO deploy job. Deploying dads means applying migrations
-# first and then `npm run deploy`, in that order, by someone who has decided the
-# migration is safe — this is five friends and one database, not a service with
-# a rollback plan. If that ever changes, the shape to copy is jaffre's
-# .github/workflows/ci.yml, which needs CLOUDFLARE_API_TOKEN and
-# CLOUDFLARE_ACCOUNT_ID as repository secrets.
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -36,3 +29,55 @@ jobs:
       # apply fails the suite.
       - run: npm test
       - run: npm run build
+
+  # Every green push to main goes live (decided 2026-09-11; until then deploys
+  # were by hand on purpose). The order is the one the hand-run always had:
+  # migrations first, then the Worker, so code never meets a schema it has not
+  # seen. The unit suite above has already applied every migration to a fresh
+  # D1, which is the "is it safe" check a person used to do by reading it.
+  #
+  # Not waiting on the browser suite: e2e.yml takes minutes and runs on this
+  # same commit as soon as this workflow succeeds. The trade is that a
+  # regression only a browser catches can ship for as long as it takes to
+  # notice the red run — for five friends, a trade worth making.
+  #
+  # DEPLOY_ENABLED is a repository variable, so the job can be switched off
+  # without editing this file. CLOUDFLARE_API_TOKEN (Workers Scripts, D1 and
+  # Workers R2 edit) and CLOUDFLARE_ACCOUNT_ID are repository secrets.
+  deploy:
+    needs: [ci]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      # Two pushes in quick succession deploy in order, never on top of each
+      # other; the later one wins, which is the one that should.
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run migrate:remote
+      - run: npm run deploy
+      # A deploy that returned 0 is not a deploy that landed. The live door
+      # must name the bundle this build produced — the same check the app
+      # itself runs on every return to the foreground.
+      - name: Prove the live site serves this build
+        run: |
+          set -euo pipefail
+          want=$(grep -oE '/assets/index-[^"]+\.js' dist/index.html | head -1)
+          echo "built  $want"
+          for i in 1 2 3 4 5 6; do
+            got=$(curl -fsS -H 'Cache-Control: no-cache' https://dads.marcportal.com/ | grep -oE '/assets/index-[^"]+\.js' | head -1 || true)
+            echo "live   ${got:-<nothing>}"
+            if [ "$got" = "$want" ]; then exit 0; fi
+            sleep 10
+          done
+          echo "the live site never served this build" >&2
+          exit 1

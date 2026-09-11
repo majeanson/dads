@@ -588,10 +588,18 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   credentials: it stays cheap enough to run on everything.
 - `e2e.yml` runs the browser suite after CI goes green on main, nightly, and on
   demand. Split out because it downloads Chromium and boots a Worker.
-- **There is deliberately no deploy job.** Deploying means applying migrations
-  first and then `npm run deploy`, in that order, by someone who has decided
-  the migration is safe. Five friends and one database is not a service with a
-  rollback plan.
+- **Every green push to main deploys** (decided 2026-09-11, reversing the
+  earlier "no deploy job" rule). The `deploy` job in ci.yml runs after the
+  `ci` job, in the order the hand-run always had: `migrate:remote`, then
+  `deploy`, then a check that the live door names the bundle this build made.
+  It does not wait for the browser suite, which runs on the same commit right
+  after. Switched by the `DEPLOY_ENABLED` repository variable; needs
+  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository secrets.
+  `npm run deploy` by hand still works and is how to ship when CI is down.
+- A migration now goes live the moment it is merged. The unit suite applying
+  it to a fresh D1 is the safety check; a migration that needs a hand on it
+  (a backfill, a rename) is a reason to set `DEPLOY_ENABLED` to `false`
+  first, run it by hand, and switch back.
 
 ## The room on a phone
 
