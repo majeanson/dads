@@ -10,6 +10,10 @@ export interface RoomState {
   connection: Connection;
   you: RosterEntry | null;
   roster: RosterEntry[];
+  /** Everyone in the group, present or not. Where a face comes from: the
+   * roster is who is connected, and a line said on Tuesday by a man who is
+   * not here tonight still wants his face beside it. */
+  members: RosterEntry[];
   messages: RoomMessage[];
   /** memberId → name, of dads typing in the last few seconds. */
   typing: Map<string, string>;
@@ -79,6 +83,7 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
     connection: 'connecting',
     you: null,
     roster: [],
+    members: [],
     messages: [],
     typing: new Map(),
     call: [],
@@ -198,6 +203,7 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
             connection: 'open',
             you: frame.you,
             roster: frame.roster,
+            members: frame.members ?? s.members,
             call: frame.call,
             messages: merge(
               lost.size === 0 ? s.messages : s.messages.filter((m) => !lost.has(m.id)),
@@ -219,6 +225,17 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
           return;
         case 'roster':
           setState((s) => ({ ...s, roster: frame.roster }));
+          return;
+        case 'member':
+          // Upsert rather than replace: this is one dad changing, and the
+          // other four are unaffected.
+          setState((s) => ({
+            ...s,
+            members: [
+              ...s.members.filter((m) => m.memberId !== frame.member.memberId),
+              frame.member,
+            ],
+          }));
           return;
         case 'night':
           setState((s) => ({ ...s, night: frame.night }));

@@ -140,6 +140,16 @@ export type ServerFrame =
       roster: RosterEntry[];
       /** Who is already on the call when you arrive. */
       call: CallMember[];
+      /**
+       * Everyone in the group, present or not, with the version of each
+       * one's face.
+       *
+       * Separate from `roster`, which is who is CONNECTED: a line said on
+       * Tuesday by a man who is not here tonight still has his face beside
+       * it. One source of truth for faces, so a message never carries a
+       * version that has since gone stale.
+       */
+      members: RosterEntry[];
       /** Messages after the client's `after`, oldest first. */
       messages: RoomMessage[];
       /**
@@ -150,6 +160,9 @@ export type ServerFrame =
       gone: string[];
     }
   | { t: 'roster'; roster: RosterEntry[] }
+  /** One dad's name or face changed. Distinct from `roster`, which is about
+   * who is connected: this is about who he is, present or not. */
+  | { t: 'member'; member: RosterEntry }
   /** Who is on the call right now. Separate from the roster: being in the room
    * and being on the call are different things. */
   | { t: 'call-roster'; members: CallMember[] }

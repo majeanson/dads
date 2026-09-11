@@ -30,6 +30,7 @@ import { nightItem, nightSoon } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
 import { lastSeen, markSeen } from './seen';
+import { Face } from './Face';
 import { Marks, marksOf } from './Marks';
 import { LineMenu } from './ui/LineMenu';
 import { useFreshBuild } from './useFreshBuild';
@@ -343,6 +344,19 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     [room.roster, t],
   );
 
+  /**
+   * The version of a dad's face, for the conversation.
+   *
+   * From `members` rather than the roster: a line said on Tuesday by a man
+   * who is not here tonight still has his face beside it. Undefined for a dad
+   * with no face, and `Face` falls back to his initials.
+   */
+  const faceOf = useCallback(
+    (memberId: string | null) =>
+      memberId === null ? undefined : room.members.find((m) => m.memberId === memberId)?.face,
+    [room.members],
+  );
+
   const rows = toRows(
     room.messages,
     Date.now(),
@@ -489,6 +503,18 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                     }`}
                     data-testid="line"
                   >
+                    {/* Only at the top of a run. A face on every line of one
+                        turn is the app repeating who is talking between every
+                        sentence, which is what dropping the name fixed. */}
+                    {row.showName && row.message.memberId !== null ? (
+                      <Face
+                        className="face"
+                        memberId={row.message.memberId}
+                        name={row.message.name}
+                        version={faceOf(row.message.memberId)}
+                        size={32}
+                      />
+                    ) : null}
                     <span className="who">{row.showName ? row.message.name : ''}</span>
                     <span className="body">
                       {row.message.kind === 'prompt' ? (

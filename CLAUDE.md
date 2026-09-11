@@ -503,6 +503,26 @@ secret, custom domain bound by the route in wrangler.toml.
   crop). Unlike a photograph there is NO fallback to the original: a face the
   browser cannot decode is a face this app cannot show, and a twelve-megapixel
   one is not a face.
+- **The conversation shows faces, in a FIXED 2rem gutter.** The message row is
+  `2rem 7.5rem 1fr auto` — face, name, what he said, the clock — and both of
+  the first two tracks are fixed for different reasons. The gutter, because a
+  flexible column is exactly what crushed the name to "M…" and made the phone
+  layout two rows in the first place. The name, because **every line is its
+  own grid**, so `auto` sized each row to its own contents and no two lines of
+  the conversation began at the same place.
+- **Every cell is placed by hand.** Auto-placement counts children, not
+  columns: on a continued line, with no face in the gutter, the words slid one
+  column left and were laid out in the 7.5rem meant for a name. `e2e` pins the
+  alignment at both widths, because this is the kind of thing that regresses
+  without anybody noticing.
+- **A face appears once per run**, at the top, like the name. The room's own
+  lines start in column 2 — nobody said them, so nothing belongs in the column
+  that says who did.
+- **Faces come from `hello.members`, not from the message.** `members` is
+  everyone in the group; `roster` is who is CONNECTED — and a line said on
+  Tuesday by a man who is not here tonight still wants his face beside it. One
+  source of truth, so a face set this evening reaches every line he ever
+  wrote, and a `member` frame keeps it current without a reload.
 - **A dad with no face gets his initials, never an empty circle.** The whole
   job is telling five men apart and a blank is worse at that than two letters.
   Split on whitespace, so "Marc-antoine" is M and not MA.

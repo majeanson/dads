@@ -352,3 +352,43 @@ test('every mark is reachable wherever on the line he presses', async ({ browser
 
   await context.close();
 });
+
+test('a face sits beside a run, once, and the words below it line up', async ({ browser }) => {
+  // Both widths: wide is four columns and a phone is two rows, and the face
+  // gutter has to behave in each. The alignment matters because every line is
+  // its OWN grid — nothing lines up across rows unless the tracks are fixed,
+  // and auto-placement slid a continued line into the name column when there
+  // was no face in the gutter to hold its place.
+  for (const width of [1200, 430]) {
+    const context = await browser.newContext({ viewport: { width, height: 900 } });
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+    await page.getByLabel('Your name').fill(`Pat ${width}`);
+    await page.getByRole('button', { name: 'Come in' }).click();
+    await expect(page.getByTestId('connection')).toHaveText(/here$/);
+
+    const first = `first of a run at ${width}`;
+    const second = `and its continuation at ${width}`;
+    for (const text of [first, second]) {
+      await page.getByLabel('Say something').fill(text);
+      await page.getByRole('button', { name: 'Send' }).click();
+      await expect(page.getByTestId('line').filter({ hasText: text })).toBeVisible();
+    }
+
+    const top = page.getByTestId('line').filter({ hasText: first });
+    const next = page.getByTestId('line').filter({ hasText: second });
+
+    // His name and his face, once, at the top of the run.
+    await expect(top.locator('.face')).toHaveCount(1);
+    await expect(next.locator('.face')).toHaveCount(0);
+
+    const a = (await top.locator('.body').boundingBox())!;
+    const b = (await next.locator('.body').boundingBox())!;
+    expect(Math.abs(a.x - b.x), `bodies must align at ${width}`).toBeLessThan(2);
+    // And the words start after the gutter, not inside it.
+    expect(a.x).toBeGreaterThan(32);
+
+    await context.close();
+  }
+});

@@ -262,6 +262,12 @@ export class RoomDO extends DurableObject<Env> {
         }
       }
       this.broadcastRoster();
+      // And who he is, which reaches his old lines as well as the roster —
+      // a face set tonight belongs beside what he said on Tuesday.
+      this.broadcast({
+        t: 'member',
+        member: { memberId, name, face: face ?? undefined },
+      });
       // A name changing with nothing said is four men wondering who the new
       // bloke is. A face changing is not news.
       if (typeof was === 'string' && was !== '' && was !== name) {
@@ -335,6 +341,7 @@ export class RoomDO extends DurableObject<Env> {
       you: { memberId, name },
       roster: this.roster(),
       call: this.callRoster(),
+      members: await this.membersOfGroup(),
       messages: await this.backfill(resuming ? after : null),
       // Only for a resume. A fresh load is backfilled from a tail the line is
       // already out of, so there is nothing on that screen to take back.
@@ -998,6 +1005,38 @@ export class RoomDO extends DurableObject<Env> {
       }
     }
     return found;
+  }
+
+  /**
+   * Everyone in the group, present or not, with each one's face.
+   *
+   * The roster is who is CONNECTED; this is who exists. A line said on
+   * Tuesday by a man who is not here tonight still wants his face beside it,
+   * and keeping the version here rather than on the message means a face set
+   * this evening reaches every line he ever wrote.
+   *
+   * Five rows, once per connection. Empty on the failure path rather than
+   * fatal: faces missing is a room that falls back to initials, and that is
+   * not worth refusing a dad the door.
+   */
+  private async membersOfGroup(): Promise<RosterEntry[]> {
+    const groupId = this.groupId();
+    if (groupId === undefined) return [];
+    try {
+      const { results } = await this.env.DB.prepare(
+        'SELECT id, display_name, avatar_at FROM members WHERE group_id = ?',
+      )
+        .bind(groupId)
+        .all<{ id: string; display_name: string; avatar_at: number | null }>();
+      return results.map((r) => ({
+        memberId: r.id,
+        name: r.display_name,
+        face: r.avatar_at ?? undefined,
+      }));
+    } catch (err) {
+      console.error('members failed', err);
+      return [];
+    }
   }
 
   /** Everything taken back recently, for a socket resuming where it left off. */
