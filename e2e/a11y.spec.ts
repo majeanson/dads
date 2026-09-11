@@ -44,9 +44,13 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByTestId('connection')).toHaveText(/here$/);
 
     // One of everything in the conversation so the rows are checked too.
-    await page.getByLabel('Say something').fill('a line with a link https://example.com in it');
+    // Named for the theme: both runs share one room, and a line that reads
+    // the same twice is two elements to a locator.
+    await page
+      .getByLabel('Say something')
+      .fill(`a ${theme} line with a link https://example.com in it`);
     await page.getByRole('button', { name: 'Send' }).click();
-    await expect(page.getByTestId('line').filter({ hasText: 'a line with' })).toBeVisible();
+    await expect(page.getByTestId('line').filter({ hasText: `a ${theme} line` })).toBeVisible();
     found.push(...(await faults(page, 'the room')));
 
     const menu = () => page.getByRole('button', { name: 'Menu' }).click();

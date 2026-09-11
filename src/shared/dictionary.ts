@@ -76,6 +76,8 @@ const EN = {
   'menu.invite': 'Invite a dad',
   'menu.sign_out': 'Sign out',
   'menu.settings': 'Settings',
+  'menu.prompt_waiting': 'a question for you',
+  'menu.board_waiting': 'your week to fill in',
   'inv.title': 'Invite a dad',
   'inv.week': 'Good for a week.',
   'inv.link': 'Invite link',
@@ -108,6 +110,8 @@ const EN = {
   'here.you': ' (you)',
   'here.came_in': '{name} came in',
   'here.left': '{name} left',
+  'here.on_call': 'on the call',
+  'here.muted': 'muted',
 
   // -------------------------------------------------------- the questions
   'q.title': 'Questions',
@@ -176,6 +180,10 @@ const EN = {
   't.silent_link': 'Open it in its own tab',
   't.silent_or': 'or',
   't.try_again': 'try again',
+  't.turn': '{name}’s turn — {n}s',
+  't.away': '{name} dropped — bot in {n}s',
+  't.bot': 'A bot is playing for {name}',
+  't.reconnecting': 'Reconnecting to the table…',
 
   // ------------------------------------------------------- dad night
   'n.title': 'Dad night',
@@ -320,6 +328,8 @@ const FR: Record<Key, string> = {
   'menu.invite': 'Invite un chum',
   'menu.sign_out': 'Déconnexion',
   'menu.settings': 'Réglages',
+  'menu.prompt_waiting': 'une question pour toi',
+  'menu.board_waiting': 'ta semaine à remplir',
   'inv.title': 'Invite un chum',
   'inv.week': 'Bon pour une semaine.',
   'inv.link': 'Le lien',
@@ -353,6 +363,8 @@ const FR: Record<Key, string> = {
   'here.you': ' (toi)',
   'here.came_in': '{name} est arrivé',
   'here.left': '{name} est parti',
+  'here.on_call': 'dans l’appel',
+  'here.muted': 'micro fermé',
 
   // -------------------------------------------------------- les questions
   'q.title': 'Les questions',
@@ -421,6 +433,10 @@ const FR: Record<Key, string> = {
   't.silent_link': 'Ouvre-la dans un autre onglet',
   't.silent_or': 'ou',
   't.try_again': 'réessaie',
+  't.turn': 'Au tour de {name} — {n}s',
+  't.away': '{name} a décroché — bot dans {n}s',
+  't.bot': 'Un bot joue pour {name}',
+  't.reconnecting': 'Reconnexion à la table…',
 
   // -------------------------------------------------------- soirée de gars
   'n.title': 'Soirée de gars',

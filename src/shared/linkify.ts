@@ -56,6 +56,27 @@ export function parts(body: string): Part[] {
   return found.length > 0 ? found : [{ link: false, text: body }];
 }
 
+/** Past this a link is a wall; the host is what a man reads anyway. */
+const SHOWN = 40;
+
+/**
+ * What a link SHOWS. The scheme goes, "www." goes, a lone trailing slash
+ * goes, and a long path is cut so the line stays a line. The host is never
+ * cut — it is the one part that says where he is being sent, and the full
+ * address is on the anchor's title for anyone who wants it.
+ */
+export function shortLink(href: string): string {
+  const shown = href
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/$/, '');
+  if (shown.length <= SHOWN) return shown;
+  const slash = shown.indexOf('/');
+  const host = slash === -1 ? shown : shown.slice(0, slash);
+  if (host.length >= SHOWN - 1) return `${host}…`;
+  return `${shown.slice(0, SHOWN - 1)}…`;
+}
+
 function countOf(text: string, character: string): number {
   let n = 0;
   for (const c of text) if (c === character) n += 1;

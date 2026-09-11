@@ -19,7 +19,7 @@ import {
 } from '../shared/protocol';
 import { tableSaid } from '../shared/jaffre';
 import { englishOf, parseSaid, type Said } from '../shared/said';
-import { notifyGroup } from './push';
+import { notifyGroup, notifyMember } from './push';
 import type { Env } from './env';
 import { newId } from './identity';
 import { mediaFor } from './media';
@@ -65,6 +65,8 @@ const LEAVE_GRACE_MS = 15_000;
  * table line and drops an identical one that follows close behind.
  */
 const TABLE_DEDUPE_MS = 20_000;
+/** A hand takes a minute or two; a nudge per hand is a nag. */
+const TURN_NUDGE_EVERY_MS = 3 * 60_000;
 
 /**
  * How long a posted line's cid is remembered, so a re-send after a reconnect
@@ -342,6 +344,9 @@ export class RoomDO extends DurableObject<Env> {
       if (said && !this.recentlySaid(englishOf(said))) {
         await this.say(who.name, said, 'table');
       }
+      // His turn has sat for twenty seconds: the one line of this that goes
+      // to a phone, and only to his.
+      if (frame.event.t === 'turn') await this.nudgeTurn(frame.event.name);
       return;
     }
 
@@ -730,6 +735,45 @@ export class RoomDO extends DurableObject<Env> {
    * archive reads like and what an old client shows, and the fact in `meta`,
    * because that is what lets a dad read it in French.
    */
+  /** When each dad was last nudged about his turn. In memory on purpose: an
+   * eviction forgetting it costs one extra nudge, and a table keeps its own
+   * timers anyway. */
+  private turnNudged = new Map<string, number>();
+
+  /**
+   * Tell the man whose turn it is, on his phone, once.
+   *
+   * The seat carries the name jaffre was handed on the way in, which is his
+   * display name here, so that is the join. Every framed dad relays the same
+   * event a few hundred milliseconds apart; the first one sends, the rest
+   * find the stamp. Two dads with the same name both hear it, which is the
+   * right failure.
+   */
+  private async nudgeTurn(name: string): Promise<void> {
+    const groupId = this.groupId();
+    if (groupId === undefined) return;
+    const now = Date.now();
+    const last = this.turnNudged.get(name) ?? 0;
+    if (now - last < TURN_NUDGE_EVERY_MS) return;
+    this.turnNudged.set(name, now);
+    try {
+      const { results } = await this.env.DB.prepare(
+        'SELECT id FROM members WHERE group_id = ? AND display_name = ?',
+      )
+        .bind(groupId, name)
+        .all<{ id: string }>();
+      for (const member of results) {
+        await notifyMember(this.env, member.id, {
+          title: 'dads',
+          body: 'Your turn at the table.',
+          tag: 'table-turn',
+        });
+      }
+    } catch (err) {
+      console.error('turn nudge failed', { name }, err);
+    }
+  }
+
   private async say(name: string, said: Said, kind: 'system' | 'table' = 'system'): Promise<void> {
     await this.post(kind, null, name, englishOf(said), null, null, said);
   }

@@ -214,6 +214,20 @@ weakening `sessionSecret()`.
   by an e2e with a deliberately mute stub.
 - jaffre's half lives in `jaffre/apps/web/src/embed.ts`, on `main` and
   deployed. The two sides share a vocabulary but no code.
+- **The quiet seats never become lines** (2026-09-11). The bridge grew
+  `turn` (a sitting player's turn has run to the last 20s), `away` (a seated
+  dad dropped, with the bot-swap countdown; 0 means the bot has it), `back`,
+  and `connection` — still `v: 1`, because an unknown kind was always
+  dropped. `tableSaid` returns null for all four: they are said in the
+  panel's own head (`table-note`, a countdown that clears itself) and, for
+  `turn`, pushed to the ONE dad it concerns, joined on the display name
+  jaffre was handed on the way in, at most once every three minutes. A line
+  in the room saying a man's turn has sat for twenty seconds, every hand,
+  would be furniture.
+- **`.table-frame` is a flex column, not grid rows.** With rows, the "isn't
+  answering" notice took the stretchy row and the game got the leftover one
+  — two thirds blank and the table squashed, on exactly the browsers that
+  show the notice.
 
 ## Two languages
 
@@ -372,7 +386,8 @@ secret, custom domain bound by the route in wrangler.toml.
   come from the platform. Sheets mount on open, so each reads fresh data.
 - The Menu carries a mark when something is waiting for **you** — a question
   you have not answered, a week you have not filled in — and the menu itself
-  says which. A mark for something somebody else did would be noise, and a
+  says which, in words ("a question for you", "your week to fill in") rather
+  than a dot: a mark says "something", and something is what a man ignores. A mark for something somebody else did would be noise, and a
   number invites you to drive it to zero. `/api/todo` is what the marks read,
   and it is deliberately about the caller and nobody else.
 - **Dad night appears on the header only inside 24 hours** (`nightSoon`), and
@@ -400,6 +415,13 @@ secret, custom domain bound by the route in wrangler.toml.
   now, then the comings and goings, newest first (`GET /api/presence`, capped
   at 60). The 15s leave grace still applies, so a wifi→LTE hop records nothing.
 - The roster itself is no longer in the menu — one place to look, not two.
+- **The roster answers the question; the log is behind one more tap.** "In
+  and out" is a disclosure button, collapsed by default. Tests that want a
+  row from it click `comings` first.
+- **The call is read here too.** Who is on it and who is muted used to be a
+  row of names under the call buttons; that row is conversation now, and the
+  count there is a button into this sheet. A roster pill carries a phone or
+  a mic-off icon with the words sr-only, and `data-on-call` for a test.
 
 ## Dad-night reminders (push)
 
@@ -450,7 +472,14 @@ secret, custom domain bound by the route in wrangler.toml.
   service worker — the one free signal a browser gives.
 - **Links are split, never substituted.** `src/shared/linkify.ts` returns parts
   and the renderer builds anchors from them, so no string ever becomes markup;
-  http(s) only, so nothing else can become an href.
+  http(s) only, so nothing else can become an href. What a link SHOWS is
+  `shortLink`: no scheme, no www, forty characters, and the host is never
+  cut, because it is the part that says where he is being sent; the full
+  address is the anchor's title. Underlined, because the preflight strips
+  the browser's underline and axe rightly refused a link told apart by
+  colour alone.
+- A photo in the list is capped at 16rem tall as well as 20rem wide. Tap
+  for the real one.
 - **The screen stays awake on a call** (`useWakeLock`). The browser drops the
   lock whenever the tab hides, so it is taken again on the way back.
 - **Speaking is worked out locally** (`src/web/speaking.ts`): one AudioContext,

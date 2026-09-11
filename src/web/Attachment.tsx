@@ -72,7 +72,10 @@ export function Attachment({ media }: { media: MessageAttachment }) {
         height={media.height ?? undefined}
         loading="lazy"
         decoding="async"
-        className="block h-auto max-w-80"
+        // Capped at a hand's height as well as a width: a tall photo off a
+        // phone was a whole screen of one thing, and the line after it
+        // was a scroll away. Tap for the real one.
+        className="block h-auto max-h-64 w-auto max-w-80"
       />
     </a>
   );

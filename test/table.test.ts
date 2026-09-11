@@ -137,6 +137,44 @@ describe('the bridge vocabulary', () => {
     );
     // 'ready' is the frame proving the table is alive; nobody needs telling.
     expect(tableSaid({ v: 1, t: 'ready' })).toBeNull();
+    // The quiet seats are said beside the frame and to the man, not to the room.
+    expect(tableSaid({ v: 1, t: 'turn', name: 'Marc', seconds: 20 })).toBeNull();
+    expect(tableSaid({ v: 1, t: 'away', name: 'Sam', seconds: 0 })).toBeNull();
+    expect(tableSaid({ v: 1, t: 'connection', state: 'ok' })).toBeNull();
+  });
+
+  it('reads the quiet-seat vocabulary, and bounds the countdown', () => {
+    expect(parseTableEvent({ v: 1, t: 'turn', name: 'Marc', seconds: 20 })).toEqual({
+      v: 1,
+      t: 'turn',
+      name: 'Marc',
+      seconds: 20,
+    });
+    expect(parseTableEvent({ v: 1, t: 'away', name: 'Sam', seconds: 99_999 })).toEqual({
+      v: 1,
+      t: 'away',
+      name: 'Sam',
+      seconds: 3600,
+    });
+    expect(parseTableEvent({ v: 1, t: 'back', name: 'Sam' })).toEqual({
+      v: 1,
+      t: 'back',
+      name: 'Sam',
+    });
+    expect(parseTableEvent({ v: 1, t: 'connection', state: 'ok' })).toEqual({
+      v: 1,
+      t: 'connection',
+      state: 'ok',
+    });
+    for (const bad of [
+      { v: 1, t: 'turn', name: 'Marc' },
+      { v: 1, t: 'turn', name: 'Marc', seconds: -1 },
+      { v: 1, t: 'turn', name: 'Marc', seconds: 'soon' },
+      { v: 1, t: 'away', seconds: 5 },
+      { v: 1, t: 'connection', state: 'gone' },
+    ]) {
+      expect(parseTableEvent(bad)).toBeNull();
+    }
   });
 
   it('validates the event when it arrives as a client frame', () => {
@@ -241,6 +279,18 @@ describe('table events reaching the room', () => {
     marc.table({ v: 1, t: 'ready' });
     await settle(120);
     expect(marc.lines().some((b) => b.includes('ready'))).toBe(false);
+  });
+
+  it('keeps the quiet seats out of the conversation', async () => {
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    await settle();
+    marc.table({ v: 1, t: 'turn', name: 'Marc', seconds: 20 });
+    marc.table({ v: 1, t: 'away', name: 'Sam', seconds: 45 });
+    marc.table({ v: 1, t: 'back', name: 'Sam' });
+    marc.table({ v: 1, t: 'connection', state: 'reconnecting' });
+    await settle(150);
+    expect(marc.lines()).toEqual([]);
   });
 
   it('ignores a frame it does not recognise instead of posting it', async () => {

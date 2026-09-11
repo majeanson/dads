@@ -227,13 +227,34 @@ async function sendWebPush(
  * else ever tells us.
  */
 export async function notifyGroup(env: Env, groupId: string, payload: PushPayload): Promise<void> {
+  await notify(
+    env,
+    env.DB.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE group_id = ?').bind(
+      groupId,
+    ),
+    payload,
+  );
+}
+
+/** One dad, every device he said yes on. For the things that are his alone. */
+export async function notifyMember(
+  env: Env,
+  memberId: string,
+  payload: PushPayload,
+): Promise<void> {
+  await notify(
+    env,
+    env.DB.prepare(
+      'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE member_id = ?',
+    ).bind(memberId),
+    payload,
+  );
+}
+
+async function notify(env: Env, query: D1PreparedStatement, payload: PushPayload): Promise<void> {
   if (!pushEnabled(env)) return;
   try {
-    const { results } = await env.DB.prepare(
-      'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE group_id = ?',
-    )
-      .bind(groupId)
-      .all<PushSubscriptionRow>();
+    const { results } = await query.all<PushSubscriptionRow>();
 
     for (const sub of results) {
       const alive = await sendWebPush(env, sub, payload).catch((err) => {
@@ -247,6 +268,6 @@ export async function notifyGroup(env: Env, groupId: string, payload: PushPayloa
       }
     }
   } catch (err) {
-    console.error('notifyGroup failed', err);
+    console.error('notify failed', err);
   }
 }

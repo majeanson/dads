@@ -73,6 +73,7 @@ test('and the room remembers he was here, without saying so in the conversation'
   // Named exactly: earlier tests in this file have been in and out of the same
   // group, so "Sam" alone matches a column of rows.
   await marc.getByTestId('connection').click();
+  await marc.getByTestId('comings').click();
   await expect(marc.getByTestId('coming').filter({ hasText: 'Sam left' }).first()).toBeVisible({
     timeout: 30_000,
   });

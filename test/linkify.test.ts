@@ -52,3 +52,23 @@ describe('links in a message', () => {
     ]);
   });
 });
+
+describe('what a link shows', () => {
+  it('drops the scheme, the www and a lone trailing slash', async () => {
+    const { shortLink } = await import('../src/shared/linkify');
+    expect(shortLink('https://www.example.com/')).toBe('example.com');
+    expect(shortLink('http://example.com/the-thing')).toBe('example.com/the-thing');
+  });
+
+  it('cuts a long path but never the host', async () => {
+    const { shortLink } = await import('../src/shared/linkify');
+    const long = 'https://example.com/' + 'a'.repeat(80);
+    const shown = shortLink(long);
+    expect(shown.length).toBeLessThanOrEqual(41);
+    expect(shown.startsWith('example.com/')).toBe(true);
+    expect(shown.endsWith('…')).toBe(true);
+
+    const longHost = 'https://' + 'sub.'.repeat(12) + 'example.com/x';
+    expect(shortLink(longHost)).toBe(`${'sub.'.repeat(12)}example.com…`);
+  });
+});

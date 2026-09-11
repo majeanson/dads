@@ -99,7 +99,6 @@ test('a camera turned on reaches the other dad, and turning it off takes it away
 
   // Sam is still only heard, not seen.
   await expect(marc.getByTestId('call-tile').filter({ hasText: 'Sam' })).toHaveCount(0);
-  await expect(marc.getByTestId('call')).toContainText('Sam');
 
   // Off again, and the picture goes away without the call going with it.
   await marc.getByRole('button', { name: 'Camera off' }).click();
@@ -131,18 +130,18 @@ test('a dad can enlarge a tile, and knows who is muted', async ({ browser }) => 
   // Sam mutes himself. From Marc's end a muted man and a quiet one are the
   // same thing on the wire, so the room has to say which.
   await sam.getByRole('button', { name: 'Camera off' }).click();
-  await expect(marc.getByTestId('heard').filter({ hasText: 'Sam' })).toBeVisible({
-    timeout: 20_000,
-  });
+  await expect(marc.getByTestId('call-tile')).toHaveCount(0, { timeout: 20_000 });
   await sam.getByRole('button', { name: 'Mute' }).click();
-  await expect(marc.getByTestId('heard').filter({ hasText: 'Sam' })).toHaveClass(/is-quiet/, {
-    timeout: 10_000,
-  });
+
+  // The names and the mute marks live behind the count, in who's here —
+  // not in a row under the call buttons.
+  await marc.getByTestId('call-count').click();
+  const samHere = marc.getByTestId('roster-entry').filter({ hasText: 'Sam' });
+  await expect(samHere).toHaveAttribute('data-on-call', 'yes');
+  await expect(samHere).toContainText('muted', { timeout: 10_000 });
 
   await sam.getByRole('button', { name: 'Unmute' }).click();
-  await expect(marc.getByTestId('heard').filter({ hasText: 'Sam' })).not.toHaveClass(/is-quiet/, {
-    timeout: 10_000,
-  });
+  await expect(samHere).not.toContainText('muted', { timeout: 10_000 });
 
   await marc.context().close();
   await sam.context().close();

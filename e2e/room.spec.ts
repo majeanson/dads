@@ -26,7 +26,10 @@ test('two dads see each other and each other’s lines', async ({ browser }) => 
   await marc.getByTestId('connection').click();
   await expect(marc.getByTestId('roster-entry')).toHaveCount(2);
 
-  // Coming and going is recorded there, and NOT in the conversation.
+  // Coming and going is recorded there — behind one more tap, because the
+  // roster is the question and the log is the detail — and NOT in the
+  // conversation.
+  await marc.getByTestId('comings').click();
   await expect(marc.getByTestId('coming').filter({ hasText: 'Sam came in' })).toBeVisible();
   await marc.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(marc.getByTestId('line').filter({ hasText: 'came in' })).toHaveCount(0);

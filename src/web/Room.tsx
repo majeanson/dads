@@ -24,7 +24,7 @@ import {
 import { plural, useT } from './i18n';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
-import { parts } from '../shared/linkify';
+import { parts, shortLink } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { nightItem, nightSoon } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
@@ -391,6 +391,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             onLeave={call.leave}
             onToggleMute={call.toggleMute}
             onToggleCamera={() => void call.toggleCamera()}
+            onWho={() => setSheet('here')}
           />
 
           <ol
@@ -427,10 +428,11 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                             <a
                               key={i}
                               href={part.href}
+                              title={part.href}
                               target="_blank"
                               rel="noopener noreferrer nofollow"
                             >
-                              {part.text}
+                              {shortLink(part.text)}
                             </a>
                           ) : (
                             <span key={i}>{part.text}</span>
@@ -650,14 +652,16 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               <Button block onClick={() => setSheet('prompts')}>
                 <MessageCircleQuestion size={17} aria-hidden="true" className="text-muted" />
                 {t('menu.questions')}
+                {/* The reason, in words, where a dot used to be: a mark says
+                    "something", and something is what makes a man ignore it. */}
                 {todo.prompt ? (
                   <span
-                    className="ml-auto h-2 w-2 rounded-full bg-accent"
+                    className="ml-auto text-sm font-normal text-accent"
                     data-testid="mark-prompts"
-                    aria-hidden="true"
-                  />
+                  >
+                    {t('menu.prompt_waiting')}
+                  </span>
                 ) : null}
-                {todo.prompt ? <span className="sr-only">{t('room.waiting')}</span> : null}
               </Button>
             ) : null}
 
@@ -667,12 +671,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 {t('menu.week')}
                 {todo.board ? (
                   <span
-                    className="ml-auto h-2 w-2 rounded-full bg-accent"
+                    className="ml-auto text-sm font-normal text-accent"
                     data-testid="mark-board"
-                    aria-hidden="true"
-                  />
+                  >
+                    {t('menu.board_waiting')}
+                  </span>
                 ) : null}
-                {todo.board ? <span className="sr-only">{t('room.waiting')}</span> : null}
               </Button>
             ) : null}
 
@@ -719,6 +723,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               name: m.name,
               you: m.memberId === session.member.id,
             }))}
+            call={room.call}
           />
         </Sheet>
       ) : null}

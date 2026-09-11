@@ -2,7 +2,7 @@ import { ExternalLink, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { JAFFRE_ORIGIN, parseTableEvent, type TableEvent } from '../shared/jaffre';
 import { fetchTable, type TableInfo } from './api';
-import { useT } from './i18n';
+import { useT, type T } from './i18n';
 import { Button } from './ui/Button';
 
 /**
@@ -11,6 +11,56 @@ import { Button } from './ui/Button';
  * connect away, so several seconds is generous.
  */
 const SILENCE_MS = 12_000;
+
+/**
+ * What the table is doing right now, for the panel's head.
+ *
+ * A turn sitting, a dad dropped, a bot playing for him, the frame's own
+ * socket down. Said beside the frame and nowhere else: the room never hears
+ * it, because a line of it every hand would be furniture. A countdown
+ * carries the instant it ends and clears itself; the others are cleared by
+ * the event that undoes them.
+ */
+type Note =
+  | { kind: 'turn'; name: string; until: number }
+  | { kind: 'away'; name: string; until: number }
+  | { kind: 'bot'; name: string }
+  | { kind: 'reconnecting' };
+
+/** The next note, given what the table just said. Pure, so it is testable. */
+export function noteAfter(note: Note | null, event: TableEvent, now: number): Note | null {
+  switch (event.t) {
+    case 'turn':
+      return { kind: 'turn', name: event.name, until: now + event.seconds * 1000 };
+    case 'away':
+      return event.seconds === 0
+        ? { kind: 'bot', name: event.name }
+        : { kind: 'away', name: event.name, until: now + event.seconds * 1000 };
+    case 'back':
+      return note !== null && note.kind !== 'reconnecting' && note.name === event.name
+        ? null
+        : note;
+    case 'connection':
+      if (event.state === 'reconnecting') return { kind: 'reconnecting' };
+      return note?.kind === 'reconnecting' ? null : note;
+    default:
+      return note;
+  }
+}
+
+export function noteText(t: T, note: Note, now: number): string {
+  const left = (until: number) => Math.max(0, Math.ceil((until - now) / 1000));
+  switch (note.kind) {
+    case 'turn':
+      return t('t.turn', { name: note.name, n: left(note.until) });
+    case 'away':
+      return t('t.away', { name: note.name, n: left(note.until) });
+    case 'bot':
+      return t('t.bot', { name: note.name });
+    case 'reconnecting':
+      return t('t.reconnecting');
+  }
+}
 
 /**
  * The Jaffre table, beside the talking.
@@ -40,6 +90,8 @@ export function TableColumn({
    * has said nothing at all, says so and hands over a link that will work.
    */
   const [silent, setSilent] = useState(false);
+  const [note, setNote] = useState<Note | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const frame = useRef<HTMLIFrameElement>(null);
   const heard = useRef(false);
 
@@ -64,11 +116,24 @@ export function TableColumn({
       if (!parsed) return;
       heard.current = true;
       setSilent(false);
+      setNote((n) => noteAfter(n, parsed, Date.now()));
       onEvent(parsed);
     }
     window.addEventListener('message', receive);
     return () => window.removeEventListener('message', receive);
   }, [onEvent]);
+
+  // A countdown ticks once a second and clears itself when it reaches the
+  // end; the other notes need no clock.
+  useEffect(() => {
+    if (note === null || !('until' in note)) return;
+    const timer = setInterval(() => {
+      const at = Date.now();
+      setNow(at);
+      if (at >= note.until) setNote((n) => (n === note ? null : n));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [note]);
 
   // Starts only once there is a frame to wait on.
   useEffect(() => {
@@ -129,6 +194,11 @@ export function TableColumn({
     <section className="table-frame" data-testid="table">
       <div className="table-head">
         <h2>{t('t.title')}</h2>
+        {note === null ? null : (
+          <span className="table-note" role="status" data-testid="table-note">
+            {noteText(t, note, now)}
+          </span>
+        )}
         <span className="table-head-actions">
           <a
             href={table.shareUrl}

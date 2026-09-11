@@ -27,6 +27,13 @@ const STUB_TABLE = `<!doctype html><meta charset="utf-8"><h1>stub table</h1>
 /** A table that loads and then says nothing at all. */
 const MUTE_TABLE = '<!doctype html><meta charset="utf-8"><h1>a table that says nothing</h1>';
 
+/** A table where Marc has let his turn sit. */
+const SLOW_TABLE = `<!doctype html><meta charset="utf-8"><h1>a table with a slow player</h1>
+<script>
+  parent.postMessage({ v: 1, t: 'ready' }, '*');
+  setTimeout(() => parent.postMessage({ v: 1, t: 'turn', name: 'Marc', seconds: 20 }, '*'), 500);
+</script>`;
+
 /**
  * Everything that is not the conversation lives behind the one Menu button.
  *
@@ -150,4 +157,20 @@ test('a table that never speaks offers a way out', async ({ browser }) => {
   ).toBeVisible();
 
   await page.context().close();
+});
+
+test('a turn left sitting is said beside the table, never in the room', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc', SLOW_TABLE);
+  await open(marc, 'Open the table');
+
+  // In the panel's own head, with the countdown.
+  await expect(marc.getByTestId('table-note')).toContainText('Marc’s turn');
+  await expect(marc.getByTestId('table-note')).toContainText(/\d+s/);
+
+  // And not as a line: a man's turn sitting for twenty seconds every hand
+  // would be furniture in the conversation.
+  await marc.waitForTimeout(800);
+  await expect(marc.getByTestId('line').filter({ hasText: /turn/ })).toHaveCount(0);
+
+  await marc.context().close();
 });

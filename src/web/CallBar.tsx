@@ -24,6 +24,7 @@ export function CallBar({
   onLeave,
   onToggleMute,
   onToggleCamera,
+  onWho,
 }: {
   state: 'out' | 'joining' | 'in' | 'denied' | 'failed';
   peers: Peer[];
@@ -34,6 +35,8 @@ export function CallBar({
   onLeave: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
+  /** Opens who's here, which is where the names and the mute marks live. */
+  onWho: () => void;
 }) {
   const { t } = useT();
   /** The one tile a dad has asked to actually look at. */
@@ -81,11 +84,17 @@ export function CallBar({
           <PhoneOff size={15} aria-hidden="true" />
           <span className="max-[26rem]:sr-only">{t('call.leave')}</span>
         </Button>
-        {/* On a small phone the tiles and the listening line already say who
-            is on it, and this ran into the edge of the screen. */}
-        <span className="ml-auto shrink truncate text-sm text-muted max-[26rem]:sr-only">
+        {/* The count is the way to the names. It used to be a row of names
+            under the buttons, with the muted ones faded: a row of conversation
+            spent on something the sheet says better. */}
+        <button
+          type="button"
+          className="count-in ml-auto shrink truncate text-sm text-muted"
+          onClick={onWho}
+          data-testid="call-count"
+        >
           {peers.length === 0 ? t('call.alone') : t('call.count', { n: peers.length + 1 })}
-        </span>
+        </button>
       </div>
 
       {showing.length > 0 || camera ? (
@@ -125,21 +134,6 @@ export function CallBar({
       {showing.map((p) => (
         <Audio key={`a-${p.memberId}`} stream={p.stream} />
       ))}
-
-      {listening.length > 0 ? (
-        <p className="quiet call-listening">
-          {listening.map((p) => (
-            <span
-              key={p.memberId}
-              className={`heard${p.speaking ? ' is-speaking' : ''}${p.muted ? ' is-quiet' : ''}`}
-              data-testid="heard"
-            >
-              {p.name}
-              {p.muted ? <span className="sr-only"> — {t('call.is_muted')}</span> : null}
-            </span>
-          ))}
-        </p>
-      ) : null}
     </div>
   );
 }

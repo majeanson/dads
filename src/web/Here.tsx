@@ -1,5 +1,6 @@
-import { LogIn, LogOut } from 'lucide-react';
+import { ChevronDown, ChevronRight, LogIn, LogOut, MicOff, Phone } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { CallMember } from '../shared/protocol';
 import { fetchPresence, type PresenceEvent } from './api';
 import { useT } from './i18n';
 
@@ -23,12 +24,27 @@ function when(ts: number, locale: string): string {
  * a group of five on phones the room mostly talked about itself. It is not
  * nothing, though — knowing your mate looked in at eleven and you missed him
  * is worth something — so it lives here, behind the count in the header, where
- * you find it by asking rather than by scrolling past it.
+ * you find it by asking rather than by scrolling past it. And behind one more
+ * tap: the roster answers the question that opened the sheet, and the log is
+ * for the man who wants to know more.
+ *
+ * The call is read here too. Who is on it, and who has his microphone off,
+ * used to be a line of names under the call buttons; that row is worth more
+ * as conversation, and a muted man and a quiet one look the same from the far
+ * end of a peer connection, so the room has to say which somewhere.
  */
-export function Here({ roster }: { roster: { memberId: string; name: string; you: boolean }[] }) {
+export function Here({
+  roster,
+  call,
+}: {
+  roster: { memberId: string; name: string; you: boolean }[];
+  call: CallMember[];
+}) {
   const { t, lang } = useT();
   const locale = lang === 'fr' ? 'fr-CA' : 'en-CA';
   const [events, setEvents] = useState<PresenceEvent[] | null | 'loading'>('loading');
+  const [showLog, setShowLog] = useState(false);
+  const onCall = new Map(call.map((m) => [m.memberId, m]));
 
   // Read again while it is open, because this is the one view whose whole
   // subject is people arriving and going. A dad leaves the room the moment his
@@ -56,23 +72,55 @@ export function Here({ roster }: { roster: { memberId: string; name: string; you
         <p className="text-muted">{t('here.nobody')}</p>
       ) : (
         <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label={t('here.title')}>
-          {roster.map((m) => (
-            <li
-              key={m.memberId}
-              data-testid="roster-entry"
-              className="rounded-full border border-line bg-panel px-3 py-1 text-sm"
-            >
-              {/* A dot, not a word: the list is of people who are here. */}
-              <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-accent align-middle" />
-              {m.name}
-              {m.you ? t('here.you') : ''}
-            </li>
-          ))}
+          {roster.map((m) => {
+            const c = onCall.get(m.memberId);
+            return (
+              <li
+                key={m.memberId}
+                data-testid="roster-entry"
+                data-on-call={c ? 'yes' : undefined}
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel px-3 py-1.5 text-sm"
+              >
+                {/* A dot, not a word: the list is of people who are here. */}
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+                {m.name}
+                {m.you ? t('here.you') : ''}
+                {c ? (
+                  <span className="inline-flex items-center gap-1 text-muted">
+                    {c.muted ? (
+                      <MicOff size={13} aria-hidden="true" className="text-danger" />
+                    ) : (
+                      <Phone size={13} aria-hidden="true" className="text-accent" />
+                    )}
+                    <span className="sr-only">
+                      {t('here.on_call')}
+                      {c.muted ? `, ${t('here.muted')}` : ''}
+                    </span>
+                  </span>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      <h2 className="mt-6 mb-2 text-sm font-semibold text-muted">{t('here.comings')}</h2>
-      {events === 'loading' ? (
+      <h2 className="mt-6 mb-2 text-sm font-semibold text-muted">
+        <button
+          type="button"
+          className="inline-flex min-h-11 cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-inherit"
+          aria-expanded={showLog}
+          onClick={() => setShowLog((v) => !v)}
+          data-testid="comings"
+        >
+          {showLog ? (
+            <ChevronDown size={15} aria-hidden="true" />
+          ) : (
+            <ChevronRight size={15} aria-hidden="true" />
+          )}
+          {t('here.comings')}
+        </button>
+      </h2>
+      {!showLog ? null : events === 'loading' ? (
         <p className="text-muted">…</p>
       ) : events === null ? (
         <p className="text-muted">{t('here.failed')}</p>

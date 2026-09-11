@@ -170,6 +170,15 @@
     color: var(--accent);
   }
 
+  /* A link inside what a dad said is underlined, because colour alone is
+     not a difference everyone can see — and since links now show as
+     "example.com/thing" rather than a whole address, nothing else says it
+     is one. The preflight strips the browser's own underline. */
+  .line .body a {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
   /* One focus treatment, never removed. */
   :where(a, button, input, select, textarea, [tabindex]):focus-visible {
     outline: 2px solid var(--accent);
@@ -485,9 +494,12 @@
   /* --- the table --- */
 
   .table-frame {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    grid-auto-rows: auto;
+    /* A column, not grid rows: with rows, a notice above the frame took the
+       stretchy row and the game got what was left — two thirds blank and the
+       table squashed at the bottom, on exactly the browsers that show the
+       notice. Nothing in here may depend on how many children there are. */
+    display: flex;
+    flex-direction: column;
     height: 100%;
     min-height: 24rem;
     border: 1px solid var(--border);
@@ -520,10 +532,23 @@
 
   .table-frame iframe {
     display: block;
+    flex: 1;
     width: 100%;
-    height: 100%;
-    min-height: 22rem;
+    min-height: 0;
     border: 0;
+  }
+
+  /* What the table is doing, in the panel's own head: a turn sitting, a man
+     dropped, the frame reconnecting. Beside the title, never in the room. */
+  .table-note {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .table-fallback {
@@ -679,11 +704,6 @@
     color: var(--accent);
   }
 
-  .call-listening {
-    margin: 0;
-    font-size: 0.8125rem;
-  }
-
   /* Small, and capped. A tile is there to show you someone is really there —
      it is not the point of the room, and on a phone a 4:3 self-view at full
      width is most of the conversation. */
@@ -753,19 +773,6 @@
   .call-tile.is-speaking video {
     outline: 2px solid var(--accent);
     outline-offset: -2px;
-  }
-
-  .call-listening .heard:not(:last-child)::after {
-    content: ', ';
-  }
-
-  .call-listening .heard.is-speaking {
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .call-listening .heard.is-quiet {
-    opacity: 0.55;
   }
 
   /* Said in the menu where the switch would have been, when there cannot be a
