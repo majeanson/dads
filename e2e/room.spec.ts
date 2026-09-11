@@ -285,3 +285,38 @@ test('a line that is not yours offers no way to take it back', async ({ browser 
   await marc.context().close();
   await sam.context().close();
 });
+
+test('a mark says you read it without spending a line', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc Mark');
+  const sam = await comeIn(browser, 'Sam Mark');
+
+  await marc.getByLabel('Say something').fill('long night, both of them up');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const line = sam.getByTestId('line').filter({ hasText: 'long night, both of them up' });
+  await expect(line).toBeVisible();
+
+  // A line nobody has marked carries no control at all — that is what keeps
+  // this out of the conversation.
+  await expect(sam.getByTestId('mark')).toHaveCount(0);
+
+  await line.click({ button: 'right' });
+  await sam.getByTestId('react-👍').click();
+
+  // On his screen and on the other dad's, with the count of men rather than
+  // a list of names.
+  await expect(line.getByTestId('mark')).toContainText('1');
+  const his = marc.getByTestId('line').filter({ hasText: 'long night, both of them up' });
+  await expect(his.getByTestId('mark')).toContainText('1');
+
+  // Marc adds his to the same mark by tapping it, without opening anything.
+  await his.getByTestId('mark').click();
+  await expect(his.getByTestId('mark')).toContainText('2');
+  await expect(line.getByTestId('mark')).toContainText('2');
+
+  // And pressing his own again takes it off.
+  await his.getByTestId('mark').click();
+  await expect(his.getByTestId('mark')).toContainText('1');
+
+  await marc.context().close();
+  await sam.context().close();
+});

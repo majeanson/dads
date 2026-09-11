@@ -1,7 +1,9 @@
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { Copy, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { REACTIONS } from '../../shared/protocol';
 import { useT } from '../i18n';
+import { cn } from './cn';
 
 const ITEM = [
   'flex cursor-pointer items-center gap-2.5 rounded-app px-2.5 py-2 text-[0.9375rem]',
@@ -25,12 +27,17 @@ const ITEM = [
  */
 export function LineMenu({
   body,
+  mine,
   onRetract,
+  onReact,
   children,
 }: {
   body: string;
+  /** Which marks this dad has already put on the line. */
+  mine: string[];
   /** Absent when the line is not his — then this is a copy menu and no more. */
   onRetract?: () => void;
+  onReact: (emoji: string, on: boolean) => void;
   children: ReactNode;
 }) {
   const { t } = useT();
@@ -47,6 +54,33 @@ export function LineMenu({
           ].join(' ')}
           data-testid="line-menu"
         >
+          {/* The marks first, because it is the one anybody presses. A row of
+              five at a thumb's size, the ones already yours outlined. */}
+          <div className="flex gap-1 p-1" role="group" aria-label={t('line.react')}>
+            {REACTIONS.map((emoji) => {
+              const on = mine.includes(emoji);
+              return (
+                <button
+                  key={emoji}
+                  type="button"
+                  aria-pressed={on}
+                  aria-label={emoji}
+                  data-testid={`react-${emoji}`}
+                  onClick={() => onReact(emoji, !on)}
+                  className={cn(
+                    'grid h-11 w-11 cursor-pointer place-items-center rounded-app text-lg',
+                    'border transition-colors duration-75',
+                    on ? 'border-accent bg-panel' : 'border-transparent hover:border-edge',
+                  )}
+                >
+                  {emoji}
+                </button>
+              );
+            })}
+          </div>
+
+          <ContextMenu.Separator className="my-1 h-px bg-line" />
+
           {body === '' ? null : (
             <ContextMenu.Item
               className={ITEM}

@@ -209,6 +209,14 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
         case 'gone':
           setState((s) => ({ ...s, messages: s.messages.filter((m) => m.id !== frame.id) }));
           return;
+        case 'reacted':
+          setState((s) => ({
+            ...s,
+            messages: s.messages.map((m) =>
+              m.id === frame.id ? { ...m, reactions: frame.reactions } : m,
+            ),
+          }));
+          return;
         case 'roster':
           setState((s) => ({ ...s, roster: frame.roster }));
           return;
@@ -374,10 +382,41 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
     ws.send(JSON.stringify({ t: 'retract', id }));
   }, []);
 
+  /**
+   * Put a mark on a line, or take yours off.
+   *
+   * Optimistic, unlike taking a line back — the opposite call for the
+   * opposite reason. A mark that does not land costs nothing and the next
+   * frame from the room corrects it, and a tap that takes a beat to answer is
+   * the difference between this feeling like a button and feeling like a
+   * form.
+   */
+  const react = useCallback((id: string, emoji: string, on: boolean, me: string) => {
+    setState((s) => ({
+      ...s,
+      messages: s.messages.map((m) => {
+        if (m.id !== id) return m;
+        const list = (m.reactions ?? []).map((r) => ({ ...r, by: [...r.by] }));
+        const mark = list.find((r) => r.emoji === emoji);
+        if (on) {
+          if (mark) {
+            if (!mark.by.includes(me)) mark.by.push(me);
+          } else list.push({ emoji, by: [me] });
+        } else if (mark) {
+          mark.by = mark.by.filter((who) => who !== me);
+        }
+        return { ...m, reactions: list.filter((r) => r.by.length > 0) };
+      }),
+    }));
+    const ws = socket.current;
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ t: 'react', id, emoji, on }));
+  }, []);
+
   return {
     ...state,
     send,
     retract,
+    react,
     answerPrompt,
     relayTableEvent,
     sendTyping,

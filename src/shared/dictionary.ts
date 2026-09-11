@@ -52,6 +52,9 @@ const EN = {
   'line.copy': 'Copy',
   'line.retract': 'Take it back',
   'line.retract_sure': 'Take it back — sure?',
+  'line.react': 'Put a mark on it',
+  'line.marked': 'marked it',
+  'line.someone': 'somebody',
 
   // ------------------------------------------------------------- the call
   'call.join': 'Join the call',
@@ -308,6 +311,9 @@ const FR: Record<Key, string> = {
   'line.copy': 'Copie',
   'line.retract': 'Reprends-le',
   'line.retract_sure': 'Reprends-le — certain ?',
+  'line.react': 'Mets une marque',
+  'line.marked': 'l’a marqué',
+  'line.someone': 'quelqu’un',
 
   // ------------------------------------------------------------ l'appel
   'call.join': 'Embarque dans l’appel',

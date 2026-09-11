@@ -30,6 +30,7 @@ import { nightItem, nightSoon } from './NightEditor';
 import { prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
 import { lastSeen, markSeen } from './seen';
+import { Marks, marksOf } from './Marks';
 import { LineMenu } from './ui/LineMenu';
 import { useFreshBuild } from './useFreshBuild';
 import { useVisualViewport } from './useVisualViewport';
@@ -335,6 +336,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     yesterday: t('day.yesterday'),
     locale: lang === 'fr' ? 'fr-CA' : 'en-CA',
   };
+  /** A member id as a name, for the marks. The roster is five people long. */
+  const nameOf = useCallback(
+    (memberId: string) =>
+      room.roster.find((m) => m.memberId === memberId)?.name ?? t('line.someone'),
+    [room.roster, t],
+  );
+
   const rows = toRows(
     room.messages,
     Date.now(),
@@ -467,6 +475,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                 <LineMenu
                   key={row.key}
                   body={row.message.body}
+                  mine={marksOf(row.message, session.member.id)}
+                  onReact={(emoji, on) => room.react(row.message.id, emoji, on, session.member.id)}
                   onRetract={
                     row.message.memberId === session.member.id
                       ? () => room.retract(row.message.id)
@@ -500,6 +510,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                         ),
                       )}
                       {row.message.media ? <Attachment media={row.message.media} /> : null}
+                      <Marks
+                        reactions={row.message.reactions}
+                        me={session.member.id}
+                        nameOf={nameOf}
+                        onToggle={(emoji, on) =>
+                          room.react(row.message.id, emoji, on, session.member.id)
+                        }
+                      />
                     </span>
                     <time className="when">{clock(row.message.createdAt)}</time>
                   </li>

@@ -48,6 +48,10 @@ class Dad {
     );
   }
 
+  react(id: string, emoji: string, on: boolean) {
+    this.ws.send(JSON.stringify({ t: 'react', id, emoji, on }));
+  }
+
   retract(id: string) {
     this.ws.send(JSON.stringify({ t: 'retract', id }));
   }
@@ -381,6 +385,73 @@ describe('RoomDO', () => {
       // He is holding it from before, so the room has to say so; a reload
       // would have needed nothing, because the tail no longer has it.
       expect(hello.gone).toContain(posted.message.id);
+    });
+  });
+  describe('marks on a line', () => {
+    it('is one tap, shared with everyone, and pressing it again takes it off', async () => {
+      const marc = await enter(group, 'Marc');
+      const sam = await enter(group, 'Sam');
+      open.push(marc, sam);
+      marc.say('bedtime was a war');
+      const posted = await sam.next('msg', (f) => f.message.body === 'bedtime was a war');
+      const id = posted.message.id;
+      await new Promise((r) => setTimeout(r, 50));
+
+      sam.react(id, '👍', true);
+      const on = await marc.next('reacted', (f) => f.id === id);
+      expect(on.reactions).toEqual([{ emoji: '👍', by: [expect.any(String)] }]);
+
+      sam.react(id, '👍', false);
+      const off = await marc.next('reacted', (f) => f.id === id && f.reactions.length === 0);
+      expect(off.reactions).toEqual([]);
+    });
+
+    it('refuses anything that is not one of the five', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      marc.say('a line');
+      const posted = await marc.next('msg', (f) => f.message.body === 'a line');
+      await new Promise((r) => setTimeout(r, 50));
+
+      // A browser is not a place arbitrary text becomes a column value.
+      marc.react(posted.message.id, '<script>', true);
+      marc.react(posted.message.id, '🦄', true);
+      await new Promise((r) => setTimeout(r, 80));
+      expect(marc.frames.some((f) => f.t === 'reacted')).toBe(false);
+    });
+
+    it('comes back with the line on a fresh backfill', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      marc.say('worth a mark');
+      const posted = await marc.next('msg', (f) => f.message.body === 'worth a mark');
+      await new Promise((r) => setTimeout(r, 50));
+      marc.react(posted.message.id, '💪', true);
+      await marc.next('reacted');
+
+      const sam = await enter(group, 'Sam');
+      open.push(sam);
+      const hello = await sam.next('hello');
+      const line = hello.messages.find((m) => m.body === 'worth a mark');
+      expect(line?.reactions).toEqual([{ emoji: '💪', by: [expect.any(String)] }]);
+    });
+
+    it('goes with the line when the line is taken back', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      marc.say('this is going');
+      const posted = await marc.next('msg', (f) => f.message.body === 'this is going');
+      await new Promise((r) => setTimeout(r, 50));
+      marc.react(posted.message.id, '🙏', true);
+      await marc.next('reacted');
+
+      marc.retract(posted.message.id);
+      await marc.next('gone');
+      const { results } = await env.DB.prepare('SELECT emoji FROM reactions WHERE message_id = ?')
+        .bind(posted.message.id)
+        .all();
+      // The cascade on message_id is what does this, not the retract path.
+      expect(results).toEqual([]);
     });
   });
 });

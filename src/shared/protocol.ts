@@ -22,6 +22,28 @@ export interface Attachment {
   height: number | null;
 }
 
+/**
+ * The five marks, and there is no picker.
+ *
+ * A fixed short set rather than every emoji a keyboard has: what these are
+ * for is saying "heard you" on a night you have nothing to add, and a grid of
+ * two thousand faces is a worse answer to that than five. Chosen for what
+ * five men actually say to each other — yes, warmth, that's funny, hang in
+ * there, thank you.
+ */
+export const REACTIONS = ['👍', '❤️', '😂', '💪', '🙏'] as const;
+
+export function isReaction(emoji: string): boolean {
+  return (REACTIONS as readonly string[]).includes(emoji);
+}
+
+/** One mark on one line, and who put it there. */
+export interface Reaction {
+  emoji: string;
+  /** Member ids. The client works out which one is its own. */
+  by: string[];
+}
+
 export interface RoomMessage {
   /** Monotonic per room. What a reconnecting client sends back as `after`. */
   seq: number;
@@ -37,6 +59,9 @@ export interface RoomMessage {
   /** A photo or file attached to the line. The bytes live behind
    * /api/media?id=…, never in the frame. */
   media?: Attachment | null;
+  /** Marks on this line, hydrated from D1 on backfill like the attachment.
+   * Absent means none, which is nearly every line. */
+  reactions?: Reaction[];
   /**
    * Set on the lines the ROOM writes, never on a line a dad typed: what
    * happened, so each reader's own language can say it. `body` is the English
@@ -96,6 +121,8 @@ export type ClientFrame =
    * that a week later.
    */
   | { t: 'retract'; id: string }
+  /** Put a mark on a line, or take yours off. `on` says which. */
+  | { t: 'react'; id: string; emoji: string; on: boolean }
   | { t: 'typing' };
 
 export type ServerFrame =
@@ -124,6 +151,9 @@ export type ServerFrame =
   | { t: 'msg'; message: RoomMessage; cid?: string }
   /** A line somebody took back. Drop it: it is gone from the archive too. */
   | { t: 'gone'; id: string }
+  /** Every mark on one line, after a change. Whole list, not a delta: five
+   * dads tapping at once is not worth a merge rule on the client. */
+  | { t: 'reacted'; id: string; reactions: Reaction[] }
   | { t: 'typing'; memberId: string; name: string }
   | { t: 'night'; night: DadNight | null }
   | { t: 'rooms'; rooms: RoomsOpen }
@@ -154,6 +184,15 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
     const { id } = value as { id?: unknown };
     // Bounded like a cid: an id is ours, and nothing this long is one.
     return typeof id === 'string' && id !== '' && id.length <= 64 ? { t: 'retract', id } : null;
+  }
+  if (frame.t === 'react') {
+    const { id, emoji, on } = value as { id?: unknown; emoji?: unknown; on?: unknown };
+    // The mark is an allowlist and not free text: this ends up in a column
+    // and on everyone's screen, and there is no reason for it to be anything
+    // but one of five known things.
+    if (typeof id !== 'string' || id === '' || id.length > 64) return null;
+    if (typeof emoji !== 'string' || !isReaction(emoji)) return null;
+    return { t: 'react', id, emoji, on: on === true };
   }
   if (frame.t === 'call' && typeof (value as { join?: unknown }).join === 'boolean') {
     const { join, muted } = value as { join: boolean; muted?: unknown };

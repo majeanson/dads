@@ -14,6 +14,7 @@ import {
   type CallMember,
   type RoomMessage,
   type RoomsOpen,
+  type Reaction,
   type RosterEntry,
   type ServerFrame,
 } from '../shared/protocol';
@@ -374,6 +375,11 @@ export class RoomDO extends DurableObject<Env> {
 
     if (frame.t === 'retract') {
       await this.retract(frame.id, who.memberId);
+      return;
+    }
+
+    if (frame.t === 'react') {
+      await this.react(frame.id, who.memberId, frame.emoji, frame.on);
       return;
     }
 
@@ -872,6 +878,80 @@ export class RoomDO extends DurableObject<Env> {
     this.broadcast({ t: 'gone', id });
   }
 
+  /**
+   * A mark on a line, or a mark taken off.
+   *
+   * D1 only: a reaction has to outlive an eviction, and the room's tail is
+   * the live half. The write is scoped to the group on the way in, so an id
+   * from somebody else's room writes nothing — and the read that follows is
+   * what everyone is told, so a refused write shows up as no change rather
+   * than as a lie on one screen.
+   *
+   * The emoji reached here through the allowlist in `parseClientFrame`; this
+   * does not re-check it, but nothing else may call this.
+   */
+  private async react(id: string, memberId: string, emoji: string, on: boolean): Promise<void> {
+    const groupId = this.groupId();
+    if (groupId === undefined) return;
+
+    try {
+      if (on) {
+        // The line has to be this group's. Selecting it into the INSERT is
+        // what makes a stray id from another room a no-op rather than a row.
+        await this.env.DB.prepare(
+          `INSERT OR IGNORE INTO reactions (message_id, member_id, emoji, group_id, created_at)
+           SELECT ?1, ?2, ?3, ?4, ?5 FROM messages WHERE id = ?1 AND group_id = ?4`,
+        )
+          .bind(id, memberId, emoji, groupId, Date.now())
+          .run();
+      } else {
+        await this.env.DB.prepare(
+          `DELETE FROM reactions
+            WHERE message_id = ? AND member_id = ? AND emoji = ? AND group_id = ?`,
+        )
+          .bind(id, memberId, emoji, groupId)
+          .run();
+      }
+      const all = await this.reactionsById([id]);
+      this.broadcast({ t: 'reacted', id, reactions: all.get(id) ?? [] });
+    } catch (err) {
+      // Nobody is waiting on this and nothing downstream depends on it. A
+      // mark that did not land is a mark a man can press again.
+      console.error('react failed', { id, emoji }, err);
+    }
+  }
+
+  /** Marks on a set of lines, oldest first within each. */
+  private async reactionsById(ids: string[]): Promise<Map<string, Reaction[]>> {
+    const found = new Map<string, Reaction[]>();
+    const groupId = this.groupId();
+    if (ids.length === 0 || groupId === undefined) return found;
+
+    // Chunked for the same reason the attachments are: D1 takes about a
+    // hundred bound parameters and a backfill can carry five hundred lines.
+    const CHUNK = 80;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const slice = ids.slice(i, i + CHUNK);
+      const placeholders = slice.map(() => '?').join(', ');
+      const { results } = await this.env.DB.prepare(
+        `SELECT message_id, member_id, emoji FROM reactions
+          WHERE group_id = ? AND message_id IN (${placeholders})
+          ORDER BY created_at ASC`,
+      )
+        .bind(groupId, ...slice)
+        .all<{ message_id: string; member_id: string; emoji: string }>();
+
+      for (const row of results) {
+        const list = found.get(row.message_id) ?? [];
+        const mark = list.find((r) => r.emoji === row.emoji);
+        if (mark) mark.by.push(row.member_id);
+        else list.push({ emoji: row.emoji, by: [row.member_id] });
+        found.set(row.message_id, list);
+      }
+    }
+    return found;
+  }
+
   /** Everything taken back recently, for a socket resuming where it left off. */
   private retractedSince(): string[] {
     return this.ctx.storage.sql
@@ -1032,7 +1112,12 @@ export class RoomDO extends DurableObject<Env> {
             .exec<TailRow>('SELECT * FROM tail WHERE seq > ? ORDER BY seq ASC', after)
             .toArray();
     const wanted = [...new Set(rows.map((r) => r.media_id).filter((id) => id !== null))];
-    const attachments = await this.attachmentsById(wanted);
+    const [attachments, reactions] = await Promise.all([
+      this.attachmentsById(wanted),
+      // Only what a dad typed can carry a mark, so the room's own lines are
+      // not worth asking about.
+      this.reactionsById(rows.filter((r) => r.member_id !== null).map((r) => r.id)),
+    ]);
 
     return rows.map((r) => ({
       seq: r.seq,
@@ -1044,6 +1129,7 @@ export class RoomDO extends DurableObject<Env> {
       createdAt: r.created_at,
       promptId: r.prompt_id,
       media: r.media_id === null ? null : (attachments.get(r.media_id) ?? null),
+      reactions: reactions.get(r.id),
       // A line from before the room knew how to say things twice has no meta,
       // and its English body is what it keeps.
       said: parseSaid(r.meta),

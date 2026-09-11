@@ -113,6 +113,22 @@ weakening `sessionSecret()`.
 - **Taking it back is not optimistic.** The line stays on his own screen until
   the room says it is gone. For this one feature, a local vanish that failed on
   the wire would be the worst possible lie.
+- **A mark is one tap, and there is no picker.** Five fixed emoji in
+  `REACTIONS` (protocol.ts), allowlisted in `parseClientFrame` before the
+  string ever reaches a column — this ends up on everyone's screen and there
+  is no reason for it to be free text. Rows live in D1 (migration 0014), never
+  in the tail, and are hydrated on backfill beside the attachments. The
+  primary key is the whole row, so pressing the same one twice takes it off.
+  `message_id` cascades, so a line taken back takes its marks with it — the
+  retract path relies on that rather than doing it by hand.
+- **Marks render only when there are some.** Adding one is in the long-press
+  menu, so a line nobody marked carries no control and the room at rest looks
+  exactly as it did before this existed. The count is of dads, not a badge;
+  who they are is in the title and the accessible name.
+- **A mark is optimistic and taking a line back is not**, which is the same
+  rule twice: a mark that fails costs nothing and the next frame corrects it,
+  where a retraction that vanished locally and survived on the wire would be
+  the worst possible lie.
 - **`LineMenu` is a Radix context menu** — right-click on a laptop and a long
   press on a phone from one primitive, keyboard route included. It wraps only
   chat and prompt lines. The destructive item ARMS on the first select

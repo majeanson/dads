@@ -658,6 +658,15 @@
     background: var(--accent);
   }
 
+  /* The marks on a line: their own row under what he said, and only there
+     when somebody has put one on. A line nobody marked carries nothing. */
+  .marks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.3rem;
+  }
+
   /* A dad still talking keeps his name off every line; the turn reads as one
    * thought instead of five announcements. */
   .line.is-continued {
