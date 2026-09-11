@@ -21,9 +21,47 @@ export interface RoomState {
   night: DadNight | null;
   /** The same, for what the group has open. */
   rooms: RoomsOpen;
+  /** Lines typed while the socket was down, waiting to go. */
+  waiting: number;
 }
 
+/**
+ * How many unsent lines are held while the socket is down.
+ *
+ * A phone in a lift is back in a minute; a phone left in a drawer overnight is
+ * a different thing, and neither of them should be able to grow this without
+ * bound. Twenty is more than anybody types into a dead socket before noticing.
+ */
+const OUTBOX_LIMIT = 20;
+
 const PING_INTERVAL_MS = 30_000;
+
+/**
+ * How long a socket may say nothing before we stop believing in it.
+ *
+ * The hard case is not the socket that closes — that one announces itself and
+ * reconnects. It is the one a phone leaves behind when the signal goes: it
+ * stays readyState OPEN, every send is swallowed, and nothing ever fires. The
+ * server answers every ping with a pong, so silence across two pings means
+ * this end is talking to nobody.
+ */
+const SILENCE_MS = 2.5 * PING_INTERVAL_MS;
+
+/** How often the two checks below run. */
+const WATCH_INTERVAL_MS = 3_000;
+
+/**
+ * How long a line may sit unanswered before we stop believing the socket.
+ *
+ * The room echoes every line back to the man who sent it, so an unanswered one
+ * after this long means the send went nowhere. Short, because he is watching
+ * the screen: waiting out a 30-second ping to find out is waiting too long.
+ */
+const ACK_GRACE_MS = 8_000;
+
+/** After this many goes, a line is not going to be accepted — a body the room
+ * refuses would otherwise be re-sent for the rest of the evening. */
+const MAX_TRIES = 3;
 const TYPING_TTL_MS = 4_000;
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 15_000;
@@ -46,12 +84,27 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
     call: [],
     night: initialNight,
     rooms: initialRooms,
+    waiting: 0,
   });
 
   const socket = useRef<WebSocket | null>(null);
   const lastSeq = useRef(0);
   const attempt = useRef(0);
   const typingTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  /**
+   * What was said while there was nothing to say it down.
+   *
+   * A man on a platform types a line, presses send, and the app takes it — the
+   * socket being closed is the app's problem, not his. Held in memory and not
+   * in storage on purpose: this covers a signal that comes back, and a queue
+   * that outlives the tab is a line posted an hour later out of nowhere, or
+   * posted twice.
+   */
+  const outbox = useRef<
+    { cid: string; body: string; mediaId?: string; sentAt?: number; tries: number }[]
+  >([]);
+  /** Anything at all from the server, pong included. */
+  const lastHeard = useRef(0);
   const closedByUs = useRef(false);
 
   useEffect(() => {
@@ -68,15 +121,49 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
 
       ws.onopen = () => {
         attempt.current = 0;
+        lastHeard.current = Date.now();
+        // Still held, not cleared: a line is delivered when it comes back with
+        // its own id, and not before. Re-sending one the room already has is
+        // what the cid is for at the other end. In the order he typed them.
+        for (const line of outbox.current) sendLine(ws, line);
+
+        let lastPing = Date.now();
         pingTimer = setInterval(() => {
           // Guarded like every other send here: the socket can enter CLOSING
           // between the tick and the send, and an unhandled throw in a timer
           // is a hard error rather than a dropped keepalive.
-          if (ws.readyState === WebSocket.OPEN) ws.send('ping');
-        }, PING_INTERVAL_MS);
+          if (ws.readyState !== WebSocket.OPEN) return;
+          const now = Date.now();
+
+          // A line that has not come back. The socket says OPEN and is
+          // delivering nothing, which is exactly what a phone in a dead spot
+          // leaves behind. Close it and let the reconnect carry the outbox.
+          const stuck = outbox.current.find(
+            (l) => l.sentAt !== undefined && now - l.sentAt > ACK_GRACE_MS,
+          );
+          if (stuck) {
+            if (stuck.tries >= MAX_TRIES) {
+              // The room is not going to take this one. Dropping it beats
+              // re-sending it for the rest of the evening.
+              outbox.current = outbox.current.filter((l) => l !== stuck);
+              setState((st) => ({ ...st, waiting: outbox.current.length }));
+              return;
+            }
+            return ws.close();
+          }
+
+          // And a socket that has said nothing at all, for a dad who is only
+          // reading: the room answers every ping, so silence is an answer.
+          if (now - lastHeard.current > SILENCE_MS) return ws.close();
+          if (now - lastPing >= PING_INTERVAL_MS) {
+            lastPing = now;
+            ws.send('ping');
+          }
+        }, WATCH_INTERVAL_MS);
       };
 
       ws.onmessage = (event) => {
+        lastHeard.current = Date.now();
         if (event.data === 'pong') return;
         let frame: ServerFrame;
         try {
@@ -133,7 +220,18 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
         case 'msg': {
           lastSeq.current = Math.max(lastSeq.current, frame.message.seq);
           clearTyping(frame.message.memberId);
-          setState((s) => ({ ...s, messages: merge(s.messages, [frame.message]) }));
+          // Our own line, come back. Now — and not when ws.send returned — is
+          // when it has actually been said.
+          const held = outbox.current.length;
+          if (frame.cid !== undefined) {
+            outbox.current = outbox.current.filter((l) => l.cid !== frame.cid);
+          }
+          const waiting = outbox.current.length;
+          setState((s) => ({
+            ...s,
+            messages: merge(s.messages, [frame.message]),
+            ...(waiting === held ? {} : { waiting }),
+          }));
           return;
         }
         case 'typing': {
@@ -152,6 +250,14 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
         }
         case 'error':
           console.warn('room:', frame.code);
+          // A line the room will not take — empty, too long, a photo it cannot
+          // find. It will never come back with its id, so the oldest one still
+          // in flight is the one it is about, and holding it would mean
+          // re-sending it all evening.
+          if (frame.code !== 'bad_frame' && outbox.current.length > 0) {
+            outbox.current = outbox.current.slice(1);
+            setState((s) => ({ ...s, waiting: outbox.current.length }));
+          }
           return;
       }
     };
@@ -182,13 +288,28 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
     };
   }, [enabled]);
 
+  /**
+   * Say something. Always accepted — if it cannot go now it waits.
+   *
+   * It returns nothing because there is no longer an answer worth giving: the
+   * composer used to hold the draft when the send failed and leave the dad
+   * looking at his own words, wondering whether to press it again.
+   *
+   * Every line is held until it comes BACK from the room carrying its own id,
+   * not merely until `ws.send` did not throw. A socket the network has
+   * abandoned swallows sends silently, which is the whole failure this exists
+   * to survive.
+   */
   const send = useCallback((body: string, mediaId?: string) => {
+    const cid = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const line = mediaId === undefined ? { cid, body, tries: 0 } : { cid, body, mediaId, tries: 0 };
+    // Past the cap the oldest goes, not the newest: what he just typed is the
+    // one he is still looking at.
+    outbox.current = [...outbox.current, line].slice(-OUTBOX_LIMIT);
+    setState((s) => ({ ...s, waiting: outbox.current.length }));
+
     const ws = socket.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
-    ws.send(
-      JSON.stringify(mediaId === undefined ? { t: 'chat', body } : { t: 'chat', body, mediaId }),
-    );
-    return true;
+    if (ws && ws.readyState === WebSocket.OPEN) sendLine(ws, line);
   }, []);
 
   const answerPrompt = useCallback((body: string) => {
@@ -250,4 +371,25 @@ function merge(have: RoomMessage[], incoming: RoomMessage[]): RoomMessage[] {
   const fresh = incoming.filter((m) => !seen.has(m.seq));
   if (fresh.length === 0) return have;
   return [...have, ...fresh].sort((a, b) => a.seq - b.seq);
+}
+
+/**
+ * Put one held line down the socket, and remember that we did.
+ *
+ * `sentAt` is what the watchdog reads: a line sent and never echoed back is
+ * how a socket that lies about being open gives itself away.
+ */
+function sendLine(
+  ws: WebSocket,
+  line: { cid: string; body: string; mediaId?: string; sentAt?: number; tries: number },
+): void {
+  line.sentAt = Date.now();
+  line.tries += 1;
+  ws.send(
+    JSON.stringify(
+      line.mediaId === undefined
+        ? { t: 'chat', cid: line.cid, body: line.body }
+        : { t: 'chat', cid: line.cid, body: line.body, mediaId: line.mediaId },
+    ),
+  );
 }

@@ -224,7 +224,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     if (!body && pending === null) return;
 
     if (pending === null) {
-      if (room.send(body)) setDraft('');
+      room.send(body);
+      setDraft('');
       return;
     }
 
@@ -239,11 +240,10 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       );
       return;
     }
-    if (room.send(body, result.media.id)) {
-      setDraft('');
-      setPending(null);
-      if (picker.current !== null) picker.current.value = '';
-    }
+    room.send(body, result.media.id);
+    setDraft('');
+    setPending(null);
+    if (picker.current !== null) picker.current.value = '';
   }
 
   const typingNames = [...room.typing.entries()]
@@ -404,7 +404,11 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           ) : null}
 
           <p className="min-h-[1.2em] text-xs text-muted" aria-live="polite">
-            {typingNames.length > 0 ? t('room.typing', { names: typingNames.join(', ') }) : ' '}
+            {room.waiting > 0
+              ? t(`room.waiting_${plural(lang, room.waiting)}`, { n: room.waiting })
+              : typingNames.length > 0
+                ? t('room.typing', { names: typingNames.join(', ') })
+                : ' '}
           </p>
 
           <form
@@ -474,16 +478,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               }}
               placeholder={pending === null ? t('composer.say') : t('composer.caption')}
               autoComplete="off"
-              disabled={room.connection !== 'open'}
             />
             <Button
               type="submit"
               look="primary"
               size="icon"
               aria-label={t('composer.send')}
-              disabled={
-                room.connection !== 'open' || sending || (!draft.trim() && pending === null)
-              }
+              disabled={sending || (!draft.trim() && pending === null)}
             >
               <SendHorizontal size={18} aria-hidden="true" />
               <span className="sr-only">

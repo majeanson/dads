@@ -42,8 +42,10 @@ class Dad {
     });
   }
 
-  say(body: string) {
-    this.ws.send(JSON.stringify({ t: 'chat', body }));
+  say(body: string, cid?: string) {
+    this.ws.send(
+      JSON.stringify(cid === undefined ? { t: 'chat', body } : { t: 'chat', body, cid }),
+    );
   }
 
   close() {
@@ -105,6 +107,31 @@ describe('RoomDO', () => {
     expect(a.message.body).toBe('rough bedtime tonight');
     expect(a.message.name).toBe('Marc');
     expect(b.message.seq).toBe(a.message.seq);
+  });
+
+  it('posts a re-sent line once, and hands the sender back its own id', async () => {
+    const marc = await enter(group, 'Marc');
+    const sam = await enter(group, 'Sam');
+    open.push(marc, sam);
+    await sam.next('hello');
+
+    // A phone that lost the signal cannot know whether the line got there, so
+    // it sends it again on reconnect. The room has it, and says so rather than
+    // saying it twice.
+    marc.say('on the train, back later', 'c-abc');
+    const first = await marc.next('msg', (f) => f.message.kind === 'chat');
+    expect(first.cid).toBe('c-abc');
+
+    marc.say('on the train, back later', 'c-abc');
+    marc.say('and here now', 'c-def');
+    const next = await marc.next('msg', (f) => f.message.kind === 'chat' && f.cid === 'c-def');
+
+    // Nothing between them: the repeat was dropped, not posted.
+    expect(next.message.seq).toBe(first.message.seq + 1);
+    const said = sam.frames.filter(
+      (f) => f.t === 'msg' && f.message.body === 'on the train, back later',
+    );
+    expect(said).toHaveLength(1);
   });
 
   it('shows a newcomer everyone already here', async () => {

@@ -66,6 +66,16 @@ const LEAVE_GRACE_MS = 15_000;
  */
 const TABLE_DEDUPE_MS = 20_000;
 
+/**
+ * How long a posted line's cid is remembered, so a re-send after a reconnect
+ * does not post it twice.
+ *
+ * In memory rather than in the tail: a re-send only ever happens seconds to
+ * minutes after the first try, and an object that has been evicted for long
+ * enough to forget has been idle far longer than that.
+ */
+const CID_MEMORY_MS = 5 * 60_000;
+
 /** How long before the table opens the phones are told. The evening before,
  * while a man can still move something. */
 const REMIND_BEFORE_MS = 24 * 60 * 60 * 1000;
@@ -348,7 +358,13 @@ export class RoomDO extends DurableObject<Env> {
             height: found.height,
           };
 
-    await this.post('chat', who.memberId, who.name, body, null, media);
+    // A dad whose phone lost the signal re-sends what it was holding. If the
+    // room got it the first time, the second copy is the same line and not a
+    // second thing said.
+    const cid = frame.t === 'chat' ? frame.cid : undefined;
+    if (cid !== undefined && !this.firstTimeSeen(cid)) return;
+
+    await this.post('chat', who.memberId, who.name, body, null, media, null, cid);
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
@@ -633,6 +649,20 @@ export class RoomDO extends DurableObject<Env> {
     this.broadcast({ t: 'call-roster', members: this.callRoster(except) });
   }
 
+  /** Lines already posted, by the sender's own id for them. */
+  private readonly postedCids = new Map<string, number>();
+
+  /** True the first time a cid is offered, false for a repeat of one we have
+   * already posted. */
+  private firstTimeSeen(cid: string, now = Date.now()): boolean {
+    for (const [seen, at] of this.postedCids) {
+      if (now - at > CID_MEMORY_MS) this.postedCids.delete(seen);
+    }
+    if (this.postedCids.has(cid)) return false;
+    this.postedCids.set(cid, now);
+    return true;
+  }
+
   private async scheduleLeave(who: SocketIdentity): Promise<void> {
     this.ctx.storage.sql.exec(
       'INSERT OR REPLACE INTO leaving (member_id, name, leave_at) VALUES (?, ?, ?)',
@@ -689,6 +719,7 @@ export class RoomDO extends DurableObject<Env> {
     promptId: string | null = null,
     media: Attachment | null = null,
     said: Said | null = null,
+    cid?: string,
   ): Promise<void> {
     const id = newId('msg');
     const createdAt = Date.now();
@@ -728,7 +759,7 @@ export class RoomDO extends DurableObject<Env> {
     };
     // Fan out before the archive write: a dad should not wait on D1 to see
     // his own line appear.
-    this.broadcast({ t: 'msg', message });
+    this.broadcast(cid === undefined ? { t: 'msg', message } : { t: 'msg', message, cid });
     await this.archive(message);
   }
 

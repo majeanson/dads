@@ -94,3 +94,62 @@ test('a dad sends a photo and the others see it', async ({ browser }) => {
   await marc.context().close();
   await sam.context().close();
 });
+
+test('a line typed with no signal waits, and goes when the signal comes back', async ({
+  browser,
+}) => {
+  test.setTimeout(90_000);
+  const marcCtx = await browser.newContext();
+
+  /**
+   * A dead spot, not a disconnection.
+   *
+   * The socket a phone leaves behind in a tunnel stays readyState OPEN and
+   * swallows everything sent down it — nothing closes, nothing throws, and the
+   * app is told nothing. That is the case worth testing, and setOffline does
+   * not reproduce it, so the frames are dropped in the middle instead.
+   */
+  let swallow = false;
+  await marcCtx.routeWebSocket('**/ws*', (ws) => {
+    const server = ws.connectToServer();
+    ws.onMessage((message) => {
+      if (!swallow) server.send(message);
+    });
+    server.onMessage((message) => ws.send(message));
+  });
+
+  const marc = await marcCtx.newPage();
+  await marc.goto('/');
+  await marc.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await marc.getByLabel('Your name').fill('Fitz');
+  await marc.getByRole('button', { name: 'Come in' }).click();
+  await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+
+  const sam = await comeIn(browser, 'Gil');
+
+  swallow = true;
+
+  // He can still type, and pressing send is accepted rather than swallowed by
+  // the app as well as by the network.
+  await marc.getByLabel('Say something').fill('on the train, back later');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  await expect(marc.getByLabel('Say something')).toHaveValue('');
+  await expect(marc.getByText(/waiting for a signal/)).toBeVisible();
+  // It is nowhere near the room: nothing that was sent got there.
+  await expect(sam.getByTestId('line').filter({ hasText: 'on the train' })).toHaveCount(0);
+
+  // The signal comes back. The socket that was lying about being open is
+  // dropped on its own, and what was held goes down the new one.
+  swallow = false;
+  await expect(
+    marc.getByTestId('line').filter({ hasText: 'on the train, back later' }),
+  ).toBeVisible({ timeout: 45_000 });
+  // Once, not twice: the room recognises a line it has already posted.
+  await expect(sam.getByTestId('line').filter({ hasText: 'on the train, back later' })).toHaveCount(
+    1,
+  );
+  await expect(marc.getByText(/waiting for a signal/)).toHaveCount(0);
+
+  await marcCtx.close();
+  await sam.context().close();
+});

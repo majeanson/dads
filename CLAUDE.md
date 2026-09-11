@@ -84,6 +84,21 @@ weakening `sessionSecret()`.
   the window cancels the row _and_ reschedules the alarm.
 - Ping/pong is `setWebSocketAutoResponse`, which never wakes a hibernating
   object. Do not replace it with a handled message.
+- **A line is delivered when it comes BACK, not when `ws.send` did not throw.**
+  The socket a phone leaves behind in a dead spot stays readyState OPEN and
+  swallows everything; nothing closes and nothing throws. So every chat frame
+  carries a `cid` the browser chose, the room echoes it on the broadcast, and
+  the sender holds the line in an outbox until it sees its own id. Unanswered
+  after 8s, the client closes its own socket so the reconnect can re-send.
+- **The room drops a repeat of a cid it has already posted** (5 minutes of
+  memory, in the object rather than the tail — a re-send only ever happens
+  seconds after the first try). Without it, every recovered line would post
+  twice.
+- Three things stop the outbox growing for ever: 20 lines held, 3 tries each,
+  and an `error` frame drops the oldest — a body the room refuses would
+  otherwise be re-sent all evening.
+- The composer stays live while the socket is down. Taking the keyboard off a
+  man because the network went is the app making its problem his.
 
 ## Dad night (M3)
 

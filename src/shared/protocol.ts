@@ -73,7 +73,13 @@ export interface CallMember extends RosterEntry {
 }
 
 export type ClientFrame =
-  | { t: 'chat'; body: string; mediaId?: string }
+  /**
+   * `cid` is the browser's own id for this line, and it is what makes a bad
+   * signal survivable: the sender holds the line until it comes back with the
+   * same cid, and re-sends on reconnect if it never did. The room uses it to
+   * ignore a second copy of one it already posted.
+   */
+  | { t: 'chat'; body: string; mediaId?: string; cid?: string }
   /** Sitting down at, getting up from, or muting yourself on the call. */
   | { t: 'call'; join: boolean; muted?: boolean }
   /** One leg of a WebRTC handshake, addressed to one other dad. The room
@@ -99,7 +105,9 @@ export type ServerFrame =
    * and being on the call are different things. */
   | { t: 'call-roster'; members: CallMember[] }
   | { t: 'rtc'; from: string; name: string; payload: unknown }
-  | { t: 'msg'; message: RoomMessage }
+  /** `cid` is echoed back to everyone, and means something only to the browser
+   * that chose it: its line arrived and can stop being held. */
+  | { t: 'msg'; message: RoomMessage; cid?: string }
   | { t: 'typing'; memberId: string; name: string }
   | { t: 'night'; night: DadNight | null }
   | { t: 'rooms'; rooms: RoomsOpen }
@@ -117,10 +125,12 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   const frame = value as { t?: unknown; body?: unknown };
   if (frame.t === 'typing') return { t: 'typing' };
   if (frame.t === 'chat' && typeof frame.body === 'string') {
-    const mediaId = (value as { mediaId?: unknown }).mediaId;
-    return typeof mediaId === 'string' && mediaId !== ''
-      ? { t: 'chat', body: frame.body, mediaId }
-      : { t: 'chat', body: frame.body };
+    const { mediaId, cid } = value as { mediaId?: unknown; cid?: unknown };
+    const chat: ClientFrame = { t: 'chat', body: frame.body };
+    if (typeof mediaId === 'string' && mediaId !== '') chat.mediaId = mediaId;
+    // Opaque, and bounded so it cannot become a channel of its own.
+    if (typeof cid === 'string' && cid !== '' && cid.length <= 64) chat.cid = cid;
+    return chat;
   }
   if (frame.t === 'prompt' && typeof frame.body === 'string')
     return { t: 'prompt', body: frame.body };
