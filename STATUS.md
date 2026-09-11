@@ -55,13 +55,35 @@ Honest list. Everything else in here has a test standing behind it.
    configured in production now (`dads-key`), so a dad behind a strict NAT has
    a way through as well — verified by `/api/ice` returning credentialed
    `turn:` and `turns:` servers alongside the STUN ones.
-2. **A reminder actually arriving on a phone.** The endpoint mints a key, the
-   subscribe and unsubscribe round trip is tested, and the send is jaffre's
-   proven code — but no notification has yet gone from this Worker to a real
-   lock screen. To try it: add dads to the home screen, open the menu, press
-   "Tell me when the table opens", then set dad night to a few minutes from
-   now. Headless Chrome cannot answer this: it reports notifications as
-   blocked, which is the path it exercises instead.
+   That is now the only one. The reminder was the other, and it has been driven
+   end to end against production — see below.
+
+## Proven: the reminder, and what it took to see it
+
+A real Chrome, in a persistent profile on a real desktop, subscribed through
+the app's own switch, and the night was set three minutes out on production.
+The service worker showed `dads — The table's open.` The whole chain holds:
+VAPID ES256, RFC 8291 aes128gcm, FCM accepting the POST, the push queued while
+the browser was shut and delivered when it came back, the worker waking and
+calling showNotification.
+
+**It did not work on the first try, and that is the point of having done it.**
+Chrome handed back `https://jmt17.google.com/fcm/send/…` — not the
+`fcm.googleapis.com` its own documentation names — and the endpoint allowlist
+refused it with a 400. Nobody would ever have seen that: the switch simply
+would not have stayed on, for the browser most of the dads use. Google's hosts
+are matched by suffix now and narrowed by path (`/fcm/send/`) instead, and the
+real endpoint is in the test.
+
+Three things had to be true before any of it could be observed, none of them
+obvious: headless Chrome reports notifications as `denied` outright; a normal
+Playwright context is incognito, and Chrome has no Push API there; and a
+notification can be seen from the page through
+`registration.getNotifications()`, which is what turns "it was sent" into
+"it was shown".
+
+What is still unproven is a human's eyes on a phone's lock screen, which is
+now a cosmetic question rather than a technical one.
 
 ## The last review
 

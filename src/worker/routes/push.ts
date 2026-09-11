@@ -30,11 +30,29 @@ interface Body {
  * surprise.
  */
 const PUSH_HOSTS = [
-  'fcm.googleapis.com', // Chrome, Edge, Android
+  'fcm.googleapis.com', // Chrome, Edge, Android — the documented one
   'web.push.apple.com', // Safari, iOS
   '.push.services.mozilla.com', // Firefox
   '.notify.windows.com', // Windows
 ];
+
+/**
+ * Chrome does not always hand back the host its own documentation names.
+ *
+ * A real subscription from a current Chrome came back as
+ * `https://jmt17.google.com/fcm/send/…` — same service, different front door,
+ * and our allowlist refused it with a 400. Nobody would ever have seen that:
+ * the switch simply would not have stayed on, for the browser most of the
+ * dads use.
+ *
+ * So Google's hosts are matched by suffix, and narrowed by PATH instead:
+ * /fcm/send/ is the push endpoint and nothing else on those domains is. The
+ * point of the list was never the hostname for its own sake — it is that this
+ * Worker POSTs to these addresses on a schedule with nobody watching, and it
+ * must not become a relay for whoever asks.
+ */
+const GOOGLE_HOSTS = ['.google.com', '.googleapis.com'];
+const GOOGLE_PUSH_PATH = '/fcm/send/';
 
 /** A URL can be long; an endpoint is not. Bounded so a row cannot be used as
  * somewhere to put a payload. */
@@ -59,8 +77,16 @@ export function acceptableEndpoint(endpoint: string): boolean {
   // No credentials and no port: a push service's own address has neither, and
   // both are how a URL is made to read as one host and reach another.
   if (url.username !== '' || url.password !== '' || url.port !== '') return false;
-  return PUSH_HOSTS.some((host) =>
-    host.startsWith('.') ? url.hostname.endsWith(host) : url.hostname === host,
+  if (
+    PUSH_HOSTS.some((host) =>
+      host.startsWith('.') ? url.hostname.endsWith(host) : url.hostname === host,
+    )
+  ) {
+    return true;
+  }
+  return (
+    GOOGLE_HOSTS.some((host) => url.hostname.endsWith(host)) &&
+    url.pathname.startsWith(GOOGLE_PUSH_PATH)
   );
 }
 

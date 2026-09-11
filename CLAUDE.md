@@ -418,6 +418,17 @@ secret, custom domain bound by the route in wrangler.toml.
 - **An endpoint is a URL this Worker will later POST to**, so it must be an
   https address or it is somebody choosing where our server sends its requests.
   Pinned by a test.
+- **Chrome does not hand back the host Google documents.** A real subscription
+  came back as `jmt17.google.com/fcm/send/…`, not `fcm.googleapis.com`, and the
+  allowlist refused it — the switch would not have stayed on for most of the
+  dads, silently. Google's hosts are matched by SUFFIX and narrowed by path
+  (`/fcm/send/`) instead; the real endpoint is in the test. Do not re-tighten
+  this to the documented hostname.
+- **Proving it needs a real profile.** Headless Chrome reports notifications
+  `denied`; a normal Playwright context is incognito and has no Push API at all.
+  `chromium.launchPersistentContext` headed, with notifications granted, can
+  subscribe for real — and `registration.getNotifications()` from the page is
+  how you see that the worker actually showed one.
 - `public/sw.js` does ONE job: show the notification and focus a tab. It caches
   nothing and intercepts no fetch — a room full of other people is not useful
   offline, and a stale shell from a cache is the classic way to ship a bug

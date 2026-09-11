@@ -18,12 +18,16 @@ const worker = workerExports.default;
  * would have been a green test that proved nothing.
  */
 describe('an endpoint the room will post to', () => {
-  it('takes the four services that issue them', () => {
+  it('takes the services that issue them', () => {
     for (const endpoint of [
       'https://fcm.googleapis.com/fcm/send/abc123',
       'https://web.push.apple.com/QBcd-ef',
       'https://updates.push.services.mozilla.com/wpush/v2/gAAA',
       'https://ABC.notify.windows.com/w/?token=x',
+      // What a real Chrome actually handed back when this was driven against
+      // production. Not the host Google documents, and the reason the switch
+      // would not stay on for most of the dads.
+      'https://jmt17.google.com/fcm/send/fknEfdNabms:APA91bGGblD3YGkq',
     ]) {
       expect(acceptableEndpoint(endpoint)).toBe(true);
     }
@@ -43,6 +47,11 @@ describe('an endpoint the room will post to', () => {
       'https://user:pw@web.push.apple.com/x',
       'https://web.push.apple.com:8443/x',
       `https://web.push.apple.com/${'x'.repeat(1200)}`,
+      // Google's hosts are matched by suffix, so the path is what narrows
+      // them: anything else on those domains is not a push endpoint.
+      'https://jmt17.google.com/robots.txt',
+      'https://accounts.google.com/o/oauth2/token',
+      'https://google.com.evil.test/fcm/send/x',
     ]) {
       expect(acceptableEndpoint(endpoint)).toBe(false);
     }
