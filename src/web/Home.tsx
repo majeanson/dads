@@ -28,6 +28,7 @@ import type { RosterEntry } from '../shared/protocol';
  */
 export function Home({
   night,
+  answered,
   you,
   roster,
   members,
@@ -41,6 +42,17 @@ export function Home({
   onBoard,
 }: {
   night: DadNight | null;
+  /**
+   * The seq of the most recent line that could change who is coming or what
+   * is up for the night.
+   *
+   * Home is a live screen — the roster on it comes off the socket — but the
+   * night was fetched once at mount, so a dad sitting on it watched the list
+   * of who is coming go stale while the room said so out loud a foot below.
+   * Keyed on the kind of line rather than on any line: a chatty evening is
+   * not a reason to re-read the night thirty times.
+   */
+  answered: number;
   you: string;
   roster: RosterEntry[];
   members: RosterEntry[];
@@ -69,7 +81,7 @@ export function Home({
     return () => {
       cancelled = true;
     };
-  }, [night]);
+  }, [night, answered]);
 
   // The countdown is the one thing here that goes stale while he looks at it.
   useEffect(() => {

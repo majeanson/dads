@@ -1,4 +1,5 @@
 import { faceUrl } from './api';
+import { initials } from './initials';
 import { cn } from './ui/cn';
 
 /**
@@ -54,20 +55,4 @@ export function Face({
       className={cn('inline-block shrink-0 rounded-full object-cover', className)}
     />
   );
-}
-
-/**
- * One letter, or two for a name with a second word.
- *
- * Split on whitespace rather than taking the first two characters, so
- * "Marc-antoine" is M and not MA — a hyphen is one name, a space is two.
- * Code points, not char codes: a name can start outside the basic plane.
- */
-export function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return '?';
-  const first = [...words[0]!][0] ?? '';
-  if (words.length === 1) return first;
-  const last = [...words[words.length - 1]!][0] ?? '';
-  return first + last;
 }

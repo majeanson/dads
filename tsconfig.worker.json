@@ -10,6 +10,8 @@
   "include": [
     "src/web/messageGroups.ts",
     "src/web/fresh.ts",
+    "src/web/initials.ts",
+    "src/web/seen.ts",
     "src/shared/**/*.ts",
     "src/worker/**/*.ts",
     "test/**/*.ts",

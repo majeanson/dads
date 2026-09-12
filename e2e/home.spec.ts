@@ -152,3 +152,22 @@ test('home names who is about, and the header has its own way back', async ({ br
   await marc.context().close();
   await sam.context().close();
 });
+
+test('home keeps up with who is coming while he sits on it', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Pim');
+  const sam = await comeIn(browser, 'Quill');
+
+  // Marc stays on home. Sam goes and answers from the sheet.
+  await expect(marc.getByTestId('home')).toBeVisible();
+  await sam.getByRole('button', { name: 'Menu' }).click();
+  await sam.getByTestId('dad-night').click();
+  await sam.getByTestId('rsvp-in').click();
+  await expect(sam.getByTestId('rsvp-who')).toContainText('Quill');
+
+  // Home is a live screen, so it must not go on showing a list the room has
+  // already contradicted a foot below.
+  await expect(marc.getByTestId('home-who-coming')).toContainText('Quill', { timeout: 10_000 });
+
+  await marc.context().close();
+  await sam.context().close();
+});

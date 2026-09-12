@@ -165,6 +165,16 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const unseen =
     seenSeq === null ? 0 : room.messages.reduce((n, m) => (m.seq > seenSeq ? n + 1 : n), 0);
 
+  /**
+   * The newest line that could change who is coming, or what is up for the
+   * night. Home re-reads the night when this moves, and not when anything
+   * else does: an evening of talk is not a reason to fetch it thirty times.
+   */
+  const nightPulse = room.messages.reduce(
+    (seq, m) => (m.said?.k === 'rsvp' || m.said?.k === 'item_added' ? m.seq : seq),
+    0,
+  );
+
   /** The conversation is genuinely on the screen — not home, not the table. */
   const watching = view === 'talk' && !tableOpen;
   const pinnedNow = useRef(pinned);
@@ -561,6 +571,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           reason the table has never been unmounted either. */}
       <Home
         night={room.night}
+        answered={nightPulse}
         you={session.member.id}
         roster={room.roster}
         members={room.members}

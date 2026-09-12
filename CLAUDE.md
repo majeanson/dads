@@ -255,6 +255,11 @@ weakening `sessionSecret()`.
   `TableColumn` waits `SILENCE_MS` for any bridge event and then offers the
   own-tab link and a retry, above the frame rather than instead of it. Covered
   by an e2e with a deliberately mute stub.
+- **A reconnection does not clobber a countdown.** `noteAfter` is the table's
+  one line of status, and a `reconnecting` event used to overwrite whatever
+  was there — so a seat counting down to a bot swap lost the count and the
+  dads lost the only sign the table was going to unstick itself. Reconnecting
+  now only claims the line when nothing else holds it.
 - jaffre's half lives in `jaffre/apps/web/src/embed.ts`, on `main` and
   deployed. The two sides share a vocabulary but no code.
 - **The quiet seats never become lines** (2026-09-11). The bridge grew
@@ -465,6 +470,9 @@ secret, custom domain bound by the route in wrangler.toml.
 - **The way back is its own control**, first in the header, the way every app
   on a phone does it. It was the group's name with a chevron, which is the
   convention on a desktop and something nobody finds on a phone.
+  Its hit area reaches UP into the header's own padding and never down:
+  reaching down put it over the night line below, which — being later in the
+  document — quietly swallowed every tap meant for home.
 - **`.quiet` means muted, `.error` means danger.** They shared one rule and
   both painted danger, so an empty room announced "nobody has said anything
   yet" in alarm red, and so did a file's size while a dad was picking it. Red
@@ -477,11 +485,12 @@ secret, custom domain bound by the route in wrangler.toml.
 - **A new line is unseen unless the conversation is on the screen.** `watching`
   is `view === 'talk' && !tableOpen`. The table used to fall through that
   check and count nothing at all.
-- **The group's name in the header is the way back**, with a chevron, because
-  "the name is the way back" is only obvious to whoever built it. Its hit area
-  reaches UP into the header's own padding and never down: reaching down put
-  it over the night line below, which — being later in the document — quietly
-  swallowed every tap meant for home.
+- **Home is a LIVE screen, and the night is part of what is live.** Presence
+  comes off the socket, but the night was fetched once at mount, so a dad
+  sitting on home watched the list of who is coming go stale while the room
+  said otherwise a foot below. It re-reads on the newest `rsvp` or
+  `item_added` seq — that kind of line, not any line, because a chatty evening
+  is not a reason to re-read the night thirty times.
 - **The header does not repeat what home says.** The night line is hidden on
   home, where the same thing is the first item on the screen at four times the
   size.
@@ -898,5 +907,13 @@ people use.
   (`upcomingNight()`) and fakes `Date` only at the moment it fires the alarm.
   For the same reason, a helper that waits must never reinstall fake timers —
   that silently resets the system time to now.
+- **Pure logic lives outside the component that renders it**, so the worker
+  pool can import it without a DOM. `src/shared/tableNote.ts`,
+  `src/web/messageGroups.ts`, `src/web/initials.ts`, `src/web/fresh.ts` and
+  `src/web/seen.ts` are all there for that reason, and each one is listed in
+  `tsconfig.worker.json`. A helper reached for a browser global (`seen.ts` and
+  `localStorage`) is the one that will not go — take the global as a
+  locally-typed accessor instead, which is also the honest shape, because
+  every call already has to survive storage refusing.
 - Anything that shells out goes through `scripts/run.ts`, which quotes
   arguments on Windows. `execFileSync` with `shell: true` does not.
