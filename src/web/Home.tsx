@@ -179,6 +179,11 @@ export function Home({
         {others.length === 0 ? (
           <p className="m-0 text-[0.9375rem] text-muted">{t('home.quiet')}</p>
         ) : (
+          // Names, not a count. "3 here" is a number a man reads as a quorum;
+          // which of his friends is actually about is the thing he opened the
+          // app to find out, and it is the same reasoning as the RSVP list
+          // above. The faces are who, the words are who as well — one is for
+          // the glance and the other is for certainty.
           <button type="button" className="home-faces" onClick={onWho} data-testid="home-faces">
             <span className="home-face-row">
               {others.slice(0, 6).map((m) => (
@@ -191,7 +196,7 @@ export function Home({
                 />
               ))}
             </span>
-            <span>{t('room.here', { n: roster.length })}</span>
+            <span className="home-names">{others.map((m) => m.name).join(', ')}</span>
           </button>
         )}
       </section>

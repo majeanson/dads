@@ -111,7 +111,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const [now, setNow] = useState(() => Date.now());
   /** Reading the newest line, rather than back through the week. */
   const [pinned, setPinned] = useState(true);
-  const [unseen, setUnseen] = useState(0);
+  /**
+   * The newest line he has actually looked at, on this device.
+   *
+   * Null until the first backfill lands, which is a dad who has never opened
+   * this room here. Everything about "how many are new" is derived from this
+   * rather than tallied as lines arrive — see the effects below for why.
+   */
+  const [seenSeq, setSeenSeq] = useState<number | null>(() => lastSeen(session.group.id));
   /** The last line he saw before this sitting, or null on a first visit. */
   const [since, setSince] = useState<number | null>(() => lastSeen(session.group.id));
   const recorder = useRecorder();
@@ -146,6 +153,22 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   // Anything that could change what is waiting — an answer, a check-in, a
   // commitment — arrives as a line in the room.
   const lastSeq = room.messages.at(-1)?.seq ?? 0;
+
+  /**
+   * How many lines he has not looked at — DERIVED, never accumulated.
+   *
+   * Counted against the mark rather than tallied as frames arrive, so a
+   * reload, a reconnect and a backfill all agree with each other. The
+   * accumulator this replaced began every load at nought, which is why
+   * opening the app announced the whole evening again.
+   */
+  const unseen =
+    seenSeq === null ? 0 : room.messages.reduce((n, m) => (m.seq > seenSeq ? n + 1 : n), 0);
+
+  /** The conversation is genuinely on the screen — not home, not the table. */
+  const watching = view === 'talk' && !tableOpen;
+  const pinnedNow = useRef(pinned);
+  pinnedNow.current = pinned;
   useEffect(refreshTodo, [refreshTodo, lastSeq]);
 
   useEffect(() => {
@@ -168,33 +191,40 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     // because the effect reads it, but a dad scrolling must never itself
     // cause a scroll or count as an arrival.
     if (count === counted.current) return;
-    const arrived = Math.max(0, count - counted.current);
     counted.current = count;
-
-    // Watching means the conversation is actually on the screen. On home, or
-    // behind the table, a new line is unseen — which is what puts the count
-    // on the way in. The table used to fall through here and count nothing.
-    const watching = view === 'talk' && !tableOpen;
     if (watching && pinned) bottom.current?.scrollIntoView({ block: 'end' });
-    if (watching && pinned && !document.hidden) setUnseen(0);
-    else setUnseen((n) => n + arrived);
-  }, [room.messages.length, tableOpen, pinned, view]);
+  }, [room.messages.length, watching, pinned]);
 
   /**
-   * Going in is reading it.
+   * Going in is reading it, and so is scrolling to the newest line.
    *
-   * The count on the way in says how many lines are waiting; walking through
-   * that door and finding it still there afterwards would make it a badge
-   * rather than an answer. Only on the way IN — `pinned` is deliberately read
-   * through a ref so a dad scrolling inside the conversation never retriggers
-   * this and never has the page scrolled out of his hands.
+   * Advancing the mark rather than zeroing a tally, because the tally was the
+   * bug: it began each load at nought and every backfilled line incremented
+   * it, so a dad who opened the app on a conversation he had already read was
+   * told there were forty-one new ones. What he has seen is a property of him
+   * and this device, it survives the tab, and the count is derived from it.
    */
-  const pinnedNow = useRef(pinned);
-  pinnedNow.current = pinned;
+  useEffect(() => {
+    if (!watching || !pinned || document.hidden) return;
+    if (lastSeq <= 0 || (seenSeq !== null && lastSeq <= seenSeq)) return;
+    setSeenSeq(lastSeq);
+    markSeen(session.group.id, lastSeq);
+  }, [watching, pinned, lastSeq, seenSeq, session.group.id]);
+
+  // A dad who has never opened this room on this device has nothing to catch
+  // up on: the archive is not a backlog. The mark starts at the newest line
+  // he was handed rather than at nothing.
+  useEffect(() => {
+    if (seenSeq === null && lastSeq > 0) {
+      setSeenSeq(lastSeq);
+      markSeen(session.group.id, lastSeq);
+    }
+  }, [seenSeq, lastSeq, session.group.id]);
+
+  /** Straight to the bottom, and everything down to there is read. */
   useEffect(() => {
     if (view !== 'talk' || !pinnedNow.current) return;
     bottom.current?.scrollIntoView({ block: 'end' });
-    if (!document.hidden) setUnseen(0);
   }, [view]);
 
   /** A dad who has scrolled up, or looked away, has not seen it. */
@@ -204,10 +234,11 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     return el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
   }, []);
 
+  // Reaching the newest line is reading everything down to it — but that is
+  // the mark-advancing effect's job, which fires as soon as `pinned` flips.
   const toBottom = useCallback(() => {
     bottom.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
     setPinned(true);
-    setUnseen(0);
   }, []);
 
   // The keyboard coming up takes a third of the list. If he was reading the
@@ -229,8 +260,10 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       }
       const away = hiddenAt.current !== null && Date.now() - hiddenAt.current > AWAY_MS;
       hiddenAt.current = null;
+      // Coming back is reading it; the mark-advancing effect picks it up on
+      // the next render, because the tab is no longer hidden.
       if (away) setSince(lastSeen(session.group.id));
-      else if (atBottom()) setUnseen(0);
+      else if (atBottom()) setPinned(true);
     }
     document.addEventListener('visibilitychange', seen);
     return () => document.removeEventListener('visibilitychange', seen);
@@ -430,9 +463,10 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     if (since === null || !hasNew || landedOn.current === since) return;
     landedOn.current = since;
     newMark.current?.scrollIntoView({ block: 'start' });
+    // Not pinned: he is reading from the boundary, not from the bottom, so
+    // what is below it stays counted until he gets there.
     setPinned(false);
-    setUnseen(room.messages.filter((m) => m.seq > since).length);
-  }, [since, hasNew, room.messages]);
+  }, [since, hasNew]);
 
   return (
     <main
@@ -443,30 +477,25 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       onDrop={dropped}
     >
       <header className="room-head border-b border-line pb-2.5">
+        {/* A real back button, first in the bar, the way every app on a phone
+            does it. It was the group's name with a chevron, which is the
+            convention on a desktop and something nobody finds on a phone. */}
+        {view === 'talk' ? (
+          <Button
+            size="icon"
+            look="quiet"
+            className="-ml-1 shrink-0"
+            onClick={() => setView('home')}
+            aria-label={t('home.title')}
+            data-testid="go-home"
+          >
+            <ChevronLeft size={20} aria-hidden="true" />
+            <span className="sr-only">{t('home.title')}</span>
+          </Button>
+        ) : null}
+
         <div className="min-w-0">
-          {/* The group's name is the way home, which is where a logo goes in
-              every app anybody has ever used — and costs the header no third
-              icon, on a bar that already has to survive "Embarque dans
-              l'appel" on a 390px phone. */}
-          <h1 className="display truncate text-base text-muted">
-            {view === 'talk' ? (
-              <button
-                type="button"
-                className="home-back"
-                onClick={() => setView('home')}
-                title={t('home.title')}
-                data-testid="go-home"
-              >
-                {/* A chevron, because "the name is the way back" is only
-                    obvious to the person who built it. */}
-                <ChevronLeft size={15} aria-hidden="true" className="shrink-0" />
-                <span className="truncate">{session.group.name}</span>
-                <span className="sr-only"> — {t('home.title')}</span>
-              </button>
-            ) : (
-              session.group.name
-            )}
-          </h1>
+          <h1 className="display truncate text-base text-muted">{session.group.name}</h1>
           {/* The count is also the door to the roster and to who has been
               about. A button, because it does something — but not a blue
               underlined link, which is three times louder than a group of five

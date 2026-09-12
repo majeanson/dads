@@ -184,7 +184,7 @@ export function TableColumn({
           </Button>
         </div>
         <div className="table-fallback">
-          <p className="quiet">{t('t.unreachable')}</p>
+          <p className="error">{t('t.unreachable')}</p>
         </div>
       </section>
     );

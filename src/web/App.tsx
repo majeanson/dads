@@ -9,7 +9,7 @@ function Shell() {
   const { state, signedIn, signOut } = useSession();
 
   if (state.status === 'loading') return <main className="quiet">…</main>;
-  if (state.status === 'error') return <main className="quiet">{t('app.unreachable')}</main>;
+  if (state.status === 'error') return <main className="error">{t('app.unreachable')}</main>;
   if (state.status === 'out') return <JoinScreen onJoined={signedIn} />;
 
   return <Room session={state.session} onSignOut={() => void signOut()} />;

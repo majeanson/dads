@@ -451,6 +451,24 @@ secret, custom domain bound by the route in wrangler.toml.
   is live rather than polled, and going in is instant rather than a reconnect.
   Home sits BESIDE the stage and the stage is hidden with CSS — taking it out
   of the tree would unmount the table's iframe and restart a game.
+- **The unseen count is DERIVED from the last line he looked at, never
+  tallied.** `seen.ts` keeps that mark per device; the count is
+  `messages.filter(seq > mark).length`. It used to be an accumulator starting
+  at nought each load, so every backfilled line incremented it and opening the
+  app on a conversation he had already read announced forty-one new ones. A
+  reload, a reconnect and a backfill now all agree because they are all
+  reading the same mark. Pinned by an e2e that reads, reloads, and expects
+  silence.
+- A dad who has never opened the room on this device has NOTHING to catch up
+  on: the mark starts at the newest line he was handed. The archive is not a
+  backlog.
+- **The way back is its own control**, first in the header, the way every app
+  on a phone does it. It was the group's name with a chevron, which is the
+  convention on a desktop and something nobody finds on a phone.
+- **`.quiet` means muted, `.error` means danger.** They shared one rule and
+  both painted danger, so an empty room announced "nobody has said anything
+  yet" in alarm red, and so did a file's size while a dad was picking it. Red
+  is for what went wrong.
 - **The way in says how many.** A dad who only came to talk spends one tap and
   sees the count on the button he was going to press anyway. Going in clears
   it: a count that survived walking through the door would be a badge rather

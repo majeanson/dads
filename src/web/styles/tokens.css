@@ -233,7 +233,15 @@
     outline-offset: 2px;
   }
 
-  .quiet,
+  /* Quiet means quiet. It shared a rule with `.error` and was therefore
+     painted in the danger colour, so an empty room announced "nobody has said
+     anything yet" in alarm red, and so did a file's size while a dad was
+     picking it. Red is for what went wrong, and almost none of these had. */
+  .quiet {
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+  }
+
   .error {
     margin: 0.5rem 0 0;
     color: var(--danger);
@@ -517,26 +525,12 @@
     gap: 0.35rem;
   }
 
-  /* The header's name is the way back, and it must not look like a link on a
-     screen whose whole palette is one colour spent on meaning. */
-  .home-back {
-    display: flex;
-    align-items: center;
-    gap: 0.2rem;
-    max-width: 100%;
-    /* A thumb's height without a thumb's worth of header — but reaching UP
-       only, into the padding the header already has. Reaching down as well
-       put this box over the night line below it, and the night line, being
-       later in the document, quietly swallowed every tap meant for home. */
-    min-height: 2rem;
-    margin-top: -0.5rem;
-    margin-left: -0.15rem;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
+  /* Who is about, by name. Wraps rather than truncating: five names is two
+     lines at worst, and a list that ends in an ellipsis answers nothing. */
+  .home-names {
+    min-width: 0;
+    text-align: left;
+    text-wrap: pretty;
   }
 
   .stage {

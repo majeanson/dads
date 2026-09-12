@@ -68,8 +68,9 @@ test('home says who is about, and counts what he has not read', async ({ browser
   const sam = await comeIn(browser, 'Sam');
 
   // Live, because the socket is open behind home rather than opened on the
-  // way into the conversation.
-  await expect(marc.getByTestId('home-faces')).toContainText('2 here');
+  // way into the conversation. By name: which of his friends is about is the
+  // thing he opened the app to find out, and a count is not that.
+  await expect(marc.getByTestId('home-faces')).toContainText('Sam');
 
   // Sam talks while Marc is standing on home. The way in says how many.
   // Counted as a CHANGE rather than an absolute: the room's own lines are
@@ -91,6 +92,62 @@ test('home says who is about, and counts what he has not read', async ({ browser
   await expect(marc.getByTestId('line').filter({ hasText: 'bedtime was a war' })).toBeVisible();
   await marc.getByTestId('go-home').click();
   await expect(marc.getByTestId('home-new')).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
+test('what he has already read is not announced again on the next open', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Reader');
+  const sam = await comeIn(browser, 'Teller');
+
+  await talk(sam);
+  for (const line of ['one', 'two', 'three']) {
+    await sam.getByLabel('Say something').fill(`something ${line}`);
+    await sam.getByRole('button', { name: 'Send' }).click();
+    await expect(sam.getByTestId('line').filter({ hasText: `something ${line}` })).toBeVisible();
+  }
+
+  // He reads them: into the conversation, at the bottom, tab in front of him.
+  await marc.getByTestId('home-go').click();
+  await expect(marc.getByTestId('line').filter({ hasText: 'something three' })).toBeVisible();
+  await marc.getByTestId('go-home').click();
+  await expect(marc.getByTestId('home-new')).toHaveCount(0);
+
+  // And a cold open says nothing new, because it counts against what he has
+  // read rather than tallying whatever the backfill happens to carry. That
+  // tally began each load at nought, which announced the whole evening again.
+  await marc.reload();
+  await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await expect(marc.getByTestId('home')).toBeVisible();
+  await expect(marc.getByTestId('home-new')).toHaveCount(0);
+
+  // A line said while he is on home still counts, and only that one.
+  await sam.getByLabel('Say something').fill('and one more');
+  await sam.getByRole('button', { name: 'Send' }).click();
+  await expect(marc.getByTestId('home-new')).toContainText('1 new');
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
+test('home names who is about, and the header has its own way back', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Ned');
+  const sam = await comeIn(browser, 'Otto');
+
+  // Names, not only a count: which of his friends is about is what he opened
+  // the app to find out.
+  await expect(marc.getByTestId('home-faces')).toContainText('Otto');
+
+  // The way back is a control of its own, not the group's name.
+  await marc.getByTestId('home-go').click();
+  const back = marc.getByTestId('go-home');
+  await expect(back).toBeVisible();
+  await expect(back).toHaveAccessibleName('Home');
+  const box = (await back.boundingBox())!;
+  expect(box.height, 'a thumb has to be able to hit it').toBeGreaterThanOrEqual(36);
+  await back.click();
+  await expect(marc.getByTestId('home')).toBeVisible();
 
   await marc.context().close();
   await sam.context().close();
