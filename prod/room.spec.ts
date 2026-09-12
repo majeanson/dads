@@ -26,8 +26,11 @@ test('two dads see each other, and what each other says', async ({ browser }) =>
   await sam.getByLabel('Say something').fill('half a thought');
   await expect(marc.getByText(/typing/)).toBeVisible({ timeout: 10_000 });
 
-  // And it survives a reload, because the archive is D1 and not the tab.
+  // And it survives a reload, because the archive is D1 and not the tab. A
+  // reload lands on home, like every cold open does.
   await marc.reload();
+  await expect(marc.getByTestId('connection')).toBeVisible({ timeout: 20_000 });
+  await talk(marc);
   await expect(marc.getByTestId('line').filter({ hasText: said })).toBeVisible({ timeout: 20_000 });
 
   await marc.context().close();
