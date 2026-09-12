@@ -399,3 +399,48 @@ test('a face sits beside a run, once, and the words below it line up', async ({ 
     await context.close();
   }
 });
+
+test('a photo opens in the app, moves between them, and can be kept', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Quentin Shots');
+
+  // Two, so the viewer has something to move between.
+  const pngs = [
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  ];
+  for (const [i, data] of pngs.entries()) {
+    await marc.setInputFiles('#attach', {
+      name: `shot-${i}.png`,
+      mimeType: 'image/png',
+      buffer: Buffer.from(data, 'base64'),
+    });
+    await marc.getByLabel('Say something').fill(`shot ${i}`);
+    await marc.getByRole('button', { name: 'Send' }).click();
+    await expect(marc.getByTestId('line').filter({ hasText: `shot ${i}` })).toBeVisible();
+  }
+
+  // Tapping one opens it HERE, rather than throwing him into a browser tab
+  // with no way back but the app switcher. Scoped to his own line: the viewer
+  // holds every photo in the conversation, and earlier tests in this file
+  // share the room.
+  await marc.getByTestId('line').filter({ hasText: 'shot 0' }).getByTestId('photo').click();
+  await expect(marc.getByTestId('viewer')).toBeVisible();
+  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', 'shot-0.png');
+  await expect(marc.getByTestId('viewer')).toContainText(/\d+ of \d+/);
+
+  // The others in the conversation are an arrow away, by button and by key.
+  await marc.getByTestId('viewer-next').click();
+  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', 'shot-1.png');
+  await marc.keyboard.press('ArrowLeft');
+  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', 'shot-0.png');
+
+  // And there is a way to keep it.
+  await expect(marc.getByTestId('viewer-save')).toBeVisible();
+
+  // Escape closes it, and the conversation is still where he left it.
+  await marc.keyboard.press('Escape');
+  await expect(marc.getByTestId('viewer')).toHaveCount(0);
+  await expect(marc.getByLabel('Say something')).toBeVisible();
+
+  await marc.context().close();
+});

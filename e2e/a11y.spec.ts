@@ -57,6 +57,18 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByTestId('line').filter({ hasText: `a ${theme} line` })).toBeVisible();
     found.push(...(await faults(page, 'the room')));
 
+    // And a photograph, which is a line with a control on it and a screen of
+    // its own behind that.
+    await page.setInputFiles('#attach', 'public/icon-192.png');
+    await page.getByLabel('Say something').fill(`a ${theme} photo`);
+    await page.getByRole('button', { name: 'Send' }).click();
+    const shot = page.getByTestId('line').filter({ hasText: `a ${theme} photo` });
+    await expect(shot).toBeVisible();
+    await shot.getByTestId('photo').click();
+    await expect(page.getByTestId('viewer')).toBeVisible();
+    found.push(...(await faults(page, 'a photo, full screen')));
+    await page.keyboard.press('Escape');
+
     const menu = () => page.getByRole('button', { name: 'Menu' }).click();
     const close = () => page.getByRole('button', { name: 'Close', exact: true }).first().click();
 

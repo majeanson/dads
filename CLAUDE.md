@@ -672,6 +672,30 @@ secret, custom domain bound by the route in wrangler.toml.
   by name. Every browser does them by default; a default is not a promise, and
   five men in five kitchens is the case they exist for.
 
+- **A photograph opens IN the app** (`Viewer.tsx`, 2026-09-12). It used to be
+  an anchor to the raw file with `target="_blank"`, which from the app on a
+  home screen throws a dad out into a browser with no way back but the app
+  switcher — for the one thing in here nobody would expect to be hard to look
+  at. Radix Dialog, so the focus trap, Escape and the inert background come
+  from the same place the sheets get them.
+- **The viewer holds every photo in the CONVERSATION**, built from
+  `room.messages` rather than fetched: these are the ones he is looking at,
+  and moving between them should not depend on the network. Arrows and
+  buttons both.
+- **Saving tries the share sheet first**, falling back to a download anchor.
+  On a phone the share sheet is "Save Image", and it is the only route iOS
+  really gives a web page to the camera roll; a downloads folder is not
+  somewhere a phone really has. The fetch resolves from cache — the picture is
+  on the screen — so the user gesture is still live when `share()` is called.
+  A cancelled share is an `AbortError` and is not a failure.
+- **The viewer's ground is solid black and its own palette**, the one place in
+  the app that is not on the tokens: a photograph of people is looked at
+  against nothing. At 90% the conversation read straight through it. The image
+  is `contain`, never `cover` — a picture of somebody's child does not get its
+  edges cropped to fill a screen.
+- Video and voice notes are NOT in the viewer. A clip has the browser's own
+  player with its own full screen and its own save, and a voice note is not
+  something to look at. Anything off the inline allowlist already downloads.
 - **Content types are an allowlist, and `image/svg+xml` is not on it.** An
   SVG is a document that can carry script; serving one inline from our own
   origin runs an uploader's code with this app's session. Anything not on the

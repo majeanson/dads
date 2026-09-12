@@ -9,7 +9,15 @@ import { isAudio, isImage, isVideo, mediaUrl } from './media';
  * does not jump around as photos load — which on a phone means the thing you
  * were reading stays where you were reading it.
  */
-export function Attachment({ media }: { media: MessageAttachment }) {
+export function Attachment({
+  media,
+  onOpen,
+}: {
+  media: MessageAttachment;
+  /** Opens the picture full-screen. Images only; everything else plays or
+   * downloads where it sits. */
+  onOpen?: () => void;
+}) {
   const href = mediaUrl(media.id);
 
   if (isVideo(media.contentType)) {
@@ -58,12 +66,16 @@ export function Attachment({ media }: { media: MessageAttachment }) {
     );
   }
 
+  // A button, not a link to the raw file. From the app on a home screen that
+  // link threw a dad out into a browser, on the one thing in here nobody
+  // would expect to be hard to look at.
   return (
-    <a
-      className="mt-1.5 block w-fit max-w-full overflow-hidden rounded-lg border border-line"
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+    <button
+      type="button"
+      className="mt-1.5 block w-fit max-w-full cursor-pointer overflow-hidden rounded-lg border border-line p-0"
+      onClick={onOpen}
+      data-testid="photo"
+      aria-label={media.name}
     >
       <img
         src={href}
@@ -77,6 +89,6 @@ export function Attachment({ media }: { media: MessageAttachment }) {
         // was a scroll away. Tap for the real one.
         className="block h-auto max-h-64 w-auto max-w-80"
       />
-    </a>
+    </button>
   );
 }

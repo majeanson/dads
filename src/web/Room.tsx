@@ -28,12 +28,13 @@ import { cn } from './ui/cn';
 import { parts, shortLink } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { nightItem, nightSoon } from './NightEditor';
-import { prepare, readableSize, upload, type Prepared } from './media';
+import { isImage, prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
 import { lastSeen, markSeen } from './seen';
 import { Face } from './Face';
 import { Home } from './Home';
 import { Marks, marksOf } from './Marks';
+import { Viewer } from './Viewer';
 import { LineMenu } from './ui/LineMenu';
 import { useFreshBuild } from './useFreshBuild';
 import { useVisualViewport } from './useVisualViewport';
@@ -96,6 +97,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
    * it, so switching costs nothing and a game in progress is untouched.
    */
   const [view, setView] = useState<'home' | 'talk'>('home');
+  /** The photo he is looking at full-screen, by media id. */
+  const [viewing, setViewing] = useState<string | null>(null);
   const [tableOpen, setTableOpen] = useState(false);
   const [draft, setDraft] = useState('');
   /** Picked but not sent: the dad still gets a caption, or a change of mind. */
@@ -392,6 +395,19 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     [room.members],
   );
 
+  /**
+   * Every photograph in the conversation, oldest first.
+   *
+   * From what is already on the screen rather than from a fetch: these are
+   * the ones he is looking at, and moving between them should not depend on
+   * the network. Images only — a clip has the browser's own player and its
+   * own full screen, and a voice note is not something to look at.
+   */
+  const shots = room.messages
+    .filter((m) => m.media != null && isImage(m.media.contentType))
+    .map((m) => ({ media: m.media!, name: m.name, at: m.createdAt }));
+  const viewingAt = shots.findIndex((s) => s.media.id === viewing);
+
   const rows = toRows(
     room.messages,
     Date.now(),
@@ -615,7 +631,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                           <span key={i}>{part.text}</span>
                         ),
                       )}
-                      {row.message.media ? <Attachment media={row.message.media} /> : null}
+                      {row.message.media ? (
+                        <Attachment
+                          media={row.message.media}
+                          onOpen={() => setViewing(row.message.media!.id)}
+                        />
+                      ) : null}
                       <Marks
                         reactions={row.message.reactions}
                         me={session.member.id}
@@ -964,6 +985,13 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           />
         </Sheet>
       ) : null}
+
+      <Viewer
+        shots={shots}
+        at={viewingAt}
+        onMove={(next) => setViewing(shots[next]?.media.id ?? null)}
+        onClose={() => setViewing(null)}
+      />
     </main>
   );
 }

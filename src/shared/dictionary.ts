@@ -62,6 +62,12 @@ const EN = {
   'line.react': 'Put a mark on it',
   'line.marked': 'marked it',
   'line.someone': 'somebody',
+  'view.title': 'A photo from {name}',
+  'view.save': 'Save',
+  'view.previous': 'The one before',
+  'view.next': 'The next one',
+  'view.of': '{n} of {total}',
+  'view.failed': 'Couldn’t save that one.',
 
   // ------------------------------------------------------------- the call
   'call.join': 'Join the call',
@@ -337,6 +343,12 @@ const FR: Record<Key, string> = {
   'line.react': 'Mets une marque',
   'line.marked': 'l’a marqué',
   'line.someone': 'quelqu’un',
+  'view.title': 'Une photo de {name}',
+  'view.save': 'Garde-la',
+  'view.previous': 'La précédente',
+  'view.next': 'La suivante',
+  'view.of': '{n} sur {total}',
+  'view.failed': 'Impossible de garder celle-là.',
 
   // ------------------------------------------------------------ l'appel
   'call.join': 'Embarque dans l’appel',

@@ -353,6 +353,81 @@
 
   /* --- the stage: talk, and the table beside it on a wide screen --- */
 
+  /* --- the viewer ---------------------------------------------------------
+   *
+   * A photograph, the size of the screen. Its own dark ground rather than the
+   * app's paper: a picture of people is looked at against nothing, the way
+   * every viewer on a phone does it, and white around it is a light on in the
+   * room. The one place in this app with a fixed palette, because it is the
+   * one place where the ground is not the app's.
+   */
+  .viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 61;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right))
+      max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+    color: #ffffff;
+  }
+
+  .viewer-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .viewer-who {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.5rem;
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+
+  .viewer-when {
+    color: rgb(255 255 255 / 65%);
+    font-size: 0.8125rem;
+  }
+
+  /* CONTAIN, never cover: a photograph of people is not wallpaper and must
+     never have its edges cropped to fill a screen. */
+  .viewer-shot {
+    min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
+    /* `auto` on all four sides centres a grid item in both directions, which
+       is where a photograph belongs on a screen of nothing else. */
+    margin: auto;
+    object-fit: contain;
+  }
+
+  .viewer-foot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 2.5rem;
+  }
+
+  .viewer-count {
+    color: rgb(255 255 255 / 75%);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .viewer-failed {
+    margin: 0;
+    color: #ffb4a8;
+    font-size: 0.875rem;
+  }
+
   /* --- home ---------------------------------------------------------------
    *
    * Where the app opens. One of these two is on the screen and the other is
