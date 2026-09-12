@@ -29,16 +29,27 @@ export async function putRooms(
     return Response.json({ error: 'bad_request' }, { status: 400 });
   }
 
+  // A switch is a boolean or it is absent. Anything else used to reach
+  // Number(), and NaN bound to D1 is a NULL rather than a nought — so a body
+  // with a string in it did not turn a room off, it broke the NOT NULL
+  // constraint and came back a 500 with a stack in the logs.
+  const flag = (v: unknown, was: boolean): boolean | null =>
+    v === undefined || v === null ? was : typeof v === 'boolean' ? v : null;
+
   // Only what was sent changes; a client that knows about two switches must
   // not silently turn a third one on.
-  const next: RoomsOpen = {
-    questions: body.questions ?? session.group.rooms.questions,
-    week: body.week ?? session.group.rooms.week,
-    table: body.table ?? session.group.rooms.table,
+  const next = {
+    questions: flag(body.questions, session.group.rooms.questions),
+    week: flag(body.week, session.group.rooms.week),
+    table: flag(body.table, session.group.rooms.table),
   };
+  if (next.questions === null || next.week === null || next.table === null) {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+  const rooms: RoomsOpen = { questions: next.questions, week: next.week, table: next.table };
 
   await env.DB.prepare('UPDATE groups SET questions_on = ?, week_on = ?, table_on = ? WHERE id = ?')
-    .bind(Number(next.questions), Number(next.week), Number(next.table), session.group.id)
+    .bind(Number(rooms.questions), Number(rooms.week), Number(rooms.table), session.group.id)
     .run();
 
   // Every open room finds out without a reload, the same way the night does.
@@ -49,8 +60,8 @@ export async function putRooms(
       'Content-Type': 'application/json',
       [IDENTITY_HEADERS.groupId]: session.group.id,
     },
-    body: JSON.stringify(next),
+    body: JSON.stringify(rooms),
   });
 
-  return Response.json({ rooms: next });
+  return Response.json({ rooms });
 }

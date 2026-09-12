@@ -34,7 +34,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 260, in workerd against the real migrations
+npm test              # 272, in workerd against the real migrations
 npm run e2e           # 57, against the built stack
 npm run audit:contrast  # 26 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy

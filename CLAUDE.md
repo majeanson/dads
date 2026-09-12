@@ -498,6 +498,18 @@ secret, custom domain bound by the route in wrangler.toml.
   conversation and is idempotent, because these suites walk through screens
   and it must not matter which one the last step left him on.
 
+## The three switches
+
+- **`PUT /api/rooms` is any dad's to change and nobody's to own**, like the
+  night. Two dads seeing different menus is how a group stops sharing a room,
+  so it is the group's setting and not each man's, and it is announced to
+  nothing — a switch is not news, and the change reaches every open socket
+  anyway.
+- **A switch is a boolean or it is absent.** Anything else used to reach
+  `Number()`, and a NaN bound to D1 is a NULL rather than a nought: the row's
+  NOT NULL constraint threw and the dad got a 500 with a stack behind it. A
+  non-boolean is a 400 now, and `null` still means leave it alone.
+
 ## Shape of the room
 
 - **The room is the conversation and the call. That is the whole screen.**
