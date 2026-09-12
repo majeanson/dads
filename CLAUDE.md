@@ -567,6 +567,33 @@ neither see nor scroll anything.
   an item with something waiting is named "Board — something waiting", which is
   what a screen reader should hear. `close(page)` clicks the sheet's Close.
 
+## Finding a line
+
+- **The archive was write-only until this existed.** The room backfills five
+  hundred lines and D1 keeps every one, so for five men talking for a year
+  almost everything they have said was on the disk with no door to it.
+  `GET /api/search?q=` is that door, and it reads D1 rather than what is
+  loaded — the whole point is that the line is older than the backfill.
+- **Only what somebody TYPED.** `chat` and `prompt`, never `system` or
+  `table`: the room's own lines are furniture, and fifty of them would bury
+  the one line he wanted. Same rule as retraction, and the same reason.
+- **LIKE, not FTS5.** A substring is what a man means when he half remembers a
+  word, it needs no second table to keep in step with retraction (which
+  DELETEs the row, so a line taken back is unfindable for free), and at the
+  size of a group of five it is a scan of nothing. `%` and `_` are escaped
+  before they reach the pattern — a bare `%` would otherwise return the whole
+  archive — and a test pins that. Case-insensitive for ASCII only, which is
+  what SQLite gives; an accent has to be typed as it was written.
+- **`src/shared/highlight.ts` splits, it never substitutes**, exactly like
+  `linkify`: it returns pieces and the renderer builds the `<mark>`, so no
+  string a dad typed ever becomes markup, and the needle is matched literally
+  rather than compiled as a pattern.
+- **A result goes nowhere, on purpose.** The line, who said it and when is the
+  whole answer; jumping the conversation to a line from March would mean
+  fetching ten thousand lines to arrive at the top of them. A photograph on a
+  result shows where it sits and carries no `onOpen` — the viewer holds the
+  conversation's pictures, and this one may be older than all of them.
+
 ## Who's here
 
 - **Coming and going is not conversation.** `presence` in D1 (migration 0006)

@@ -1,5 +1,5 @@
 import type { DadNight } from '../shared/dadNight';
-import type { RoomsOpen } from '../shared/protocol';
+import type { Found, RoomsOpen } from '../shared/protocol';
 
 /** A night as the client sends it: the zone is omitted when the group already
  * has one, so the server keeps it rather than adopting the editor's. */
@@ -342,6 +342,21 @@ export async function fetchPresence(): Promise<PresenceEvent[]> {
   const res = await fetch('/api/presence');
   if (!res.ok) throw new Error(`GET /api/presence ${res.status}`);
   return ((await res.json()) as { events: PresenceEvent[] }).events;
+}
+
+export type { Found } from '../shared/protocol';
+
+/**
+ * A line, found again.
+ *
+ * Against D1 rather than against what is loaded: the conversation on the
+ * screen is the last five hundred lines, and the whole point of looking
+ * something up is that it is older than that.
+ */
+export async function findLines(q: string, signal?: AbortSignal): Promise<Found[]> {
+  const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal });
+  if (!res.ok) throw new Error(`GET /api/search ${res.status}`);
+  return ((await res.json()) as { results: Found[] }).results;
 }
 
 /**

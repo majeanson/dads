@@ -14,6 +14,7 @@ import { getPresence } from './routes/presence';
 import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
 import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp';
 import { putRooms } from './routes/rooms';
+import { search } from './routes/search';
 import { getTable } from './routes/table';
 import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
 
@@ -122,6 +123,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/presence':
       return getPresence(request, env, prod);
+
+    case 'GET /api/search':
+      return search(request, env, url, prod);
 
     case 'GET /api/push':
       return getPushKey(request, env, url, prod);

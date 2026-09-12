@@ -93,6 +93,7 @@ const EN = {
   'menu.week': 'The week',
   'menu.open_table': 'Open the table',
   'menu.close_table': 'Close the table',
+  'menu.find': 'Find something',
   'menu.invite': 'Invite a dad',
   'menu.sign_out': 'Sign out',
   'menu.settings': 'Settings',
@@ -140,6 +141,14 @@ const EN = {
   'here.left': '{name} left',
   'here.on_call': 'on the call',
   'here.muted': 'muted',
+
+  // -------------------------------------------------------- finding a line
+  'find.title': 'Find something',
+  'find.field': 'Find something said',
+  'find.lede': 'A word or two from the line you’re after.',
+  'find.looking': 'Looking…',
+  'find.failed': 'That didn’t load.',
+  'find.nothing': 'Nothing with “{q}” in it.',
 
   // -------------------------------------------------------- the questions
   'q.title': 'Questions',
@@ -374,6 +383,7 @@ const FR: Record<Key, string> = {
   'menu.week': 'La semaine',
   'menu.open_table': 'Ouvre la table',
   'menu.close_table': 'Ferme la table',
+  'menu.find': 'Retrouve quelque chose',
   'menu.invite': 'Invite un chum',
   'menu.sign_out': 'Déconnexion',
   'menu.settings': 'Réglages',
@@ -422,6 +432,14 @@ const FR: Record<Key, string> = {
   'here.left': '{name} est parti',
   'here.on_call': 'dans l’appel',
   'here.muted': 'micro fermé',
+
+  // ------------------------------------------------------ retrouver un mot
+  'find.title': 'Retrouve quelque chose',
+  'find.field': 'Retrouve ce qui s’est dit',
+  'find.lede': 'Un mot ou deux de la ligne que tu cherches.',
+  'find.looking': 'Je cherche…',
+  'find.failed': 'Ça n’a pas chargé.',
+  'find.nothing': 'Rien avec « {q} » dedans.',
 
   // -------------------------------------------------------- les questions
   'q.title': 'Les questions',

@@ -71,6 +71,11 @@ export const E2E_HOME_GROUP = {
   name: 'The E2E Home',
   code: 'gravel cinder poplar vane',
 };
+export const E2E_FIND_GROUP = {
+  slug: 'e2e-find',
+  name: 'The E2E Find',
+  code: 'harbour lantern spruce dune',
+};
 const GROUPS = [
   E2E_CALL_GROUP,
   E2E_GROUP,
@@ -85,6 +90,7 @@ const GROUPS = [
   E2E_FRESH_GROUP,
   E2E_A11Y_GROUP,
   E2E_HOME_GROUP,
+  E2E_FIND_GROUP,
 ];
 
 /**

@@ -3,6 +3,7 @@ import { fetchTodo, type Session, type Todo } from './api';
 import { Attachment } from './Attachment';
 import { Board } from './Board';
 import { CallBar, JoinCall } from './CallBar';
+import { Find } from './Find';
 import { Here } from './Here';
 import { Invite } from './Invite';
 import { Night } from './Night';
@@ -15,6 +16,7 @@ import {
   MessageCircleQuestion,
   Mic,
   Plus,
+  Search,
   SendHorizontal,
   Send,
   Square,
@@ -60,7 +62,7 @@ const NEAR_BOTTOM_PX = 80;
 const AWAY_MS = 30 * 60_000;
 
 /** What is open over the room, if anything. */
-type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night' | 'invite' | 'settings';
+type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night' | 'find' | 'invite' | 'settings';
 
 /**
  * The room is the conversation and the call. That is the whole screen.
@@ -990,6 +992,15 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               {nightItem(t, lang, room.night, now)}
             </Button>
 
+            {/* The way back to what was said before the backfill: the room
+                hands over five hundred lines and the archive keeps every one,
+                so for five men talking for a year this is the only door to
+                most of it. */}
+            <Button block onClick={() => setSheet('find')}>
+              <Search size={17} aria-hidden="true" className="text-muted" />
+              {t('menu.find')}
+            </Button>
+
             {/* Second from the bottom, not first: the room is for the dads
                 who are already in it. But it is in the menu at all because
                 everything else in this app is worth nothing until the other
@@ -1043,6 +1054,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       {sheet === 'night' ? (
         <Sheet title={t('n.title')} onClose={() => setSheet(null)}>
           <Night night={room.night} you={session.member.id} />
+        </Sheet>
+      ) : null}
+
+      {sheet === 'find' ? (
+        <Sheet title={t('find.title')} onClose={() => setSheet(null)}>
+          <Find faceOf={(memberId) => faceOf(memberId)} />
         </Sheet>
       ) : null}
 

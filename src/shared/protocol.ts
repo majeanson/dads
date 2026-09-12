@@ -234,3 +234,29 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   }
   return null;
 }
+
+/**
+ * A line found again by searching the archive.
+ *
+ * Not a `Message`: it has no `seq`, because seq is the room object's
+ * autoincrement and this row came out of D1, which may be older than
+ * anything the object still holds. It carries no marks either — a search
+ * result is a line quoted back at you, not a line you are standing in.
+ */
+export interface Found {
+  id: string;
+  memberId: string | null;
+  /** Empty for a dad whose member row is gone. The line is still the group's. */
+  name: string;
+  kind: MessageKind;
+  body: string;
+  at: number;
+  media: Attachment | null;
+}
+
+/**
+ * Shorter than this and every query matches half the archive, which is not an
+ * answer to anything. Shared so the field and the route agree about when a
+ * search is worth making.
+ */
+export const MIN_SEARCH = 2;
