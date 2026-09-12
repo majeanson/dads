@@ -59,6 +59,9 @@ export function Viewer({
     return () => window.removeEventListener('keydown', key);
   }, [at, shots.length, onMove, shot]);
 
+  // A save that went wrong on one picture is not news about the next one.
+  useEffect(() => setFailed(false), [at]);
+
   if (shot === undefined) return null;
   const href = mediaUrl(shot.media.id);
 
@@ -92,7 +95,10 @@ export function Viewer({
       document.body.append(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
+      // Not synchronously: Chrome tolerates a revoke straight after the
+      // click, and Firefox and Safari have both cancelled the download for
+      // it. This is the laptop path, which is exactly where those two are.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
       // A share the dad cancelled is not a failure, and it is the only thing
       // that throws here in normal use.

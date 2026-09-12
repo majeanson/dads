@@ -99,9 +99,18 @@ export async function putFace(request: Request, env: Env, prod: boolean): Promis
   const declared = safeContentType(request.headers.get('Content-Type') ?? '');
   if (!isImage(declared)) return Response.json({ error: 'not_an_image' }, { status: 415 });
 
+  // Before the body is read, not after: buffering a hundred megabytes into
+  // the isolate to then refuse it turns a 413 into a 500. The length is the
+  // client's claim, so the real check below still stands.
+  const cap = Math.min(MAX_FACE_BYTES, MAX_UPLOAD_BYTES);
+  const claimed = Number(request.headers.get('Content-Length') ?? '');
+  if (Number.isFinite(claimed) && claimed > cap) {
+    return Response.json({ error: 'too_large' }, { status: 413 });
+  }
+
   const bytes = await request.arrayBuffer();
   if (bytes.byteLength === 0) return Response.json({ error: 'empty' }, { status: 400 });
-  if (bytes.byteLength > Math.min(MAX_FACE_BYTES, MAX_UPLOAD_BYTES)) {
+  if (bytes.byteLength > cap) {
     return Response.json({ error: 'too_large' }, { status: 413 });
   }
 

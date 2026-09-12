@@ -458,9 +458,16 @@ export class RoomDO extends DurableObject<Env> {
 
     // Resolved here rather than trusted: an id belonging to another group
     // must not become a way to pull a photo out of it.
+    //
+    // And a man may only hang up what he took. Every id in the room is
+    // already on every client, in its own messages, so scoping this to the
+    // GROUP alone let one dad put another man's photograph on a line of his
+    // own — and since taking a line back takes its picture with it, retracting
+    // that line deleted the blob and the record, and the photo disappeared off
+    // the line the man who took it had posted, with nothing to put it back.
     const groupId = this.groupId();
     const found = mediaId !== null && groupId ? await mediaFor(this.env, groupId, mediaId) : null;
-    if (mediaId !== null && found === null) {
+    if (mediaId !== null && (found === null || found.memberId !== who.memberId)) {
       return this.sendTo(ws, { t: 'error', code: 'no_media' });
     }
     const media: Attachment | null =

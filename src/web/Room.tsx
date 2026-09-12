@@ -175,11 +175,30 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     0,
   );
 
+  /**
+   * The newest line that could change what is waiting for him.
+   *
+   * Same reasoning as the pulse above, and the same reason: this was keyed on
+   * the newest line of ANY kind, so five dads talking through an evening each
+   * spent a round trip per line asking a question whose answer only moves
+   * when somebody files an answer, a check-in, a promise or its outcome.
+   */
+  const todoPulse = room.messages.reduce(
+    (seq, m) =>
+      m.kind === 'prompt' ||
+      m.said?.k === 'check_in' ||
+      m.said?.k === 'commitment' ||
+      m.said?.k === 'outcome'
+        ? m.seq
+        : seq,
+    0,
+  );
+
   /** The conversation is genuinely on the screen — not home, not the table. */
   const watching = view === 'talk' && !tableOpen;
   const pinnedNow = useRef(pinned);
   pinnedNow.current = pinned;
-  useEffect(refreshTodo, [refreshTodo, lastSeq]);
+  useEffect(refreshTodo, [refreshTodo, todoPulse]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), TICK_MS);
@@ -354,8 +373,20 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
     setSending(true);
     setUploadError(null);
-    const result = await upload(pending);
-    setSending(false);
+    // try/finally, because `upload` does not always return: fetch REJECTS on
+    // a network failure rather than answering, which is the wifi-to-LTE hop
+    // this whole app is built around. Without it `sending` stayed true, and
+    // `sending` disables the Send button, the microphone and the file picker
+    // alike — a dad left with a composer he could not use and nothing on the
+    // screen saying why, until he reloaded.
+    let result: Awaited<ReturnType<typeof upload>>;
+    try {
+      result = await upload(pending);
+    } catch {
+      result = { ok: false, error: 'unknown' };
+    } finally {
+      setSending(false);
+    }
 
     if (!result.ok) {
       setUploadError(
@@ -382,8 +413,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     if (spoken === null) return;
     setSending(true);
     setUploadError(null);
-    const result = await upload(spoken);
-    setSending(false);
+    let result: Awaited<ReturnType<typeof upload>>;
+    try {
+      result = await upload(spoken);
+    } catch {
+      result = { ok: false, error: 'unknown' };
+    } finally {
+      setSending(false);
+    }
     if (!result.ok) {
       setUploadError(
         result.error === 'too_large' ? t('composer.too_large') : t('composer.upload_failed'),
@@ -470,13 +507,18 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const newMark = useRef<HTMLLIElement>(null);
   const landedOn = useRef<number | null>(null);
   useEffect(() => {
+    // Not while he is on home: the stage is display:none there, so the scroll
+    // goes nowhere — but the guard below would still be spent and `pinned`
+    // still turned off, and he would then walk into the conversation at the
+    // OLDEST line of the backfill with nothing left to correct it.
+    if (view !== 'talk') return;
     if (since === null || !hasNew || landedOn.current === since) return;
     landedOn.current = since;
     newMark.current?.scrollIntoView({ block: 'start' });
     // Not pinned: he is reading from the boundary, not from the bottom, so
     // what is below it stays counted until he gets there.
     setPinned(false);
-  }, [since, hasNew]);
+  }, [view, since, hasNew]);
 
   return (
     <main

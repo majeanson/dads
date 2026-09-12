@@ -140,6 +140,12 @@ weakening `sessionSecret()`.
   chat and prompt lines. The destructive item ARMS on the first select
   (`event.preventDefault()` keeps the menu open) and fires on the second,
   because a long press is a gesture a thumb makes by accident.
+- **`sending` must come off in a `finally`.** `upload()` does not always
+  return: `fetch` REJECTS on a network failure rather than answering, which is
+  the wifi-to-LTE hop this whole app is built around. `sending` disables the
+  Send button, the microphone and the file picker alike, so without the
+  `finally` a dad was left holding a composer he could not use, with nothing
+  on the screen saying why, until he reloaded.
 - The composer stays live while the socket is down. Taking the keyboard off a
   man because the network went is the app making its problem his.
 
@@ -510,6 +516,25 @@ secret, custom domain bound by the route in wrangler.toml.
   NOT NULL constraint threw and the dad got a 500 with a stack behind it. A
   non-boolean is a 400 now, and `null` still means leave it alone.
 
+## An effect behind a hidden screen still runs
+
+Home and the conversation are two views of one component, and the stage is
+hidden with `display: none` rather than unmounted — so every effect written
+for the conversation fires while a dad is standing on home, where it can
+neither see nor scroll anything.
+
+- **The divider effect was the one that bit.** It scrolled to "new since you
+  were here", and it fired behind home: the scroll went nowhere, the
+  once-per-boundary guard was spent, and `pinned` was turned off — so when he
+  finally walked in, the view-change effect declined to scroll him and he
+  arrived at the OLDEST line of a five-hundred-line backfill, for exactly the
+  dad this feature exists for. Anything that measures or moves the list needs
+  `view === 'talk'` in it, not just in its dependencies.
+- **Keep a socket-driven refetch keyed on the KIND of line that can change
+  its answer**, never on the newest line of any kind. `nightPulse` and
+  `todoPulse` are that; `/api/todo` was keyed on every line, so five dads
+  talking through an evening each spent a round trip per line.
+
 ## Shape of the room
 
 - **The room is the conversation and the call. That is the whole screen.**
@@ -735,6 +760,15 @@ secret, custom domain bound by the route in wrangler.toml.
 - Video and voice notes are NOT in the viewer. A clip has the browser's own
   player with its own full screen and its own save, and a voice note is not
   something to look at. Anything off the inline allowlist already downloads.
+- **A man may only hang up what he took.** `mediaFor` scopes an id to the
+  GROUP, which is right for serving it and wrong for attaching it: every id in
+  the room is already on every client, in its own messages, so one dad could
+  put another man's photograph on a line of his own. And because taking a line
+  back takes its picture with it, retracting that line deleted the blob and
+  the record — the photo then disappeared off the line the man who took it had
+  posted, with nothing anywhere to put it back. The sender is compared as well
+  as the group, on the way in.
+
 - **Content types are an allowlist, and `image/svg+xml` is not on it.** An
   SVG is a document that can carry script; serving one inline from our own
   origin runs an uploader's code with this app's session. Anything not on the

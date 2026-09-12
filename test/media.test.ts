@@ -436,6 +436,32 @@ describe('a photo in the conversation', () => {
     expect(marc.frames.some((f) => f.t === 'msg' && f.message.body === 'look at this')).toBe(false);
   });
 
+  it('refuses an attachment a dad in this room did not upload', async () => {
+    // Every media id in the room is already on the client, in its own
+    // messages. Scoping the lookup to the GROUP and not to the SENDER let one
+    // dad hang another man's photograph on a line of his own — and because
+    // taking a line back takes its picture with it, retracting that line
+    // deleted the blob and the record, so the photo vanished off the line the
+    // man who took it had posted, with nothing to put it back.
+    const sam = await enter(group, 'Sam');
+    const marc = await enter(group, 'Marc');
+    open.push(sam, marc);
+    await settle();
+
+    const his = await uploadOne(sam.cookie, 'his-kid.png');
+    marc.say('mine now', his.media.id);
+    await settle(140);
+
+    expect(marc.frames.some((f) => f.t === 'error' && f.code === 'no_media')).toBe(true);
+    expect(marc.frames.some((f) => f.t === 'msg' && f.message.body === 'mine now')).toBe(false);
+
+    // And it is still there for the man it belongs to.
+    const still = await worker.fetch(`https://dads.test/api/media?id=${his.media.id}`, {
+      headers: { Cookie: sam.cookie },
+    });
+    expect(still.status).toBe(200);
+  });
+
   it('archives the attachment alongside the line', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);

@@ -171,3 +171,51 @@ test('home keeps up with who is coming while he sits on it', async ({ browser })
   await marc.context().close();
   await sam.context().close();
 });
+
+test('he walks in on the divider, not at the top of the week', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Rune');
+  const sam = await comeIn(browser, 'Sable');
+
+  // A week's worth behind him, so that the top of the list and the divider
+  // are nowhere near each other. With a short conversation both are on the
+  // screen at once and the bug is invisible.
+  await talk(sam);
+  for (let i = 0; i < 25; i++) {
+    await sam.getByLabel('Say something').fill(`a week of this ${i}`);
+    await sam.getByRole('button', { name: 'Send' }).click();
+  }
+  await expect(sam.getByTestId('line').filter({ hasText: 'a week of this 24' })).toBeVisible();
+
+  // Marc reads everything, then goes back out to home.
+  await marc.getByTestId('home-go').click();
+  await expect(marc.getByTestId('line').filter({ hasText: 'a week of this 24' })).toBeVisible();
+  await marc.getByTestId('go-home').click();
+  await expect(marc.getByTestId('home-new')).toHaveCount(0);
+
+  // A reload, because the boundary is where he got to BEFORE this sitting:
+  // a device that has never opened the room has nothing to catch up on, by
+  // design, so the divider only exists from the second visit.
+  await marc.reload();
+  await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await expect(marc.getByTestId('home')).toBeVisible();
+
+  // Sam talks while Marc is standing on home.
+  for (const line of ['first', 'second', 'third']) {
+    await sam.getByLabel('Say something').fill(`while he was out ${line}`);
+    await sam.getByRole('button', { name: 'Send' }).click();
+    await expect(sam.getByTestId('line').filter({ hasText: `out ${line}` })).toBeVisible();
+  }
+  await expect(marc.getByTestId('home-new')).toContainText('3 new');
+
+  // And in. The divider effect used to fire behind home, where the stage is
+  // display:none — the scroll went nowhere, the once-per-boundary guard was
+  // spent, and `pinned` was turned off, so he arrived at the OLDEST line of
+  // the backfill with nothing left to correct it.
+  await marc.getByTestId('home-go').click();
+  const since = marc.getByTestId('since');
+  await expect(since).toBeVisible();
+  await expect(since).toBeInViewport();
+
+  await marc.context().close();
+  await sam.context().close();
+});

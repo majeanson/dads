@@ -66,7 +66,13 @@ export function You({
     setBusy(true);
     try {
       await setMyFace(square);
-      setPreview(URL.createObjectURL(square));
+      // The handle before it goes, or every face he tries leaks a 320-square
+      // JPEG for the life of the page — the same thing the composer's own
+      // preview already takes care of.
+      setPreview((was) => {
+        if (was !== null) URL.revokeObjectURL(was);
+        return URL.createObjectURL(square);
+      });
     } catch {
       setError(t('you.failed'));
     } finally {
@@ -80,7 +86,10 @@ export function You({
     setError(null);
     try {
       await clearMyFace();
-      setPreview(null);
+      setPreview((was) => {
+        if (was !== null) URL.revokeObjectURL(was);
+        return null;
+      });
     } catch {
       setError(t('you.failed'));
     } finally {
