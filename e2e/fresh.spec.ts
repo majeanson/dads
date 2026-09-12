@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_FRESH_GROUP } from './global-setup';
 
 /**
@@ -24,6 +25,7 @@ async function comeIn(page: Page, name: string) {
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
   await page.evaluate(() => {
     (window as unknown as { stillTheOldPage: boolean }).stillTheOldPage = true;
   });
@@ -76,6 +78,7 @@ test('coming back to a newer build reloads the room', async ({ page }) => {
   // Reloaded into the same room, still him: the cookie and the device token
   // carried him through.
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
 });
 
 test('a line half typed holds the new build back until his hands are free', async ({ page }) => {
@@ -94,5 +97,7 @@ test('a line half typed holds the new build back until his hands are free', asyn
   await expect(page.getByLabel('Say something')).toHaveValue('');
   await comeBack(page);
   await reloaded(page);
+  // A reload lands on home, like every cold open does.
+  await talk(page);
   await expect(page.getByTestId('line').filter({ hasText: 'half a thou' })).toBeVisible();
 });

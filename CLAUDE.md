@@ -439,6 +439,38 @@ secret, custom domain bound by the route in wrangler.toml.
   checks the mesh really reaches a peer connection. Whether a human can hear a
   human is not something a headless browser can answer.
 
+## Home
+
+- **The app opens on home** (2026-09-12), not in the conversation. Four of the
+  five questions a dad has when he picks up his phone are not "what was said":
+  when the night is, whether anyone is about, whether he has answered, and
+  whether anything is waiting for him. Those used to be a countdown that only
+  appeared inside 24 hours plus three items behind a menu.
+- **It is a VIEW, not a route.** `data-view` on `main.room`; the socket, the
+  call and the table all live above it. So switching costs nothing, presence
+  is live rather than polled, and going in is instant rather than a reconnect.
+  Home sits BESIDE the stage and the stage is hidden with CSS — taking it out
+  of the tree would unmount the table's iframe and restart a game.
+- **The way in says how many.** A dad who only came to talk spends one tap and
+  sees the count on the button he was going to press anyway. Going in clears
+  it: a count that survived walking through the door would be a badge rather
+  than an answer. Read through a ref so scrolling inside the conversation
+  never retriggers it.
+- **A new line is unseen unless the conversation is on the screen.** `watching`
+  is `view === 'talk' && !tableOpen`. The table used to fall through that
+  check and count nothing at all.
+- **The group's name in the header is the way back**, with a chevron, because
+  "the name is the way back" is only obvious to whoever built it. Its hit area
+  reaches UP into the header's own padding and never down: reaching down put
+  it over the night line below, which — being later in the document — quietly
+  swallowed every tap meant for home.
+- **The header does not repeat what home says.** The night line is hidden on
+  home, where the same thing is the first item on the screen at four times the
+  size.
+- e2e: `talk(page)` (`e2e/talk.ts`, and `prod/names.ts`) steps into the
+  conversation and is idempotent, because these suites walk through screens
+  and it must not matter which one the last step left him on.
+
 ## Shape of the room
 
 - **The room is the conversation and the call. That is the whole screen.**

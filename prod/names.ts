@@ -51,5 +51,20 @@ export async function comeIn(browser: Browser, what: string): Promise<Page> {
   await page.getByLabel('Your name').fill(named(what));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  // The app opens on home; almost everything this suite checks is inside.
+  await talk(page);
   return page;
+}
+
+/**
+ * Into the conversation, from wherever he is.
+ *
+ * The app opens on home — when the night is, who is about, what is waiting —
+ * and the conversation is one tap past it. Idempotent, because these suites
+ * walk through several screens and it must not matter whether the last step
+ * left him on home or already inside.
+ */
+export async function talk(page: Page): Promise<void> {
+  const go = page.getByTestId('home-go');
+  if (await go.isVisible()) await go.click();
 }

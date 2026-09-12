@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_INVITE_GROUP } from './global-setup';
 
 test('a dad sends a link, and the man who follows it never sees the code', async ({ browser }) => {
@@ -10,6 +11,7 @@ test('a dad sends a link, and the man who follows it never sees the code', async
   await marc.getByLabel('Your name').fill('Marc');
   await marc.getByRole('button', { name: 'Come in' }).click();
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await talk(marc);
 
   await marc.getByRole('button', { name: 'Menu' }).click();
   await marc.getByRole('button', { name: 'Invite a dad' }).click();
@@ -31,6 +33,8 @@ test('a dad sends a link, and the man who follows it never sees the code', async
   await sam.getByRole('button', { name: 'Come in' }).click();
 
   await expect(sam.getByTestId('connection')).toHaveText(/here$/);
+
+  await talk(sam);
   await expect(marc.getByTestId('connection')).toHaveText('2 here');
 
   await first.close();

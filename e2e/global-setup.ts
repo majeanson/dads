@@ -66,6 +66,11 @@ export const E2E_A11Y_GROUP = {
   name: 'The E2E Access',
   code: 'moss falcon tundra reed',
 };
+export const E2E_HOME_GROUP = {
+  slug: 'e2e-home',
+  name: 'The E2E Home',
+  code: 'gravel cinder poplar vane',
+};
 const GROUPS = [
   E2E_CALL_GROUP,
   E2E_GROUP,
@@ -79,6 +84,7 @@ const GROUPS = [
   E2E_INVITE_GROUP,
   E2E_FRESH_GROUP,
   E2E_A11Y_GROUP,
+  E2E_HOME_GROUP,
 ];
 
 /**

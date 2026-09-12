@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_ROOM_GROUP } from './global-setup';
 
 // One room, one roster: these tests would see each other's dads if they ran
@@ -13,6 +14,7 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
   return page;
 }
 
@@ -60,6 +62,7 @@ test('a dad who reloads keeps the evening’s lines', async ({ browser }) => {
 
   await marc.reload();
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await talk(marc);
   await expect(marc.getByTestId('line').filter({ hasText: 'before the reload' })).toBeVisible();
 
   await marc.context().close();
@@ -130,6 +133,7 @@ test('a line typed with no signal waits, and goes when the signal comes back', a
   await marc.getByLabel('Your name').fill('Fitz');
   await marc.getByRole('button', { name: 'Come in' }).click();
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await talk(marc);
 
   const sam = await comeIn(browser, 'Gil');
 
@@ -224,6 +228,7 @@ test('a dad who was away lands on what he missed', async ({ browser }) => {
 
   await marc.goto('/');
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await talk(marc);
   const since = marc.getByTestId('since');
   await expect(since).toHaveCount(1);
   await expect(since).toBeVisible();
@@ -333,6 +338,7 @@ test('every mark is reachable wherever on the line he presses', async ({ browser
   await page.getByLabel('Your name').fill('Otto Edge');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
 
   await page.getByLabel('Say something').fill('pressed at the edge');
   await page.getByRole('button', { name: 'Send' }).click();
@@ -367,6 +373,7 @@ test('a face sits beside a run, once, and the words below it line up', async ({ 
     await page.getByLabel('Your name').fill(`Pat ${width}`);
     await page.getByRole('button', { name: 'Come in' }).click();
     await expect(page.getByTestId('connection')).toHaveText(/here$/);
+    await talk(page);
 
     const first = `first of a run at ${width}`;
     const second = `and its continuation at ${width}`;

@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_A11Y_GROUP } from './global-setup';
 
 /**
@@ -42,6 +43,9 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByLabel('Your name').fill(theme === 'light' ? 'Marc' : 'Sam');
     await page.getByRole('button', { name: 'Come in' }).click();
     await expect(page.getByTestId('connection')).toHaveText(/here$/);
+    // Home is where the app opens, so it is a scene like any other.
+    found.push(...(await faults(page, 'home')));
+    await talk(page);
 
     // One of everything in the conversation so the rows are checked too.
     // Named for the theme: both runs share one room, and a line that reads

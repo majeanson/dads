@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_BOARD_GROUP } from './global-setup';
 
 // One group, one shared board.
@@ -34,6 +35,7 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
   return page;
 }
 
@@ -114,10 +116,12 @@ test('a check-in survives a reload, and the menu still works', async ({ browser 
     dave.getByTestId('board-row').filter({ hasText: 'Dave (you)' }).first(),
   ).toContainText('Good week, for once.');
 
-  // Closing the sheet leaves the conversation, which is the whole room.
+  // Closing the sheet leaves whatever was behind it — home, after a reload —
+  // and the conversation is one tap from there.
   await close(dave);
-  await expect(dave.getByLabel('Say something')).toBeVisible();
   await expect(dave.getByTestId('board')).toHaveCount(0);
+  await talk(dave);
+  await expect(dave.getByLabel('Say something')).toBeVisible();
 
   await dave.context().close();
 });

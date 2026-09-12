@@ -10,6 +10,7 @@ import {
   ArrowDown,
   CalendarCheck,
   CalendarClock,
+  ChevronLeft,
   Menu as MenuIcon,
   MessageCircleQuestion,
   Mic,
@@ -31,6 +32,7 @@ import { prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
 import { lastSeen, markSeen } from './seen';
 import { Face } from './Face';
+import { Home } from './Home';
 import { Marks, marksOf } from './Marks';
 import { LineMenu } from './ui/LineMenu';
 import { useFreshBuild } from './useFreshBuild';
@@ -81,6 +83,19 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const { t, lang } = useT();
   const room = useRoom(true, session.group.dadNight, session.group.rooms);
   const [sheet, setSheet] = useState<Sheets | null>(null);
+  /**
+   * Home or the conversation.
+   *
+   * The app opens on home: when the night is, who is about and what is
+   * waiting are the questions a dad has before he has read a word, and they
+   * used to be a countdown that appeared inside 24 hours plus three items
+   * behind a menu. Going in is one tap and the tap says how many lines are
+   * waiting, so the man who only came to talk loses a second.
+   *
+   * A VIEW and not a route: the socket, the call and the table all live above
+   * it, so switching costs nothing and a game in progress is untouched.
+   */
+  const [view, setView] = useState<'home' | 'talk'>('home');
   const [tableOpen, setTableOpen] = useState(false);
   const [draft, setDraft] = useState('');
   /** Picked but not sent: the dad still gets a caption, or a change of mind. */
@@ -152,12 +167,32 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     if (count === counted.current) return;
     const arrived = Math.max(0, count - counted.current);
     counted.current = count;
-    if (tableOpen) return;
 
-    if (pinned) bottom.current?.scrollIntoView({ block: 'end' });
-    if (pinned && !document.hidden) setUnseen(0);
+    // Watching means the conversation is actually on the screen. On home, or
+    // behind the table, a new line is unseen — which is what puts the count
+    // on the way in. The table used to fall through here and count nothing.
+    const watching = view === 'talk' && !tableOpen;
+    if (watching && pinned) bottom.current?.scrollIntoView({ block: 'end' });
+    if (watching && pinned && !document.hidden) setUnseen(0);
     else setUnseen((n) => n + arrived);
-  }, [room.messages.length, tableOpen, pinned]);
+  }, [room.messages.length, tableOpen, pinned, view]);
+
+  /**
+   * Going in is reading it.
+   *
+   * The count on the way in says how many lines are waiting; walking through
+   * that door and finding it still there afterwards would make it a badge
+   * rather than an answer. Only on the way IN — `pinned` is deliberately read
+   * through a ref so a dad scrolling inside the conversation never retriggers
+   * this and never has the page scrolled out of his hands.
+   */
+  const pinnedNow = useRef(pinned);
+  pinnedNow.current = pinned;
+  useEffect(() => {
+    if (view !== 'talk' || !pinnedNow.current) return;
+    bottom.current?.scrollIntoView({ block: 'end' });
+    if (!document.hidden) setUnseen(0);
+  }, [view]);
 
   /** A dad who has scrolled up, or looked away, has not seen it. */
   const atBottom = useCallback(() => {
@@ -386,13 +421,36 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   return (
     <main
       className="room"
+      data-view={view}
       data-table={tableOpen ? 'open' : 'closed'}
       onDragOver={(e) => e.preventDefault()}
       onDrop={dropped}
     >
       <header className="room-head border-b border-line pb-2.5">
         <div className="min-w-0">
-          <h1 className="display truncate text-base text-muted">{session.group.name}</h1>
+          {/* The group's name is the way home, which is where a logo goes in
+              every app anybody has ever used — and costs the header no third
+              icon, on a bar that already has to survive "Embarque dans
+              l'appel" on a 390px phone. */}
+          <h1 className="display truncate text-base text-muted">
+            {view === 'talk' ? (
+              <button
+                type="button"
+                className="home-back"
+                onClick={() => setView('home')}
+                title={t('home.title')}
+                data-testid="go-home"
+              >
+                {/* A chevron, because "the name is the way back" is only
+                    obvious to the person who built it. */}
+                <ChevronLeft size={15} aria-hidden="true" className="shrink-0" />
+                <span className="truncate">{session.group.name}</span>
+                <span className="sr-only"> — {t('home.title')}</span>
+              </button>
+            ) : (
+              session.group.name
+            )}
+          </h1>
           {/* The count is also the door to the roster and to who has been
               about. A button, because it does something — but not a blue
               underlined link, which is three times louder than a group of five
@@ -410,7 +468,10 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                   ? t('room.opening')
                   : t('room.reconnecting')}
             </button>
-            {soon === null ? null : (
+            {/* Not on home, where the night is the first thing on the screen
+                and four times the size. A header that repeats what is an inch
+                below it is the app saying something twice. */}
+            {soon === null || view === 'home' ? null : (
               <span className="max-[30rem]:block max-[30rem]:pt-0.5">
                 <span className="max-[30rem]:hidden"> · </span>
                 <button
@@ -448,6 +509,25 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           </Button>
         </span>
       </header>
+
+      {/* Home sits BESIDE the stage rather than in place of it, and the stage
+          is hidden with CSS: taking it out of the tree would unmount the
+          table's iframe and restart a game in progress, which is the same
+          reason the table has never been unmounted either. */}
+      <Home
+        night={room.night}
+        you={session.member.id}
+        roster={room.roster}
+        members={room.members}
+        unseen={unseen}
+        todo={todo}
+        rooms={room.rooms}
+        onGo={() => setView('talk')}
+        onWho={() => setSheet('here')}
+        onNight={() => setSheet('night')}
+        onPrompts={() => setSheet('prompts')}
+        onBoard={() => setSheet('board')}
+      />
 
       <div className="stage">
         <div className="col-talk">

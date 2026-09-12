@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_TABLE_GROUP } from './global-setup';
 
 // One group, one table.
@@ -62,6 +63,7 @@ async function comeIn(browser: Browser, name: string, body = STUB_TABLE): Promis
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
   return page;
 }
 
@@ -120,6 +122,7 @@ test('on a phone the table takes the room’s place, and gives it back', async (
   await page.getByLabel('Your name').fill('Phone');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
 
   // No room for both, so the room is what you see and the table is offered.
   await expect(page.getByLabel('Say something')).toBeVisible();

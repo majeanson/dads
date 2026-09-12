@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_NIGHT_GROUP } from './global-setup';
 
 // One group, one schedule: these would overwrite each other in parallel.
@@ -12,6 +13,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await marc.getByLabel('Your name').fill('Marc');
   await marc.getByRole('button', { name: 'Come in' }).click();
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await talk(marc);
 
   // A second dad is already in the room, watching.
   const samCtx = await browser.newContext();
@@ -21,6 +23,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await sam.getByLabel('Your name').fill('Sam');
   await sam.getByRole('button', { name: 'Come in' }).click();
   await expect(sam.getByTestId('connection')).toHaveText(/here$/);
+  await talk(sam);
   // With no night set the room says nothing about it anywhere.
   await expect(sam.getByTestId('night-soon')).toHaveCount(0);
 
@@ -41,8 +44,12 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
     sam.getByTestId('line').filter({ hasText: 'Marc set dad night to Thursdays at 21:00.' }),
   ).toBeVisible();
 
-  // It survives a reload, because it lives in D1 and not in the tab.
+  // It survives a reload, because it lives in D1 and not in the tab. A reload
+  // lands on home, where the night is the first thing on the screen rather
+  // than a line in the header — the header does not repeat it there.
   await marc.reload();
+  await expect(marc.getByTestId('home-when')).toContainText('Thursdays at 21:00');
+  await talk(marc);
   await expect(marc.getByTestId('night-soon')).toBeVisible();
 
   // And the question the standing slot never answered: who is actually

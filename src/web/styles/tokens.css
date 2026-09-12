@@ -353,6 +353,117 @@
 
   /* --- the stage: talk, and the table beside it on a wide screen --- */
 
+  /* --- home ---------------------------------------------------------------
+   *
+   * Where the app opens. One of these two is on the screen and the other is
+   * display:none — not unmounted, because the stage holds the table's iframe
+   * and taking that out of the tree restarts a game.
+   */
+  .home {
+    display: none;
+    grid-auto-rows: min-content;
+    gap: 1.75rem;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 1rem;
+  }
+
+  .room[data-view='home'] .home {
+    display: grid;
+  }
+
+  .room[data-view='home'] .stage {
+    display: none;
+  }
+
+  .home-night,
+  .home-here,
+  .home-waiting {
+    display: grid;
+    gap: 0.6rem;
+    justify-items: start;
+  }
+
+  .home-waiting {
+    gap: 0.5rem;
+    justify-items: stretch;
+  }
+
+  /* The one label shape on this screen: quiet, small, and it names the block
+     under it rather than decorating it. */
+  .home-label {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .home-when {
+    margin: 0;
+    font-size: 1.25rem;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  /* The way in, and the size of it is the point. */
+  .home-go {
+    width: 100%;
+    height: 3.25rem;
+    justify-content: space-between;
+    font-size: 1.0625rem;
+  }
+
+  .home-new {
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+  }
+
+  .home-faces {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.75rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9375rem;
+    cursor: pointer;
+  }
+
+  /* A plain row. An overlapped stack is the stock way to draw this and it
+     reads as a product doing a trick — five friends do not need their faces
+     shingled, and at this size the rings that make it work crowd each other. */
+  .home-face-row {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  /* The header's name is the way back, and it must not look like a link on a
+     screen whose whole palette is one colour spent on meaning. */
+  .home-back {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    max-width: 100%;
+    /* A thumb's height without a thumb's worth of header — but reaching UP
+       only, into the padding the header already has. Reaching down as well
+       put this box over the night line below it, and the night line, being
+       later in the document, quietly swallowed every tap meant for home. */
+    min-height: 2rem;
+    margin-top: -0.5rem;
+    margin-left: -0.15rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
   .stage {
     display: grid;
     /* Explicit, not implicit: an auto row sizes to its content and leaves the

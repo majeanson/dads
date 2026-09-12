@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { CODE, named } from './names';
+import { CODE, named, talk } from './names';
 
 /**
  * The front door, against the real PBKDF2 and the real throttle.
@@ -56,6 +56,7 @@ test('a dad who comes back is the same dad, not a second one', async ({ browser 
   await page.getByLabel('Your name').fill(named('returning'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  await talk(page);
 
   const first = await page.evaluate(async () => {
     const r = await fetch('/api/me');
@@ -70,6 +71,7 @@ test('a dad who comes back is the same dad, not a second one', async ({ browser 
   await page.getByLabel('Your name').fill(named('returning'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  await talk(page);
 
   const second = await page.evaluate(async () => {
     const r = await fetch('/api/me');
@@ -88,6 +90,7 @@ test('a link opens the door, and a dead one is just a wrong code', async ({ brow
   await page.getByLabel('Your name').fill(named('host'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  await talk(page);
 
   await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Invite a dad' }).click();
@@ -105,6 +108,7 @@ test('a link opens the door, and a dead one is just a wrong code', async ({ brow
   await them.getByLabel('Your name').fill(named('guest'));
   await them.getByRole('button', { name: 'Come in' }).click();
   await expect(them.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  await talk(them);
 
   // An invented token fails into the same message a wrong code gets.
   const made = await them.request.post('/api/join', {

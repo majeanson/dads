@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_CALL_GROUP } from './global-setup';
 
 // One group, one call.
@@ -21,6 +22,7 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
   return page;
 }
 

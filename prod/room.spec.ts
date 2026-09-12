@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { comeIn, named, note } from './names';
+import { comeIn, named, note, talk } from './names';
 
 /**
  * The room itself, against the real Durable Object, D1 and R2.
@@ -150,6 +150,7 @@ test('a line typed with no signal is not lost', async ({ browser }) => {
   await page.getByLabel('Your name').fill(named('tunnel'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  await talk(page);
 
   swallow = true;
   const said = note('from a dead spot');

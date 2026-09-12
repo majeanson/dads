@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { comeIn, named, note } from './names';
+import { comeIn, named, note, talk } from './names';
 
 /**
  * The standing night, without moving it.
@@ -10,10 +10,19 @@ import { comeIn, named, note } from './names';
  */
 test.describe.configure({ mode: 'serial' });
 
-test('the night reads the same in the header, the menu and the sheet', async ({ browser }) => {
+test('the night reads the same on home, the header, the menu and the sheet', async ({
+  browser,
+}) => {
   const marc = await comeIn(browser, 'nightreader');
 
   await expect(marc.getByTestId('night-soon')).toBeVisible();
+
+  // And on home, where it is the largest thing on the screen and the header
+  // does not repeat it.
+  await marc.getByTestId('go-home').click();
+  await expect(marc.getByTestId('home-when')).toContainText(/at \d\d:\d\d/);
+  await expect(marc.getByTestId('night-soon')).toHaveCount(0);
+  await talk(marc);
   await marc.getByRole('button', { name: 'Menu' }).click();
   await expect(marc.getByTestId('dad-night')).toContainText(/Dad night/);
   await marc.getByTestId('dad-night').click();

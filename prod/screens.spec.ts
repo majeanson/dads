@@ -110,6 +110,10 @@ for (const size of WIDTHS) {
     await page.getByRole('button', { name: 'Entre' }).click();
     await expect(page.getByTestId('connection')).toBeVisible({ timeout: 20_000 });
     await page.waitForTimeout(1200);
+    // Home is where the app opens, so it is the first scene a dad stands in.
+    faults.push(...(await faultsIn(page, 'home')));
+    await page.getByTestId('home-go').click();
+    await page.waitForTimeout(600);
     faults.push(...(await faultsIn(page, 'the room')));
 
     const rooms = await page.evaluate(async () => {

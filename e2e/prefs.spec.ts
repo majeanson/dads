@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_PREFS_GROUP } from './global-setup';
 
 // One group, and each test brings its own dad.
@@ -10,6 +11,7 @@ async function comeIn(page: Page, name: string) {
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
 }
 
 test('a dad reads the room in French, and it stays French', async ({ page }) => {
@@ -28,6 +30,7 @@ test('a dad reads the room in French, and it stays French', async ({ page }) => 
   await expect(page.getByRole('button', { name: 'Réglages' })).toBeVisible();
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
   await expect(page.getByTestId('connection')).toHaveText(/ici$/);
+  await talk(page);
   await expect(page.getByLabel('Dis quelque chose')).toBeVisible();
 
   // Including the page's own language, which is what a screen reader and a
@@ -38,6 +41,7 @@ test('a dad reads the room in French, and it stays French', async ({ page }) => 
   await page.reload();
   expect(await page.evaluate(() => document.documentElement.lang)).toBe('fr');
   await expect(page.getByTestId('connection')).toHaveText(/ici$/);
+  await talk(page);
 
   // And back again.
   await page.getByRole('button', { name: 'Menu' }).click();
@@ -71,6 +75,7 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   await page.reload();
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
 
   // Handing it back to the phone takes the stamp off again.
   await page.getByRole('button', { name: 'Menu' }).click();
@@ -165,6 +170,7 @@ test('a francophone can say so at the door, before he is anybody', async ({ page
   await page.getByLabel('Ton nom').fill('Luc');
   await page.getByRole('button', { name: 'Entre' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/ici$/);
+  await talk(page);
 });
 
 test('the phone’s own chrome follows the theme it was asked for', async ({ page }) => {

@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { talk } from './talk';
 import { E2E_PROMPT_GROUP } from './global-setup';
 
 // One group, one shared prompt pool and one day's question.
@@ -34,6 +35,7 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
   return page;
 }
 
@@ -100,6 +102,7 @@ test('what the group was asked before is readable, and a dad can add one', async
   await open(marc, 'Questions');
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await close(marc);
+  await talk(marc);
   await expect(marc.getByLabel('Say something')).toBeVisible();
 
   await marc.context().close();
