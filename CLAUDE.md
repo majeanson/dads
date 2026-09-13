@@ -516,6 +516,37 @@ secret, custom domain bound by the route in wrangler.toml.
   NOT NULL constraint threw and the dad got a 500 with a stack behind it. A
   non-boolean is a 400 now, and `null` still means leave it alone.
 
+## What is in the room, and where
+
+`Room.tsx` was a thousand lines holding home, the conversation, the composer,
+the media, the seen-mark and every sheet. The "an effect behind a hidden
+screen still runs" bug below is that shape biting. It is the wiring now, and
+these are the parts:
+
+- **`RoomHeader`** — the app bar. Presentational; the structural rules that
+  stop it widening the page live with it.
+- **`Lines`** — the conversation. Dumb on purpose: `messageGroups` decides
+  what a row is, this only draws it.
+- **`Composer`** — the field, the picker, the microphone and everything a
+  half-finished line is. It owns that state, because nothing above it needs
+  to read a draft.
+- **`Sheets`** — everything behind the Menu button, which is the app's own
+  model of itself. Each still mounts on open, so it reads fresh data.
+- **`useSeen`** — what he has read and where the list is: the mark, the count,
+  the follow-down, the tab title, the visibility rules. One hook because it is
+  one question asked three ways, all answered from the one mark.
+- **The divider-landing effect stays in `Room`**, because it is the only one
+  that depends on what was RENDERED — whether `toRows` actually placed a
+  divider, which it declines to do at the top of a list.
+
+- **`useFreshBuild` takes a FUNCTION, not a boolean.** It is only ever asked
+  at the instant a dad comes back to the app, and the answer has to be the
+  current one. As a boolean, "his hands are free" had to travel from the
+  composer up through a state change and a render, and the frame that took
+  was a reload landing on the line he had just sent. The composer writes
+  `busy` into a ref during render, the way `useSeen` writes `pinnedNow`.
+  `e2e/fresh.spec.ts` is what caught it.
+
 ## An effect behind a hidden screen still runs
 
 Home and the conversation are two views of one component, and the stage is

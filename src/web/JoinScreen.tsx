@@ -45,7 +45,7 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   // The door too, held back while he is typing into it.
-  useFreshBuild(code !== '' || name !== '');
+  useFreshBuild(() => code !== '' || name !== '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

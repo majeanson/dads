@@ -144,6 +144,7 @@ describe('finding a line again', () => {
       contentType: 'image/jpeg',
       width: 800,
       height: 600,
+      kept: false,
     });
   });
 

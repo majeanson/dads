@@ -17,10 +17,16 @@ const AT_MOST_EVERY_MS = 60_000;
  * A cold load is not asked about: it IS the newest build. `pageshow` counts
  * only when the page came back out of the browser's cache, which is the other
  * way an old page wakes up.
+ *
+ * `isBusy` is a function and not a boolean, because it is only ever asked at
+ * the instant he comes back and the answer must be the CURRENT one. As a
+ * boolean it had to travel up from the composer through a state change and a
+ * render, and the frame that took was a reload landing on a line he had just
+ * sent — or, as easily, on one he had just started typing.
  */
-export function useFreshBuild(busy: boolean): void {
-  const busyRef = useRef(busy);
-  busyRef.current = busy;
+export function useFreshBuild(isBusy: () => boolean): void {
+  const busyRef = useRef(isBusy);
+  busyRef.current = isBusy;
 
   useEffect(() => {
     const running = bundleOf(document.documentElement.outerHTML);
@@ -32,7 +38,7 @@ export function useFreshBuild(busy: boolean): void {
     async function check() {
       if (document.hidden) return;
       if (stale) {
-        if (!busyRef.current) location.reload();
+        if (!busyRef.current()) location.reload();
         return;
       }
       const now = Date.now();
@@ -47,7 +53,7 @@ export function useFreshBuild(busy: boolean): void {
         return;
       }
       stale = true;
-      if (!busyRef.current) location.reload();
+      if (!busyRef.current()) location.reload();
     }
 
     const onVisible = () => void check();

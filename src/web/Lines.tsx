@@ -1,0 +1,163 @@
+import type { RefObject } from 'react';
+import type { Attachment as MessageAttachment } from '../shared/protocol';
+import { parts, shortLink } from '../shared/linkify';
+import { describeSaid } from '../shared/said';
+import { Attachment } from './Attachment';
+import { Face } from './Face';
+import { useT } from './i18n';
+import { Marks, marksOf } from './Marks';
+import type { Row } from './messageGroups';
+import { LineMenu } from './ui/LineMenu';
+
+function clock(ts: number): string {
+  return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+/**
+ * The conversation itself.
+ *
+ * Dumb on purpose: `messageGroups` has already decided what a row is — which
+ * lines drop the repeated name, where a day opens, where "new since you were
+ * here" goes — and this only draws them. Every cell is placed by hand in CSS
+ * because auto-placement counts children rather than columns, and on a
+ * continued line with no face in the gutter the words slid one column left.
+ */
+export function Lines({
+  rows,
+  empty,
+  you,
+  lines,
+  bottom,
+  newMark,
+  faceOf,
+  nameOf,
+  onReact,
+  onRetract,
+  onKeep,
+  onOpenPhoto,
+  onScroll,
+}: {
+  rows: Row[];
+  /** Nothing has been said in this room at all. */
+  empty: boolean;
+  /** The reader's own member id, for "which marks are mine". */
+  you: string;
+  lines: RefObject<HTMLOListElement | null>;
+  bottom: RefObject<HTMLLIElement | null>;
+  /** The "new since you were here" divider, so the list can land on it. */
+  newMark: RefObject<HTMLLIElement | null>;
+  faceOf: (memberId: string | null) => number | undefined;
+  nameOf: (memberId: string) => string;
+  onReact: (id: string, emoji: string, on: boolean) => void;
+  onRetract: (id: string) => void;
+  onKeep: (media: MessageAttachment) => void;
+  onOpenPhoto: (mediaId: string) => void;
+  onScroll: () => void;
+}) {
+  const { t, lang } = useT();
+
+  return (
+    <ol className="lines" aria-label={t('room.messages')} ref={lines} onScroll={onScroll}>
+      {empty ? <li className="lines-empty quiet">{t('room.empty')}</li> : null}
+      {rows.map((row) =>
+        row.kind === 'day' ? (
+          <li key={`day-${row.key}`} className="day" data-testid="day">
+            <span>{row.label}</span>
+          </li>
+        ) : row.kind === 'new' ? (
+          <li key="new" ref={newMark} className="day day-new" data-testid="since">
+            <span>{row.label}</span>
+          </li>
+        ) : row.message.kind === 'chat' || row.message.kind === 'prompt' ? (
+          // Only what a dad typed gets a menu: the room's own lines are facts
+          // about the evening, not quotes, and nobody's to take back. Yours
+          // also carries the way to take it back.
+          <LineMenu
+            key={row.key}
+            body={row.message.body}
+            mine={marksOf(row.message, you)}
+            // Any dad may keep anybody's picture, unlike taking a line back:
+            // what the room keeps belongs to the five of them.
+            keep={
+              row.message.media
+                ? { kept: row.message.media.kept, onKeep: () => onKeep(row.message.media!) }
+                : undefined
+            }
+            onReact={(emoji, on) => onReact(row.message.id, emoji, on)}
+            onRetract={row.message.memberId === you ? () => onRetract(row.message.id) : undefined}
+          >
+            <li
+              className={`line line-${row.message.kind}${row.showName ? '' : ' is-continued'}`}
+              data-testid="line"
+            >
+              {/* Only at the top of a run. A face on every line of one turn is
+                  the app repeating who is talking between every sentence,
+                  which is what dropping the name fixed. */}
+              {row.showName && row.message.memberId !== null ? (
+                <Face
+                  className="face"
+                  memberId={row.message.memberId}
+                  name={row.message.name}
+                  version={faceOf(row.message.memberId)}
+                  size={32}
+                />
+              ) : null}
+              <span className="who">{row.showName ? row.message.name : ''}</span>
+              <span className="body">
+                {row.message.kind === 'prompt' ? (
+                  <span className="answer-tag">{t('line.answered')}</span>
+                ) : null}
+                {parts(row.message.body).map((part, i) =>
+                  part.link ? (
+                    <a
+                      key={i}
+                      href={part.href}
+                      title={part.href}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                    >
+                      {shortLink(part.text)}
+                    </a>
+                  ) : (
+                    <span key={i}>{part.text}</span>
+                  ),
+                )}
+                {row.message.media ? (
+                  <Attachment
+                    media={row.message.media}
+                    onOpen={() => onOpenPhoto(row.message.media!.id)}
+                  />
+                ) : null}
+                <Marks
+                  reactions={row.message.reactions}
+                  me={you}
+                  nameOf={nameOf}
+                  onToggle={(emoji, on) => onReact(row.message.id, emoji, on)}
+                />
+              </span>
+              <time className="when">{clock(row.message.createdAt)}</time>
+            </li>
+          </LineMenu>
+        ) : (
+          // The room talking. It carries what happened, not a sentence, so it
+          // can be read in either language — and falls back to the English
+          // body for a line written before that was true.
+          <li
+            key={row.key}
+            className={`line line-${row.message.kind}${row.joined ? ' is-joined' : ''}`}
+            data-testid="line"
+          >
+            <span className="body">
+              {row.message.said
+                ? describeSaid(t, lang, row.message.said, row.joined)
+                : row.message.body}
+            </span>
+          </li>
+        ),
+      )}
+      {/* The scroll target, and nothing else: an item so the list is still a
+          list to a screen reader, hidden so it is not counted. */}
+      <li ref={bottom} aria-hidden="true" className="m-0 h-0 p-0" />
+    </ol>
+  );
+}
