@@ -238,14 +238,22 @@ export async function keyFor(env: Env, groupId: string, id: string): Promise<str
   return row?.r2_key ?? null;
 }
 
-/** Everything the room still holds, newest first. */
+/**
+ * Everything the room still holds, newest first.
+ *
+ * Bounded by what a room CAN hold rather than by one shelf: the pictures, the
+ * voice notes, and everything kept off both. It was MEDIA_PER_GROUP alone,
+ * which was right while there was one shelf and quietly wrong the day there
+ * were two — thirty voice notes would have hidden every photograph in the
+ * room from anything that asked.
+ */
 export async function recentMedia(env: Env, groupId: string): Promise<Media[]> {
   const { results } = await env.DB.prepare(
     `SELECT id, name, content_type, size, width, height, member_id, created_at, kept
        FROM media WHERE group_id = ?
       ORDER BY created_at DESC, id DESC LIMIT ?`,
   )
-    .bind(groupId, MEDIA_PER_GROUP)
+    .bind(groupId, MEDIA_PER_GROUP + VOICE_PER_GROUP + KEPT_PER_GROUP)
     .all<MediaRow>();
   return results.map(toMedia);
 }

@@ -324,6 +324,25 @@ describe('the ten-photo cap', () => {
     expect(gone.status).toBe(404);
   });
 
+  it('lists the photographs a room still holds, under a week of voice notes', async () => {
+    const cookie = await cookieFor(group);
+    const photo = (await uploadOne(cookie, 'photo.png')).media.id;
+    await settle(2);
+    // A chatty week. Both are still on their own shelves and both are still
+    // held, so a listing bounded by one shelf would have answered with twelve
+    // voice notes and no picture at all.
+    for (let i = 0; i < 12; i++) {
+      await sayOne(cookie, `voice-${i}.webm`);
+      await settle(2);
+    }
+
+    const list = (await (
+      await worker.fetch('https://dads.test/api/media-list', { headers: { Cookie: cookie } })
+    ).json()) as { media: { id: string }[] };
+    expect(list.media).toHaveLength(13);
+    expect(list.media.map((m) => m.id)).toContain(photo);
+  });
+
   it('counts each group’s ten separately', async () => {
     const other = await seedGroup();
     const mine = await cookieFor(group);

@@ -375,13 +375,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                   : ' ')}
           </p>
 
-          <Composer
-            ref={composer}
-            busy={composing}
-            connected={room.connection === 'open'}
-            onSend={room.send}
-            onTyping={room.sendTyping}
-          />
+          <Composer ref={composer} busy={composing} onSend={room.send} onTyping={room.sendTyping} />
         </div>
 
         {/* Always mounted: unmounting the iframe restarts a game in progress. */}

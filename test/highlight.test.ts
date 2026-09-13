@@ -63,4 +63,16 @@ describe('highlight', () => {
   it('marks nothing for an empty needle', () => {
     expect(highlight('anything', '')).toEqual([{ text: 'anything', hit: false }]);
   });
+
+  it('leaves a line alone rather than slicing it wrong', () => {
+    // `İ` lowercases to two characters, so an offset found in the lowered
+    // string no longer points at the same place in the original. Every piece
+    // after it would be cut one position out; the line is shown unmarked
+    // instead, which is a search that found it and did not mark it rather
+    // than a line with its letters rearranged.
+    const body = 'İstanbul and the rest of it';
+    expect(highlight(body, 'rest')).toEqual([{ text: body, hit: false }]);
+    // The needle's own lowering counts the same way.
+    expect(highlight('plain enough', 'İ')).toEqual([{ text: 'plain enough', hit: false }]);
+  });
 });

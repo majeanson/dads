@@ -23,6 +23,13 @@ export function highlight(body: string, needle: string): Piece[] {
 
   const hay = body.toLowerCase();
   const find = needle.toLowerCase();
+  // Lowercasing is not always length-preserving — `İ` becomes two characters —
+  // and the offsets found in `hay` are then used to slice `body`, so
+  // everything after such a letter would be marked one place out. Rare enough
+  // to be worth a plain refusal rather than a second index.
+  if (hay.length !== body.length || find.length !== needle.length) {
+    return [{ text: body, hit: false }];
+  }
   const pieces: Piece[] = [];
   let at = 0;
 

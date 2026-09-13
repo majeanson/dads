@@ -61,6 +61,34 @@ test('a word brings the line back, and a word nobody said brings nothing', async
   await marc.context().close();
 });
 
+test('a photograph on a result is shown, not offered to be opened', async ({ browser }) => {
+  // The viewer holds the photographs that are in the CONVERSATION, and a
+  // result may be older than every line still loaded — so a result's picture
+  // goes nowhere. It must therefore not be a button: one that does nothing is
+  // still a button to a thumb and to a screen reader.
+  const marc = await comeIn(browser, 'Marc Snapshot');
+  await talk(marc);
+  await marc.setInputFiles('#attach', {
+    name: 'kayak.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  });
+  await say(marc, 'down at the lake with the canoe');
+
+  await openFind(marc);
+  await marc.getByLabel('Find something said').fill('canoe');
+
+  const found = marc.getByTestId('found');
+  await expect(found).toHaveCount(1);
+  await expect(found.first().locator('img')).toBeVisible();
+  await expect(found.first().getByTestId('photo')).toHaveCount(0);
+
+  await marc.context().close();
+});
+
 test('the room’s own lines are not findable', async ({ browser }) => {
   // Setting the night makes the room say so, by name — a line nobody typed.
   const marc = await comeIn(browser, 'Marc Furniture');

@@ -33,7 +33,6 @@ export interface ComposerHandle {
 export function Composer({
   ref,
   busy,
-  connected,
   onSend,
   onTyping,
 }: {
@@ -48,7 +47,6 @@ export function Composer({
    * took was a reload landing on the line he had just sent.
    */
   busy?: RefObject<boolean>;
-  connected: boolean;
   onSend: (body: string, mediaId?: string) => void;
   onTyping: () => void;
 }) {
@@ -255,7 +253,12 @@ export function Composer({
             className="sr-only"
             type="file"
             onChange={(e) => void pick(e.target.files?.[0])}
-            disabled={!connected || sending}
+            // Not gated on the socket. Choosing a photo is not saying
+            // anything yet, the upload is plain HTTP and does not need the
+            // websocket, and the line waits in the outbox like any other — so
+            // a dad on a wifi-to-LTE hop kept a composer whose `+` did
+            // nothing at all, with no disabled look on the label to say why.
+            disabled={sending}
           />
 
           <label htmlFor="say" className="sr-only">

@@ -105,6 +105,26 @@ export function Attachment({
     );
   }
 
+  // Nowhere to open it: a picture on a search result, which may be older than
+  // every line the viewer holds. A button that does nothing is still a button
+  // to a screen reader and to a thumb, so it is not one.
+  if (onOpen === undefined) {
+    return (
+      <span className="relative mt-1.5 block w-fit max-w-full">
+        <img
+          src={href}
+          alt={media.name}
+          width={media.width ?? undefined}
+          height={media.height ?? undefined}
+          loading="lazy"
+          decoding="async"
+          className="block h-auto max-h-64 w-auto max-w-80 rounded-lg border border-line"
+        />
+        {media.kept ? <Kept over /> : null}
+      </span>
+    );
+  }
+
   // A button, not a link to the raw file. From the app on a home screen that
   // link threw a dad out into a browser, on the one thing in here nobody
   // would expect to be hard to look at.
