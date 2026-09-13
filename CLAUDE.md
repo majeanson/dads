@@ -500,6 +500,22 @@ secret, custom domain bound by the route in wrangler.toml.
 - **The header does not repeat what home says.** The night line is hidden on
   home, where the same thing is the first item on the screen at four times the
   size.
+- **Home never asserts a fact it has not been told.** The roster comes off the
+  socket and home paints before the socket has said anything, so an empty
+  roster at that moment means "I do not know" — and it used to render
+  "Nobody else is here right now", which is the app inventing bad news and
+  correcting itself a second later. The same for who is coming, which said
+  "Nobody has said yet" before the fetch had landed. Both show `…` instead,
+  which is the vocabulary the roster sheet already uses. A RECONNECT keeps the
+  last roster rather than falling back to `…`: it was true a moment ago, and a
+  wifi hop should not blank the screen.
+- **The header does not repeat what home says — including the mark.** The
+  night line was already hidden on home for this reason; the dot on the Menu
+  button was not, and home lists the very things it stands for, in words, an
+  inch below it. It comes back the moment he walks into the conversation,
+  where nothing else is saying it.
+- **Who is coming reads at ink.** It was `text-muted` — the same grey as the
+  section label above it — and it is the thing that actually decides turnout.
 - e2e: `talk(page)` (`e2e/talk.ts`, and `prod/names.ts`) steps into the
   conversation and is idempotent, because these suites walk through screens
   and it must not matter which one the last step left him on.

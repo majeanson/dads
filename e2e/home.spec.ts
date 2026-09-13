@@ -219,3 +219,54 @@ test('he walks in on the divider, not at the top of the week', async ({ browser 
   await marc.context().close();
   await sam.context().close();
 });
+
+test('home does not say twice what the header already says', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Barnaby');
+
+  // The mark on the Menu button is not on home: home lists the very things it
+  // stands for, in words, an inch below it. It comes back the moment he walks
+  // into the conversation, where nothing else is saying it.
+  await expect(marc.getByTestId('home-waiting')).toBeVisible();
+  await expect(marc.getByTestId('mark-menu')).toHaveCount(0);
+
+  await marc.getByTestId('home-go').click();
+  await expect(marc.getByTestId('mark-menu')).toBeVisible();
+
+  await marc.context().close();
+});
+
+test('home never says nobody is about before it has been told', async ({ browser }) => {
+  // The socket is what decides who is here, and it has said nothing at the
+  // moment home first paints. An empty roster then is "I do not know", and
+  // announcing "nobody else is here" is the app inventing bad news and
+  // correcting itself a second later.
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  // Held open and never answered, so home stays in the state every cold open
+  // passes through: connecting, and told nothing. Installed before the first
+  // navigation, which is when the route has to exist.
+  let connected = false;
+  await page.routeWebSocket(/\/ws(\?|$)/, () => {
+    connected = true;
+  });
+
+  await page.goto('/');
+  await page.getByLabel('Code').fill(E2E_HOME_GROUP.code);
+  await page.getByLabel('Your name').fill('Peregrine');
+  await page.getByRole('button', { name: 'Come in' }).click();
+
+  const here = page.getByTestId('home').locator('section.home-here');
+  await expect(here).toBeVisible();
+  await expect.poll(() => connected).toBe(true);
+  await expect(page.getByTestId('connection')).not.toHaveText(/here$/);
+  await expect(here).not.toContainText('Nobody else');
+
+  await context.close();
+
+  // And once it HAS been told, it says so. A fresh browser, because the held
+  // socket above cannot be handed back — and a fresh dad, because a new
+  // context is a new member.
+  const told = await comeIn(browser, 'Peregrine Two');
+  await expect(told.getByTestId('home').locator('section.home-here')).toContainText('Nobody else');
+  await told.context().close();
+});

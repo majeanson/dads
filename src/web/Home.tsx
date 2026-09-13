@@ -30,6 +30,7 @@ export function Home({
   night,
   answered,
   you,
+  connection,
   roster,
   members,
   unseen,
@@ -54,6 +55,15 @@ export function Home({
    */
   answered: number;
   you: string;
+  /**
+   * Whether the roster below is a fact yet.
+   *
+   * Home renders the moment the app opens, before the socket has said
+   * anything, and an empty roster then is "I do not know" rather than
+   * "nobody" — so without this the first screen a dad saw told him his
+   * friends were not about, and corrected itself a second later.
+   */
+  connection: 'connecting' | 'open' | 'reconnecting';
   roster: RosterEntry[];
   members: RosterEntry[];
   unseen: number;
@@ -149,20 +159,25 @@ export function Home({
             </div>
 
             {/* Names, not a count: a man wants to know whether HIS friend is
-                coming, which is the thing that actually decides it. */}
-            <p className="m-0 text-[0.9375rem] text-muted" data-testid="home-who-coming">
-              {answers.length === 0
-                ? t('n.nobody_yet')
-                : [
-                    coming.length > 0
-                      ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
-                      : null,
-                    not.length > 0
-                      ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
+                coming, which is the thing that actually decides it — and at
+                ink rather than muted for the same reason. It was the same
+                grey as the section label above it. */}
+            <p className="m-0 text-[0.9375rem]" data-testid="home-who-coming">
+              {state === null
+                ? // Not "nobody has said yet" — it has not been asked yet.
+                  '…'
+                : answers.length === 0
+                  ? t('n.nobody_yet')
+                  : [
+                      coming.length > 0
+                        ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
+                        : null,
+                      not.length > 0
+                        ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
             </p>
 
             {items === 0 ? null : (
@@ -188,7 +203,13 @@ export function Home({
 
       <section className="home-here">
         <h2 className="home-label">{t('here.title')}</h2>
-        {others.length === 0 ? (
+        {connection !== 'open' && others.length === 0 ? (
+          // Nothing to show AND not sure — which is the first second of every
+          // cold open. Saying "nobody" before the socket has spoken is the app
+          // inventing bad news, and correcting itself a moment later. A
+          // reconnect keeps the last roster instead: it was true a moment ago.
+          <p className="m-0 text-[0.9375rem] text-muted">…</p>
+        ) : others.length === 0 ? (
           <p className="m-0 text-[0.9375rem] text-muted">{t('home.quiet')}</p>
         ) : (
           // Names, not a count. "3 here" is a number a man reads as a quorum;
