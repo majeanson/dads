@@ -1031,6 +1031,14 @@ people use.
 
 ## Test layout
 
+- **A fixed `settle()` before an assertion is a race, and a loaded machine
+  loses it.** The suite is green run alone and on CI, and drops one or two
+  tests in a different file every time when something else is running — a
+  browser suite, or another session. Wait for the frame instead: the `until`
+  helper polls a predicate and asserts it, counted in TRIES rather than against
+  the clock, because `night.test.ts` fakes `Date` and a deadline computed from
+  `Date.now()` there never arrives. `table.test.ts` and `night.test.ts` have
+  it; the rest still guess, and are the ones that flake.
 - vitest storage is per **file**, not per test. Tests that seed groups call
   `resetTables()` in `beforeEach`; seeded codes are unique by default.
 - e2e `global-setup.ts` migrates the local D1, then drops and recreates one

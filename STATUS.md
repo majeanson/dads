@@ -8,16 +8,20 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 
 ## What a dad can do
 
-|                    |                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| **Get in**         | Follow a link, or type the code, and a name. Remembered on that device forever.       |
-| **Talk**           | Live chat with presence, typing, reconnect-and-backfill, day dividers.                |
-| **Be heard**       | Voice call in the room, camera optional. Full WebRTC mesh.                            |
-| **Show something** | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.           |
-| **Answer**         | A curated question every day, answered in front of the others.                        |
-| **Be counted**     | Weekly 1–5, one honest line, one thing to try, and whether it happened.               |
-| **Play**           | Jaffre framed beside the conversation, name passed through, table events in the chat. |
-| **Turn up**        | A standing dad night: countdown, who's coming, what to get into, a nudge, an .ics.    |
+|                     |                                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------- |
+| **Get in**          | Follow a link, or type the code, and a name. Remembered on that device forever.           |
+| **See at a glance** | The app opens on home: when the night is, who is about, what is waiting, how many lines.  |
+| **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers.                    |
+| **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.   |
+| **Be heard**        | Voice call in the room, camera optional. Full WebRTC mesh.                                |
+| **Show something**  | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.               |
+| **Look at it**      | A photograph opens full-screen in the app, moves to the next one, and saves to the phone. |
+| **Keep it**         | Any dad can take a picture off the shelf so the next upload never reaches it.             |
+| **Answer**          | A curated question every day, answered in front of the others.                            |
+| **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened.                   |
+| **Play**            | Jaffre framed beside the conversation, name passed through, table events in the chat.     |
+| **Turn up**         | A standing dad night: countdown, who's coming, what to get into, a nudge, an .ics.        |
 
 ## The shape of it
 
@@ -34,8 +38,8 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 273, in workerd against the real migrations
-npm run e2e           # 58, against the built stack
+npm test              # 303, in workerd against the real migrations
+npm run e2e           # 65, against the built stack
 npm run audit:contrast  # 26 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run prove         # 27, against dads.marcportal.com itself
@@ -56,8 +60,15 @@ Honest list. Everything else in here has a test standing behind it.
    configured in production now (`dads-key`), so a dad behind a strict NAT has
    a way through as well — verified by `/api/ice` returning credentialed
    `turn:` and `turns:` servers alongside the STUN ones.
-   That is now the only one. The reminder was the other, and it has been driven
-   end to end against production — see below.
+   The reminder was the other, and it has been driven end to end against
+   production — see below.
+
+2. **A human's hands on the newest half.** Search, the photo viewer, keeping a
+   picture and home-as-the-opening-screen all shipped together on 2026-09-13.
+   Every one has an e2e standing behind it and `npm run prove` is green, but
+   `prove` proves the DEPLOYMENT — the domain, the headers, the secrets, the
+   bindings — and never opens the viewer. Nobody has yet tapped a photograph
+   on a real phone on the live site.
 
 ## Proven: the reminder, and what it took to see it
 
@@ -87,6 +98,30 @@ What is still unproven is a human's eyes on a phone's lock screen, which is
 now a cosmetic question rather than a technical one.
 
 ## The last review
+
+A hostile read over the fortnight that brought search, the viewer, keeping a
+photograph, home and the `Room.tsx` decomposition found five defects. Four are
+fixed, three of them pinned by a test:
+
+- **The media listing was bounded by one shelf**, which was right until there
+  were two: thirty voice notes would have hidden every photograph in the room
+  from anything that asked.
+- **The composer's picker died with the socket**, with nothing on the label to
+  say so — a dad on a wifi-to-LTE hop tapping a `+` that did nothing.
+- **A photograph on a search result was a button that went nowhere**, which is
+  still a button to a thumb and to a screen reader.
+- **`highlight` sliced the original at offsets found in the lowercased copy**,
+  and lowercasing is not always length-preserving.
+- **The same picture could be hung on two lines**, and retracting either
+  deleted the blob out from under the other. No client could reach it; the
+  room refuses it now, and a re-sent line is still dropped silently rather
+  than refused, because an `error` frame costs the outbox its oldest line.
+
+The pass confirmed clean: the search route's parameterisation and its LIKE
+escaping, the keep route's group scoping and its 404-not-403 refusal, the
+content-type allowlist, and the seen-mark's derivation.
+
+## The review before that
 
 A fresh adversarial review found eleven defects; all eleven are fixed and
 four now have tests pinning them. Three mattered:

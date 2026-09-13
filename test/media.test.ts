@@ -33,10 +33,11 @@ class Dad {
       this.frames.push(JSON.parse(event.data as string) as ServerFrame);
     });
   }
-  say(body: string, mediaId?: string) {
-    this.ws.send(
-      JSON.stringify(mediaId === undefined ? { t: 'chat', body } : { t: 'chat', body, mediaId }),
-    );
+  say(body: string, mediaId?: string, cid?: string) {
+    const frame: Record<string, unknown> = { t: 'chat', body };
+    if (mediaId !== undefined) frame.mediaId = mediaId;
+    if (cid !== undefined) frame.cid = cid;
+    this.ws.send(JSON.stringify(frame));
   }
   close() {
     this.ws.close(1000, 'bye');
@@ -484,6 +485,49 @@ describe('a photo in the conversation', () => {
       headers: { Cookie: sam.cookie },
     });
     expect(still.status).toBe(200);
+  });
+
+  it('refuses a picture that is already on a line', async () => {
+    // A photograph belongs to ONE line. Nothing a dad can press sends the same
+    // id twice, but the protocol allowed it — and because taking a line back
+    // takes its picture with it, retracting either of the two deleted the blob
+    // out from under the other, leaving a broken photograph on a line nobody
+    // had touched.
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    await settle();
+
+    const uploaded = await uploadOne(marc.cookie, 'once.png');
+    marc.say('here he is', uploaded.media.id);
+    await settle(160);
+    expect(marc.frames.some((f) => f.t === 'msg' && f.message.body === 'here he is')).toBe(true);
+
+    marc.say('and again', uploaded.media.id);
+    await settle(160);
+    expect(marc.frames.some((f) => f.t === 'error' && f.code === 'no_media')).toBe(true);
+    expect(marc.frames.some((f) => f.t === 'msg' && f.message.body === 'and again')).toBe(false);
+  });
+
+  it('takes a re-sent line back silently, picture and all', async () => {
+    // The phone in the dead spot re-sends what it was holding, and that is
+    // the same line arriving twice rather than a second use of the picture.
+    // It has to be DROPPED and not refused: an `error` frame drops the oldest
+    // line in the outbox, so refusing a recovery would cost a dad a different
+    // line entirely.
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    await settle();
+
+    const uploaded = await uploadOne(marc.cookie, 'again.png');
+    marc.say('in the pool', uploaded.media.id, 'c-recovered');
+    await settle(160);
+    marc.say('in the pool', uploaded.media.id, 'c-recovered');
+    await settle(160);
+
+    expect(
+      marc.frames.filter((f) => f.t === 'msg' && f.message.body === 'in the pool'),
+    ).toHaveLength(1);
+    expect(marc.frames.some((f) => f.t === 'error')).toBe(false);
   });
 
   it('archives the attachment alongside the line', async () => {

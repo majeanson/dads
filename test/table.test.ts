@@ -42,6 +42,18 @@ class Dad {
 
 const settle = (ms = 60) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Waits for a frame to arrive rather than guessing how long it takes.
+ *
+ * A fixed settle() before an assertion is a race, and under a full suite the
+ * machine loses it in a different file every time. Counted in tries rather
+ * than against the clock because this file fakes Date.
+ */
+async function until(done: () => boolean, tries = 200): Promise<void> {
+  for (let i = 0; i < tries && !done(); i++) await settle(10);
+  expect(done()).toBe(true);
+}
+
 async function enter(group: SeededGroup, name: string): Promise<Dad> {
   const cookie = cookieFrom(await worker.fetch(postJoin({ code: group.code, displayName: name })));
   const res = await worker.fetch('https://dads.test/ws', {
@@ -248,9 +260,7 @@ describe('table events reaching the room', () => {
     await settle();
 
     marc.table({ v: 1, t: 'seated', name: 'Marc' });
-    await settle(120);
-
-    expect(sam.lines()).toContain('Marc sat down at the table.');
+    await until(() => sam.lines().includes('Marc sat down at the table.'));
     const kind = sam.frames.find(
       (f) => f.t === 'msg' && f.message.body === 'Marc sat down at the table.',
     );

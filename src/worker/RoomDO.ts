@@ -476,9 +476,24 @@ export class RoomDO extends DurableObject<Env> {
     // own — and since taking a line back takes its picture with it, retracting
     // that line deleted the blob and the record, and the photo disappeared off
     // the line the man who took it had posted, with nothing to put it back.
+    //
+    // And a picture belongs to ONE line. Nothing a dad can press sends the
+    // same id twice, but the protocol allowed it — and because taking a line
+    // back takes its picture with it, retracting either of two lines sharing
+    // an id deleted the blob out from under the other, leaving a broken
+    // photograph on a line nobody had touched.
+    const cid = frame.t === 'chat' ? frame.cid : undefined;
     const groupId = this.groupId();
     const found = mediaId !== null && groupId ? await mediaFor(this.env, groupId, mediaId) : null;
     if (mediaId !== null && (found === null || found.memberId !== who.memberId)) {
+      return this.sendTo(ws, { t: 'error', code: 'no_media' });
+    }
+    // A phone re-sending what it was holding is not a second use of the
+    // picture — it IS that line, arriving twice, and the cid below drops it
+    // silently. Refusing it here would send an `error` frame instead, and an
+    // error frame drops the oldest line the outbox is holding.
+    const resent = cid !== undefined && this.postedCids.has(cid);
+    if (mediaId !== null && !resent && groupId && (await this.alreadyOnALine(groupId, mediaId))) {
       return this.sendTo(ws, { t: 'error', code: 'no_media' });
     }
     const media: Attachment | null =
@@ -496,7 +511,6 @@ export class RoomDO extends DurableObject<Env> {
     // A dad whose phone lost the signal re-sends what it was holding. If the
     // room got it the first time, the second copy is the same line and not a
     // second thing said.
-    const cid = frame.t === 'chat' ? frame.cid : undefined;
     if (cid !== undefined && !this.firstTimeSeen(cid)) return;
 
     await this.post('chat', who.memberId, who.name, body, null, media, null, cid);
@@ -782,6 +796,22 @@ export class RoomDO extends DurableObject<Env> {
 
   private broadcastCallRoster(except?: WebSocket): void {
     this.broadcast({ t: 'call-roster', members: this.callRoster(except) });
+  }
+
+  /**
+   * Whether this picture is already on a line.
+   *
+   * The archive rather than the tail: an id a client offers can be as old as
+   * anything it was handed in a backfill, and the tail holds five hundred
+   * lines. One query, and only when a line carries an attachment at all.
+   */
+  private async alreadyOnALine(groupId: string, mediaId: string): Promise<boolean> {
+    const row = await this.env.DB.prepare(
+      'SELECT 1 AS n FROM messages WHERE group_id = ? AND media_id = ? LIMIT 1',
+    )
+      .bind(groupId, mediaId)
+      .first<{ n: number }>();
+    return row !== null;
   }
 
   /** Lines already posted, by the sender's own id for them. */

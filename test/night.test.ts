@@ -87,6 +87,18 @@ function settle(ms = 40): Promise<void> {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Waits for the lines to arrive rather than guessing how long they take.
+ *
+ * A fixed settle() before an assertion is a race, and under a full suite the
+ * machine loses it in a different file every time. Counted in tries rather
+ * than against the clock, because this file fakes Date.
+ */
+async function until(done: () => boolean, tries = 200): Promise<void> {
+  for (let i = 0; i < tries && !done(); i++) await settle(10);
+  expect(done()).toBe(true);
+}
+
 async function fireAlarm(group: SeededGroup): Promise<boolean> {
   return runDurableObjectAlarm(env.ROOM.get(env.ROOM.idFromName(group.id)));
 }
@@ -280,7 +292,9 @@ describe('the night itself', () => {
     marc.say('made it');
     sam.say('me too');
     marc.say('rough week');
-    await settle(150);
+    // The summary counts the ARCHIVE, so the three lines have to be in D1
+    // before the alarm fires — not merely likely to be.
+    await until(() => ['made it', 'me too', 'rough week'].every((l) => marc.lines().includes(l)));
 
     clockAt(start + NIGHT_DURATION_MS + 1000);
     expect(await fireAlarm(group)).toBe(true);
