@@ -289,11 +289,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         here={room.roster.length}
         soon={soon}
         callState={call.state}
-        // Not on home, which lists the very things the mark stands for, in
-        // words, an inch below it. The same rule as the night line: a header
-        // that repeats what is already on the screen is the app saying
-        // something twice.
-        waiting={waiting && view === 'talk'}
+        // On home as well, now that home says two things and nothing else.
+        // It was hidden there while home listed the very items it stands for,
+        // an inch below it; with those behind the Menu button, hiding the
+        // mark on home would leave a dad no sign at all that a question is
+        // waiting for him.
+        waiting={waiting}
         onHome={() => setView('home')}
         onWho={() => setSheet('here')}
         onNight={() => setSheet('night')}
@@ -313,13 +314,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         roster={room.roster}
         members={room.members}
         unseen={seen.unseen}
-        todo={todo}
-        rooms={room.rooms}
         onGo={() => setView('talk')}
         onWho={() => setSheet('here')}
         onNight={() => setSheet('night')}
-        onPrompts={() => setSheet('prompts')}
-        onBoard={() => setSheet('board')}
       />
 
       <div className="stage">

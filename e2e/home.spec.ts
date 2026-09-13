@@ -5,10 +5,10 @@ import { talk } from './talk';
 /**
  * Where the app opens.
  *
- * Four of the five questions a dad has when he picks up his phone are not
- * "what was said": when the night is, whether anyone is about, whether he has
- * answered, and whether anything is waiting for him. This is that screen, and
- * the conversation is one tap past it.
+ * Two things, and deliberately only two: the night — what this is and when it
+ * is — and the conversation, which is what it is for, with who is about
+ * underneath the way in because that is what decides whether to go in now.
+ * Everything else stays behind the Menu button and its mark.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -220,14 +220,19 @@ test('he walks in on the divider, not at the top of the week', async ({ browser 
   await sam.context().close();
 });
 
-test('home does not say twice what the header already says', async ({ browser }) => {
+test('home says two things, and the mark says the rest wherever he stands', async ({ browser }) => {
   const marc = await comeIn(browser, 'Barnaby');
 
-  // The mark on the Menu button is not on home: home lists the very things it
-  // stands for, in words, an inch below it. It comes back the moment he walks
-  // into the conversation, where nothing else is saying it.
-  await expect(marc.getByTestId('home-waiting')).toBeVisible();
-  await expect(marc.getByTestId('mark-menu')).toHaveCount(0);
+  // Two blocks and no third: the night, and the conversation. What is waiting
+  // for him is behind the Menu button, where it already lives.
+  await expect(marc.getByTestId('home-waiting')).toHaveCount(0);
+  await expect(marc.getByTestId('home-when')).toBeVisible();
+  await expect(marc.getByTestId('home-go')).toBeVisible();
+
+  // And because home no longer lists those items in words, the mark is on the
+  // Menu button here too — hiding it would leave a dad standing on home with
+  // no sign at all that a question is waiting for him.
+  await expect(marc.getByTestId('mark-menu')).toBeVisible();
 
   await marc.getByTestId('home-go').click();
   await expect(marc.getByTestId('mark-menu')).toBeVisible();
@@ -255,7 +260,7 @@ test('home never says nobody is about before it has been told', async ({ browser
   await page.getByLabel('Your name').fill('Peregrine');
   await page.getByRole('button', { name: 'Come in' }).click();
 
-  const here = page.getByTestId('home').locator('section.home-here');
+  const here = page.getByTestId('home').locator('section.home-talk');
   await expect(here).toBeVisible();
   await expect.poll(() => connected).toBe(true);
   await expect(page.getByTestId('connection')).not.toHaveText(/here$/);
@@ -267,6 +272,6 @@ test('home never says nobody is about before it has been told', async ({ browser
   // socket above cannot be handed back — and a fresh dad, because a new
   // context is a new member.
   const told = await comeIn(browser, 'Peregrine Two');
-  await expect(told.getByTestId('home').locator('section.home-here')).toContainText('Nobody else');
+  await expect(told.getByTestId('home').locator('section.home-talk')).toContainText('Nobody else');
   await told.context().close();
 });

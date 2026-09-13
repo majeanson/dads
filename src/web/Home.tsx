@@ -11,12 +11,15 @@ import type { RosterEntry } from '../shared/protocol';
 /**
  * Where the app opens.
  *
- * The room is still the point of this thing, and everything here is in
- * service of getting a man into it — but four of the five questions a dad has
- * when he picks up his phone are not "what was said": they are when the night
- * is, whether anyone else is about, whether he has answered yet, and whether
- * anything is waiting for him. Those used to be a countdown that showed up
- * inside 24 hours and three items behind a menu.
+ * TWO things, and deliberately only two: the night — what this thing is, and
+ * when it is — and the conversation, which is what it is for. Everything else
+ * the app can do is behind the Menu button and stays there, including what is
+ * waiting for HIM: it already lives there and already carries its mark, and a
+ * home screen that lists four things is a home screen that ranks none of them.
+ *
+ * Who is about is not a third block. It sits under the way in, because it is
+ * not a separate question — it is the thing that decides whether going in is
+ * worth doing now.
  *
  * It is one tap from here into the conversation, and the tap says how many
  * lines are waiting, so the man who only came to talk loses a second and the
@@ -34,13 +37,9 @@ export function Home({
   roster,
   members,
   unseen,
-  todo,
-  rooms,
   onGo,
   onWho,
   onNight,
-  onPrompts,
-  onBoard,
 }: {
   night: DadNight | null;
   /**
@@ -67,13 +66,9 @@ export function Home({
   roster: RosterEntry[];
   members: RosterEntry[];
   unseen: number;
-  todo: { prompt: boolean; board: boolean };
-  rooms: { questions: boolean; week: boolean };
   onGo: () => void;
   onWho: () => void;
   onNight: () => void;
-  onPrompts: () => void;
-  onBoard: () => void;
 }) {
   const { t, lang } = useT();
   const [state, setState] = useState<NightState | null>(null);
@@ -116,7 +111,6 @@ export function Home({
   const not = answers.filter((a) => !a.coming);
   const items = state?.items.length ?? 0;
   const others = roster.filter((m) => m.memberId !== you);
-  const waiting = (todo.prompt && rooms.questions) || (todo.board && rooms.week);
 
   return (
     <div className="home" data-testid="home">
@@ -190,19 +184,29 @@ export function Home({
         )}
       </section>
 
-      {/* The way in, and the size of it is the point: this is what the app is
-          for and everything above is what a man checks on the way past. */}
-      <Button look="primary" className="home-go" onClick={onGo} data-testid="home-go">
-        <span>{t('home.go')}</span>
-        {unseen > 0 ? (
-          <span className="home-new" data-testid="home-new">
-            {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
-          </span>
-        ) : null}
-      </Button>
+      {/*
+       * The other of the two, and the size of the way in is the point: the
+       * night is what this thing IS, and the conversation is what it is for.
+       * Home says those two and nothing else — what is waiting for HIM is
+       * behind the Menu button, where it already lives and already carries
+       * its mark.
+       *
+       * Who is about sits under the way in rather than in a block of its own.
+       * It is not a separate question: it is the thing that decides whether
+       * going in is worth doing now.
+       */}
+      <section className="home-talk">
+        <h2 className="home-label">{t('home.talk')}</h2>
 
-      <section className="home-here">
-        <h2 className="home-label">{t('here.title')}</h2>
+        <Button look="primary" className="home-go" onClick={onGo} data-testid="home-go">
+          <span>{t('home.go')}</span>
+          {unseen > 0 ? (
+            <span className="home-new" data-testid="home-new">
+              {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
+            </span>
+          ) : null}
+        </Button>
+
         {connection !== 'open' && others.length === 0 ? (
           // Nothing to show AND not sure — which is the first second of every
           // cold open. Saying "nobody" before the socket has spoken is the app
@@ -233,29 +237,6 @@ export function Home({
           </button>
         )}
       </section>
-
-      {/* Only ever about HIM. Something somebody else has not done is not a
-          thing to put on a man's home screen. */}
-      {waiting ? (
-        <section className="home-waiting" data-testid="home-waiting">
-          {todo.prompt && rooms.questions ? (
-            <Button block onClick={onPrompts} data-testid="home-prompt">
-              {t('menu.questions')}
-              <span className="ml-auto text-sm font-normal text-accent">
-                {t('menu.prompt_waiting')}
-              </span>
-            </Button>
-          ) : null}
-          {todo.board && rooms.week ? (
-            <Button block onClick={onBoard} data-testid="home-board">
-              {t('menu.week')}
-              <span className="ml-auto text-sm font-normal text-accent">
-                {t('menu.board_waiting')}
-              </span>
-            </Button>
-          ) : null}
-        </section>
-      ) : null}
     </div>
   );
 }

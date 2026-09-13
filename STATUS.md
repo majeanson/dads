@@ -11,7 +11,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 |                     |                                                                                           |
 | ------------------- | ----------------------------------------------------------------------------------------- |
 | **Get in**          | Follow a link, or type the code, and a name. Remembered on that device forever.           |
-| **See at a glance** | The app opens on home: when the night is, who is about, what is waiting, how many lines.  |
+| **See at a glance** | The app opens on home, and home is two things: the night, and the way into the talk.      |
 | **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers.                    |
 | **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.   |
 | **Be heard**        | Voice call in the room, camera optional. Full WebRTC mesh.                                |

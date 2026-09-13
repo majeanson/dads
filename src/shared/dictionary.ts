@@ -40,6 +40,7 @@ const EN = {
   'home.items_one': '1 thing to get into',
   'home.items_other': '{n} things to get into',
   'home.title': 'Home',
+  'home.talk': 'The conversation',
   'day.today': 'Today',
   'day.yesterday': 'Yesterday',
 
@@ -335,6 +336,7 @@ const FR: Record<Key, string> = {
   'home.items_one': '1 affaire à se dire',
   'home.items_other': '{n} affaires à se dire',
   'home.title': 'Accueil',
+  'home.talk': 'La conversation',
   'day.today': 'Aujourd’hui',
   'day.yesterday': 'Hier',
 

@@ -452,11 +452,19 @@ secret, custom domain bound by the route in wrangler.toml.
 
 ## Home
 
-- **The app opens on home** (2026-09-12), not in the conversation. Four of the
-  five questions a dad has when he picks up his phone are not "what was said":
-  when the night is, whether anyone is about, whether he has answered, and
-  whether anything is waiting for him. Those used to be a countdown that only
-  appeared inside 24 hours plus three items behind a menu.
+- **The app opens on home** (2026-09-12), not in the conversation. The first
+  question a dad has when he picks up his phone is not "what was said": it is
+  when the night is, and that used to be a countdown that only appeared inside
+  24 hours.
+- **Home is TWO things** (2026-09-13): the night — what this is, and when it
+  is — and the conversation, which is what it is for. Nothing else, and that
+  is the rule rather than the current state: a home screen that lists four
+  blocks ranks none of them. What is waiting for HIM came off it and stays
+  behind the Menu button, where it already lived and already carries its mark.
+  Who is about is not a third block either — it sits under the way in, because
+  it is not a separate question but the thing that decides whether going in is
+  worth doing now. Anything proposed for this screen has to displace one of
+  the two, not join them.
 - **It is a VIEW, not a route.** `data-view` on `main.room`; the socket, the
   call and the table all live above it. So switching costs nothing, presence
   is live rather than polled, and going in is instant rather than a reconnect.
@@ -497,9 +505,6 @@ secret, custom domain bound by the route in wrangler.toml.
   said otherwise a foot below. It re-reads on the newest `rsvp` or
   `item_added` seq — that kind of line, not any line, because a chatty evening
   is not a reason to re-read the night thirty times.
-- **The header does not repeat what home says.** The night line is hidden on
-  home, where the same thing is the first item on the screen at four times the
-  size.
 - **Home never asserts a fact it has not been told.** The roster comes off the
   socket and home paints before the socket has said anything, so an empty
   roster at that moment means "I do not know" — and it used to render
@@ -509,11 +514,12 @@ secret, custom domain bound by the route in wrangler.toml.
   which is the vocabulary the roster sheet already uses. A RECONNECT keeps the
   last roster rather than falling back to `…`: it was true a moment ago, and a
   wifi hop should not blank the screen.
-- **The header does not repeat what home says — including the mark.** The
-  night line was already hidden on home for this reason; the dot on the Menu
-  button was not, and home lists the very things it stands for, in words, an
-  inch below it. It comes back the moment he walks into the conversation,
-  where nothing else is saying it.
+- **The header does not repeat what home says.** The night line is hidden on
+  home, where the same thing is the first item on the screen at four times the
+  size. The MARK is the exception now, and it was not always: it was hidden
+  there too while home listed the very items it stood for, an inch below it.
+  Those items are behind the Menu button again, so hiding the mark on home
+  would leave a dad with no sign at all that a question is waiting for him.
 - **Who is coming reads at ink.** It was `text-muted` — the same grey as the
   section label above it — and it is the thing that actually decides turnout.
 - e2e: `talk(page)` (`e2e/talk.ts`, and `prod/names.ts`) steps into the

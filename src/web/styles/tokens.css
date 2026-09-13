@@ -460,16 +460,18 @@
     display: none;
   }
 
+  /* The two blocks, and there are only two: the night, and the conversation.
+     Everything else the app can do is behind the Menu button. */
   .home-night,
-  .home-here,
-  .home-waiting {
+  .home-talk {
     display: grid;
     gap: 0.6rem;
     justify-items: start;
   }
 
-  .home-waiting {
-    gap: 0.5rem;
+  /* The way in is the widest thing in its block and the faces sit under it,
+     so this one stretches rather than shrink-wrapping each row. */
+  .home-talk {
     justify-items: stretch;
   }
 
