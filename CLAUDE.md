@@ -811,6 +811,28 @@ neither see nor scroll anything.
   The partition is the stored content type, so anything not on the allowlist is
   `application/octet-stream` and shares the tighter cap with the pictures.
   The cap is still the feature.
+- **A photograph can be made to stay** (migration 0016). The cap is still the
+  feature, but the thing that falls off the shelf is a photograph of somebody's
+  child, and a default is not an absolute. `media.kept` exempts a row from the
+  pruner AND from the shelf's count, so keeping one never costs the room the
+  next one; `KEPT_PER_GROUP` (20, across both shelves) is what stops a group
+  keeping its way to an unbounded bucket, and being full is a 409 a dad is
+  told about rather than a switch that quietly does nothing.
+- **Any dad may keep anybody's picture**, like the night and the three
+  switches — and unlike taking a line back, which is about what a man SAID and
+  is his alone. What the room keeps belongs to the five of them.
+- **Keeping is not optimistic.** Same rule as retraction, and the same reason:
+  a mark that fails costs nothing, but a dad who believes a photo of his child
+  is safe when the keep never left the phone has been lied to. The pin appears
+  when the room says `kept` — a frame broadcast to every open socket, so two
+  dads looking at one picture never disagree about whether it survives — and a
+  refusal lands in the composer's status line.
+- **Letting one go is not a delete.** It goes back on its shelf as the oldest
+  thing there, and the next upload may be the end of it. That is the shelf
+  working, not something a dad asked for.
+- **"Stays" is not "Save".** The viewer's save puts a copy on the phone and in
+  French it is already _Garde-la_; the shelf needed its own words or the two
+  read as one thing.
 - Images are shrunk in the **browser** (long side 1600, JPEG 0.82) before
   upload. Every failure path falls back to the original file: a large upload
   beats a failed one.

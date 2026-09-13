@@ -25,6 +25,7 @@ interface Row {
   content_type: string | null;
   width: number | null;
   height: number | null;
+  kept: number | null;
 }
 
 /**
@@ -72,7 +73,8 @@ export async function search(
   const rows = await env.DB.prepare(
     `SELECT m.id, m.member_id, m.kind, m.body, m.created_at,
             d.display_name AS name,
-            a.id AS media_id, a.name AS media_name, a.content_type, a.width, a.height
+            a.id AS media_id, a.name AS media_name, a.content_type, a.width, a.height,
+            a.kept
        FROM messages m
        LEFT JOIN members d ON d.id = m.member_id
        LEFT JOIN media a ON a.id = m.media_id
@@ -103,6 +105,7 @@ export async function search(
             contentType: r.content_type ?? 'application/octet-stream',
             width: r.width,
             height: r.height,
+            kept: r.kept === 1,
           },
   }));
 

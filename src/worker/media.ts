@@ -24,6 +24,18 @@ export const MEDIA_PER_GROUP = 10;
  * they are worth is being able to scroll back through the evening. */
 export const VOICE_PER_GROUP = 30;
 
+/**
+ * And how many a room may take off the shelves altogether.
+ *
+ * The cap is the feature, and a photograph of somebody's child falling off it
+ * is the one thing in here nobody would ever expect to be thrown away. Keeping
+ * one is the answer to that, and this is the answer to keeping everything:
+ * twice the picture shelf, counted across both kinds, so a group cannot keep
+ * its way to an unbounded bucket. Past it, keeping another says so rather than
+ * quietly doing nothing.
+ */
+export const KEPT_PER_GROUP = 20;
+
 /** Anything larger is refused outright. Images are shrunk in the browser long
  * before they get here; this is the backstop for everything else. */
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
@@ -37,6 +49,8 @@ export interface Media {
   height: number | null;
   memberId: string | null;
   createdAt: number;
+  /** Off the shelf: the pruner will not take it. */
+  kept: boolean;
 }
 
 interface MediaRow {
@@ -48,6 +62,7 @@ interface MediaRow {
   height: number | null;
   member_id: string | null;
   created_at: number;
+  kept: number;
 }
 
 function toMedia(row: MediaRow): Media {
@@ -60,6 +75,7 @@ function toMedia(row: MediaRow): Media {
     height: row.height,
     memberId: row.member_id,
     createdAt: row.created_at,
+    kept: row.kept === 1,
   };
 }
 
@@ -145,6 +161,10 @@ export async function pruneMedia(env: Env, groupId: string): Promise<number> {
  * The partition is the stored content type, which is the one the allowlist
  * already decided — a file that is not on it is `application/octet-stream` and
  * belongs with the pictures, where the tighter cap is.
+ *
+ * Kept media is not on either shelf — it is not deleted and it does not take
+ * up a place, so keeping a picture never costs the room the next one. Its own
+ * bound is KEPT_PER_GROUP, enforced where a dad asks for it.
  */
 async function pruneShelf(
   env: Env,
@@ -154,7 +174,7 @@ async function pruneShelf(
 ): Promise<number> {
   const { results } = await env.DB.prepare(
     `SELECT id, r2_key FROM media
-      WHERE group_id = ?1 AND (content_type LIKE 'audio/%') = ?3
+      WHERE group_id = ?1 AND kept = 0 AND (content_type LIKE 'audio/%') = ?3
       ORDER BY created_at DESC, id DESC
       LIMIT -1 OFFSET ?2`,
   )
@@ -202,7 +222,7 @@ export async function forgetMedia(env: Env, groupId: string, id: string): Promis
 
 export async function mediaFor(env: Env, groupId: string, id: string): Promise<Media | null> {
   const row = await env.DB.prepare(
-    `SELECT id, name, content_type, size, width, height, member_id, created_at
+    `SELECT id, name, content_type, size, width, height, member_id, created_at, kept
        FROM media WHERE id = ? AND group_id = ?`,
   )
     .bind(id, groupId)
@@ -221,11 +241,52 @@ export async function keyFor(env: Env, groupId: string, id: string): Promise<str
 /** Everything the room still holds, newest first. */
 export async function recentMedia(env: Env, groupId: string): Promise<Media[]> {
   const { results } = await env.DB.prepare(
-    `SELECT id, name, content_type, size, width, height, member_id, created_at
+    `SELECT id, name, content_type, size, width, height, member_id, created_at, kept
        FROM media WHERE group_id = ?
       ORDER BY created_at DESC, id DESC LIMIT ?`,
   )
     .bind(groupId, MEDIA_PER_GROUP)
     .all<MediaRow>();
   return results.map(toMedia);
+}
+
+/**
+ * Take a picture off the shelf, or put it back on.
+ *
+ * Any dad, on anybody's photograph — the same rule as the night and the three
+ * switches, and for the same reason: whether a picture of five men at a
+ * barbecue survives is not something five friends need a permission model
+ * for. Scoped to the group, like everything that touches the bucket.
+ *
+ * Letting one go does NOT delete it. It goes back onto its shelf where it is
+ * the oldest thing there, and the next upload may well be the end of it —
+ * which is the shelf working, not a deletion a dad asked for.
+ */
+export async function keepMedia(
+  env: Env,
+  groupId: string,
+  id: string,
+  on: boolean,
+): Promise<'ok' | 'missing' | 'full'> {
+  const row = await env.DB.prepare('SELECT kept FROM media WHERE id = ? AND group_id = ?')
+    .bind(id, groupId)
+    .first<{ kept: number }>();
+  if (row === null) return 'missing';
+  // Already where he is asking for it. Idempotent on purpose: two dads on two
+  // phones can both press this, and the second must not be an error.
+  if ((row.kept === 1) === on) return 'ok';
+
+  if (on) {
+    const count = await env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM media WHERE group_id = ? AND kept = 1',
+    )
+      .bind(groupId)
+      .first<{ n: number }>();
+    if ((count?.n ?? 0) >= KEPT_PER_GROUP) return 'full';
+  }
+
+  await env.DB.prepare('UPDATE media SET kept = ? WHERE id = ? AND group_id = ?')
+    .bind(on ? 1 : 0, id, groupId)
+    .run();
+  return 'ok';
 }

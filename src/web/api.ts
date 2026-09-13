@@ -401,3 +401,26 @@ export async function clearMyFace(): Promise<void> {
 export function faceUrl(memberId: string, version: number | undefined): string | null {
   return version === undefined ? null : `/api/face?member=${memberId}&v=${version}`;
 }
+
+/**
+ * Take a picture off the shelf, or put it back on it.
+ *
+ * Any dad, on anybody's picture — the room's rule, not this client's. The
+ * answer everyone else sees comes back over the socket as a `kept` frame, so
+ * nothing here has to tell the conversation about it.
+ */
+export async function keepMedia(id: string, on: boolean): Promise<'ok' | 'full' | 'failed'> {
+  try {
+    const res = await fetch('/api/media/keep', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, on }),
+    });
+    if (res.ok) return 'ok';
+    return res.status === 409 ? 'full' : 'failed';
+  } catch {
+    // The wifi-to-LTE hop this whole app is built around. A keep that never
+    // left is a keep that did not happen, and the man has to be told.
+    return 'failed';
+  }
+}

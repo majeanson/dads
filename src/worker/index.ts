@@ -7,7 +7,7 @@ import { forget } from './routes/ops';
 import { getIce } from './routes/ice';
 import { createInvite } from './routes/invite';
 import { getTodo } from './routes/todo';
-import { getMedia, listMedia, uploadMedia } from './routes/media';
+import { getMedia, keepMediaRoute, listMedia, uploadMedia } from './routes/media';
 import { deleteFace, getFace, putFace, putName } from './routes/me';
 import { setNight } from './routes/night';
 import { getPresence } from './routes/presence';
@@ -153,6 +153,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/media':
       return getMedia(request, env, url, prod);
+
+    case 'PUT /api/media/keep':
+      return keepMediaRoute(request, env, prod);
 
     case 'GET /api/media-list':
       return listMedia(request, env, prod);

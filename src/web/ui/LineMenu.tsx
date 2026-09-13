@@ -1,5 +1,5 @@
 import * as ContextMenu from '@radix-ui/react-context-menu';
-import { Copy, Trash2 } from 'lucide-react';
+import { Copy, Pin, PinOff, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { REACTIONS } from '../../shared/protocol';
 import { useT } from '../i18n';
@@ -28,6 +28,7 @@ const ITEM = [
 export function LineMenu({
   body,
   mine,
+  keep,
   onRetract,
   onReact,
   children,
@@ -35,6 +36,11 @@ export function LineMenu({
   body: string;
   /** Which marks this dad has already put on the line. */
   mine: string[];
+  /**
+   * Present only when the line carries a photograph or a file, which is what
+   * the shelf can take. Any dad may keep anybody's, unlike taking one back.
+   */
+  keep?: { kept: boolean; onKeep: () => void };
   /** Absent when the line is not his — then this is a copy menu and no more. */
   onRetract?: () => void;
   onReact: (emoji: string, on: boolean) => void;
@@ -103,6 +109,20 @@ export function LineMenu({
             >
               <Copy size={15} aria-hidden="true" className="text-muted" />
               {t('line.copy')}
+            </ContextMenu.Item>
+          )}
+
+          {/* No arming. Keeping is reversible and costs nothing, and letting
+              one go does not delete it — it puts the picture back on the
+              shelf, where the next upload may or may not be the end of it. */}
+          {keep === undefined ? null : (
+            <ContextMenu.Item className={ITEM} data-testid="line-keep" onSelect={keep.onKeep}>
+              {keep.kept ? (
+                <PinOff size={15} aria-hidden="true" className="text-muted" />
+              ) : (
+                <Pin size={15} aria-hidden="true" className="text-muted" />
+              )}
+              {keep.kept ? t('line.let_go') : t('line.keep')}
             </ContextMenu.Item>
           )}
 

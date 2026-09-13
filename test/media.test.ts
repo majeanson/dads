@@ -1,7 +1,12 @@
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ServerFrame } from '../src/shared/protocol';
-import { MEDIA_PER_GROUP, MAX_UPLOAD_BYTES, VOICE_PER_GROUP } from '../src/worker/media';
+import {
+  KEPT_PER_GROUP,
+  MEDIA_PER_GROUP,
+  MAX_UPLOAD_BYTES,
+  VOICE_PER_GROUP,
+} from '../src/worker/media';
 import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
 
 const worker = workerExports.default;
@@ -508,5 +513,188 @@ describe('a photo in the conversation', () => {
     const line = hello.messages.find((m) => m.body === 'the first one');
     expect(line).toBeTruthy();
     expect(line?.media ?? null).toBeNull();
+  });
+});
+
+/**
+ * A photograph can be kept, and then the shelf cannot have it.
+ *
+ * The cap is still the feature — ten pictures, thirty voice notes — but the
+ * thing that falls off is a photograph of somebody's child, which is the one
+ * thing in here nobody would ever expect to be thrown away. What has to hold:
+ * a kept picture survives any number of uploads, it does NOT take up a place
+ * on the shelf, keeping is bounded, and an id from another room reaches
+ * nothing.
+ */
+describe('keeping a photograph', () => {
+  let group: SeededGroup;
+  beforeEach(async () => {
+    await resetTables();
+    group = await seedGroup();
+  });
+
+  function keep(cookie: string, id: string, on: boolean) {
+    return worker.fetch('https://dads.test/api/media/keep', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: JSON.stringify({ id, on }),
+    });
+  }
+
+  it('survives a shelf-full of uploads, and does not take up a place', async () => {
+    const cookie = await cookieFor(group);
+    const first = (await uploadOne(cookie, 'the-one.png')).media.id;
+    await settle(2);
+    expect((await keep(cookie, first, true)).status).toBe(200);
+
+    // A whole shelf on top of it, which without the keep would have taken it.
+    for (let i = 0; i < MEDIA_PER_GROUP + 2; i++) {
+      await uploadOne(cookie, `photo-${i}.png`);
+      await settle(2);
+    }
+
+    const still = await worker.fetch(`https://dads.test/api/media?id=${first}`, {
+      headers: { Cookie: cookie },
+    });
+    expect(still.status).toBe(200);
+
+    // And the shelf is still a full shelf beside it: keeping a picture never
+    // costs the room the next one.
+    const unkept = await env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM media WHERE group_id = ? AND kept = 0',
+    )
+      .bind(group.id)
+      .first<{ n: number }>();
+    expect(unkept?.n).toBe(MEDIA_PER_GROUP);
+  });
+
+  it('goes back on the shelf when it is let go', async () => {
+    const cookie = await cookieFor(group);
+    const one = (await uploadOne(cookie, 'the-one.png')).media.id;
+    await settle(2);
+    await keep(cookie, one, true);
+    expect((await keep(cookie, one, false)).status).toBe(200);
+
+    for (let i = 0; i < MEDIA_PER_GROUP; i++) {
+      await uploadOne(cookie, `photo-${i}.png`);
+      await settle(2);
+    }
+
+    const gone = await worker.fetch(`https://dads.test/api/media?id=${one}`, {
+      headers: { Cookie: cookie },
+    });
+    expect(gone.status).toBe(404);
+  });
+
+  it('is any dad’s to do, on anybody’s picture', async () => {
+    // Unlike taking a line back, which is his alone: what the room keeps
+    // belongs to the five of them.
+    const marc = await cookieFor(group, 'Marc');
+    const sam = await cookieFor(group, 'Sam');
+    const his = (await uploadOne(marc, 'marcs.png')).media.id;
+    expect((await keep(sam, his, true)).status).toBe(200);
+
+    const row = await env.DB.prepare('SELECT kept FROM media WHERE id = ?')
+      .bind(his)
+      .first<{ kept: number }>();
+    expect(row?.kept).toBe(1);
+  });
+
+  it('says so rather than quietly doing nothing when it is full', async () => {
+    const cookie = await cookieFor(group);
+    for (let i = 0; i < KEPT_PER_GROUP; i++) {
+      const id = (await uploadOne(cookie, `keep-${i}.png`)).media.id;
+      expect((await keep(cookie, id, true)).status).toBe(200);
+      await settle(2);
+    }
+
+    const one = (await uploadOne(cookie, 'one-too-many.png')).media.id;
+    const full = await keep(cookie, one, true);
+    expect(full.status).toBe(409);
+    expect(await full.json()).toEqual({ error: 'keep_full' });
+
+    // And letting one go makes room again.
+    const letGo = await env.DB.prepare(
+      'SELECT id FROM media WHERE group_id = ? AND kept = 1 LIMIT 1',
+    )
+      .bind(group.id)
+      .first<{ id: string }>();
+    await keep(cookie, letGo!.id, false);
+    expect((await keep(cookie, one, true)).status).toBe(200);
+  });
+
+  it('is idempotent — two phones may both press it', async () => {
+    const cookie = await cookieFor(group);
+    const id = (await uploadOne(cookie, 'twice.png')).media.id;
+    expect((await keep(cookie, id, true)).status).toBe(200);
+    expect((await keep(cookie, id, true)).status).toBe(200);
+  });
+
+  it('never reaches another room', async () => {
+    const other = await seedGroup();
+    const stranger = await cookieFor(other, 'Somebody');
+    const mine = (await uploadOne(await cookieFor(group), 'mine.png')).media.id;
+
+    const res = await keep(stranger, mine, true);
+    // Not found rather than forbidden: the shape of the refusal must not say
+    // whether it exists somewhere else.
+    expect(res.status).toBe(404);
+  });
+
+  it('refuses a body that is not an id and a boolean', async () => {
+    const cookie = await cookieFor(group);
+    const id = (await uploadOne(cookie, 'x.png')).media.id;
+    expect((await keep(cookie, id, 'yes' as unknown as boolean)).status).toBe(400);
+    expect((await keep(cookie, '', true)).status).toBe(400);
+  });
+
+  it('reaches every open phone, not just the one that asked', async () => {
+    // Whether a photograph survives the next upload is a fact about the room.
+    // Two dads looking at the same picture must not disagree about it.
+    const marc = await enter(group, 'Marc');
+    const sam = await enter(group, 'Sam');
+    await settle();
+
+    const id = (await uploadOne(marc.cookie, 'ours.png')).media.id;
+    marc.say('look at this', id);
+    await settle();
+
+    marc.frames.length = 0;
+    expect((await keep(sam.cookie, id, true)).status).toBe(200);
+    await settle();
+
+    expect(marc.frames).toContainEqual({ t: 'kept', mediaId: id, on: true });
+
+    marc.close();
+    sam.close();
+    await settle();
+  });
+
+  it('is still kept after a reload, because the backfill carries it', async () => {
+    const marc = await enter(group, 'Marc');
+    await settle();
+    const id = (await uploadOne(marc.cookie, 'ours.png')).media.id;
+    marc.say('look at this', id);
+    await settle();
+    await keep(marc.cookie, id, true);
+    marc.close();
+    await settle();
+
+    const again = await enter(group, 'Marc');
+    await settle();
+    const hello = again.frames.find((f) => f.t === 'hello');
+    const line = hello!.messages.find((m) => m.media?.id === id);
+    expect(line?.media?.kept).toBe(true);
+    again.close();
+    await settle();
+  });
+
+  it('needs a session', async () => {
+    const res = await worker.fetch('https://dads.test/api/media/keep', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'whatever', on: true }),
+    });
+    expect(res.status).toBe(401);
   });
 });

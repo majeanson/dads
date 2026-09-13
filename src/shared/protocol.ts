@@ -20,6 +20,15 @@ export interface Attachment {
    * arrive, so the conversation does not jump as it loads. */
   width: number | null;
   height: number | null;
+  /**
+   * Off the shelf, and the pruner will not take it.
+   *
+   * On the attachment rather than fetched, because it is hydrated from D1
+   * beside the rest of the row on every backfill — and it changes live for
+   * everyone through the `kept` frame, so two dads never sit looking at the
+   * same picture disagreeing about whether it is safe.
+   */
+  kept: boolean;
 }
 
 /**
@@ -176,6 +185,15 @@ export type ServerFrame =
    * dads tapping at once is not worth a merge rule on the client. */
   | { t: 'reacted'; id: string; reactions: Reaction[] }
   | { t: 'typing'; memberId: string; name: string }
+  /**
+   * A picture taken off the shelf, or put back on it.
+   *
+   * Broadcast rather than left to the phone that asked, because whether a
+   * photograph survives the next upload is a fact about the room and not
+   * about one dad's screen. Addressed by media id: the same picture can only
+   * be on one line, but the line's id is not what the pruner knows it by.
+   */
+  | { t: 'kept'; mediaId: string; on: boolean }
   | { t: 'night'; night: DadNight | null }
   | { t: 'rooms'; rooms: RoomsOpen }
   | { t: 'error'; code: 'bad_frame' | 'too_long' | 'empty' | 'no_prompt' | 'no_media' };

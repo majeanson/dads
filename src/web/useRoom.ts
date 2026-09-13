@@ -223,6 +223,16 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
             ),
           }));
           return;
+        case 'kept':
+          // By media id, not by line: the pruner knows a picture by the id on
+          // the shelf, and that is what the room broadcast.
+          setState((s) => ({
+            ...s,
+            messages: s.messages.map((m) =>
+              m.media?.id === frame.mediaId ? { ...m, media: { ...m.media, kept: frame.on } } : m,
+            ),
+          }));
+          return;
         case 'roster':
           setState((s) => ({ ...s, roster: frame.roster }));
           return;

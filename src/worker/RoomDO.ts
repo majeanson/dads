@@ -217,6 +217,17 @@ export class RoomDO extends DurableObject<Env> {
       return new Response(null, { status: 204 });
     }
 
+    // A picture was taken off the shelf, or put back on it. Nothing is said —
+    // keeping a photograph is not news, the same as a face changing — but
+    // whether it survives the next upload is a fact about the room, so every
+    // open phone hears it rather than only the one that asked. The Worker has
+    // already written it to D1.
+    if (url.pathname === '/kept' && request.method === 'POST') {
+      const { mediaId, on } = (await request.json()) as { mediaId: string; on: boolean };
+      this.broadcast({ t: 'kept', mediaId, on });
+      return new Response(null, { status: 204 });
+    }
+
     /**
      * Take something back out of the room's own memory.
      *
@@ -479,6 +490,7 @@ export class RoomDO extends DurableObject<Env> {
             contentType: found.contentType,
             width: found.width,
             height: found.height,
+            kept: found.kept,
           };
 
     // A dad whose phone lost the signal re-sends what it was holding. If the
@@ -1246,7 +1258,7 @@ export class RoomDO extends DurableObject<Env> {
       const slice = ids.slice(i, i + CHUNK);
       const placeholders = slice.map(() => '?').join(', ');
       const { results } = await this.env.DB.prepare(
-        `SELECT id, name, content_type, width, height FROM media
+        `SELECT id, name, content_type, width, height, kept FROM media
           WHERE group_id = ? AND id IN (${placeholders})`,
       )
         .bind(groupId, ...slice)
@@ -1256,6 +1268,7 @@ export class RoomDO extends DurableObject<Env> {
           content_type: string;
           width: number | null;
           height: number | null;
+          kept: number;
         }>();
 
       for (const row of results) {
@@ -1265,6 +1278,7 @@ export class RoomDO extends DurableObject<Env> {
           contentType: row.content_type,
           width: row.width,
           height: row.height,
+          kept: row.kept === 1,
         });
       }
     }

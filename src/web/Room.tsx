@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { fetchTodo, type Session, type Todo } from './api';
+import { fetchTodo, keepMedia, type Session, type Todo } from './api';
 import { Attachment } from './Attachment';
 import { Board } from './Board';
 import { CallBar, JoinCall } from './CallBar';
@@ -61,6 +61,9 @@ const NEAR_BOTTOM_PX = 80;
 /** Hidden for longer than this and coming back counts as coming back. */
 const AWAY_MS = 30 * 60_000;
 
+/** Long enough to read twice, short enough that it is gone by the next line. */
+const NOTE_MS = 6000;
+
 /** What is open over the room, if anything. */
 type Sheets = 'menu' | 'here' | 'prompts' | 'board' | 'night' | 'find' | 'invite' | 'settings';
 
@@ -109,6 +112,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const [preview, setPreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  /**
+   * The room's one line of status, above the composer.
+   *
+   * The same idea as the table's `table-note`: somewhere for the rare thing
+   * that has to be said and is not worth a dialog. It clears itself, because
+   * a notice a dad has to dismiss is a notice that outstays what it was about.
+   */
+  const [note, setNote] = useState<string | null>(null);
   const [todo, setTodo] = useState<Todo>({ prompt: false, board: false });
   const [now, setNow] = useState(() => Date.now());
   /** Reading the newest line, rather than back through the week. */
@@ -434,6 +445,31 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
   const recording = recorder.state.kind === 'recording' || recorder.state.kind === 'asking';
 
+  useEffect(() => {
+    if (note === null) return;
+    const timer = setTimeout(() => setNote(null), NOTE_MS);
+    return () => clearTimeout(timer);
+  }, [note]);
+
+  /**
+   * Taking a picture off the shelf, or putting it back on.
+   *
+   * NOT optimistic, and that is the same rule as taking a line back: a mark
+   * that fails costs nothing and the next frame corrects it, but a dad who
+   * believes a photograph of his child is safe when the keep never left the
+   * phone has been told a lie by the app. The pin appears when the ROOM says
+   * it is kept — the `kept` frame — and a refusal says so here.
+   */
+  const keep = useCallback(
+    (mediaId: string, on: boolean) => {
+      void keepMedia(mediaId, on).then((outcome) => {
+        if (outcome === 'full') setNote(t('line.keep_full'));
+        else if (outcome === 'failed') setNote(t('line.keep_failed'));
+      });
+    },
+    [t],
+  );
+
   // A new build waits for his hands to be free: a line half typed, a voice
   // note going, a photo chosen, a call in progress — none of these survive a
   // reload, and none of them is worth losing for one.
@@ -670,6 +706,16 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                   key={row.key}
                   body={row.message.body}
                   mine={marksOf(row.message, session.member.id)}
+                  // Any dad may keep anybody's picture, unlike taking a line
+                  // back: what the room keeps belongs to the five of them.
+                  keep={
+                    row.message.media
+                      ? {
+                          kept: row.message.media.kept,
+                          onKeep: () => keep(row.message.media!.id, !row.message.media!.kept),
+                        }
+                      : undefined
+                  }
                   onReact={(emoji, on) => room.react(row.message.id, emoji, on, session.member.id)}
                   onRetract={
                     row.message.memberId === session.member.id
@@ -769,11 +815,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           ) : null}
 
           <p className="min-h-[1.2em] text-xs text-muted" aria-live="polite">
-            {room.waiting > 0
-              ? t(`room.waiting_${plural(lang, room.waiting)}`, { n: room.waiting })
-              : typingNames.length > 0
-                ? t('room.typing', { names: typingNames.join(', ') })
-                : ' '}
+            {note ??
+              (room.waiting > 0
+                ? t(`room.waiting_${plural(lang, room.waiting)}`, { n: room.waiting })
+                : typingNames.length > 0
+                  ? t('room.typing', { names: typingNames.join(', ') })
+                  : ' ')}
           </p>
 
           <form

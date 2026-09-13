@@ -444,3 +444,44 @@ test('a photo opens in the app, moves between them, and can be kept', async ({ b
 
   await marc.context().close();
 });
+
+test('a photo can be made to stay, and the other dad sees that it has', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Wendell Stays');
+  const sam = await comeIn(browser, 'Yusuf Stays');
+
+  await marc.setInputFiles('#attach', {
+    name: 'stays.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  });
+  await marc.getByLabel('Say something').fill('the one that stays');
+  await marc.getByRole('button', { name: 'Send' }).click();
+
+  const his = marc.getByTestId('line').filter({ hasText: 'the one that stays' });
+  const hers = sam.getByTestId('line').filter({ hasText: 'the one that stays' });
+  await expect(hers).toBeVisible();
+  // Nothing at rest: a room where every photograph carried a badge saying it
+  // was ordinary would be a room with a badge on every photograph.
+  await expect(his.getByTestId('kept')).toHaveCount(0);
+
+  // The long press, which on a laptop is the right-click the same primitive
+  // gives us.
+  await his.click({ button: 'right' });
+  await marc.getByTestId('line-keep').click();
+
+  // Not optimistic: the mark appears because the ROOM said so, which is why
+  // the other dad's screen gets it too without a reload.
+  await expect(his.getByTestId('kept')).toBeVisible();
+  await expect(hers.getByTestId('kept')).toBeVisible();
+
+  // And any dad may let it go again — it is the room's picture, not his.
+  await hers.click({ button: 'right' });
+  await sam.getByTestId('line-keep').click();
+  await expect(his.getByTestId('kept')).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
+});

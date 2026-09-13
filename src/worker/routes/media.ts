@@ -1,7 +1,9 @@
 import type { Env } from '../env';
 import { newId } from '../identity';
+import { IDENTITY_HEADERS } from '../RoomDO';
 import {
   isInlineSafe,
+  keepMedia,
   keyFor,
   MAX_UPLOAD_BYTES,
   mediaFor,
@@ -172,4 +174,63 @@ export async function listMedia(
   const session = await currentSession(request, env, isProduction);
   if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 });
   return Response.json({ media: await recentMedia(env, session.group.id) });
+}
+
+/**
+ * PUT /api/media/keep — a photograph is kept, or let go.
+ *
+ * The shelf is the feature: ten pictures to a room, and past that the oldest
+ * goes. But the thing that goes is a photograph of somebody's child, and a
+ * default is not an absolute. One tap takes a picture off the shelf, where
+ * nothing will take it.
+ *
+ * Any dad, on anybody's picture — like the night and the three switches, and
+ * not like retraction. Retracting is about what a man SAID and is his alone;
+ * this is about what the room keeps, and a photo of five men at a barbecue
+ * belongs to the five of them.
+ *
+ * Full is a real answer and not a silence: past KEPT_PER_GROUP the room says
+ * so, because a switch that quietly did nothing would be a dad believing a
+ * picture was safe when it was not.
+ */
+export async function keepMediaRoute(
+  request: Request,
+  env: Env,
+  isProduction: boolean,
+): Promise<Response> {
+  const session = await currentSession(request, env, isProduction);
+  if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 });
+
+  let body: { id?: unknown; on?: unknown };
+  try {
+    body = (await request.json()) as { id?: unknown; on?: unknown };
+  } catch {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+  const id = body.id;
+  const on = body.on;
+  if (typeof id !== 'string' || id === '' || id.length > 64 || typeof on !== 'boolean') {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+
+  const outcome = await keepMedia(env, session.group.id, id, on);
+  // An id from another room is not found, not forbidden: the shape of the
+  // refusal must not say whether it exists somewhere else.
+  if (outcome === 'missing') return Response.json({ error: 'not_found' }, { status: 404 });
+  if (outcome === 'full') return Response.json({ error: 'keep_full' }, { status: 409 });
+
+  // Every open phone finds out, the way the night and the switches do:
+  // whether a picture survives the next upload is a fact about the room, not
+  // about the screen that asked.
+  const stub = env.ROOM.get(env.ROOM.idFromName(session.group.id));
+  await stub.fetch('https://room/kept', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      [IDENTITY_HEADERS.groupId]: session.group.id,
+    },
+    body: JSON.stringify({ mediaId: id, on }),
+  });
+
+  return Response.json({ kept: on });
 }
