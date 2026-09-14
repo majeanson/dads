@@ -45,8 +45,8 @@ export function Sheet({
         >
           {/* Bigger than it was, because on a phone this header is the top of
               the whole screen rather than the lip of a panel. */}
-          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-5 py-3.5">
-            <Dialog.Title className="display m-0 text-xl">{title}</Dialog.Title>
+          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-5 py-4">
+            <Dialog.Title className="display m-0 text-2xl">{title}</Dialog.Title>
             <Dialog.Close asChild>
               {/* The word is still there for anything reading the page aloud,
                   and for a test: an icon with no name is a button nobody can

@@ -347,11 +347,15 @@ weakening `sessionSecret()`.
   was 40 while the composer's row, the header's icons and the call's buttons
   each asked for 44 by hand — the number this repo already called a thumb. One
   size, set once.
-- **The menu rows and the switch rows are 56px**, set at 1.0625rem, on home's
-  control radius. They are a list a thumb picks from at arm's length, usually
-  one-handed, and on a phone they are the whole content of the screen. A sheet
-  header is `text-xl` for the same reason: on a phone it is the top of the
-  screen, not the lip of a panel.
+- **The menu rows and the switch rows are 64px**, set at 1.125rem, on home's
+  control radius, with 22px icons. They are a list a thumb picks from at arm's
+  length, usually one-handed, and on a phone they are the whole content of the
+  screen. A sheet header is `text-2xl` for the same reason: on a phone it is
+  the top of the screen, not the lip of a panel. **The size IS the style** —
+  the answer to an empty half-screen is bigger type, not more things on it.
+  Checked at 390px in French as well as English: "Mets une soirée de gars" and
+  "ta semaine à remplir" are the rows that would overflow first, and a menu
+  row does not wrap.
 - **One list, one row size.** Language and Theme sit in the same list as the
   three switches and were set smaller; a settings screen that answers three
   questions in two sizes makes a dad work out which is which.

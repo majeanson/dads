@@ -28,6 +28,17 @@ export type SheetName =
   'menu' | 'here' | 'prompts' | 'board' | 'night' | 'find' | 'invite' | 'settings';
 
 /**
+ * One shape for every row in the menu.
+ *
+ * Taller than a button elsewhere in the app and set in a larger face: this is
+ * a list a thumb picks from on a phone, at arm's length, usually one-handed,
+ * and the rows are the whole content of the screen. The radius is home's
+ * control radius, so the two screens a dad actually touches agree with each
+ * other.
+ */
+const ITEM = 'h-16 gap-3.5 rounded-[var(--radius-control)] px-4 text-[1.125rem]';
+
+/**
  * Everything the app can do that is not the conversation or the call.
  *
  * There is no tab strip: tabs are a claim that four things matter equally, and
@@ -39,17 +50,6 @@ export type SheetName =
  * A sheet MOUNTS when it opens, so it reads fresh data every time rather than
  * showing what was true when the page loaded.
  */
-/**
- * One shape for every row in the menu.
- *
- * Taller than a button elsewhere in the app and set in a larger face: this is
- * a list a thumb picks from on a phone, at arm's length, usually one-handed,
- * and the rows are the whole content of the screen. The radius is home's
- * control radius, so the two screens a dad actually touches agree with each
- * other.
- */
-const ITEM = 'h-14 gap-3 rounded-[var(--radius-control)] px-4 text-[1.0625rem]';
-
 export function Sheets({
   open,
   onOpen,
@@ -102,7 +102,7 @@ export function Sheets({
         <nav className="menu" aria-label="Rooms">
           {rooms.questions ? (
             <Button block className={ITEM} onClick={() => onOpen('prompts')}>
-              <MessageCircleQuestion size={20} aria-hidden="true" className="text-muted" />
+              <MessageCircleQuestion size={22} aria-hidden="true" className="text-muted" />
               {t('menu.questions')}
               {/* The reason, in words, where a dot used to be: a mark says
                   "something", and something is what makes a man ignore it. */}
@@ -119,7 +119,7 @@ export function Sheets({
 
           {rooms.week ? (
             <Button block className={ITEM} onClick={() => onOpen('board')}>
-              <CalendarCheck size={20} aria-hidden="true" className="text-muted" />
+              <CalendarCheck size={22} aria-hidden="true" className="text-muted" />
               {t('menu.week')}
               {todo.board ? (
                 <span className="ml-auto text-sm font-normal text-accent" data-testid="mark-board">
@@ -138,13 +138,13 @@ export function Sheets({
                 close();
               }}
             >
-              <Spade size={20} aria-hidden="true" className="text-muted" />
+              <Spade size={22} aria-hidden="true" className="text-muted" />
               {tableOpen ? t('menu.close_table') : t('menu.open_table')}
             </Button>
           ) : null}
 
           <Button block className={ITEM} data-testid="dad-night" onClick={() => onOpen('night')}>
-            <CalendarClock size={20} aria-hidden="true" className="text-muted" />
+            <CalendarClock size={22} aria-hidden="true" className="text-muted" />
             {nightItem(t, lang, night, now)}
           </Button>
 
@@ -152,7 +152,7 @@ export function Sheets({
               over five hundred lines and the archive keeps every one, so for
               five men talking for a year this is the only door to most of it. */}
           <Button block className={ITEM} onClick={() => onOpen('find')}>
-            <Search size={20} aria-hidden="true" className="text-muted" />
+            <Search size={22} aria-hidden="true" className="text-muted" />
             {t('menu.find')}
           </Button>
 
@@ -161,12 +161,12 @@ export function Sheets({
               everything else in this app is worth nothing until the other four
               are here. */}
           <Button block className={ITEM} onClick={() => onOpen('invite')}>
-            <Send size={20} aria-hidden="true" className="text-muted" />
+            <Send size={22} aria-hidden="true" className="text-muted" />
             {t('menu.invite')}
           </Button>
 
           <Button block className={ITEM} onClick={() => onOpen('settings')}>
-            <SettingsIcon size={20} aria-hidden="true" className="text-muted" />
+            <SettingsIcon size={22} aria-hidden="true" className="text-muted" />
             {t('menu.settings')}
           </Button>
         </nav>

@@ -499,7 +499,7 @@
     gap: 0.5rem;
     border-radius: var(--radius-card);
     background: var(--bg-soft);
-    padding: 2rem 1.5rem;
+    padding: 2.25rem 1.5rem;
   }
 
   /* The day and the hour, stacked and huge: the one question this screen
@@ -514,7 +514,7 @@
 
   .home-day,
   .home-time {
-    font-size: clamp(2.5rem, 13vw, 3.5rem);
+    font-size: clamp(2.75rem, 14vw, 3.75rem);
     line-height: 1;
     letter-spacing: -0.02em;
   }
@@ -640,7 +640,7 @@
      things rather than a stack. */
   .menu {
     display: grid;
-    gap: 0.625rem;
+    gap: 0.75rem;
   }
 
   /* --- what was said --- */
