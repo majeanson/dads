@@ -59,12 +59,25 @@ export async function comeIn(browser: Browser, what: string): Promise<Page> {
 /**
  * Into the conversation, from wherever he is.
  *
- * The app opens on home — when the night is, who is about, what is waiting —
- * and the conversation is one tap past it. Idempotent, because these suites
- * walk through several screens and it must not matter whether the last step
- * left him on home or already inside.
+ * The app opens on home — when the night is, and the way in — and the
+ * conversation is one tap past it. Idempotent, because these suites walk
+ * through several screens and it must not matter whether the last step left
+ * him on home or already inside.
+ *
+ * It waits for the room to BE there before deciding. An immediate
+ * `isVisible()` is false for a screen that is about to paint, and the helper
+ * then quietly did nothing — leaving the caller asserting against a
+ * conversation still behind `display: none`.
+ *
+ * Which screen is showing is read off `data-view` rather than off a control
+ * with a name: a dad can read this room in French, and a helper that waits for
+ * "Say something" waits for ever in a room that says "Dis quelque chose".
  */
 export async function talk(page: Page): Promise<void> {
-  const go = page.getByTestId('home-go');
-  if (await go.isVisible()) await go.click();
+  const room = page.locator('main.room');
+  await expect(room).toBeVisible();
+  if ((await room.getAttribute('data-view')) === 'home') {
+    await page.getByTestId('home-go').click();
+  }
+  await expect(room).toHaveAttribute('data-view', 'talk');
 }

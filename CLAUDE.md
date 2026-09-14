@@ -465,6 +465,22 @@ secret, custom domain bound by the route in wrangler.toml.
   it is not a separate question but the thing that decides whether going in is
   worth doing now. Anything proposed for this screen has to displace one of
   the two, not join them.
+- **The two blocks take the phone's screen between them** (2026-09-14). The
+  night at the top where the eye lands, the way in at the bottom where the
+  thumb is, and the empty space in the middle rather than all of it
+  underneath — which is also what says there are two. `align-content:
+space-between`, and only below 48rem: a mouse does not care where a button
+  is, and 400px of air between two blocks on a laptop reads as a mistake.
+  Above the content's own height it does nothing and the screen scrolls.
+- **When it is, is the biggest thing on the screen**, and it gets there on
+  size alone — `clamp(1.5rem, 6.5vw, 1.875rem)`, no webfont and no extra
+  weight. The face is reserved for names and titles, and a quiet hero is
+  still a hero. The empty state ("No dad night yet") is the same size for the
+  same reason: a group with no night has the same question as a group with
+  one, and a whisper is the wrong way to ask it.
+- **Facts, then the action.** When it is and who is coming are one breath and
+  sit together; the two answer buttons come under them. It was when → buttons
+  → who, which put a control in the middle of a sentence.
 - **It is a VIEW, not a route.** `data-view` on `main.room`; the socket, the
   call and the table all live above it. So switching costs nothing, presence
   is live rather than polled, and going in is instant rather than a reconnect.

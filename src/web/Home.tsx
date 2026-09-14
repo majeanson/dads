@@ -118,7 +118,10 @@ export function Home({
         <h2 className="home-label">{t('n.title')}</h2>
         {night === null ? (
           <>
-            <p className="m-0 text-[0.9375rem] text-muted">{t('n.none')}</p>
+            {/* The empty state keeps the block's shape and its size. A group
+                with no night has the same question as a group with one, and
+                a whisper is the wrong way to ask it. */}
+            <p className="home-when text-muted">{t('n.none')}</p>
             <Button className="justify-self-start" onClick={onNight}>
               {t('n.set')}
             </Button>
@@ -131,7 +134,35 @@ export function Home({
               {nightDetail(t, lang, night, now)}
             </p>
 
-            <div className="flex flex-wrap gap-2">
+            {/* Names, not a count: a man wants to know whether HIS friend is
+                coming, which is the thing that actually decides it — and at
+                ink rather than muted for the same reason. It was the same
+                grey as the section label above it.
+
+                Directly under the when, because the two of them are one fact:
+                this is on Thursday and these men are coming. The buttons come
+                after, where the actions on this screen belong. */}
+            <p className="home-coming" data-testid="home-who-coming">
+              {state === null
+                ? // Not "nobody has said yet" — it has not been asked yet.
+                  '…'
+                : answers.length === 0
+                  ? t('n.nobody_yet')
+                  : [
+                      coming.length > 0
+                        ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
+                        : null,
+                      not.length > 0
+                        ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+            </p>
+
+            {/* The one thing to DO about the night, under the two lines that
+                say what it is. */}
+            <div className="home-answer">
               <Button
                 look={mine?.coming === true ? 'primary' : 'plain'}
                 disabled={busy}
@@ -151,28 +182,6 @@ export function Home({
                 {t('n.cant')}
               </Button>
             </div>
-
-            {/* Names, not a count: a man wants to know whether HIS friend is
-                coming, which is the thing that actually decides it — and at
-                ink rather than muted for the same reason. It was the same
-                grey as the section label above it. */}
-            <p className="m-0 text-[0.9375rem]" data-testid="home-who-coming">
-              {state === null
-                ? // Not "nobody has said yet" — it has not been asked yet.
-                  '…'
-                : answers.length === 0
-                  ? t('n.nobody_yet')
-                  : [
-                      coming.length > 0
-                        ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
-                        : null,
-                      not.length > 0
-                        ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-            </p>
 
             {items === 0 ? null : (
               <Button look="quiet" className="justify-self-start px-0" onClick={onNight}>

@@ -60,15 +60,9 @@ Honest list. Everything else in here has a test standing behind it.
    configured in production now (`dads-key`), so a dad behind a strict NAT has
    a way through as well — verified by `/api/ice` returning credentialed
    `turn:` and `turns:` servers alongside the STUN ones.
-   The reminder was the other, and it has been driven end to end against
-   production — see below.
-
-2. **A human's hands on the newest half.** Search, the photo viewer, keeping a
-   picture and home-as-the-opening-screen all shipped together on 2026-09-13.
-   Every one has an e2e standing behind it and `npm run prove` is green, but
-   `prove` proves the DEPLOYMENT — the domain, the headers, the secrets, the
-   bindings — and never opens the viewer. Nobody has yet tapped a photograph
-   on a real phone on the live site.
+   That is now the only one. The reminder was one of the others and has been
+   driven end to end against production; the newest half was the last, and a
+   real phone has now been through it — both below.
 
 ## Proven: the reminder, and what it took to see it
 
@@ -96,6 +90,21 @@ notification can be seen from the page through
 
 What is still unproven is a human's eyes on a phone's lock screen, which is
 now a cosmetic question rather than a technical one.
+
+## Proven on a real phone
+
+The newest half — search, the photo viewer, keeping a picture, and home as the
+screen the app opens on — has been through a real phone on the live site
+(2026-09-14), the day after it shipped. A photograph opened, a picture was
+kept, a word from an old line was found again, and home said the right things
+on a cold open. All of it worked.
+
+That matters because none of it is what `npm run prove` proves. `prove` is
+about the DEPLOYMENT: the domain, the assets binding answering before the
+Worker, the headers that only exist because `public/_headers` shipped, and
+secrets that are only set in production. It never opens the viewer, and a
+headless browser has nothing to say about whether a photograph of somebody's
+child looks right on a phone in a kitchen.
 
 ## The last review
 

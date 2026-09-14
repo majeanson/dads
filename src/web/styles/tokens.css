@@ -445,15 +445,35 @@
   .home {
     display: none;
     grid-auto-rows: min-content;
-    gap: 1.75rem;
+    /* Wide enough to separate the two blocks at a glance. They are the whole
+       screen; the space between them is what says there are two. */
+    gap: 2.25rem;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-bottom: 1rem;
+    /* A column, not a page. The room is 44rem and 74rem with the table open,
+       and a way-in button 74rem wide is a button nobody aims at. */
+    max-width: 34rem;
   }
 
   .room[data-view='home'] .home {
     display: grid;
+  }
+
+  /* On a phone the two blocks take the screen between them: the night at the
+     top where the eye lands, the way in at the bottom where the thumb is, and
+     the empty space in the middle rather than all of it underneath. It is
+     also what says there are two of them. Once the content is taller than the
+     screen this does nothing and the list simply scrolls.
+
+     Not above 48rem: a mouse does not care where the button is, and 400px of
+     air between two blocks on a laptop reads as a mistake rather than as a
+     decision. */
+  @media (max-width: 48rem) and (min-height: 34rem) {
+    .room[data-view='home'] .home {
+      align-content: space-between;
+    }
   }
 
   .room[data-view='home'] .stage {
@@ -484,19 +504,40 @@
     font-weight: 600;
   }
 
+  /* When it is, and it is the biggest thing on the screen on purpose: it is
+     the first question a dad has when he picks the phone up. Size alone does
+     the work — no webfont, because nothing he reads a sentence of changes
+     face, and no weight, because a quiet hero is still a hero. */
   .home-when {
     margin: 0;
-    font-size: 1.25rem;
-    line-height: 1.25;
+    font-size: clamp(1.5rem, 6.5vw, 1.875rem);
+    line-height: 1.15;
     text-wrap: balance;
   }
 
-  /* The way in, and the size of it is the point. */
+  /* One fact with the line above it, so it sits close enough to be read as
+     part of the same breath. */
+  .home-coming {
+    margin: -0.15rem 0 0;
+    font-size: 0.9375rem;
+    text-wrap: pretty;
+  }
+
+  /* And the actions after the facts, with air between. */
+  .home-answer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+  }
+
+  /* The way in, and the size of it is the point: it is the second of the two
+     things this screen is for, and the only one that is a button. */
   .home-go {
     width: 100%;
-    height: 3.25rem;
+    height: 3.5rem;
     justify-content: space-between;
-    font-size: 1.0625rem;
+    font-size: 1.125rem;
   }
 
   .home-new {
