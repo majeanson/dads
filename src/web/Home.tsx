@@ -115,7 +115,11 @@ export function Home({
   return (
     <div className="home" data-testid="home">
       <section className="home-night">
-        <h2 className="home-label">{t('n.title')}</h2>
+        {/* Named for a screen reader, where the structure of a page is real,
+            and not on the screen, where it is a word above a line that
+            already says what it is: "Thursdays at 21:00" under a heading
+            reading "Dad night", above a button reading "I'm in". */}
+        <h2 className="sr-only">{t('n.title')}</h2>
         {night === null ? (
           <>
             {/* The empty state keeps the block's shape and its size. A group
@@ -136,8 +140,7 @@ export function Home({
 
             {/* Names, not a count: a man wants to know whether HIS friend is
                 coming, which is the thing that actually decides it — and at
-                ink rather than muted for the same reason. It was the same
-                grey as the section label above it.
+                ink rather than muted for the same reason.
 
                 Directly under the when, because the two of them are one fact:
                 this is on Thursday and these men are coming. The buttons come
@@ -205,7 +208,7 @@ export function Home({
        * going in is worth doing now.
        */}
       <section className="home-talk">
-        <h2 className="home-label">{t('home.talk')}</h2>
+        <h2 className="sr-only">{t('home.talk')}</h2>
 
         <Button look="primary" className="home-go" onClick={onGo} data-testid="home-go">
           <span>{t('home.go')}</span>

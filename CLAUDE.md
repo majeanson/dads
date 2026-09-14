@@ -481,6 +481,13 @@ space-between`, and only below 48rem: a mouse does not care where a button
 - **Facts, then the action.** When it is and who is coming are one breath and
   sit together; the two answer buttons come under them. It was when → buttons
   → who, which put a control in the middle of a sentence.
+- **The two blocks are not labelled on the screen** (2026-09-14). "Dad night"
+  sat over a line reading "Thursdays at 21:00" with "I'm in" under it, and
+  "The conversation" sat over a button reading "Go and talk". A word that
+  names what the next line already says is the app talking about itself. The
+  `h2`s are still there and still say it — `sr-only`, because the structure of
+  a page is real to a screen reader — and Tailwind's `sr-only` is absolutely
+  positioned, so neither heading takes a grid row.
 - **It is a VIEW, not a route.** `data-view` on `main.room`; the socket, the
   call and the table all live above it. So switching costs nothing, presence
   is live rather than polled, and going in is instant rather than a reconnect.

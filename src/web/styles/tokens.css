@@ -495,15 +495,6 @@
     justify-items: stretch;
   }
 
-  /* The one label shape on this screen: quiet, small, and it names the block
-     under it rather than decorating it. */
-  .home-label {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
-
   /* When it is, and it is the biggest thing on the screen on purpose: it is
      the first question a dad has when he picks the phone up. Size alone does
      the work — no webfont, because nothing he reads a sentence of changes
