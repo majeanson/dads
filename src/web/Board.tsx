@@ -80,7 +80,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
             <section key={w.week} className="mt-6">
               {/* The follow-through number is the whole point of the week
                 behind you, so it stays — as words, not a badge. */}
-              <h2 className="mb-1 text-sm font-semibold text-muted">
+              <h2 className="mb-1 text-[0.9375rem] font-semibold text-muted">
                 {t('b.week_of', { date: weekDate(w.week, lang) })}
                 {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
               </h2>

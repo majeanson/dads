@@ -23,13 +23,14 @@ export function Switch({
   return (
     <label
       className={cn(
-        'flex cursor-pointer items-center justify-between gap-3 border-b border-line py-2.5',
+        // A row a thumb hits without aiming: 56px, the same as a menu row.
+        'flex min-h-14 cursor-pointer items-center justify-between gap-3 border-b border-line py-2.5',
         'transition-colors duration-75',
         checked ? 'text-ink' : 'text-muted',
         disabled && 'pointer-events-none opacity-50',
       )}
     >
-      <span className="text-[0.9375rem]">{label}</span>
+      <span className="text-[1.0625rem]">{label}</span>
       <RadixSwitch.Root
         checked={checked}
         onCheckedChange={onChange}

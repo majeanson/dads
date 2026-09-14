@@ -38,7 +38,10 @@ const button = cva(
       },
       size: {
         sm: 'h-8 px-2.5 text-sm',
-        md: 'h-10 px-3.5 text-[0.9375rem]',
+        /* 44px, which is the number this app already says a thumb is — the
+           composer's controls and the header's icons were each given it by
+           hand while the default stayed at 40. */
+        md: 'h-11 px-4 text-[0.9375rem]',
         /** Square, for a control that is an icon and nothing else. */
         icon: 'h-10 w-10 p-0',
         iconSm: 'h-7 w-7 p-0 text-sm',

@@ -38,11 +38,15 @@ export function Sheet({
             'inset-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]',
             'sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2',
             'sm:h-auto sm:max-h-[85dvh] sm:w-[min(34rem,calc(100vw-2rem))]',
-            'sm:rounded-xl sm:border sm:border-line',
+            // The same radius home's card uses, so the two surfaces a dad
+            // actually touches agree with each other.
+            'sm:rounded-[var(--radius-card)] sm:border sm:border-line',
           ].join(' ')}
         >
-          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-4 py-3">
-            <Dialog.Title className="display m-0 text-base">{title}</Dialog.Title>
+          {/* Bigger than it was, because on a phone this header is the top of
+              the whole screen rather than the lip of a panel. */}
+          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-5 py-3.5">
+            <Dialog.Title className="display m-0 text-xl">{title}</Dialog.Title>
             <Dialog.Close asChild>
               {/* The word is still there for anything reading the page aloud,
                   and for a test: an icon with no name is a button nobody can
@@ -53,7 +57,7 @@ export function Sheet({
               </Button>
             </Dialog.Close>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5">
             {children}
           </div>
         </Dialog.Content>

@@ -211,7 +211,7 @@ function Agenda({
 
   return (
     <section data-testid="agenda">
-      <h2 className="mb-2 text-sm font-semibold text-muted">{t('n.agenda')}</h2>
+      <h2 className="mb-2 text-[0.9375rem] font-semibold text-muted">{t('n.agenda')}</h2>
 
       {items.length === 0 ? null : (
         <ul className="m-0 mb-2 list-none border-t border-line p-0">

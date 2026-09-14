@@ -107,7 +107,7 @@ export function Here({
         </ul>
       )}
 
-      <h2 className="mt-6 mb-2 text-sm font-semibold text-muted">
+      <h2 className="mt-6 mb-2 text-[0.9375rem] font-semibold text-muted">
         <button
           type="button"
           className="inline-flex min-h-11 cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-inherit"

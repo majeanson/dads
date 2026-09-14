@@ -636,9 +636,11 @@
    * Everything the app can do that is not talking, as a list of plain buttons,
    * one to a line, in the order a dad is likely to want them.
    */
+  /* A list a thumb picks from, so the rows are given room to be separate
+     things rather than a stack. */
   .menu {
     display: grid;
-    gap: 0.5rem;
+    gap: 0.625rem;
   }
 
   /* --- what was said --- */

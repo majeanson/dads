@@ -39,6 +39,17 @@ export type SheetName =
  * A sheet MOUNTS when it opens, so it reads fresh data every time rather than
  * showing what was true when the page loaded.
  */
+/**
+ * One shape for every row in the menu.
+ *
+ * Taller than a button elsewhere in the app and set in a larger face: this is
+ * a list a thumb picks from on a phone, at arm's length, usually one-handed,
+ * and the rows are the whole content of the screen. The radius is home's
+ * control radius, so the two screens a dad actually touches agree with each
+ * other.
+ */
+const ITEM = 'h-14 gap-3 rounded-[var(--radius-control)] px-4 text-[1.0625rem]';
+
 export function Sheets({
   open,
   onOpen,
@@ -90,8 +101,8 @@ export function Sheets({
       <Sheet title={t('menu.title')} onClose={close}>
         <nav className="menu" aria-label="Rooms">
           {rooms.questions ? (
-            <Button block onClick={() => onOpen('prompts')}>
-              <MessageCircleQuestion size={17} aria-hidden="true" className="text-muted" />
+            <Button block className={ITEM} onClick={() => onOpen('prompts')}>
+              <MessageCircleQuestion size={20} aria-hidden="true" className="text-muted" />
               {t('menu.questions')}
               {/* The reason, in words, where a dot used to be: a mark says
                   "something", and something is what makes a man ignore it. */}
@@ -107,8 +118,8 @@ export function Sheets({
           ) : null}
 
           {rooms.week ? (
-            <Button block onClick={() => onOpen('board')}>
-              <CalendarCheck size={17} aria-hidden="true" className="text-muted" />
+            <Button block className={ITEM} onClick={() => onOpen('board')}>
+              <CalendarCheck size={20} aria-hidden="true" className="text-muted" />
               {t('menu.week')}
               {todo.board ? (
                 <span className="ml-auto text-sm font-normal text-accent" data-testid="mark-board">
@@ -121,26 +132,27 @@ export function Sheets({
           {rooms.table ? (
             <Button
               block
+              className={ITEM}
               onClick={() => {
                 onToggleTable();
                 close();
               }}
             >
-              <Spade size={17} aria-hidden="true" className="text-muted" />
+              <Spade size={20} aria-hidden="true" className="text-muted" />
               {tableOpen ? t('menu.close_table') : t('menu.open_table')}
             </Button>
           ) : null}
 
-          <Button block data-testid="dad-night" onClick={() => onOpen('night')}>
-            <CalendarClock size={17} aria-hidden="true" className="text-muted" />
+          <Button block className={ITEM} data-testid="dad-night" onClick={() => onOpen('night')}>
+            <CalendarClock size={20} aria-hidden="true" className="text-muted" />
             {nightItem(t, lang, night, now)}
           </Button>
 
           {/* The way back to what was said before the backfill: the room hands
               over five hundred lines and the archive keeps every one, so for
               five men talking for a year this is the only door to most of it. */}
-          <Button block onClick={() => onOpen('find')}>
-            <Search size={17} aria-hidden="true" className="text-muted" />
+          <Button block className={ITEM} onClick={() => onOpen('find')}>
+            <Search size={20} aria-hidden="true" className="text-muted" />
             {t('menu.find')}
           </Button>
 
@@ -148,13 +160,13 @@ export function Sheets({
               are already in it. But it is in the menu at all because
               everything else in this app is worth nothing until the other four
               are here. */}
-          <Button block onClick={() => onOpen('invite')}>
-            <Send size={17} aria-hidden="true" className="text-muted" />
+          <Button block className={ITEM} onClick={() => onOpen('invite')}>
+            <Send size={20} aria-hidden="true" className="text-muted" />
             {t('menu.invite')}
           </Button>
 
-          <Button block onClick={() => onOpen('settings')}>
-            <SettingsIcon size={17} aria-hidden="true" className="text-muted" />
+          <Button block className={ITEM} onClick={() => onOpen('settings')}>
+            <SettingsIcon size={20} aria-hidden="true" className="text-muted" />
             {t('menu.settings')}
           </Button>
         </nav>

@@ -71,7 +71,7 @@ export function PromptList() {
           a heading over "nothing yet" is two lines saying nothing. */}
       {history.length === 0 ? null : (
         <section className="mb-6">
-          <h2 className="mb-1 text-sm font-semibold text-muted">{t('q.asked_before')}</h2>
+          <h2 className="mb-1 text-[0.9375rem] font-semibold text-muted">{t('q.asked_before')}</h2>
           <ol className="m-0 list-none border-t border-line p-0">
             {history.map((h) => (
               <PromptRow

@@ -47,8 +47,11 @@ export function LangToggle() {
  */
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-line py-2.5">
-      <span className="text-[0.9375rem] text-muted">{label}</span>
+    // The same 56px and the same size of word as a Switch row: these sit in
+    // one list with those, and a list that answers three questions in two
+    // sizes makes a dad work out which is which.
+    <div className="flex min-h-14 items-center justify-between gap-3 border-b border-line py-2.5">
+      <span className="text-[1.0625rem] text-muted">{label}</span>
       {children}
     </div>
   );

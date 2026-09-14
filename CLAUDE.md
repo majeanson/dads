@@ -343,6 +343,23 @@ weakening `sessionSecret()`.
   and the attachments. `tokens.css` is down from 1030 lines to ~860, and what
   is left is layout that Tailwind would have expressed worse: the room's grid,
   the message rows, the bottom-anchored list, the table frame.
+- **A control is 44px, and that is the kit's default now** (2026-09-14). `md`
+  was 40 while the composer's row, the header's icons and the call's buttons
+  each asked for 44 by hand — the number this repo already called a thumb. One
+  size, set once.
+- **The menu rows and the switch rows are 56px**, set at 1.0625rem, on home's
+  control radius. They are a list a thumb picks from at arm's length, usually
+  one-handed, and on a phone they are the whole content of the screen. A sheet
+  header is `text-xl` for the same reason: on a phone it is the top of the
+  screen, not the lip of a panel.
+- **One list, one row size.** Language and Theme sit in the same list as the
+  three switches and were set smaller; a settings screen that answers three
+  questions in two sizes makes a dad work out which is which.
+- **Still lucide, considered and kept** (2026-09-14). Phosphor was offered and
+  is a fine set, but its weights are reachable here through `strokeWidth`, its
+  duotone and fill styles fight a near-monochrome palette, and the swap is 23
+  files of renames for no change a dad would notice. The bigger feel came from
+  size and spacing, which is where it always was.
 - **The palette is "Ink and Salt"** (2026-09-11), and it is the app's own.
   What it replaced was borrowed: `#0b57d0` is Google's blue out of Material
   and `#b3261e` is Material's error red, which is most of why the app looked
