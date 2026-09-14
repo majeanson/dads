@@ -1060,6 +1060,14 @@ people use.
 
 ## Test layout
 
+- **A line's text runs straight into the clock beside it.** `hasText` is a
+  substring of the whole row, so a line ending in a digit is completed by the
+  time: "a week of this 2" said at 4:22 PM reads as "a week of this 24:22 PM",
+  and a match for "a week of this 24" then finds two lines and fails on strict
+  mode. It passed every local run and every CI run before four o'clock, which
+  is the worst way for a test to be wrong. Numbered lines are zero-padded so
+  no line is a prefix of another, and the same care is owed to any needle
+  ending in a digit.
 - **A fixed `settle()` before an assertion is a race, and a loaded machine
   loses it.** The suite is green run alone and on CI, and drops one or two
   tests in a different file every time when something else is running — a

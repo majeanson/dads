@@ -181,7 +181,11 @@ test('he walks in on the divider, not at the top of the week', async ({ browser 
   // screen at once and the bug is invisible.
   await talk(sam);
   for (let i = 0; i < 25; i++) {
-    await sam.getByLabel('Say something').fill(`a week of this ${i}`);
+    // Padded, and that is not a decoration. A line's own text runs straight
+    // into the clock beside it, so unpadded "…this 2" at 4:22 PM reads as
+    // "…this 24:22 PM" and a substring match for "…this 24" finds two lines.
+    // The suite passed all morning and broke after four o'clock.
+    await sam.getByLabel('Say something').fill(`a week of this ${String(i).padStart(2, '0')}`);
     await sam.getByRole('button', { name: 'Send' }).click();
   }
   await expect(sam.getByTestId('line').filter({ hasText: 'a week of this 24' })).toBeVisible();
