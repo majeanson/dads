@@ -310,12 +310,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         night={room.night}
         answered={nightPulse}
         you={session.member.id}
-        connection={room.connection}
-        roster={room.roster}
-        members={room.members}
         unseen={seen.unseen}
         onGo={() => setView('talk')}
-        onWho={() => setSheet('here')}
         onNight={() => setSheet('night')}
       />
 

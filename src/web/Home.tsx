@@ -1,44 +1,35 @@
 import { ArrowRight, Check, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchNight, setRsvp, type NightState } from './api';
-import { Face } from './Face';
-import { plural, useT } from './i18n';
-import { nightDetail } from './NightEditor';
+import { plural, useT, weekdayNames } from './i18n';
+import { nightAway } from './NightEditor';
 import { Button } from './ui/Button';
+import { cn } from './ui/cn';
 import type { DadNight } from '../shared/dadNight';
-import type { RosterEntry } from '../shared/protocol';
 
 /**
- * Where the app opens.
+ * Where the app opens, and it asks ONE question.
  *
- * TWO things, and deliberately only two: the night — what this thing is, and
- * when it is — and the conversation, which is what it is for. Everything else
- * the app can do is behind the Menu button and stays there, including what is
- * waiting for HIM: it already lives there and already carries its mark, and a
- * home screen that lists four things is a home screen that ranks none of them.
+ * Are you coming on Thursday. That is the whole screen: the day and the hour
+ * in the biggest type in the app, how far off it is, who has said yes, and one
+ * button to answer with — then a door into the conversation, because talking
+ * is what the night is for and a man who only came to talk should lose one
+ * tap, not four.
  *
- * Who is about is not a third block. It sits under the way in, because it is
- * not a separate question — it is the thing that decides whether going in is
- * worth doing now.
- *
- * It is one tap from here into the conversation, and the tap says how many
- * lines are waiting, so the man who only came to talk loses a second and the
- * man who came to find out when Thursday is loses nothing.
+ * Nothing else. Not who is about (the header counts them and the roster is one
+ * tap in), not what is waiting for him (the Menu button carries that, in
+ * words, and has since home stopped listing it). A home screen that asks two
+ * questions gets neither answered.
  *
  * The socket is already open behind this — the room hook lives above both
- * screens — so "who is here" is live rather than polled, and going in is
- * instant rather than a reconnect.
+ * screens — so going in is instant rather than a reconnect.
  */
 export function Home({
   night,
   answered,
   you,
-  connection,
-  roster,
-  members,
   unseen,
   onGo,
-  onWho,
   onNight,
 }: {
   night: DadNight | null;
@@ -46,28 +37,15 @@ export function Home({
    * The seq of the most recent line that could change who is coming or what
    * is up for the night.
    *
-   * Home is a live screen — the roster on it comes off the socket — but the
-   * night was fetched once at mount, so a dad sitting on it watched the list
-   * of who is coming go stale while the room said so out loud a foot below.
-   * Keyed on the kind of line rather than on any line: a chatty evening is
-   * not a reason to re-read the night thirty times.
+   * Home is a live screen, but the night is fetched rather than pushed — so a
+   * dad sitting on it watched the list of who is coming go stale while the
+   * room said so out loud a foot below. Keyed on the KIND of line: a chatty
+   * evening is not a reason to re-read the night thirty times.
    */
   answered: number;
   you: string;
-  /**
-   * Whether the roster below is a fact yet.
-   *
-   * Home renders the moment the app opens, before the socket has said
-   * anything, and an empty roster then is "I do not know" rather than
-   * "nobody" — so without this the first screen a dad saw told him his
-   * friends were not about, and corrected itself a second later.
-   */
-  connection: 'connecting' | 'open' | 'reconnecting';
-  roster: RosterEntry[];
-  members: RosterEntry[];
   unseen: number;
   onGo: () => void;
-  onWho: () => void;
   onNight: () => void;
 }) {
   const { t, lang } = useT();
@@ -110,41 +88,50 @@ export function Home({
   const coming = answers.filter((a) => a.coming);
   const not = answers.filter((a) => !a.coming);
   const items = state?.items.length ?? 0;
-  const others = roster.filter((m) => m.memberId !== you);
+  const away = night === null ? null : nightAway(t, lang, night, now);
 
   return (
     <div className="home" data-testid="home">
-      <section className="home-night">
-        {/* Named for a screen reader, where the structure of a page is real,
-            and not on the screen, where it is a word above a line that
-            already says what it is: "Thursdays at 21:00" under a heading
-            reading "Dad night", above a button reading "I'm in". */}
+      {/* Named for a screen reader, where the structure of a page is real, and
+          not on the screen, where it would be a word above a line that already
+          says what it is. */}
+      <section className="home-card">
         <h2 className="sr-only">{t('n.title')}</h2>
+
         {night === null ? (
           <>
-            {/* The empty state keeps the block's shape and its size. A group
-                with no night has the same question as a group with one, and
-                a whisper is the wrong way to ask it. */}
-            <p className="home-when text-muted">{t('n.none')}</p>
-            <Button className="justify-self-start" onClick={onNight}>
+            {/* The empty state keeps the card's shape and its size. A group
+                with no night has the same question as a group with one, and a
+                whisper is the wrong way to ask it. */}
+            <p className="home-none display">{t('n.none')}</p>
+            <Button
+              look="primary"
+              className="home-answer h-[3.25rem] rounded-[var(--radius-control)] text-base"
+              onClick={onNight}
+            >
               {t('n.set')}
             </Button>
           </>
         ) : (
           <>
-            {/* The whole answer to "when is it again", in one line a man reads
-                without tapping anything. */}
+            {/* The day and the hour, stacked, in the biggest type in the app.
+                It is the first question a dad has when he picks up his phone
+                and it should be answered from across the kitchen. */}
             <p className="home-when" data-testid="home-when">
-              {nightDetail(t, lang, night, now)}
+              <span className="home-day display">{weekdayNames(lang)[night.weekday]}</span>
+              <span className="home-time display">{night.time}</span>
             </p>
 
-            {/* Names, not a count: a man wants to know whether HIS friend is
-                coming, which is the thing that actually decides it — and at
-                ink rather than muted for the same reason.
+            {/* Only when it is close. "in 5 days" under "Thursday 21:00" is
+                the screen saying the same thing twice in a smaller voice. */}
+            {away === null ? null : (
+              <p className="home-away" data-testid="home-away">
+                {away}
+              </p>
+            )}
 
-                Directly under the when, because the two of them are one fact:
-                this is on Thursday and these men are coming. The buttons come
-                after, where the actions on this screen belong. */}
+            {/* Names, not a count: a man wants to know whether HIS friend is
+                coming, which is the thing that actually decides it. */}
             <p className="home-coming" data-testid="home-who-coming">
               {state === null
                 ? // Not "nobody has said yet" — it has not been asked yet.
@@ -163,31 +150,62 @@ export function Home({
                       .join(' · ')}
             </p>
 
-            {/* The one thing to DO about the night, under the two lines that
-                say what it is. */}
-            <div className="home-answer">
+            {/*
+             * One question, one answer.
+             *
+             * Until he has said, both are offered: a man who cannot come must
+             * not have to say he can — the room announces an RSVP by name, and
+             * saying yes then no would put two lines in the conversation about
+             * one evening.
+             *
+             * Once he has answered it is a single button showing what he said,
+             * and pressing it changes his mind. What the press does is in the
+             * accessible name rather than on the screen, because a label
+             * explaining a button is a button that needed explaining.
+             */}
+            {mine === null ? (
+              <div className="home-answers">
+                <Button
+                  look="primary"
+                  className="home-answer h-[3.25rem] rounded-[var(--radius-control)] text-base"
+                  disabled={busy}
+                  onClick={() => void answer(true)}
+                  data-testid="home-in"
+                >
+                  <Check size={18} aria-hidden="true" />
+                  {t('n.im_in')}
+                </Button>
+                <Button
+                  className="home-answer h-[3.25rem] rounded-[var(--radius-control)] text-base"
+                  disabled={busy}
+                  onClick={() => void answer(false)}
+                  data-testid="home-out"
+                >
+                  <X size={18} aria-hidden="true" />
+                  {t('n.cant')}
+                </Button>
+              </div>
+            ) : (
               <Button
-                look={mine?.coming === true ? 'primary' : 'plain'}
+                look={mine.coming ? 'primary' : 'plain'}
+                className="home-answer h-[3.25rem] rounded-[var(--radius-control)] text-base"
                 disabled={busy}
-                onClick={() => void answer(true)}
-                data-testid="home-in"
+                onClick={() => void answer(!mine.coming)}
+                aria-label={mine.coming ? t('n.youre_in_change') : t('n.youre_out_change')}
+                data-testid={mine.coming ? 'home-in' : 'home-out'}
+                data-coming={mine.coming ? 'yes' : 'no'}
               >
-                <Check size={15} aria-hidden="true" />
-                {t('n.im_in')}
+                {mine.coming ? (
+                  <Check size={18} aria-hidden="true" />
+                ) : (
+                  <X size={18} aria-hidden="true" />
+                )}
+                <span aria-hidden="true">{mine.coming ? t('n.youre_in') : t('n.youre_out')}</span>
               </Button>
-              <Button
-                look={mine?.coming === false ? 'danger' : 'plain'}
-                disabled={busy}
-                onClick={() => void answer(false)}
-                data-testid="home-out"
-              >
-                <X size={15} aria-hidden="true" />
-                {t('n.cant')}
-              </Button>
-            </div>
+            )}
 
             {items === 0 ? null : (
-              <Button look="quiet" className="justify-self-start px-0" onClick={onNight}>
+              <Button look="quiet" className="home-items" onClick={onNight}>
                 {t(`home.items_${plural(lang, items)}`, { n: items })}
                 <ArrowRight size={15} aria-hidden="true" />
               </Button>
@@ -196,59 +214,28 @@ export function Home({
         )}
       </section>
 
-      {/*
-       * The other of the two, and the size of the way in is the point: the
-       * night is what this thing IS, and the conversation is what it is for.
-       * Home says those two and nothing else — what is waiting for HIM is
-       * behind the Menu button, where it already lives and already carries
-       * its mark.
-       *
-       * Who is about sits under the way in rather than in a block of its own.
-       * It is not a separate question: it is the thing that decides whether
-       * going in is worth doing now.
-       */}
-      <section className="home-talk">
-        <h2 className="sr-only">{t('home.talk')}</h2>
-
-        <Button look="primary" className="home-go" onClick={onGo} data-testid="home-go">
-          <span>{t('home.go')}</span>
-          {unseen > 0 ? (
-            <span className="home-new" data-testid="home-new">
-              {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
-            </span>
-          ) : null}
-        </Button>
-
-        {connection !== 'open' && others.length === 0 ? (
-          // Nothing to show AND not sure — which is the first second of every
-          // cold open. Saying "nobody" before the socket has spoken is the app
-          // inventing bad news, and correcting itself a moment later. A
-          // reconnect keeps the last roster instead: it was true a moment ago.
-          <p className="m-0 text-[0.9375rem] text-muted">…</p>
-        ) : others.length === 0 ? (
-          <p className="m-0 text-[0.9375rem] text-muted">{t('home.quiet')}</p>
-        ) : (
-          // Names, not a count. "3 here" is a number a man reads as a quorum;
-          // which of his friends is actually about is the thing he opened the
-          // app to find out, and it is the same reasoning as the RSVP list
-          // above. The faces are who, the words are who as well — one is for
-          // the glance and the other is for certainty.
-          <button type="button" className="home-faces" onClick={onWho} data-testid="home-faces">
-            <span className="home-face-row">
-              {others.slice(0, 6).map((m) => (
-                <Face
-                  key={m.memberId}
-                  memberId={m.memberId}
-                  name={m.name}
-                  version={members.find((x) => x.memberId === m.memberId)?.face}
-                  size={32}
-                />
-              ))}
-            </span>
-            <span className="home-names">{others.map((m) => m.name).join(', ')}</span>
-          </button>
+      {/* The door. Talking is what the night is for, so it is a whole control
+          of its own — and it says how many lines are waiting, so the man who
+          only came to talk spends one tap and knows why. */}
+      <Button
+        look="primary"
+        className={cn(
+          'home-go h-[3.75rem] w-full rounded-[var(--radius-card)] px-5 text-[1.0625rem]',
+          // Split when there is a count to put at the far end, centred when the
+          // label is alone: `justify-between` with one child leaves it hanging
+          // off the left of a 3.75rem bar.
+          unseen > 0 ? 'justify-between' : 'justify-center',
         )}
-      </section>
+        onClick={onGo}
+        data-testid="home-go"
+      >
+        <span>{t('home.go')}</span>
+        {unseen > 0 ? (
+          <span className="home-new" data-testid="home-new">
+            {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
+          </span>
+        ) : null}
+      </Button>
     </div>
   );
 }

@@ -48,7 +48,9 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   // lands on home, where the night is the first thing on the screen rather
   // than a line in the header — the header does not repeat it there.
   await marc.reload();
-  await expect(marc.getByTestId('home-when')).toContainText('Thursdays at 21:00');
+  const when = marc.getByTestId('home-when');
+  await expect(when).toContainText('Thursday');
+  await expect(when).toContainText('21:00');
   await talk(marc);
   await expect(marc.getByTestId('night-soon')).toBeVisible();
 

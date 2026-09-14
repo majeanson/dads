@@ -20,7 +20,8 @@ test('the night reads the same on home, the header, the menu and the sheet', asy
   // And on home, where it is the largest thing on the screen and the header
   // does not repeat it.
   await marc.getByTestId('go-home').click();
-  await expect(marc.getByTestId('home-when')).toContainText(/at \d\d:\d\d/);
+  // The day over the hour, two lines, no "at" between them.
+  await expect(marc.getByTestId('home-when')).toContainText(/\d\d:\d\d/);
   await expect(marc.getByTestId('night-soon')).toHaveCount(0);
   await talk(marc);
   await marc.getByRole('button', { name: 'Menu' }).click();

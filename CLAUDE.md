@@ -456,38 +456,32 @@ secret, custom domain bound by the route in wrangler.toml.
   question a dad has when he picks up his phone is not "what was said": it is
   when the night is, and that used to be a countdown that only appeared inside
   24 hours.
-- **Home is TWO things** (2026-09-13): the night — what this is, and when it
-  is — and the conversation, which is what it is for. Nothing else, and that
-  is the rule rather than the current state: a home screen that lists four
-  blocks ranks none of them. What is waiting for HIM came off it and stays
-  behind the Menu button, where it already lived and already carries its mark.
-  Who is about is not a third block either — it sits under the way in, because
-  it is not a separate question but the thing that decides whether going in is
-  worth doing now. Anything proposed for this screen has to displace one of
-  the two, not join them.
-- **The two blocks take the phone's screen between them** (2026-09-14). The
-  night at the top where the eye lands, the way in at the bottom where the
-  thumb is, and the empty space in the middle rather than all of it
-  underneath — which is also what says there are two. `align-content:
-space-between`, and only below 48rem: a mouse does not care where a button
-  is, and 400px of air between two blocks on a laptop reads as a mistake.
-  Above the content's own height it does nothing and the screen scrolls.
-- **When it is, is the biggest thing on the screen**, and it gets there on
-  size alone — `clamp(1.5rem, 6.5vw, 1.875rem)`, no webfont and no extra
-  weight. The face is reserved for names and titles, and a quiet hero is
-  still a hero. The empty state ("No dad night yet") is the same size for the
-  same reason: a group with no night has the same question as a group with
-  one, and a whisper is the wrong way to ask it.
-- **Facts, then the action.** When it is and who is coming are one breath and
-  sit together; the two answer buttons come under them. It was when → buttons
-  → who, which put a control in the middle of a sentence.
-- **The two blocks are not labelled on the screen** (2026-09-14). "Dad night"
-  sat over a line reading "Thursdays at 21:00" with "I'm in" under it, and
-  "The conversation" sat over a button reading "Go and talk". A word that
-  names what the next line already says is the app talking about itself. The
-  `h2`s are still there and still say it — `sr-only`, because the structure of
-  a page is real to a screen reader — and Tailwind's `sr-only` is absolutely
-  positioned, so neither heading takes a grid row.
+- **Home asks ONE question** (2026-09-14): are you coming on Thursday. The day
+  and the hour stacked in the biggest type in the app, how far off it is, who
+  has said yes, one button to answer with — and then a door into the
+  conversation, because talking is what the night is for. It was two blocks
+  before that and four before them; a screen that asks two questions gets
+  neither answered. Who is about came off it (the header counts them, and that
+  count is the way into the roster) and so did what is waiting for HIM, which
+  lives behind the Menu button and carries its own mark. Anything proposed for
+  this screen has to displace the night or the door, not join them.
+- **The card is the one place the app is not square.** `--radius-card` and
+  `--radius-control` against the app's own 4px: a screen with a single thing on
+  it reads as being ABOUT that thing when the thing has an edge. The surface is
+  `--bg-soft`, the same panel the composer and the sheets use — no new colour,
+  and `audit:contrast` already checks text and muted on it in both themes.
+  **The shapes are passed as Tailwind classes, not as CSS**: utilities are
+  layered after the hand-written sheet, so `rounded-app` on the Button would
+  beat a `.home-go { border-radius }` rule. `cn` resolves it the caller's way.
+- **The display face touches a fourth thing**, and the first that is not a
+  name: the day and the hour on home. It was the door's wordmark, the group's
+  name and a sheet's title. Still nothing a dad reads a SENTENCE of.
+- **Both answers until he has given one, then a single button showing what he
+  said.** Pressing it changes his mind. Not a toggle from the start: an RSVP is
+  announced in the room by name, so a man who cannot come must not have to say
+  he can and then take it back — that is two lines in the conversation about
+  one evening. What the press does is in the accessible name, never on the
+  screen; a label explaining a button is a button that needed explaining.
 - **It is a VIEW, not a route.** `data-view` on `main.room`; the socket, the
   call and the table all live above it. So switching costs nothing, presence
   is live rather than polled, and going in is instant rather than a reconnect.
@@ -528,23 +522,20 @@ space-between`, and only below 48rem: a mouse does not care where a button
   said otherwise a foot below. It re-reads on the newest `rsvp` or
   `item_added` seq — that kind of line, not any line, because a chatty evening
   is not a reason to re-read the night thirty times.
-- **Home never asserts a fact it has not been told.** The roster comes off the
-  socket and home paints before the socket has said anything, so an empty
-  roster at that moment means "I do not know" — and it used to render
-  "Nobody else is here right now", which is the app inventing bad news and
-  correcting itself a second later. The same for who is coming, which said
-  "Nobody has said yet" before the fetch had landed. Both show `…` instead,
-  which is the vocabulary the roster sheet already uses. A RECONNECT keeps the
-  last roster rather than falling back to `…`: it was true a moment ago, and a
-  wifi hop should not blank the screen.
+- **Home never asserts a fact it has not been told.** Who is coming is fetched
+  rather than pushed, and home paints before the answer lands — so nothing at
+  that moment means "I do not know", and printing "Nobody has said yet" is the
+  app inventing bad news about turnout and correcting itself a second later.
+  It shows `…` instead, which is the vocabulary the roster sheet already uses.
+  The same rule once covered the roster on home, back when home had one.
 - **The header does not repeat what home says.** The night line is hidden on
   home, where the same thing is the first item on the screen at four times the
   size. The MARK is the exception now, and it was not always: it was hidden
   there too while home listed the very items it stood for, an inch below it.
   Those items are behind the Menu button again, so hiding the mark on home
   would leave a dad with no sign at all that a question is waiting for him.
-- **Who is coming reads at ink.** It was `text-muted` — the same grey as the
-  section label above it — and it is the thing that actually decides turnout.
+- **Who is coming reads at ink**, under the day and the hour: it is the thing
+  that actually decides turnout, and it was the same grey as everything else.
 - e2e: `talk(page)` (`e2e/talk.ts`, and `prod/names.ts`) steps into the
   conversation and is idempotent, because these suites walk through screens
   and it must not matter which one the last step left him on.

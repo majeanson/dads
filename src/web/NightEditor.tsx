@@ -18,6 +18,27 @@ function countdownIn(t: T, lang: Lang, ms: number): string {
 }
 
 /**
+ * How far off it is, and nothing about which day — home says the day and the
+ * hour in type four times this size, directly above.
+ *
+ * Null for a night that is set but not close enough to count down to, which
+ * on home is most of the week: "in 5 days" under "Thursday 21:00" is the
+ * screen saying the same thing twice in a smaller voice.
+ */
+export function nightAway(t: T, lang: Lang, night: DadNight, now: number): string | null {
+  const phase = phaseOf(night, now);
+  if (phase?.kind === 'live') return t('n.soon_live');
+  if (phase?.kind === 'upcoming' && phase.startsIn <= AWAY_MS) {
+    return countdownIn(t, lang, phase.startsIn);
+  }
+  return null;
+}
+
+/** Far enough out that a countdown stops being news. Three days: inside that
+ * a man still has the evening to arrange around. */
+const AWAY_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
  * The standing appointment, in as few words as it can be said.
  *
  * Two readings of the same thing: `nightSoon` is what the room shows, and only

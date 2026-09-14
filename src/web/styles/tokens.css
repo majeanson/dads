@@ -64,6 +64,12 @@
   --danger: #a72f22;
 
   --radius: 4px;
+  /* The one place the app is not square: home's card and the two controls on
+     it. A screen with a single thing on it reads as being ABOUT that thing
+     when the thing has an edge, and a 4px edge is not one. Nothing else in
+     the app uses these — the conversation stays square. */
+  --radius-card: 1.25rem;
+  --radius-control: 0.875rem;
   --gap: 0.75rem;
 
   color-scheme: light dark;
@@ -461,15 +467,14 @@
     display: grid;
   }
 
-  /* On a phone the two blocks take the screen between them: the night at the
-     top where the eye lands, the way in at the bottom where the thumb is, and
-     the empty space in the middle rather than all of it underneath. It is
-     also what says there are two of them. Once the content is taller than the
-     screen this does nothing and the list simply scrolls.
+  /* On a phone the card and the door take the screen between them: the night
+     at the top where the eye lands, the way in at the bottom where the thumb
+     is, and the empty space in the middle rather than all of it underneath.
+     Once the content is taller than the screen this does nothing and the list
+     simply scrolls.
 
      Not above 48rem: a mouse does not care where the button is, and 400px of
-     air between two blocks on a laptop reads as a mistake rather than as a
-     decision. */
+     air on a laptop reads as a mistake rather than as a decision. */
   @media (max-width: 48rem) and (min-height: 34rem) {
     .room[data-view='home'] .home {
       align-content: space-between;
@@ -480,91 +485,87 @@
     display: none;
   }
 
-  /* The two blocks, and there are only two: the night, and the conversation.
-     Everything else the app can do is behind the Menu button. */
-  .home-night,
-  .home-talk {
+  /*
+   * The card the night sits on.
+   *
+   * A tinted surface with a big radius, which is how a screen with one thing
+   * on it reads as being ABOUT that thing rather than as a page that happens
+   * to start with it. The palette is unchanged: it is --bg-soft, the same
+   * surface the composer and the sheets already use.
+   */
+  .home-card {
     display: grid;
-    gap: 0.6rem;
-    justify-items: start;
-  }
-
-  /* The way in is the widest thing in its block and the faces sit under it,
-     so this one stretches rather than shrink-wrapping each row. */
-  .home-talk {
     justify-items: stretch;
+    gap: 0.5rem;
+    border-radius: var(--radius-card);
+    background: var(--bg-soft);
+    padding: 2rem 1.5rem;
   }
 
-  /* When it is, and it is the biggest thing on the screen on purpose: it is
-     the first question a dad has when he picks the phone up. Size alone does
-     the work — no webfont, because nothing he reads a sentence of changes
-     face, and no weight, because a quiet hero is still a hero. */
+  /* The day and the hour, stacked and huge: the one question this screen
+     asks, answerable from across the kitchen. The display face, which until
+     now was the door, the group's name and a sheet's title — this is the
+     fourth thing it touches and the first that is not a name. */
   .home-when {
+    display: grid;
     margin: 0;
-    font-size: clamp(1.5rem, 6.5vw, 1.875rem);
-    line-height: 1.15;
+    gap: 0.1rem;
+  }
+
+  .home-day,
+  .home-time {
+    font-size: clamp(2.5rem, 13vw, 3.5rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .home-time {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* A group with no night reads a SENTENCE here, not a name, and a sentence
+     at the day-and-hour size is the app shouting. Large enough to be the
+     thing on the screen, small enough to be read. */
+  .home-none {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.75rem, 8vw, 2.25rem);
+    line-height: 1.1;
     text-wrap: balance;
   }
 
-  /* One fact with the line above it, so it sits close enough to be read as
-     part of the same breath. */
+  /* How far off it is, and only when that is news. */
+  .home-away {
+    margin: 0;
+    color: var(--muted);
+    font-size: 1.0625rem;
+  }
+
+  /* Who has said yes, at ink: it is the thing that actually decides turnout. */
   .home-coming {
-    margin: -0.15rem 0 0;
-    font-size: 0.9375rem;
+    margin: 0.4rem 0 0;
+    font-size: 1.0625rem;
     text-wrap: pretty;
   }
 
-  /* And the actions after the facts, with air between. */
-  .home-answer {
-    display: flex;
-    flex-wrap: wrap;
+  /* Both answers while he has given neither, side by side and equal: a man
+     who cannot come must not have to say he can. */
+  .home-answers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
-    margin-top: 0.35rem;
+    margin-top: 0.5rem;
   }
 
-  /* The way in, and the size of it is the point: it is the second of the two
-     things this screen is for, and the only one that is a button. */
-  .home-go {
-    width: 100%;
-    height: 3.5rem;
-    justify-content: space-between;
-    font-size: 1.125rem;
+  /* What the week has collected, and nothing if it has collected nothing. */
+  .home-items {
+    justify-self: start;
+    padding-inline: 0;
   }
 
   .home-new {
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     font-variant-numeric: tabular-nums;
     opacity: 0.85;
-  }
-
-  .home-faces {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    min-height: 2.75rem;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--text);
-    font: inherit;
-    font-size: 0.9375rem;
-    cursor: pointer;
-  }
-
-  /* A plain row. An overlapped stack is the stock way to draw this and it
-     reads as a product doing a trick — five friends do not need their faces
-     shingled, and at this size the rings that make it work crowd each other. */
-  .home-face-row {
-    display: flex;
-    gap: 0.35rem;
-  }
-
-  /* Who is about, by name. Wraps rather than truncating: five names is two
-     lines at worst, and a list that ends in an ellipsis answers nothing. */
-  .home-names {
-    min-width: 0;
-    text-align: left;
-    text-wrap: pretty;
   }
 
   .stage {

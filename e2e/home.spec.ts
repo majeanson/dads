@@ -53,7 +53,10 @@ test('home says when the night is, and takes his answer', async ({ browser }) =>
   await marc.getByRole('button', { name: 'Save' }).click();
   await marc.getByRole('button', { name: 'Close', exact: true }).click();
 
-  await expect(marc.getByTestId('home-when')).toContainText('Thursdays at 21:00');
+  // Stacked, so the day and the hour are two lines rather than a sentence.
+  const when = marc.getByTestId('home-when');
+  await expect(when).toContainText('Thursday');
+  await expect(when).toContainText('21:00');
 
   // Answering is on home rather than two taps into a sheet: who is coming is
   // the question that decides turnout.
@@ -63,14 +66,20 @@ test('home says when the night is, and takes his answer', async ({ browser }) =>
   await marc.context().close();
 });
 
-test('home says who is about, and counts what he has not read', async ({ browser }) => {
+test('the header counts who is about, and home counts what he has not read', async ({
+  browser,
+}) => {
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
-  // Live, because the socket is open behind home rather than opened on the
-  // way into the conversation. By name: which of his friends is about is the
-  // thing he opened the app to find out, and a count is not that.
-  await expect(marc.getByTestId('home-faces')).toContainText('Sam');
+  // Who is about is not on home any more — home asks one question, and that
+  // is not it. The header counts them live, because the socket is open behind
+  // both screens, and the count is the way into the roster. Read by NAME
+  // rather than as a number: the 15s leave grace means a dad from the test
+  // before this one can still be counted for a moment.
+  await marc.getByTestId('connection').click();
+  await expect(marc.getByTestId('here')).toContainText('Sam');
+  await marc.getByRole('button', { name: 'Close', exact: true }).click();
 
   // Sam talks while Marc is standing on home. The way in says how many.
   // Counted as a CHANGE rather than an absolute: the room's own lines are
@@ -131,13 +140,9 @@ test('what he has already read is not announced again on the next open', async (
   await sam.context().close();
 });
 
-test('home names who is about, and the header has its own way back', async ({ browser }) => {
+test('the way back is its own control, first in the header', async ({ browser }) => {
   const marc = await comeIn(browser, 'Ned');
   const sam = await comeIn(browser, 'Otto');
-
-  // Names, not only a count: which of his friends is about is what he opened
-  // the app to find out.
-  await expect(marc.getByTestId('home-faces')).toContainText('Otto');
 
   // The way back is a control of its own, not the group's name.
   await marc.getByTestId('home-go').click();
@@ -244,19 +249,19 @@ test('home says two things, and the mark says the rest wherever he stands', asyn
   await marc.context().close();
 });
 
-test('home never says nobody is about before it has been told', async ({ browser }) => {
-  // The socket is what decides who is here, and it has said nothing at the
-  // moment home first paints. An empty roster then is "I do not know", and
-  // announcing "nobody else is here" is the app inventing bad news and
-  // correcting itself a second later.
+test('home never says nobody has answered before it has asked', async ({ browser }) => {
+  // The one thing on home that is fetched rather than pushed is who is
+  // coming, and home paints before the answer lands. Nothing then is "I do
+  // not know", and printing "Nobody has said yet" is the app inventing bad
+  // news about turnout and correcting itself a second later.
   const context = await browser.newContext();
   const page = await context.newPage();
-  // Held open and never answered, so home stays in the state every cold open
-  // passes through: connecting, and told nothing. Installed before the first
-  // navigation, which is when the route has to exist.
-  let connected = false;
-  await page.routeWebSocket(/\/ws(\?|$)/, () => {
-    connected = true;
+  // Held open and never answered, which is the state every cold open passes
+  // through. Installed before the first navigation, which is when the route
+  // has to exist.
+  let asked = false;
+  await page.route('**/api/night', () => {
+    asked = true;
   });
 
   await page.goto('/');
@@ -264,18 +269,17 @@ test('home never says nobody is about before it has been told', async ({ browser
   await page.getByLabel('Your name').fill('Peregrine');
   await page.getByRole('button', { name: 'Come in' }).click();
 
-  const here = page.getByTestId('home').locator('section.home-talk');
-  await expect(here).toBeVisible();
-  await expect.poll(() => connected).toBe(true);
-  await expect(page.getByTestId('connection')).not.toHaveText(/here$/);
-  await expect(here).not.toContainText('Nobody else');
+  const coming = page.getByTestId('home-who-coming');
+  await expect(coming).toBeVisible();
+  await expect.poll(() => asked).toBe(true);
+  await expect(coming).toHaveText('…');
 
   await context.close();
 
-  // And once it HAS been told, it says so. A fresh browser, because the held
-  // socket above cannot be handed back — and a fresh dad, because a new
+  // And once it HAS been answered, it says so. A fresh browser, because the
+  // held request above cannot be handed back — and a fresh dad, because a new
   // context is a new member.
   const told = await comeIn(browser, 'Peregrine Two');
-  await expect(told.getByTestId('home').locator('section.home-talk')).toContainText('Nobody else');
+  await expect(told.getByTestId('home-who-coming')).not.toHaveText('…');
   await told.context().close();
 });
