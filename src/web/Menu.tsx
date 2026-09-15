@@ -1,6 +1,5 @@
 import {
   CalendarCheck,
-  CalendarClock,
   MessageCircleQuestion,
   Search,
   Send,
@@ -8,9 +7,7 @@ import {
   Spade,
 } from 'lucide-react';
 import type { RoomsOpen } from '../shared/protocol';
-import type { DadNight } from '../shared/dadNight';
 import type { Todo } from './api';
-import { nightItem } from './NightEditor';
 import { useT } from './i18n';
 import { Button } from './ui/Button';
 
@@ -30,14 +27,19 @@ export type SheetName =
 const ITEM = 'h-16 gap-3.5 rounded-[var(--radius-control)] px-4 text-[1.125rem]';
 
 /**
- * Everything the app can do that is not the conversation or the call, as a
- * list of plain rows in the order a dad is likely to want them.
+ * The rest of the app, as rows — and which rows depends on where he is.
  *
- * It lives in two places. On HOME it is on the screen itself, under the night
- * and the door, in what used to be empty space — so nothing there is behind a
- * button, and what is waiting for him is said in words on the row it belongs
- * to. In the CONVERSATION it is behind the Menu button, because every row it
- * would take there is a row of conversation.
+ * HOME is about the group and the week: the questions, the week, bringing
+ * somebody in, and the settings. The night is not a row here because the
+ * card above IS the night, and it carries its own way into the sheet.
+ *
+ * The CONVERSATION is about talking: the questions (answering one posts a
+ * line), the table, and finding a line said before the backfill. Nothing
+ * else — the week, the invite, the settings are one tap back, and a menu
+ * that offers everything everywhere is a menu a man has to read.
+ *
+ * The questions are on both on purpose: today's question is the day's thing
+ * to do, and its answers are the conversation.
  *
  * The marks say WHICH thing is waiting, in words, where a dot used to be: a
  * mark says "something", and something is what makes a man ignore it. A mark
@@ -48,25 +50,21 @@ export function Menu({
   view,
   rooms,
   todo,
-  night,
-  now,
   tableOpen,
   onToggleTable,
   onOpen,
 }: {
-  /** Which screen it is on, which decides whether the table is offered. */
+  /** Which screen it is on, which decides which rows it holds. */
   view: 'home' | 'talk';
   rooms: RoomsOpen;
   todo: Todo;
-  night: DadNight | null;
-  /** A coarse clock, so the night item's countdown stays honest. */
-  now: number;
   tableOpen: boolean;
   onToggleTable: () => void;
   /** Opens a sheet; null closes whatever this menu is sitting in. */
   onOpen: (sheet: SheetName | null) => void;
 }) {
-  const { t, lang } = useT();
+  const { t } = useT();
+  const home = view === 'home';
 
   return (
     <nav className="menu" aria-label="Rooms">
@@ -82,7 +80,7 @@ export function Menu({
         </Button>
       ) : null}
 
-      {rooms.week ? (
+      {home && rooms.week ? (
         <Button block className={ITEM} onClick={() => onOpen('board')}>
           <CalendarCheck size={22} aria-hidden="true" className="text-muted" />
           {t('menu.week')}
@@ -94,10 +92,9 @@ export function Menu({
         </Button>
       ) : null}
 
-      {/* Only from the conversation: the table takes the room's place on a
-          phone and sits beside it on a laptop, and from home there is no room
-          for it to take. */}
-      {rooms.table && view === 'talk' ? (
+      {/* The table takes the room's place on a phone and sits beside it on a
+          laptop; from home there is no room for it to take. */}
+      {!home && rooms.table ? (
         <Button
           block
           className={ITEM}
@@ -111,31 +108,33 @@ export function Menu({
         </Button>
       ) : null}
 
-      <Button block className={ITEM} data-testid="dad-night" onClick={() => onOpen('night')}>
-        <CalendarClock size={22} aria-hidden="true" className="text-muted" />
-        {nightItem(t, lang, night, now)}
-      </Button>
-
       {/* The way back to what was said before the backfill: the room hands
           over five hundred lines and the archive keeps every one, so for five
-          men talking for a year this is the only door to most of it. */}
-      <Button block className={ITEM} onClick={() => onOpen('find')}>
-        <Search size={22} aria-hidden="true" className="text-muted" />
-        {t('menu.find')}
-      </Button>
+          men talking for a year this is the only door to most of it. It is
+          about the conversation, so it is offered from the conversation. */}
+      {!home ? (
+        <Button block className={ITEM} onClick={() => onOpen('find')}>
+          <Search size={22} aria-hidden="true" className="text-muted" />
+          {t('menu.find')}
+        </Button>
+      ) : null}
 
       {/* Second from the bottom, not first: the room is for the dads who are
-          already in it. But it is in the menu at all because everything else
-          in this app is worth nothing until the other four are here. */}
-      <Button block className={ITEM} onClick={() => onOpen('invite')}>
-        <Send size={22} aria-hidden="true" className="text-muted" />
-        {t('menu.invite')}
-      </Button>
+          already in it. But it is here at all because everything else in this
+          app is worth nothing until the other four are here. */}
+      {home ? (
+        <Button block className={ITEM} onClick={() => onOpen('invite')}>
+          <Send size={22} aria-hidden="true" className="text-muted" />
+          {t('menu.invite')}
+        </Button>
+      ) : null}
 
-      <Button block className={ITEM} onClick={() => onOpen('settings')}>
-        <SettingsIcon size={22} aria-hidden="true" className="text-muted" />
-        {t('menu.settings')}
-      </Button>
+      {home ? (
+        <Button block className={ITEM} onClick={() => onOpen('settings')}>
+          <SettingsIcon size={22} aria-hidden="true" className="text-muted" />
+          {t('menu.settings')}
+        </Button>
+      ) : null}
     </nav>
   );
 }

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { menu, talk } from './talk';
+import { home, talk } from './talk';
 import { E2E_INVITE_GROUP } from './global-setup';
 
 test('a dad sends a link, and the man who follows it never sees the code', async ({ browser }) => {
@@ -11,9 +11,7 @@ test('a dad sends a link, and the man who follows it never sees the code', async
   await marc.getByLabel('Your name').fill('Marc');
   await marc.getByRole('button', { name: 'Come in' }).click();
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
-  await talk(marc);
-
-  await menu(marc);
+  await home(marc);
   await marc.getByRole('button', { name: 'Invite a dad' }).click();
   const link = await marc.getByTestId('invite-link').inputValue();
   expect(link).toMatch(/\/i\/[A-Za-z0-9_-]{32,}$/);

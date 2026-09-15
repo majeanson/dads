@@ -122,43 +122,14 @@ for (const size of WIDTHS) {
     });
 
     const menu = () => page.getByRole('button', { name: 'Menu' }).click();
-    const sheets: [string, () => Promise<void>][] = [
+
+    // The conversation's own scenes: its menu, the roster, the questions.
+    const chat: [string, () => Promise<void>][] = [
       ['the menu', menu],
       ['who is here', () => page.getByTestId('connection').click()],
-      [
-        'dad night',
-        async () => {
-          await menu();
-          await page.getByTestId('dad-night').click();
-        },
-      ],
-      [
-        'the invite',
-        async () => {
-          await menu();
-          await page.getByRole('button', { name: /Invite un chum/ }).click();
-        },
-      ],
-      [
-        'settings',
-        async () => {
-          await menu();
-          await page.getByRole('button', { name: 'Réglages' }).click();
-        },
-      ],
     ];
-    if (rooms.week) {
-      sheets.push([
-        'the week',
-        async () => {
-          await menu();
-          await page.getByRole('button', { name: /^La semaine/ }).click();
-          await page.getByTestId('board').waitFor();
-        },
-      ]);
-    }
     if (rooms.questions) {
-      sheets.push([
+      chat.push([
         'the questions',
         async () => {
           await menu();
@@ -167,14 +138,37 @@ for (const size of WIDTHS) {
         },
       ]);
     }
+    for (const [scene, open] of chat) {
+      await open();
+      faults.push(...(await faultsIn(page, scene)));
+      await close(page);
+    }
 
-    for (const [scene, open] of sheets) {
+    // Home's: the night from its card, and the rows under the door.
+    await page.getByTestId('go-home').click();
+    await page.waitForTimeout(600);
+    const rows: [string, () => Promise<void>][] = [
+      ['dad night', () => page.getByTestId('dad-night').click()],
+      ['the invite', () => page.getByRole('button', { name: /Invite un chum/ }).click()],
+      ['settings', () => page.getByRole('button', { name: 'Réglages' }).click()],
+    ];
+    if (rooms.week) {
+      rows.push([
+        'the week',
+        async () => {
+          await page.getByRole('button', { name: /^La semaine/ }).click();
+          await page.getByTestId('board').waitFor();
+        },
+      ]);
+    }
+    for (const [scene, open] of rows) {
       await open();
       faults.push(...(await faultsIn(page, scene)));
       await close(page);
     }
 
     if (rooms.table) {
+      await page.getByTestId('home-go').click();
       await menu();
       await page.getByRole('button', { name: /Ouvre la table/ }).click();
       await page.waitForTimeout(2000);

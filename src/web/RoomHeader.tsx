@@ -44,7 +44,7 @@ export function RoomHeader({
   /** The countdown, but only inside 24 hours. Null the rest of the week. */
   soon: string | null;
   callState: CallState;
-  /** Something is waiting for HIM — a question, a week to fill in. */
+  /** A question is waiting for him: the one thing in this menu that can. */
   waiting: boolean;
   onHome: () => void;
   onWho: () => void;

@@ -112,7 +112,13 @@ export function Home({
                 with no night has the same question as a group with one, and a
                 whisper is the wrong way to ask it. */}
             <p className="home-none display">{t('n.none')}</p>
-            <Button look="primary" size="lg" className="home-answer" onClick={onNight}>
+            <Button
+              look="primary"
+              size="lg"
+              className="home-answer"
+              onClick={onNight}
+              data-testid="dad-night"
+            >
               {t('n.set')}
             </Button>
           </>
@@ -211,12 +217,16 @@ export function Home({
               </Button>
             )}
 
-            {items === 0 ? null : (
-              <Button look="quiet" className="home-items" onClick={onNight}>
-                {t(`home.items_${plural(lang, items)}`, { n: items })}
-                <ArrowRight size={15} aria-hidden="true" />
-              </Button>
-            )}
+            {/* The way into the rest of the night — what to get into, the
+                calendar, changing it. Always here, because the card is the
+                only place the night lives on this screen: there is no Dad
+                night row under it saying the same thing twice. */}
+            <Button look="quiet" className="home-items" onClick={onNight} data-testid="dad-night">
+              {items === 0
+                ? t('home.night_more')
+                : t(`home.items_${plural(lang, items)}`, { n: items })}
+              <ArrowRight size={15} aria-hidden="true" />
+            </Button>
           </>
         )}
       </section>

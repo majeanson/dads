@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { menu, talk } from './talk';
+import { home, talk } from './talk';
 import { E2E_BOARD_GROUP } from './global-setup';
 
 // One group, one shared board.
@@ -14,8 +14,10 @@ test.describe.configure({ mode: 'serial' });
  * "The week — something waiting", which is exactly what a screen reader should
  * hear, and the label is the prefix.
  */
-async function open(page: Page, name: 'Questions' | 'The week' | 'Open the table' | 'Dad night') {
-  await menu(page);
+async function open(page: Page, name: 'The week') {
+  // The week is about the group, so it is a row on home and not in the
+  // conversation's menu.
+  await home(page);
   await page
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: new RegExp(`^${name}`) })
@@ -43,12 +45,9 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
-  // A blank week is something waiting, and the room says so on its one
-  // button before you have opened anything.
-  await expect(marc.getByTestId('mark-menu')).toBeVisible();
-
-  // The menu is where it says WHICH thing is waiting.
-  await menu(marc);
+  // A blank week is something waiting, and home says so in words on the
+  // row itself before he has opened anything.
+  await home(marc);
   await expect(marc.getByTestId('mark-board')).toBeVisible();
   await marc
     .getByRole('navigation', { name: 'Rooms' })

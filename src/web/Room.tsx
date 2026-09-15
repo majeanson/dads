@@ -191,7 +191,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     .filter(([id]) => id !== session.member.id)
     .map(([, name]) => name);
 
-  const waiting = (todo.prompt && room.rooms.questions) || (todo.board && room.rooms.week);
+  // The conversation's menu holds the questions and nothing else that waits
+  // on him: the week is on home, where its own row says so in words.
+  const waiting = todo.prompt && room.rooms.questions;
   const soon = nightSoon(t, lang, room.night, now);
 
   /** A member id as a name, for the marks. The roster is five people long. */
@@ -324,8 +326,6 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               view="home"
               rooms={room.rooms}
               todo={todo}
-              night={room.night}
-              now={now}
               tableOpen={tableOpen}
               onToggleTable={() => setTableOpen((v) => !v)}
               onOpen={setSheet}
@@ -408,7 +408,6 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         night={room.night}
         rooms={room.rooms}
         todo={todo}
-        now={now}
         tableOpen={tableOpen}
         faceOf={faceOf}
         onToggleTable={() => setTableOpen((v) => !v)}

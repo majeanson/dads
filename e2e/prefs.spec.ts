@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { menu, talk } from './talk';
+import { home, menu, talk } from './talk';
 import { E2E_PREFS_GROUP } from './global-setup';
 
 // One group, and each test brings its own dad.
@@ -17,20 +17,20 @@ async function comeIn(page: Page, name: string) {
 test('a dad reads the room in French, and it stays French', async ({ page }) => {
   await comeIn(page, 'Marc');
 
-  await menu(page);
+  await home(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'FR', exact: true }).click();
 
-  // The whole app turns over: the sheet he is standing in, the menu behind
-  // it, and the room behind that.
+  // The whole app turns over: the sheet he is standing in, home behind it,
+  // and the conversation and its menu behind that.
   await expect(page.getByTestId('settings')).toContainText('Sur cet appareil');
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
-  await menu(page);
-  await expect(page.getByRole('button', { name: 'Ouvre la table' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Réglages' })).toBeVisible();
-  await page.getByRole('button', { name: 'Ferme', exact: true }).click();
   await expect(page.getByTestId('connection')).toHaveText(/ici$/);
   await talk(page);
+  await menu(page);
+  await expect(page.getByRole('button', { name: 'Ouvre la table' })).toBeVisible();
+  await page.getByRole('button', { name: 'Ferme', exact: true }).click();
   await expect(page.getByLabel('Dis quelque chose')).toBeVisible();
 
   // Including the page's own language, which is what a screen reader and a
@@ -44,7 +44,7 @@ test('a dad reads the room in French, and it stays French', async ({ page }) => 
   await talk(page);
 
   // And back again.
-  await menu(page);
+  await home(page);
   await page.getByRole('button', { name: 'Réglages' }).click();
   await page.getByRole('button', { name: 'EN', exact: true }).click();
   await expect(page.getByTestId('settings')).toContainText('On this device');
@@ -56,7 +56,7 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   // Nothing is stamped on the page until he asks: the phone decides.
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
 
-  await menu(page);
+  await home(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Dark' }).click();
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
@@ -78,7 +78,7 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   await talk(page);
 
   // Handing it back to the phone takes the stamp off again.
-  await menu(page);
+  await home(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Follow the phone' }).click();
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
@@ -95,18 +95,18 @@ test('what the room says about itself is read in each dad’s own language', asy
   await comeIn(marc, 'Marc');
   await comeIn(sam, 'Sam');
 
-  await menu(marc);
+  await home(marc);
   await marc.getByRole('button', { name: 'Settings' }).click();
   await marc.getByRole('button', { name: 'FR', exact: true }).click();
 
-  // Marc sets the night, in French, from the menu's dad-night item.
+  // Marc sets the night, in French, from home's card.
   await marc.getByRole('button', { name: 'Ferme', exact: true }).click();
-  await menu(marc);
   await marc.getByTestId('dad-night').click();
   await marc.getByLabel('Jour').selectOption('4');
   await marc.getByLabel('Heure').fill('21:00');
   await marc.getByRole('button', { name: 'Enregistre' }).click();
   await marc.getByRole('button', { name: 'Ferme', exact: true }).click();
+  await talk(marc);
 
   // The same event, two rooms, two languages.
   await expect(
@@ -117,10 +117,11 @@ test('what the room says about itself is read in each dad’s own language', asy
   ).toBeVisible();
 
   // And Sam switching over re-reads the line he already has.
-  await menu(sam);
+  await home(sam);
   await sam.getByRole('button', { name: 'Settings' }).click();
   await sam.getByRole('button', { name: 'FR', exact: true }).click();
   await sam.getByRole('button', { name: 'Ferme', exact: true }).click();
+  await talk(sam);
   await expect(
     sam.getByTestId('line').filter({ hasText: 'a mis la soirée de gars les jeudis à 21:00' }),
   ).toBeVisible();
@@ -140,11 +141,11 @@ test('the day’s question is asked in the language it is read in', async ({ pag
   const english = await page.getByTestId('prompt-body').textContent();
 
   await page.getByRole('button', { name: 'Close', exact: true }).click();
-  await menu(page);
+  await home(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'FR', exact: true }).click();
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
-  await menu(page);
+  // The questions are on home too — the day's thing to do.
   await page
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: /^Les questions/ })
@@ -186,7 +187,7 @@ test('the phone’s own chrome follows the theme it was asked for', async ({ pag
   // Nothing fixed while the phone decides: the media-query pair holds.
   expect(await bar()).toBeNull();
 
-  await menu(page);
+  await home(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Dark' }).click();
   expect(await bar()).toBe('#121314');
@@ -206,7 +207,7 @@ test('a dad changes the name he goes by, and the others are told', async ({ brow
   const samPage = await sam.newPage();
   await comeIn(samPage, 'Hank');
 
-  await menu(marcPage);
+  await home(marcPage);
   await marcPage.getByRole('button', { name: 'Settings' }).click();
   await marcPage.getByTestId('my-name').fill('Gus-antoine');
   await marcPage.getByTestId('you').getByRole('button', { name: 'Save' }).click();

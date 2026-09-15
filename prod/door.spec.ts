@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { CODE, named, talk } from './names';
+import { CODE, home, named, talk } from './names';
 
 /**
  * The front door, against the real PBKDF2 and the real throttle.
@@ -90,9 +90,7 @@ test('a link opens the door, and a dead one is just a wrong code', async ({ brow
   await page.getByLabel('Your name').fill(named('host'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
-  await talk(page);
-
-  await page.getByRole('button', { name: 'Menu' }).click();
+  await home(page);
   await page.getByRole('button', { name: 'Invite a dad' }).click();
   const link = await page.getByTestId('invite-link').inputValue();
   expect(link).toMatch(/^https:\/\/.+\/i\/[A-Za-z0-9_-]{32,}$/);

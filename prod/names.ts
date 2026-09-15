@@ -81,3 +81,13 @@ export async function talk(page: Page): Promise<void> {
   }
   await expect(room).toHaveAttribute('data-view', 'talk');
 }
+
+/** Back to home, from wherever he is. Idempotent, like `talk`. */
+export async function home(page: Page): Promise<void> {
+  const room = page.locator('main.room');
+  await expect(room).toBeVisible();
+  if ((await room.getAttribute('data-view')) === 'talk') {
+    await page.getByTestId('go-home').click();
+  }
+  await expect(room).toHaveAttribute('data-view', 'home');
+}

@@ -498,13 +498,21 @@ secret, custom domain bound by the route in wrangler.toml.
   lives behind the Menu button and carries its own mark. Anything proposed for
   this screen has to displace the night or the door, not join them.
 - **The menu is on home** (2026-09-15), under the door, in what was empty
-  space: the same `Menu` component the conversation shows in a sheet, minus
-  the table, which only makes sense beside a conversation. This is the one
+  space: the same `Menu` component the conversation shows in a sheet, and
+  **which rows it holds depends on the screen**. Home is about the group and
+  the week — Questions, The week, Invite, Settings. The conversation is about
+  talking — Questions, the table, Find. Nothing is on both except the
+  questions, which are the day's thing to do AND the conversation's raw
+  material. **There is no Dad night row anywhere**: home's card IS the night
+  and always carries its own way into the sheet (`dad-night` on the card's
+  quiet link, or on "Set dad night" when there is none). This is the one
   exception to "displace the night or the door": the rows sit below both and
-  take nothing from them, and they put the whole app one tap from the screen
-  it opens on. `Home` takes it as a `menu` ReactNode, so it knows nothing
-  of the menu's props. e2e opens it with `menu(page)` (`e2e/talk.ts`),
-  which presses Menu only where there is one. **The rows are in the tree only
+  take nothing from them. `Home` takes the menu as a `menu` ReactNode, so
+  it knows nothing of the menu's props. e2e: `menu(page)` presses Menu only
+  where there is one, `home(page)` is `talk`'s mirror, and `night(page)`
+  goes home and opens the card (`e2e/talk.ts`; `prod/names.ts` has
+  `home`). A spec opens home-side things from home and chat-side things from
+  the chat, and steps back into the conversation before asserting on a line. **The rows are in the tree only
   while home is the screen showing**: home stays mounted behind the
   conversation, and `getByTestId` does not care about `display: none` — with
   the menu sheet open, `dad-night` and `mark-board` matched twice and four
@@ -667,7 +675,8 @@ neither see nor scroll anything.
   do not. Anything added above the message list has to earn its row by being
   worth the row of conversation it costs.
 - **Everything else is behind the one Menu button** in the conversation, and
-  on the screen itself on home: who's here, Prompts,
+  on the screen itself on home — split by what each screen is for, see
+  **Home**: who's here, Prompts,
   Board, the table, dad night, sign out. Each opens as a `Sheet` — a native
   `<dialog>`, so the focus trap, Escape, the inert background and the backdrop
   come from the platform. Sheets mount on open, so each reads fresh data.

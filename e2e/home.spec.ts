@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { E2E_HOME_GROUP } from './global-setup';
-import { menu, talk } from './talk';
+import { night, talk } from './talk';
 
 /**
  * Where the app opens.
@@ -46,8 +46,8 @@ test('the app opens on home, and the conversation is one tap away', async ({ bro
 test('home says when the night is, and takes his answer', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
 
-  // Set from the menu, which is reachable from home like everything else.
-  await menu(marc);
+  // Set from the card itself: the night has no row of its own, on home or in
+  // the conversation, because the card IS the night.
   await marc.getByTestId('dad-night').click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
@@ -165,8 +165,7 @@ test('home keeps up with who is coming while he sits on it', async ({ browser })
 
   // Marc stays on home. Sam goes and answers from the sheet.
   await expect(marc.getByTestId('home')).toBeVisible();
-  await menu(sam);
-  await sam.getByTestId('dad-night').click();
+  await night(sam);
   await sam.getByTestId('rsvp-in').click();
   await expect(sam.getByTestId('rsvp-who')).toContainText('Quill');
 

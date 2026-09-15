@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { menu, talk } from './talk';
+import { night, talk } from './talk';
 import { E2E_NIGHT_GROUP } from './global-setup';
 
 // One group, one schedule: these would overwrite each other in parallel.
@@ -27,12 +27,13 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   // With no night set the room says nothing about it anywhere.
   await expect(sam.getByTestId('night-soon')).toHaveCount(0);
 
-  // It is set where it is answered: the menu's own dad-night item.
-  await menu(marc);
-  await marc.getByTestId('dad-night').click();
+  // It is set where it is answered: home's card, which is the night.
+  await night(marc);
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
   await marc.getByRole('button', { name: 'Save' }).click();
+  await marc.getByRole('button', { name: 'Close', exact: true }).click();
+  await talk(marc);
 
   // Both headers carry it without a reload: "when is it again" should not
   // cost anybody a tap.
@@ -79,8 +80,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   ).toBeVisible();
 
   // Sam sees it in his own sheet, and cannot take back what he did not write.
-  await menu(sam);
-  await sam.getByTestId('dad-night').click();
+  await night(sam);
   const samsView = sam.getByTestId('agenda-item').filter({ hasText: 'bedtime' });
   await expect(samsView).toBeVisible();
   await expect(samsView.getByRole('button', { name: 'Take it back' })).toHaveCount(0);

@@ -39,7 +39,6 @@ export function Sheets({
   night,
   rooms,
   todo,
-  now,
   tableOpen,
   faceOf,
   onToggleTable,
@@ -61,8 +60,6 @@ export function Sheets({
   night: DadNight | null;
   rooms: RoomsOpen;
   todo: Todo;
-  /** A coarse clock, so the night item's countdown stays honest. */
-  now: number;
   tableOpen: boolean;
   faceOf: (memberId: string | null) => number | undefined;
   onToggleTable: () => void;
@@ -83,8 +80,6 @@ export function Sheets({
           view={view}
           rooms={rooms}
           todo={todo}
-          night={night}
-          now={now}
           tableOpen={tableOpen}
           onToggleTable={onToggleTable}
           onOpen={onOpen}

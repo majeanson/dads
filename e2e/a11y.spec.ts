@@ -80,16 +80,34 @@ for (const theme of ['light', 'dark'] as const) {
     found.push(...(await faults(page, 'who is here')));
     await close();
 
-    const items: [string, RegExp][] = [
-      ['dad night', /^Set dad night/],
-      ['the week', /^The week/],
+    // What the conversation's menu holds.
+    const chat: [string, RegExp][] = [
       ['the questions', /^Questions/],
+      ['finding a line', /^Find something/],
+    ];
+    for (const [scene, name] of chat) {
+      await menu();
+      await page.getByRole('button', { name }).click();
+      await page.waitForTimeout(400);
+      found.push(...(await faults(page, scene)));
+      await close();
+    }
+
+    // And what home holds: the night, from its card, and the rows under the
+    // door.
+    await page.getByTestId('go-home').click();
+    await page.getByTestId('dad-night').click();
+    await page.waitForTimeout(400);
+    found.push(...(await faults(page, 'dad night')));
+    await close();
+
+    const rows: [string, RegExp][] = [
+      ['the week', /^The week/],
       ['settings', /^Settings/],
       ['the invite', /^Invite a dad/],
     ];
-    for (const [scene, name] of items) {
-      await menu();
-      await page.getByRole('button', { name }).click();
+    for (const [scene, name] of rows) {
+      await page.getByRole('navigation', { name: 'Rooms' }).getByRole('button', { name }).click();
       await page.waitForTimeout(400);
       found.push(...(await faults(page, scene)));
       await close();

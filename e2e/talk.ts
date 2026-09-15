@@ -41,3 +41,22 @@ export async function menu(page: Page): Promise<void> {
   if ((await room.getAttribute('data-view')) === 'home') return;
   await page.getByRole('button', { name: 'Menu' }).click();
 }
+
+/** Back to home, from wherever he is. Idempotent, like `talk`. */
+export async function home(page: Page): Promise<void> {
+  const room = page.locator('main.room');
+  await expect(room).toBeVisible();
+  if ((await room.getAttribute('data-view')) === 'talk') {
+    await page.getByTestId('go-home').click();
+  }
+  await expect(room).toHaveAttribute('data-view', 'home');
+}
+
+/**
+ * Into the night sheet. The night lives on home's card and nowhere else —
+ * there is no menu row for it on either screen — so this goes home first.
+ */
+export async function night(page: Page): Promise<void> {
+  await home(page);
+  await page.getByTestId('dad-night').click();
+}

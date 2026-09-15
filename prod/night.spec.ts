@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { comeIn, named, note, talk } from './names';
+import { comeIn, home, named, note } from './names';
 
 /**
  * The standing night, without moving it.
@@ -10,9 +10,7 @@ import { comeIn, named, note, talk } from './names';
  */
 test.describe.configure({ mode: 'serial' });
 
-test('the night reads the same on home, the header, the menu and the sheet', async ({
-  browser,
-}) => {
+test('the night reads the same on home, the header and the sheet', async ({ browser }) => {
   const marc = await comeIn(browser, 'nightreader');
 
   await expect(marc.getByTestId('night-soon')).toBeVisible();
@@ -23,9 +21,7 @@ test('the night reads the same on home, the header, the menu and the sheet', asy
   // The day over the hour, two lines, no "at" between them.
   await expect(marc.getByTestId('home-when')).toContainText(/\d\d:\d\d/);
   await expect(marc.getByTestId('night-soon')).toHaveCount(0);
-  await talk(marc);
-  await marc.getByRole('button', { name: 'Menu' }).click();
-  await expect(marc.getByTestId('dad-night')).toContainText(/Dad night/);
+  // The card is the night, and it carries its own way into the sheet.
   await marc.getByTestId('dad-night').click();
   await expect(marc.getByTestId('night-when')).toContainText(/at \d\d:\d\d/);
 
@@ -37,7 +33,7 @@ test('saying you are coming is said out loud, and can be taken back', async ({ b
   const marc = await comeIn(browser, 'coming');
   const sam = await comeIn(browser, 'watching');
 
-  await marc.getByRole('button', { name: 'Menu' }).click();
+  await home(marc);
   await marc.getByTestId('dad-night').click();
   await marc.getByTestId('rsvp-in').click();
   await expect(marc.getByTestId('rsvp-who')).toContainText(who);
@@ -65,7 +61,7 @@ test('what we should get into survives to the night, and is only its author’s 
   const sam = await comeIn(browser, 'reader');
 
   const thing = note('something to bring up');
-  await marc.getByRole('button', { name: 'Menu' }).click();
+  await home(marc);
   await marc.getByTestId('dad-night').click();
   await marc.getByLabel('Add', { exact: true }).fill(thing);
   await marc.getByRole('button', { name: 'Add', exact: true }).click();
@@ -76,7 +72,7 @@ test('what we should get into survives to the night, and is only its author’s 
   await expect(sam.getByTestId('line').filter({ hasText: thing })).toBeVisible({ timeout: 15_000 });
 
   // Sam sees it and cannot take it back.
-  await sam.getByRole('button', { name: 'Menu' }).click();
+  await home(sam);
   await sam.getByTestId('dad-night').click();
   const theirs = sam.getByTestId('agenda-item').filter({ hasText: thing });
   await expect(theirs).toBeVisible();
@@ -121,13 +117,26 @@ test('the menu offers exactly what the group has switched on', async ({ browser 
     return ((await r.json()) as { group: { rooms: Record<string, boolean> } }).group.rooms;
   });
 
+  // In the conversation: what is about talking.
   await marc.getByRole('button', { name: 'Menu' }).click();
+  const chat = marc.getByRole('navigation', { name: 'Rooms' });
+  await expect(chat.getByRole('button', { name: /^Questions/ })).toHaveCount(
+    rooms.questions ? 1 : 0,
+  );
+  await expect(chat.getByRole('button', { name: /the table$/ })).toHaveCount(rooms.table ? 1 : 0);
+  await expect(chat.getByRole('button', { name: /^Find something/ })).toBeVisible();
+  await expect(chat.getByRole('button', { name: /^The week/ })).toHaveCount(0);
+  await expect(chat.getByRole('button', { name: 'Settings' })).toHaveCount(0);
+  await marc.getByRole('button', { name: 'Close', exact: true }).click();
+
+  // On home: what is about the group and the week.
+  await home(marc);
   const nav = marc.getByRole('navigation', { name: 'Rooms' });
   await expect(nav.getByRole('button', { name: /^Questions/ })).toHaveCount(
     rooms.questions ? 1 : 0,
   );
   await expect(nav.getByRole('button', { name: /^The week/ })).toHaveCount(rooms.week ? 1 : 0);
-  await expect(nav.getByRole('button', { name: /the table$/ })).toHaveCount(rooms.table ? 1 : 0);
+  await expect(nav.getByRole('button', { name: /the table$/ })).toHaveCount(0);
 
   // These three are never behind a switch: the night, the way to bring
   // somebody in, and the way to change anything.
