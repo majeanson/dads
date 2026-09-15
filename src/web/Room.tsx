@@ -380,6 +380,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       <Sheets
         open={sheet}
         onOpen={setSheet}
+        view={view}
         you={session.member.id}
         youName={room.you?.name ?? session.member.displayName}
         messages={room.messages}

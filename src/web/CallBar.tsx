@@ -143,28 +143,40 @@ export function CallBar({
  *
  * Also where the microphone's refusals are said, because that is where the
  * dad just pressed something and is owed an answer.
+ *
+ * Two shapes, like the bar it sits in: on home it is as tall as the bar and
+ * carries its words on a wide screen; in the conversation (`compact`) it is a
+ * plain 44px square with the words for a screen reader only.
  */
 export function JoinCall({
   state,
   onJoin,
+  compact = false,
 }: {
   state: 'out' | 'joining' | 'in' | 'denied' | 'failed';
   onJoin: () => void;
+  compact?: boolean;
 }) {
   const { t } = useT();
   if (state === 'in') return null;
+
+  const size = compact ? 'icon' : 'md';
+  const shape = compact ? '' : 'h-auto min-h-11 self-stretch max-[48rem]:w-14 max-[48rem]:px-0';
+  const words = compact ? 'sr-only' : 'max-[48rem]:sr-only';
+  const glyph = compact ? 22 : 26;
 
   if (state === 'denied' || state === 'failed') {
     return (
       <Button
         look="danger"
+        size={size}
         onClick={onJoin}
         title={t(`call.${state}`)}
         aria-label={t('call.retry')}
-        className="max-[48rem]:w-11 max-[48rem]:px-0"
+        className={shape}
       >
-        <MicOff size={20} aria-hidden="true" />
-        <span className="max-[48rem]:sr-only">{t('call.retry')}</span>
+        <MicOff size={glyph} aria-hidden="true" />
+        <span className={words}>{t('call.retry')}</span>
         <span className="sr-only"> — {t(`call.${state}`)}</span>
       </Button>
     );
@@ -172,15 +184,14 @@ export function JoinCall({
 
   return (
     <Button
+      size={size}
       onClick={onJoin}
       disabled={state === 'joining'}
       aria-label={t('call.join')}
-      className="max-[48rem]:w-11 max-[48rem]:px-0"
+      className={shape}
     >
-      <Phone size={20} aria-hidden="true" />
-      <span className="max-[48rem]:sr-only">
-        {state === 'joining' ? t('call.opening') : t('call.join')}
-      </span>
+      <Phone size={glyph} aria-hidden="true" />
+      <span className={words}>{state === 'joining' ? t('call.opening') : t('call.join')}</span>
     </Button>
   );
 }

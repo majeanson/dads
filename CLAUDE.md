@@ -530,6 +530,20 @@ secret, custom domain bound by the route in wrangler.toml.
 - A dad who has never opened the room on this device has NOTHING to catch up
   on: the mark starts at the newest line he was handed. The archive is not a
   backlog.
+- **The header has two shapes, split on the view** (2026-09-15). On home it
+  is the full bar: the group's name, the head-count, and the phone and Menu
+  buttons stretched to the bar's whole height (`data-shape="full"` sets
+  `align-items: stretch`; the buttons are `h-auto self-stretch`, `w-14` on a
+  phone, 26px glyphs). In the conversation it is one slim row: the way back,
+  the head-count and the night line as the only information, and the same two
+  buttons as plain 44px icons with their words sr-only. The group's name is
+  still the page's h1 there, only `sr-only` — he came in from a screen that
+  said it in the biggest type in the app, and every row the bar takes in the
+  conversation is a row of conversation it costs.
+- **The table is offered only from the conversation.** The menu's item is
+  gated on `view === 'talk'`: the table takes the room's place on a phone
+  and sits beside it on a laptop, and from home there is no room for it to
+  take. e2e that opens it must `talk(page)` first.
 - **The way back is its own control**, first in the header, the way every app
   on a phone does it. It was the group's name with a chevron, which is the
   convention on a desktop and something nobody finds on a phone.

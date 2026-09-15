@@ -53,6 +53,7 @@ const ITEM = 'h-16 gap-3.5 rounded-[var(--radius-control)] px-4 text-[1.125rem]'
 export function Sheets({
   open,
   onOpen,
+  view,
   you,
   youName,
   messages,
@@ -72,6 +73,8 @@ export function Sheets({
 }: {
   open: SheetName | null;
   onOpen: (sheet: SheetName | null) => void;
+  /** Which screen the menu was opened from. */
+  view: 'home' | 'talk';
   /** The reader's own member id. */
   you: string;
   youName: string;
@@ -129,7 +132,10 @@ export function Sheets({
             </Button>
           ) : null}
 
-          {rooms.table ? (
+          {/* Only from the conversation: the table takes the room's place on
+              a phone and sits beside it on a laptop, and from home there is
+              no room for it to take. */}
+          {rooms.table && view === 'talk' ? (
             <Button
               block
               className={ITEM}

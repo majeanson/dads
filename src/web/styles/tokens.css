@@ -342,10 +342,17 @@
    */
   .room-head {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
     min-width: 0;
+  }
+
+  /* On home the two buttons are as tall as the bar: the name and the count
+     set the height, and the actions stretch to it. In the conversation the
+     bar is one slim row and everything sits on its centre. */
+  .room-head[data-shape='full'] {
+    align-items: stretch;
   }
 
   .room-head > div {
@@ -355,7 +362,7 @@
 
   .head-actions {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     gap: 0.5rem;
     flex-shrink: 0;
   }
