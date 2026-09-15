@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { talk } from './talk';
+import { menu, talk } from './talk';
 import { E2E_PROMPT_GROUP } from './global-setup';
 
 // One group, one shared prompt pool and one day's question.
@@ -15,7 +15,7 @@ test.describe.configure({ mode: 'serial' });
  * hear, and the label is the prefix.
  */
 async function open(page: Page, name: 'Questions' | 'The week' | 'Open the table' | 'Dad night') {
-  await page.getByRole('button', { name: 'Menu' }).click();
+  await menu(page);
   await page
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: new RegExp(`^${name}`) })

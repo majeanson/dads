@@ -1,5 +1,5 @@
 import { ArrowRight, Check, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { fetchNight, setRsvp, type NightState } from './api';
 import { plural, useT, weekdayNames } from './i18n';
 import { nightAway } from './NightEditor';
@@ -31,6 +31,7 @@ export function Home({
   unseen,
   onGo,
   onNight,
+  menu,
 }: {
   night: DadNight | null;
   /**
@@ -47,6 +48,13 @@ export function Home({
   unseen: number;
   onGo: () => void;
   onNight: () => void;
+  /**
+   * The rest of the app, as rows under the door.
+   *
+   * A slot rather than the menu's props: home knows what the night is and
+   * where the door goes, and nothing about what is behind the other rooms.
+   */
+  menu: ReactNode;
 }) {
   const { t, lang } = useT();
   const [state, setState] = useState<NightState | null>(null);
@@ -235,6 +243,11 @@ export function Home({
           </span>
         ) : null}
       </Button>
+
+      {/* Everything else, in what used to be empty space below the door. The
+          same rows the conversation keeps behind its Menu button, minus the
+          table, which only makes sense beside a conversation. */}
+      {menu}
     </div>
   );
 }

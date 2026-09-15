@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { talk } from './talk';
+import { menu, talk } from './talk';
 import { E2E_NIGHT_GROUP } from './global-setup';
 
 // One group, one schedule: these would overwrite each other in parallel.
@@ -28,7 +28,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await expect(sam.getByTestId('night-soon')).toHaveCount(0);
 
   // It is set where it is answered: the menu's own dad-night item.
-  await marc.getByRole('button', { name: 'Menu' }).click();
+  await menu(marc);
   await marc.getByTestId('dad-night').click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
@@ -79,7 +79,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   ).toBeVisible();
 
   // Sam sees it in his own sheet, and cannot take back what he did not write.
-  await sam.getByRole('button', { name: 'Menu' }).click();
+  await menu(sam);
   await sam.getByTestId('dad-night').click();
   const samsView = sam.getByTestId('agenda-item').filter({ hasText: 'bedtime' });
   await expect(samsView).toBeVisible();

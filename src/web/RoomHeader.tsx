@@ -3,28 +3,25 @@ import { JoinCall } from './CallBar';
 import type { CallState } from './useCall';
 import { useT } from './i18n';
 import { Button } from './ui/Button';
-import { cn } from './ui/cn';
 
 /**
  * The app bar, in two shapes.
  *
- * On HOME it is the full bar: the group's name, the head-count, and the two
- * buttons pressed most — the call and the menu — stretched to the bar's whole
- * height, because home is a screen with one thing on it and the bar is not
- * competing with anything for the room.
+ * On HOME it is the group's name and the head-count and nothing else. The
+ * menu is on home itself, under the night and the door, and the call is
+ * joined from the conversation — so there is nothing for the bar to hold a
+ * button for.
  *
  * In the CONVERSATION it is one slim row: the way back, the head-count (and
- * the night, when it is close) as the only information, and the same two
- * buttons as plain icons. The group's name goes: he came in from a screen
- * that said it in the biggest type in the app, and every row the bar takes
- * here is a row of conversation it costs.
+ * the night, when it is close) as the only information, and the call and the
+ * menu as plain icons. The group's name goes: he came in from a screen that
+ * said it in the biggest type in the app, and every row the bar takes here is
+ * a row of conversation it costs.
  *
  * Either way it must be structurally incapable of overflowing. The name and
  * the count give way (`min-width: 0` on the left, `shrink-0` on the actions),
  * because an over-long header does not wrap — it makes the whole PAGE wider,
- * and the composer ends up half off the right-hand side of a phone. A
- * breakpoint cannot be trusted with this either: "Join the call" fits a 390px
- * phone and "Embarque dans l'appel" does not.
+ * and the composer ends up half off the right-hand side of a phone.
  */
 export function RoomHeader({
   groupName,
@@ -59,10 +56,7 @@ export function RoomHeader({
   const slim = view === 'talk';
 
   return (
-    <header
-      className={cn('room-head border-b border-line', slim ? 'pb-2' : 'pb-2.5')}
-      data-shape={slim ? 'slim' : 'full'}
-    >
+    <header className={`room-head border-b border-line ${slim ? 'pb-2' : 'pb-2.5'}`}>
       {/* A real back button, first in the bar, the way every app on a phone
           does it. It was the group's name with a chevron, which is the
           convention on a desktop and something nobody finds on a phone. */}
@@ -115,32 +109,27 @@ export function RoomHeader({
         </p>
       </div>
 
-      <span className="head-actions">
-        <JoinCall state={callState} onJoin={onJoinCall} compact={slim} />
-        <Button
-          size={slim ? 'icon' : 'md'}
-          onClick={onMenu}
-          aria-label={t('room.menu')}
-          className={cn(
-            'relative',
-            // On home, as tall as the bar and a thumb and a half wide on a
-            // phone: this and the call are the two things pressed most, and
-            // they sit under the notch. In the conversation, a plain square.
-            slim ? '' : 'h-auto min-h-11 self-stretch max-[48rem]:w-14 max-[48rem]:px-0',
-          )}
-        >
-          <MenuIcon size={slim ? 22 : 26} aria-hidden="true" />
-          <span className={slim ? 'sr-only' : 'max-[48rem]:sr-only'}>{t('room.menu')}</span>
-          {waiting ? (
-            <span
-              className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-accent"
-              data-testid="mark-menu"
-              aria-hidden="true"
-            />
-          ) : null}
-          {waiting ? <span className="sr-only">{t('room.waiting')}</span> : null}
-        </Button>
-      </span>
+      {/* Only in the conversation. On home the menu is the screen and the
+          call is a thing you join from beside the talk. */}
+      {slim ? (
+        <span className="head-actions">
+          <JoinCall state={callState} onJoin={onJoinCall} />
+          <Button size="icon" onClick={onMenu} aria-label={t('room.menu')} className="relative">
+            <MenuIcon size={22} aria-hidden="true" />
+            <span className="sr-only">{t('room.menu')}</span>
+            {/* The one place a dot is right: the words are behind the button
+                it sits on, and the menu says which thing in words. */}
+            {waiting ? (
+              <span
+                className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-accent"
+                data-testid="mark-menu"
+                aria-hidden="true"
+              />
+            ) : null}
+            {waiting ? <span className="sr-only">{t('room.waiting')}</span> : null}
+          </Button>
+        </span>
+      ) : null}
     </header>
   );
 }

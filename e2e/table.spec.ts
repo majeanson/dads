@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { talk } from './talk';
+import { menu, talk } from './talk';
 import { E2E_TABLE_GROUP } from './global-setup';
 
 // One group, one table.
@@ -45,7 +45,7 @@ const SLOW_TABLE = `<!doctype html><meta charset="utf-8"><h1>a table with a slow
  * hear, and the label is the prefix.
  */
 async function open(page: Page, name: 'Questions' | 'The week' | 'Open the table' | 'Dad night') {
-  await page.getByRole('button', { name: 'Menu' }).click();
+  await menu(page);
   await page
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: new RegExp(`^${name}`) })

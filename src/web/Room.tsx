@@ -5,6 +5,7 @@ import { CallBar } from './CallBar';
 import { Composer, type ComposerHandle } from './Composer';
 import { Home } from './Home';
 import { Lines } from './Lines';
+import { Menu } from './Menu';
 import { RoomHeader } from './RoomHeader';
 import { Sheets, type SheetName } from './Sheets';
 import { TableColumn } from './TableColumn';
@@ -313,6 +314,24 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         unseen={seen.unseen}
         onGo={() => setView('talk')}
         onNight={() => setSheet('night')}
+        // Only while home is the screen showing. Home stays mounted behind
+        // the conversation, so without this the rows would sit in the tree
+        // twice whenever the menu sheet was open — one hidden, one shown —
+        // and anything looking for "the dad-night row" would find both.
+        menu={
+          view === 'home' ? (
+            <Menu
+              view="home"
+              rooms={room.rooms}
+              todo={todo}
+              night={room.night}
+              now={now}
+              tableOpen={tableOpen}
+              onToggleTable={() => setTableOpen((v) => !v)}
+              onOpen={setSheet}
+            />
+          ) : null
+        }
       />
 
       <div className="stage">

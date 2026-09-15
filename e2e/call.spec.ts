@@ -68,7 +68,9 @@ test('the call survives a reload without stranding anyone', async ({ browser }) 
   await expect(marc.getByTestId('call')).toContainText('just you so far');
 
   // A reload drops the socket; the room must not think he is still on it.
+  // It lands on home, and the way into the call is beside the talk.
   await marc.reload();
+  await talk(marc);
   await expect(marc.getByRole('button', { name: 'Join the call' })).toBeVisible();
 
   await marc.context().close();

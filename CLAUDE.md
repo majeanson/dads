@@ -497,6 +497,18 @@ secret, custom domain bound by the route in wrangler.toml.
   count is the way into the roster) and so did what is waiting for HIM, which
   lives behind the Menu button and carries its own mark. Anything proposed for
   this screen has to displace the night or the door, not join them.
+- **The menu is on home** (2026-09-15), under the door, in what was empty
+  space: the same `Menu` component the conversation shows in a sheet, minus
+  the table, which only makes sense beside a conversation. This is the one
+  exception to "displace the night or the door": the rows sit below both and
+  take nothing from them, and they put the whole app one tap from the screen
+  it opens on. `Home` takes it as a `menu` ReactNode, so it knows nothing
+  of the menu's props. e2e opens it with `menu(page)` (`e2e/talk.ts`),
+  which presses Menu only where there is one. **The rows are in the tree only
+  while home is the screen showing**: home stays mounted behind the
+  conversation, and `getByTestId` does not care about `display: none` — with
+  the menu sheet open, `dad-night` and `mark-board` matched twice and four
+  specs died on strict mode.
 - **The card is the one place the app is not square.** `--radius-card` and
   `--radius-control` against the app's own 4px: a screen with a single thing on
   it reads as being ABOUT that thing when the thing has an edge. The surface is
@@ -531,15 +543,14 @@ secret, custom domain bound by the route in wrangler.toml.
   on: the mark starts at the newest line he was handed. The archive is not a
   backlog.
 - **The header has two shapes, split on the view** (2026-09-15). On home it
-  is the full bar: the group's name, the head-count, and the phone and Menu
-  buttons stretched to the bar's whole height (`data-shape="full"` sets
-  `align-items: stretch`; the buttons are `h-auto self-stretch`, `w-14` on a
-  phone, 26px glyphs). In the conversation it is one slim row: the way back,
-  the head-count and the night line as the only information, and the same two
-  buttons as plain 44px icons with their words sr-only. The group's name is
-  still the page's h1 there, only `sr-only` — he came in from a screen that
-  said it in the biggest type in the app, and every row the bar takes in the
-  conversation is a row of conversation it costs.
+  is the group's name and the head-count and nothing else: the menu is on the
+  screen below and the call is joined from the conversation. In the
+  conversation it is one slim row: the way back, the head-count and the night
+  line as the only information, and the call and the Menu as plain 44px icons
+  with their words sr-only. The group's name is still the page's h1 there,
+  only `sr-only` — he came in from a screen that said it in the biggest type
+  in the app, and every row the bar takes in the conversation is a row of
+  conversation it costs.
 - **The table is offered only from the conversation.** The menu's item is
   gated on `view === 'talk'`: the table takes the room's place on a phone
   and sits beside it on a laptop, and from home there is no room for it to
@@ -576,10 +587,10 @@ secret, custom domain bound by the route in wrangler.toml.
   The same rule once covered the roster on home, back when home had one.
 - **The header does not repeat what home says.** The night line is hidden on
   home, where the same thing is the first item on the screen at four times the
-  size. The MARK is the exception now, and it was not always: it was hidden
-  there too while home listed the very items it stood for, an inch below it.
-  Those items are behind the Menu button again, so hiding the mark on home
-  would leave a dad with no sign at all that a question is waiting for him.
+  size — and since the menu moved onto home, so are the Menu and call buttons
+  and the mark: the rows are on the screen, and each says in words what is
+  waiting on it. The mark is on the Menu button in the conversation, where
+  the rows are behind it and hiding it would leave him no sign at all.
 - **Who is coming reads at ink**, under the day and the hour: it is the thing
   that actually decides turnout, and it was the same grey as everything else.
 - e2e: `talk(page)` (`e2e/talk.ts`, and `prod/names.ts`) steps into the
@@ -655,7 +666,8 @@ neither see nor scroll anything.
   no tab strip: tabs are a claim that four things matter equally, and here they
   do not. Anything added above the message list has to earn its row by being
   worth the row of conversation it costs.
-- **Everything else is behind the one Menu button**: who's here, Prompts,
+- **Everything else is behind the one Menu button** in the conversation, and
+  on the screen itself on home: who's here, Prompts,
   Board, the table, dad night, sign out. Each opens as a `Sheet` — a native
   `<dialog>`, so the focus trap, Escape, the inert background and the backdrop
   come from the platform. Sheets mount on open, so each reads fresh data.

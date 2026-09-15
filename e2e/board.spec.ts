@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { talk } from './talk';
+import { menu, talk } from './talk';
 import { E2E_BOARD_GROUP } from './global-setup';
 
 // One group, one shared board.
@@ -15,7 +15,7 @@ test.describe.configure({ mode: 'serial' });
  * hear, and the label is the prefix.
  */
 async function open(page: Page, name: 'Questions' | 'The week' | 'Open the table' | 'Dad night') {
-  await page.getByRole('button', { name: 'Menu' }).click();
+  await menu(page);
   await page
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: new RegExp(`^${name}`) })
@@ -48,7 +48,7 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   await expect(marc.getByTestId('mark-menu')).toBeVisible();
 
   // The menu is where it says WHICH thing is waiting.
-  await marc.getByRole('button', { name: 'Menu' }).click();
+  await menu(marc);
   await expect(marc.getByTestId('mark-board')).toBeVisible();
   await marc
     .getByRole('navigation', { name: 'Rooms' })

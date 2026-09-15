@@ -26,3 +26,18 @@ export async function talk(page: Page): Promise<void> {
   }
   await expect(room).toHaveAttribute('data-view', 'talk');
 }
+
+/**
+ * To the menu, from wherever he is.
+ *
+ * On home the rooms are on the screen itself, under the door, so there is
+ * nothing to open. In the conversation they are behind the Menu button.
+ * Either way the `Rooms` navigation is there afterwards, which is what a
+ * caller should scope its next click to.
+ */
+export async function menu(page: Page): Promise<void> {
+  const room = page.locator('main.room');
+  await expect(room).toBeVisible();
+  if ((await room.getAttribute('data-view')) === 'home') return;
+  await page.getByRole('button', { name: 'Menu' }).click();
+}

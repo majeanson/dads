@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { menu } from './talk';
 import { E2E_GROUP } from './global-setup';
 
 test('a stranger sees the door, not the room', async ({ page }) => {
@@ -39,7 +40,7 @@ test('signing out returns to the door', async ({ page }) => {
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Menu' }).click();
+  await menu(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByLabel('Code')).toBeVisible();

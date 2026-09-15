@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { E2E_FIND_GROUP } from './global-setup';
-import { talk } from './talk';
+import { menu, talk } from './talk';
 
 /**
  * Finding a line again.
@@ -30,7 +30,7 @@ async function say(page: Page, body: string): Promise<void> {
 }
 
 async function openFind(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Menu' }).click();
+  await menu(page);
   await page
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: /^Find something/ })
@@ -92,7 +92,7 @@ test('a photograph on a result is shown, not offered to be opened', async ({ bro
 test('the room’s own lines are not findable', async ({ browser }) => {
   // Setting the night makes the room say so, by name — a line nobody typed.
   const marc = await comeIn(browser, 'Marc Furniture');
-  await marc.getByRole('button', { name: 'Menu' }).click();
+  await menu(marc);
   await marc.getByTestId('dad-night').click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');

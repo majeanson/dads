@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { E2E_HOME_GROUP } from './global-setup';
-import { talk } from './talk';
+import { menu, talk } from './talk';
 
 /**
  * Where the app opens.
@@ -8,7 +8,8 @@ import { talk } from './talk';
  * Two things, and deliberately only two: the night — what this is and when it
  * is — and the conversation, which is what it is for, with who is about
  * underneath the way in because that is what decides whether to go in now.
- * Everything else stays behind the Menu button and its mark.
+ * Everything else is rows under the door on home, and behind the Menu
+ * button once he is in.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -46,7 +47,7 @@ test('home says when the night is, and takes his answer', async ({ browser }) =>
   const marc = await comeIn(browser, 'Marc');
 
   // Set from the menu, which is reachable from home like everything else.
-  await marc.getByRole('button', { name: 'Menu' }).click();
+  await menu(marc);
   await marc.getByTestId('dad-night').click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
@@ -164,7 +165,7 @@ test('home keeps up with who is coming while he sits on it', async ({ browser })
 
   // Marc stays on home. Sam goes and answers from the sheet.
   await expect(marc.getByTestId('home')).toBeVisible();
-  await sam.getByRole('button', { name: 'Menu' }).click();
+  await menu(sam);
   await sam.getByTestId('dad-night').click();
   await sam.getByTestId('rsvp-in').click();
   await expect(sam.getByTestId('rsvp-who')).toContainText('Quill');
@@ -229,20 +230,23 @@ test('he walks in on the divider, not at the top of the week', async ({ browser 
   await sam.context().close();
 });
 
-test('home says two things, and the mark says the rest wherever he stands', async ({ browser }) => {
+test('home carries the menu, and what is waiting is said on the row', async ({ browser }) => {
   const marc = await comeIn(browser, 'Barnaby');
 
-  // Two blocks and no third: the night, and the conversation. What is waiting
-  // for him is behind the Menu button, where it already lives.
-  await expect(marc.getByTestId('home-waiting')).toHaveCount(0);
+  // The night, the door, and then the rest of the app as rows in what used
+  // to be empty space — with no Menu button, because there is nothing left
+  // for one to hide.
   await expect(marc.getByTestId('home-when')).toBeVisible();
   await expect(marc.getByTestId('home-go')).toBeVisible();
+  await expect(marc.getByRole('navigation', { name: 'Rooms' })).toBeVisible();
+  await expect(marc.getByRole('button', { name: 'Menu' })).toHaveCount(0);
 
-  // And because home no longer lists those items in words, the mark is on the
-  // Menu button here too — hiding it would leave a dad standing on home with
-  // no sign at all that a question is waiting for him.
-  await expect(marc.getByTestId('mark-menu')).toBeVisible();
+  // A fresh dad has a week to fill in and a question to answer, and home says
+  // so in words on the row it belongs to rather than as a dot.
+  await expect(marc.getByTestId(/^mark-(board|prompts)$/).first()).toBeVisible();
 
+  // In the conversation the rows are behind the Menu button, so the mark is
+  // on the button — hiding it there would leave him no sign at all.
   await marc.getByTestId('home-go').click();
   await expect(marc.getByTestId('mark-menu')).toBeVisible();
 
