@@ -69,9 +69,9 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
       {/* The app's own face, at the door. It is the only decoration in the
           whole product and it is here because a stranger who has been handed
           a code should recognise where he has landed. */}
-      <img src="/icon.svg" alt="" width={56} height={56} className="mb-5 rounded-2xl shadow-sm" />
-      <h1 className="display m-0 text-3xl">dads</h1>
-      <p className="mt-2 mb-8 text-[0.9375rem] text-muted">
+      <img src="/icon.svg" alt="" width={64} height={64} className="mb-5 rounded-2xl shadow-sm" />
+      <h1 className="display m-0 text-4xl">dads</h1>
+      <p className="mt-2 mb-8 text-[1.0625rem] text-muted">
         {invite ? t('join.invited') : t('join.lede')}
       </p>
 
@@ -81,7 +81,7 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
             prove it twice. */}
         {invite ? null : (
           <div className="grid gap-1.5">
-            <label htmlFor="code" className="text-sm text-muted">
+            <label htmlFor="code" className="text-base text-muted">
               {t('join.code')}
             </label>
             <input
@@ -102,7 +102,7 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
         )}
 
         <div className="grid gap-1.5">
-          <label htmlFor="name" className="text-sm text-muted">
+          <label htmlFor="name" className="text-base text-muted">
             {t('join.name')}
           </label>
           <input
@@ -119,14 +119,20 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
           />
         </div>
 
-        <Button type="submit" look="primary" disabled={busy} className="mt-1 h-11 justify-center">
+        <Button
+          type="submit"
+          look="primary"
+          size="lg"
+          disabled={busy}
+          className="mt-1 justify-center"
+        >
           {busy ? t('join.opening') : t('join.come_in')}
-          <ArrowRight size={16} aria-hidden="true" />
+          <ArrowRight size={18} aria-hidden="true" />
         </Button>
       </form>
 
       {error ? (
-        <p className="mt-4 text-[0.9375rem] text-danger" role="alert">
+        <p className="mt-4 text-[1.0625rem] text-danger" role="alert">
           {error}
         </p>
       ) : null}

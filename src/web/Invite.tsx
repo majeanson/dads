@@ -62,8 +62,8 @@ export function Invite() {
       />
 
       <div className="flex flex-wrap gap-2">
-        <Button look="primary" onClick={() => void copy()}>
-          {copied ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
+        <Button look="primary" size="lg" onClick={() => void copy()}>
+          {copied ? <Check size={18} aria-hidden="true" /> : <Copy size={18} aria-hidden="true" />}
           {copied ? t('inv.copied') : t('inv.copy')}
         </Button>
         {/* Only where it means something: on a phone this opens the share
@@ -71,14 +71,14 @@ export function Invite() {
             does not have one and a button that does nothing is worse than no
             button. */}
         {typeof navigator.share === 'function' ? (
-          <Button onClick={() => void navigator.share({ url: link }).catch(() => {})}>
-            <Share2 size={15} aria-hidden="true" />
+          <Button size="lg" onClick={() => void navigator.share({ url: link }).catch(() => {})}>
+            <Share2 size={18} aria-hidden="true" />
             {t('inv.share')}
           </Button>
         ) : null}
       </div>
 
-      <p className="m-0 text-sm text-muted">{t('inv.week')}</p>
+      <p className="m-0 text-base text-muted">{t('inv.week')}</p>
     </div>
   );
 }

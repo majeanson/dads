@@ -94,14 +94,14 @@ export function Find({ faceOf }: { faceOf: (memberId: string) => number | undefi
       </label>
       <div className="relative">
         <Search
-          size={16}
+          size={20}
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted"
+          className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
         />
         <input
           ref={field}
           id="find-q"
-          className={`${FIELD} pl-9`}
+          className={`${FIELD} pl-12`}
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -115,15 +115,15 @@ export function Find({ faceOf }: { faceOf: (memberId: string) => number | undefi
 
       <div aria-live="polite" className="mt-4">
         {state.status === 'idle' ? (
-          <p className="text-muted">{t('find.lede')}</p>
+          <p className="text-[1.0625rem] text-muted">{t('find.lede')}</p>
         ) : state.status === 'looking' ? (
-          <p className="text-muted">{t('find.looking')}</p>
+          <p className="text-[1.0625rem] text-muted">{t('find.looking')}</p>
         ) : state.status === 'failed' ? (
           <p className="error" role="alert">
             {t('find.failed')}
           </p>
         ) : state.results.length === 0 ? (
-          <p className="text-muted" data-testid="find-nothing">
+          <p className="text-[1.0625rem] text-muted" data-testid="find-nothing">
             {t('find.nothing', { q: state.q })}
           </p>
         ) : (
@@ -134,21 +134,21 @@ export function Find({ faceOf }: { faceOf: (memberId: string) => number | undefi
                 data-testid="found"
                 className="border-b border-line py-3 last:border-0"
               >
-                <p className="flex items-center gap-2 text-sm text-muted">
+                <p className="flex items-center gap-2.5 text-base text-muted">
                   {r.memberId === null ? null : (
                     <Face
                       memberId={r.memberId}
                       name={r.name}
                       version={faceOf(r.memberId)}
-                      size={22}
+                      size={28}
                     />
                   )}
                   <span className="truncate text-ink">{r.name || t('line.someone')}</span>
-                  <time className="ml-auto shrink-0 text-xs tabular-nums">
+                  <time className="ml-auto shrink-0 text-sm tabular-nums">
                     {when(r.at, locale)}
                   </time>
                 </p>
-                <p className="mt-1 wrap-anywhere whitespace-pre-wrap">
+                <p className="mt-1 text-[1.0625rem] wrap-anywhere whitespace-pre-wrap">
                   {r.kind === 'prompt' ? (
                     <span className="answer-tag">{t('line.answered')}</span>
                   ) : null}

@@ -104,11 +104,7 @@ export function Home({
                 with no night has the same question as a group with one, and a
                 whisper is the wrong way to ask it. */}
             <p className="home-none display">{t('n.none')}</p>
-            <Button
-              look="primary"
-              className="home-answer h-[3.25rem] rounded-[var(--radius-control)] text-base"
-              onClick={onNight}
-            >
+            <Button look="primary" size="lg" className="home-answer" onClick={onNight}>
               {t('n.set')}
             </Button>
           </>
@@ -167,7 +163,8 @@ export function Home({
               <div className="home-answers">
                 <Button
                   look="primary"
-                  className="home-answer h-[3.25rem] rounded-[var(--radius-control)] text-base"
+                  size="lg"
+                  className="home-answer"
                   disabled={busy}
                   onClick={() => void answer(true)}
                   data-testid="home-in"
@@ -176,7 +173,8 @@ export function Home({
                   {t('n.im_in')}
                 </Button>
                 <Button
-                  className="home-answer h-[3.25rem] rounded-[var(--radius-control)] text-base"
+                  size="lg"
+                  className="home-answer"
                   disabled={busy}
                   onClick={() => void answer(false)}
                   data-testid="home-out"
@@ -188,7 +186,8 @@ export function Home({
             ) : (
               <Button
                 look={mine.coming ? 'primary' : 'plain'}
-                className="home-answer h-[3.25rem] rounded-[var(--radius-control)] text-base"
+                size="lg"
+                className="home-answer"
                 disabled={busy}
                 onClick={() => void answer(!mine.coming)}
                 aria-label={mine.coming ? t('n.youre_in_change') : t('n.youre_out_change')}

@@ -71,7 +71,7 @@ export function PromptList() {
           a heading over "nothing yet" is two lines saying nothing. */}
       {history.length === 0 ? null : (
         <section className="mb-6">
-          <h2 className="mb-1 text-[0.9375rem] font-semibold text-muted">{t('q.asked_before')}</h2>
+          <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('q.asked_before')}</h2>
           <ol className="m-0 list-none border-t border-line p-0">
             {history.map((h) => (
               <PromptRow
@@ -138,13 +138,13 @@ function PromptRow({
     <li className="border-b border-line" data-testid="prompt-row">
       <button
         type="button"
-        className="block w-full cursor-pointer border-0 bg-transparent px-0 py-2.5 text-left text-ink disabled:cursor-default"
+        className="block w-full cursor-pointer border-0 bg-transparent px-0 py-3 text-left text-ink disabled:cursor-default"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         disabled={answers === 0}
       >
-        <span className="block text-[0.9375rem]">{body}</span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
+        <span className="block text-[1.0625rem]">{body}</span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-muted">
           {meta ? <span>{meta}</span> : null}
           {answers > 0 ? (
             <span className="text-accent">
@@ -160,7 +160,7 @@ function PromptRow({
             <li className="text-muted">…</li>
           ) : (
             loaded.map((a) => (
-              <li key={a.id} className="py-1 text-sm">
+              <li key={a.id} className="py-1.5 text-base">
                 <span className="font-semibold">{a.name}</span> {a.body}
               </li>
             ))
@@ -204,12 +204,12 @@ function AddPromptForm({ onAdded }: { onAdded: (entry: PoolEntry) => void }) {
         maxLength={240}
         className={`${FIELD} min-w-0 flex-1`}
       />
-      <Button type="submit" look="primary" disabled={busy || !body.trim()}>
-        <Plus size={15} aria-hidden="true" />
+      <Button type="submit" look="primary" size="lg" disabled={busy || !body.trim()}>
+        <Plus size={18} aria-hidden="true" />
         {t('q.add_button')}
       </Button>
       {error ? (
-        <p className="w-full text-sm text-danger" role="alert">
+        <p className="w-full text-base text-danger" role="alert">
           {error}
         </p>
       ) : null}

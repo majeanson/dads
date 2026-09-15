@@ -346,11 +346,22 @@ weakening `sessionSecret()`.
 - **A control is 44px, and that is the kit's default now** (2026-09-14). `md`
   was 40 while the composer's row, the header's icons and the call's buttons
   each asked for 44 by hand — the number this repo already called a thumb. One
-  size, set once.
+  size, set once. `icon` is the same 44 square; `sm` and `iconSm` survive
+  only INSIDE the conversation (the to-bottom pill, the table's head, the
+  composer's remove), where a row of chat is what a bigger control costs.
+- **`lg` is the one action on a sheet** (2026-09-15): 3.25rem, 17px, on the
+  control radius — Save, I'm in, Add, Copy, Come in, and home's answers,
+  which were the same button written out by hand. A `FIELD` is the same
+  height on the same radius, so a field and the button beside it read as one
+  row; it is a `min-height`, because the same class dresses the textarea.
+  Everything a dad READS on a sheet or the door is 17px (`text-[1.0625rem]`)
+  and its heading 17px semibold; the header's count line and the group's
+  name (`text-xl`) keep pace. The conversation is deliberately untouched —
+  in there the goal is the most lines on the screen, not the biggest.
 - **The menu rows and the switch rows are 64px**, set at 1.125rem, on home's
   control radius, with 22px icons. They are a list a thumb picks from at arm's
   length, usually one-handed, and on a phone they are the whole content of the
-  screen. A sheet header is `text-2xl` for the same reason: on a phone it is
+  screen. A sheet header is `text-3xl` for the same reason: on a phone it is
   the top of the screen, not the lip of a panel. **The size IS the style** —
   the answer to an empty half-screen is bigger type, not more things on it.
   Checked at 390px in French as well as English: "Mets une soirée de gars" and

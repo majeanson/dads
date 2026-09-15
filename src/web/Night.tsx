@@ -59,22 +59,22 @@ export function Night({ night, you }: { night: DadNight | null; you: string }) {
   return (
     <div className="grid gap-5" data-testid="night">
       {night === null ? (
-        <p className="m-0 text-[0.9375rem] text-muted">{t('n.none')}</p>
+        <p className="m-0 text-[1.0625rem] text-muted">{t('n.none')}</p>
       ) : (
         <>
           <div className="grid gap-3">
-            <p className="m-0 flex items-center gap-2 text-[0.9375rem]" data-testid="night-when">
+            <p className="m-0 flex items-center gap-3 text-[1.125rem]" data-testid="night-when">
               <span className="min-w-0 flex-1">{nightDetail(t, lang, night, Date.now())}</span>
               {/* The countdown only reaches a dad who has opened the room. His
                   own calendar reaches him on Thursday afternoon, where the
                   decision actually gets made. */}
               <a
                 href="/api/night.ics"
-                className="inline-grid h-9 w-9 shrink-0 place-items-center rounded-app border border-edge text-muted no-underline transition-colors duration-75 hover:border-accent hover:text-accent"
+                className="inline-grid h-11 w-11 shrink-0 place-items-center rounded-[var(--radius-control)] border border-edge text-muted no-underline transition-colors duration-75 hover:border-accent hover:text-accent"
                 title={t('n.calendar')}
                 data-testid="night-ics"
               >
-                <CalendarPlus size={17} aria-hidden="true" />
+                <CalendarPlus size={20} aria-hidden="true" />
                 <span className="sr-only">{t('n.calendar')}</span>
               </a>
             </p>
@@ -109,8 +109,13 @@ function Change({ night }: { night: DadNight | null }) {
   const [open, setOpen] = useState(night === null);
   if (!open) {
     return (
-      <Button look="quiet" className="justify-self-start px-0" onClick={() => setOpen(true)}>
-        <Pencil size={15} aria-hidden="true" />
+      <Button
+        look="quiet"
+        size="lg"
+        className="justify-self-start px-0"
+        onClick={() => setOpen(true)}
+      >
+        <Pencil size={18} aria-hidden="true" />
         {t('n.change')}
       </Button>
     );
@@ -140,20 +145,22 @@ function Coming({
       <div className="flex flex-wrap gap-2">
         <Button
           look={mine?.coming === true ? 'primary' : 'plain'}
+          size="lg"
           disabled={busy}
           onClick={() => onAnswer(true)}
           data-testid="rsvp-in"
         >
-          <Check size={15} aria-hidden="true" />
+          <Check size={18} aria-hidden="true" />
           {t('n.im_in')}
         </Button>
         <Button
           look={mine?.coming === false ? 'danger' : 'plain'}
+          size="lg"
           disabled={busy}
           onClick={() => onAnswer(false)}
           data-testid="rsvp-out"
         >
-          <X size={15} aria-hidden="true" />
+          <X size={18} aria-hidden="true" />
           {t('n.cant')}
         </Button>
       </div>
@@ -162,7 +169,7 @@ function Coming({
           the names tell him whether HIS friend is coming, which is the thing
           that actually decides it. */}
       {answers.length === 0 ? null : (
-        <p className="m-0 text-[0.9375rem] text-muted" data-testid="rsvp-who">
+        <p className="m-0 text-[1.0625rem] text-muted" data-testid="rsvp-who">
           {[
             coming.length > 0
               ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
@@ -211,29 +218,29 @@ function Agenda({
 
   return (
     <section data-testid="agenda">
-      <h2 className="mb-2 text-[0.9375rem] font-semibold text-muted">{t('n.agenda')}</h2>
+      <h2 className="mb-2 text-[1.0625rem] font-semibold text-muted">{t('n.agenda')}</h2>
 
       {items.length === 0 ? null : (
         <ul className="m-0 mb-2 list-none border-t border-line p-0">
           {items.map((item) => (
             <li
-              className="flex items-start gap-2 border-b border-line py-2.5"
+              className="flex items-center gap-2 border-b border-line py-2"
               key={item.id}
               data-testid="agenda-item"
             >
-              <span className="min-w-0 flex-1 text-[0.9375rem]">
+              <span className="min-w-0 flex-1 text-[1.0625rem]">
                 {item.body} <span className="text-muted">— {item.name}</span>
               </span>
               {/* Only your own, and the server enforces it too. */}
               {item.memberId === you ? (
                 <Button
                   look="danger"
-                  size="iconSm"
+                  size="icon"
                   disabled={busy}
                   onClick={() => onRemove(item.id)}
                   aria-label={t('n.agenda_remove')}
                 >
-                  <Trash2 size={14} aria-hidden="true" />
+                  <Trash2 size={18} aria-hidden="true" />
                   <span className="sr-only">{t('n.agenda_remove')}</span>
                 </Button>
               ) : null}
@@ -254,8 +261,8 @@ function Agenda({
           maxLength={200}
           className={`${FIELD} min-w-0 flex-1`}
         />
-        <Button type="submit" look="primary" disabled={busy || draft.trim() === ''}>
-          <Plus size={15} aria-hidden="true" />
+        <Button type="submit" look="primary" size="lg" disabled={busy || draft.trim() === ''}>
+          <Plus size={18} aria-hidden="true" />
           {t('n.agenda_add')}
         </Button>
       </form>

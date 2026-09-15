@@ -41,9 +41,14 @@ const button = cva(
         /* 44px, which is the number this app already says a thumb is — the
            composer's controls and the header's icons were each given it by
            hand while the default stayed at 40. */
-        md: 'h-11 px-4 text-[0.9375rem]',
-        /** Square, for a control that is an icon and nothing else. */
-        icon: 'h-10 w-10 p-0',
+        md: 'h-11 px-4 text-base',
+        /** The one action on a sheet, and home's answers: a thumb's height and
+           a half, on the control radius the menu rows and home already share,
+           so the biggest thing on a screen is the one a finger goes to. */
+        lg: 'h-13 rounded-[var(--radius-control)] px-5 text-[1.0625rem]',
+        /** Square, for a control that is an icon and nothing else — and a
+           thumb's square, not four pixels under it. */
+        icon: 'h-11 w-11 p-0',
         iconSm: 'h-7 w-7 p-0 text-sm',
       },
       /** Fills its row, for a list of choices. */

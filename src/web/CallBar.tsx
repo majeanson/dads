@@ -62,7 +62,7 @@ export function CallBar({
           onClick={onToggleMute}
           className={muted ? 'border-danger text-danger' : ''}
         >
-          {muted ? <MicOff size={15} aria-hidden="true" /> : <Mic size={15} aria-hidden="true" />}
+          {muted ? <MicOff size={18} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
           <span className="max-[26rem]:sr-only">{muted ? t('call.unmute') : t('call.mute')}</span>
         </Button>
         <Button
@@ -72,16 +72,16 @@ export function CallBar({
           className={camera ? 'border-accent text-accent' : ''}
         >
           {camera ? (
-            <VideoOff size={15} aria-hidden="true" />
+            <VideoOff size={18} aria-hidden="true" />
           ) : (
-            <Video size={15} aria-hidden="true" />
+            <Video size={18} aria-hidden="true" />
           )}
           <span className="max-[26rem]:sr-only">
             {camera ? t('call.camera_off') : t('call.camera_on')}
           </span>
         </Button>
         <Button size="md" look="danger" onClick={onLeave} aria-label={t('call.leave')}>
-          <PhoneOff size={15} aria-hidden="true" />
+          <PhoneOff size={18} aria-hidden="true" />
           <span className="max-[26rem]:sr-only">{t('call.leave')}</span>
         </Button>
         {/* The count is the way to the names. It used to be a row of names
@@ -89,7 +89,7 @@ export function CallBar({
             spent on something the sheet says better. */}
         <button
           type="button"
-          className="count-in ml-auto shrink truncate text-sm text-muted"
+          className="count-in ml-auto shrink truncate text-base text-muted"
           onClick={onWho}
           data-testid="call-count"
         >
@@ -157,14 +157,13 @@ export function JoinCall({
   if (state === 'denied' || state === 'failed') {
     return (
       <Button
-        size="sm"
         look="danger"
         onClick={onJoin}
         title={t(`call.${state}`)}
         aria-label={t('call.retry')}
-        className="max-[48rem]:h-10 max-[48rem]:w-10 max-[48rem]:px-0"
+        className="max-[48rem]:w-11 max-[48rem]:px-0"
       >
-        <MicOff size={15} aria-hidden="true" />
+        <MicOff size={20} aria-hidden="true" />
         <span className="max-[48rem]:sr-only">{t('call.retry')}</span>
         <span className="sr-only"> — {t(`call.${state}`)}</span>
       </Button>
@@ -173,13 +172,12 @@ export function JoinCall({
 
   return (
     <Button
-      size="sm"
       onClick={onJoin}
       disabled={state === 'joining'}
       aria-label={t('call.join')}
-      className="max-[48rem]:h-10 max-[48rem]:w-10 max-[48rem]:px-0"
+      className="max-[48rem]:w-11 max-[48rem]:px-0"
     >
-      <Phone size={15} aria-hidden="true" />
+      <Phone size={20} aria-hidden="true" />
       <span className="max-[48rem]:sr-only">
         {state === 'joining' ? t('call.opening') : t('call.join')}
       </span>

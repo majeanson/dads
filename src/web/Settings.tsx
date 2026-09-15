@@ -57,12 +57,12 @@ export function Settings({
           than about the software, and because a man's own name above the
           group's switches is the right way round. */}
       <section>
-        <h2 className="mb-2 text-[0.9375rem] font-semibold text-muted">{t('you.title')}</h2>
+        <h2 className="mb-2 text-[1.0625rem] font-semibold text-muted">{t('you.title')}</h2>
         <You memberId={you.memberId} name={you.name} face={you.face} />
       </section>
 
       <section>
-        <h2 className="mb-2 text-[0.9375rem] font-semibold text-muted">{t('set.rooms')}</h2>
+        <h2 className="mb-2 text-[1.0625rem] font-semibold text-muted">{t('set.rooms')}</h2>
         {/* Any dad, like the night: there is no admin in a room of five
             friends, and inventing one for three switches would be inventing
             one. */}
@@ -81,7 +81,7 @@ export function Settings({
       </section>
 
       <section>
-        <h2 className="mb-2 text-[0.9375rem] font-semibold text-muted">{t('set.yours')}</h2>
+        <h2 className="mb-2 text-[1.0625rem] font-semibold text-muted">{t('set.yours')}</h2>
         {/* One list, one shape. Language, theme and the reminder are three
             answers to three questions, and they now look like it. */}
         <div className="border-t border-line">
@@ -91,8 +91,8 @@ export function Settings({
       </section>
 
       {/* Last, and quiet: a dad signs out of this app about once. */}
-      <Button look="quiet" onClick={onSignOut} className="justify-self-start px-0">
-        <LogOut size={16} aria-hidden="true" />
+      <Button look="quiet" size="lg" onClick={onSignOut} className="justify-self-start px-0">
+        <LogOut size={20} aria-hidden="true" />
         {t('menu.sign_out')}
       </Button>
     </div>

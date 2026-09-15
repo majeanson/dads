@@ -58,18 +58,18 @@ export function RoomHeader({
           aria-label={t('home.title')}
           data-testid="go-home"
         >
-          <ChevronLeft size={20} aria-hidden="true" />
+          <ChevronLeft size={22} aria-hidden="true" />
           <span className="sr-only">{t('home.title')}</span>
         </Button>
       ) : null}
 
       <div className="min-w-0">
-        <h1 className="display truncate text-base text-muted">{groupName}</h1>
+        <h1 className="display truncate text-xl text-muted">{groupName}</h1>
         {/* The count is also the door to the roster and to who has been about.
             A button, because it does something — but not a blue underlined
             link, which is three times louder than a group of five men needs
             its own head-count to be. */}
-        <p className="text-[0.9375rem] text-ink">
+        <p className="text-[1.0625rem] text-ink">
           <button type="button" className="count-in" data-testid="connection" onClick={onWho}>
             {connection === 'open'
               ? t('room.here', { n: here })
@@ -99,18 +99,17 @@ export function RoomHeader({
       <span className="head-actions">
         <JoinCall state={callState} onJoin={onJoinCall} />
         <Button
-          size="sm"
           onClick={onMenu}
           aria-label={t('room.menu')}
           // A thumb's square on a phone: this and the call are the two things
           // pressed most, and they sit under the notch.
-          className="relative max-[48rem]:h-10 max-[48rem]:w-10 max-[48rem]:px-0"
+          className="relative max-[48rem]:w-11 max-[48rem]:px-0"
         >
-          <MenuIcon size={16} aria-hidden="true" />
+          <MenuIcon size={20} aria-hidden="true" />
           <span className="max-[48rem]:sr-only">{t('room.menu')}</span>
           {waiting ? (
             <span
-              className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent"
+              className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-accent"
               data-testid="mark-menu"
               aria-hidden="true"
             />

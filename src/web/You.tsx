@@ -101,17 +101,17 @@ export function You({
 
   return (
     <div className="grid gap-4" data-testid="you">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         {preview === null ? (
-          <Face memberId={memberId} name={name} version={face} size={56} />
+          <Face memberId={memberId} name={name} version={face} size={72} />
         ) : (
           <img
             src={preview}
             alt=""
             aria-hidden="true"
-            width={56}
-            height={56}
-            className="inline-block h-14 w-14 shrink-0 rounded-full object-cover"
+            width={72}
+            height={72}
+            className="inline-block h-18 w-18 shrink-0 rounded-full object-cover"
           />
         )}
 
@@ -121,14 +121,15 @@ export function You({
           <label
             htmlFor="face"
             className={[
-              'inline-flex h-10 cursor-pointer items-center gap-2 rounded-app px-3.5',
-              'border border-edge text-[0.9375rem] transition-colors duration-75',
+              // The same shape as a `lg` Button, because it sits beside one.
+              'inline-flex h-13 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-5',
+              'border border-edge text-[1.0625rem] font-medium transition-colors duration-75',
               'hover:border-accent hover:text-accent',
               'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2',
               'has-[:focus-visible]:outline-accent',
             ].join(' ')}
           >
-            <UserRound size={16} aria-hidden="true" />
+            <UserRound size={18} aria-hidden="true" />
             {hasFace ? t('you.change_face') : t('you.add_face')}
           </label>
           <input
@@ -146,8 +147,8 @@ export function You({
               seconds is not the same act as taking back something you said,
               and two red buttons in one app teaches nobody anything. */}
           {hasFace ? (
-            <Button look="quiet" disabled={busy} onClick={() => void remove()}>
-              <Trash2 size={16} aria-hidden="true" />
+            <Button look="quiet" size="lg" disabled={busy} onClick={() => void remove()}>
+              <Trash2 size={18} aria-hidden="true" />
               {t('you.remove_face')}
             </Button>
           ) : null}
@@ -155,7 +156,7 @@ export function You({
       </div>
 
       <form onSubmit={(e) => void rename(e)} className="grid gap-1.5">
-        <label htmlFor="myname" className="text-sm text-muted">
+        <label htmlFor="myname" className="text-base text-muted">
           {t('you.name')}
         </label>
         <div className="flex gap-2">
@@ -175,8 +176,8 @@ export function You({
               button beside a field he is not editing is a control that spends
               a row of the screen saying nothing. */}
           {draft.trim() !== '' && draft.trim() !== name ? (
-            <Button type="submit" look="primary" className="h-11 shrink-0" disabled={busy}>
-              <Check size={16} aria-hidden="true" />
+            <Button type="submit" look="primary" size="lg" className="shrink-0" disabled={busy}>
+              <Check size={18} aria-hidden="true" />
               {t('you.save')}
             </Button>
           ) : null}
@@ -184,7 +185,7 @@ export function You({
       </form>
 
       {error === null ? null : (
-        <p className="text-[0.9375rem] text-danger" role="alert">
+        <p className="text-[1.0625rem] text-danger" role="alert">
           {error}
         </p>
       )}

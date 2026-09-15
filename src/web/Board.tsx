@@ -80,7 +80,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
             <section key={w.week} className="mt-6">
               {/* The follow-through number is the whole point of the week
                 behind you, so it stays — as words, not a badge. */}
-              <h2 className="mb-1 text-[0.9375rem] font-semibold text-muted">
+              <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">
                 {t('b.week_of', { date: weekDate(w.week, lang) })}
                 {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
               </h2>
@@ -109,7 +109,10 @@ function WeekRows({ rows, you, className }: { rows: BoardRow[]; you: string; cla
         <BoardEntry key={row.memberId} row={row} isYou={row.memberId === you} />
       ))}
       {quiet.length > 0 ? (
-        <li className="border-b border-line py-2.5 text-muted" data-testid="board-waiting">
+        <li
+          className="border-b border-line py-3 text-[1.0625rem] text-muted"
+          data-testid="board-waiting"
+        >
           {t('b.waiting', {
             names: quiet.map((r) => r.name + (r.memberId === you ? t('here.you') : '')).join(', '),
           })}
@@ -124,16 +127,16 @@ function BoardEntry({ row, isYou = false }: { row: BoardRow; isYou?: boolean }) 
   const { t } = useT();
   return (
     <li
-      className="grid grid-cols-[6.5rem_1fr] gap-2 border-b border-line py-2.5 max-[32rem]:grid-cols-1 max-[32rem]:gap-0"
+      className="grid grid-cols-[7rem_1fr] gap-2 border-b border-line py-3 max-[32rem]:grid-cols-1 max-[32rem]:gap-0"
       data-testid="board-row"
     >
-      <span className="font-semibold">
+      <span className="text-[1.0625rem] font-semibold">
         {row.name}
         {isYou ? t('here.you') : ''}
       </span>
       <span className="grid gap-0.5">
         {row.checkIn ? (
-          <span className="text-[0.9375rem]" data-testid="board-rating">
+          <span className="text-[1.0625rem]" data-testid="board-rating">
             <strong>{row.checkIn.rating}/5</strong> {ratingWord(t, row.checkIn.rating)}
             {row.checkIn.note ? ` — ${row.checkIn.note}` : ''}
           </span>
@@ -141,7 +144,7 @@ function BoardEntry({ row, isYou = false }: { row: BoardRow; isYou?: boolean }) 
         {row.commitment ? (
           <span
             className={cn(
-              'text-[0.9375rem]',
+              'text-[1.0625rem]',
               row.commitment.outcome === 'done' && 'text-accent',
               row.commitment.outcome === 'missed' && 'text-muted line-through',
               row.commitment.outcome === 'pending' && 'text-muted',
@@ -195,14 +198,17 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
   }
 
   return (
-    <form className="grid gap-3" data-testid="your-week" onSubmit={submit}>
+    <form className="grid gap-4" data-testid="your-week" onSubmit={submit}>
       <fieldset className="m-0 flex flex-wrap items-center gap-2 border-0 p-0">
-        <legend className="mb-1.5 text-sm text-muted">{t('b.how_was')}</legend>
+        <legend className="mb-2 text-base text-muted">{t('b.how_was')}</legend>
         {[1, 2, 3, 4, 5].map((n) => (
           <label
             key={n}
             className={cn(
-              'relative grid h-10 w-10 cursor-pointer place-items-center rounded-app border tabular-nums',
+              // Five of these at 52px and four gaps sit inside a 360px phone
+              // with room to spare, and a number is the easiest thing in the
+              // app to miss with a thumb when it is 40.
+              'relative grid h-13 w-13 cursor-pointer place-items-center rounded-[var(--radius-control)] border text-lg tabular-nums',
               'transition-colors duration-75',
               rating === n
                 ? 'border-accent bg-accent text-on-accent'
@@ -242,7 +248,7 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
       />
 
       <div className="grid gap-1.5">
-        <label htmlFor="commitment" className="text-sm text-muted">
+        <label htmlFor="commitment" className="text-base text-muted">
           {t('b.commit_label')}
         </label>
         <input
@@ -258,10 +264,11 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
       <Button
         type="submit"
         look="primary"
+        size="lg"
         className="justify-self-start"
         disabled={busy || (!checkInChanged && !commitmentChanged)}
       >
-        <Check size={15} aria-hidden="true" />
+        <Check size={18} aria-hidden="true" />
         {t('b.save')}
       </Button>
     </form>
@@ -289,10 +296,10 @@ function HowDidItGo({
 
   return (
     <section
-      className="mb-6 rounded-lg border border-line bg-panel p-3"
+      className="mb-6 rounded-[var(--radius-control)] border border-line bg-panel p-4"
       data-testid="how-did-it-go"
     >
-      <p className="m-0 text-[0.9375rem]">
+      <p className="m-0 text-[1.0625rem]">
         {t('b.you_said', {
           week: t('b.week_of', { date: weekDate(pending.week, lang) }),
           body: pending.body,
@@ -307,14 +314,14 @@ function HowDidItGo({
         onChange={(e) => setReflection(e.target.value)}
         placeholder={t('b.how_did_it_go')}
         maxLength={280}
-        className={`${FIELD} mt-2`}
+        className={`${FIELD} mt-3`}
       />
-      <div className="mt-2 flex items-center gap-2">
-        <Button look="primary" onClick={() => void answer('done')} disabled={busy}>
-          <Check size={15} aria-hidden="true" />
+      <div className="mt-3 flex items-center gap-2">
+        <Button look="primary" size="lg" onClick={() => void answer('done')} disabled={busy}>
+          <Check size={18} aria-hidden="true" />
           {t('b.did_it')}
         </Button>
-        <Button look="quiet" onClick={() => void answer('missed')} disabled={busy}>
+        <Button look="quiet" size="lg" onClick={() => void answer('missed')} disabled={busy}>
           {t('b.didnt')}
         </Button>
       </div>

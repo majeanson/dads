@@ -43,16 +43,17 @@ export function Sheet({
             'sm:rounded-[var(--radius-card)] sm:border sm:border-line',
           ].join(' ')}
         >
-          {/* Bigger than it was, because on a phone this header is the top of
-              the whole screen rather than the lip of a panel. */}
+          {/* Big, because on a phone this header is the top of the whole
+              screen rather than the lip of a panel: it is the one word that
+              says where he is. */}
           <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-5 py-4">
-            <Dialog.Title className="display m-0 text-2xl">{title}</Dialog.Title>
+            <Dialog.Title className="display m-0 text-3xl">{title}</Dialog.Title>
             <Dialog.Close asChild>
               {/* The word is still there for anything reading the page aloud,
                   and for a test: an icon with no name is a button nobody can
                   ask for. */}
               <Button look="quiet" size="icon" aria-label={t('sheet.close')}>
-                <X size={18} aria-hidden="true" />
+                <X size={22} aria-hidden="true" />
                 <span className="sr-only">{t('sheet.close')}</span>
               </Button>
             </Dialog.Close>

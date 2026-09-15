@@ -37,15 +37,16 @@ export function Switch({
         disabled={disabled}
         data-testid={testId}
         className={cn(
-          'relative h-6 w-11 shrink-0 rounded-full border transition-colors duration-100',
+          'relative h-7 w-12 shrink-0 rounded-full border transition-colors duration-100',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
           checked ? 'border-accent bg-accent' : 'border-edge bg-panel',
         )}
       >
         <RadixSwitch.Thumb
           className={cn(
-            'block h-4 w-4 rounded-full bg-paper shadow-sm transition-transform duration-100',
-            'translate-x-1 data-[state=checked]:translate-x-6',
+            'block h-5 w-5 rounded-full bg-paper shadow-sm transition-transform duration-100',
+            // 4px in from either end of a 48px track with a 1px border.
+            'translate-x-1 data-[state=checked]:translate-x-[1.375rem]',
           )}
         />
       </RadixSwitch.Root>

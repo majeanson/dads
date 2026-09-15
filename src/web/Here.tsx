@@ -70,7 +70,7 @@ export function Here({
   return (
     <div data-testid="here">
       {roster.length === 0 ? (
-        <p className="text-muted">{t('here.nobody')}</p>
+        <p className="text-[1.0625rem] text-muted">{t('here.nobody')}</p>
       ) : (
         <ul className="m-0 flex list-none flex-wrap gap-2 p-0" aria-label={t('here.title')}>
           {roster.map((m) => {
@@ -80,20 +80,20 @@ export function Here({
                 key={m.memberId}
                 data-testid="roster-entry"
                 data-on-call={c ? 'yes' : undefined}
-                className="inline-flex items-center gap-2 rounded-full border border-line bg-paper py-1 pr-3 pl-1 text-sm"
+                className="inline-flex items-center gap-2.5 rounded-full border border-line bg-paper py-1.5 pr-4 pl-1.5 text-base"
               >
                 {/* His face, or his initials. The dot went with it: a list
                     titled "Who's here" did not need a mark on every row
                     saying each of them was here. */}
-                <Face memberId={m.memberId} name={m.name} version={m.face} size={26} />
+                <Face memberId={m.memberId} name={m.name} version={m.face} size={32} />
                 {m.name}
                 {m.you ? t('here.you') : ''}
                 {c ? (
                   <span className="inline-flex items-center gap-1 text-muted">
                     {c.muted ? (
-                      <MicOff size={13} aria-hidden="true" className="text-danger" />
+                      <MicOff size={16} aria-hidden="true" className="text-danger" />
                     ) : (
-                      <Phone size={13} aria-hidden="true" className="text-accent" />
+                      <Phone size={16} aria-hidden="true" className="text-accent" />
                     )}
                     <span className="sr-only">
                       {t('here.on_call')}
@@ -107,7 +107,7 @@ export function Here({
         </ul>
       )}
 
-      <h2 className="mt-6 mb-2 text-[0.9375rem] font-semibold text-muted">
+      <h2 className="mt-6 mb-2 text-[1.0625rem] font-semibold text-muted">
         <button
           type="button"
           className="inline-flex min-h-11 cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-inherit"
@@ -116,9 +116,9 @@ export function Here({
           data-testid="comings"
         >
           {showLog ? (
-            <ChevronDown size={15} aria-hidden="true" />
+            <ChevronDown size={18} aria-hidden="true" />
           ) : (
-            <ChevronRight size={15} aria-hidden="true" />
+            <ChevronRight size={18} aria-hidden="true" />
           )}
           {t('here.comings')}
         </button>
@@ -135,17 +135,17 @@ export function Here({
             <li
               key={`${e.at}-${e.name}-${e.kind}`}
               data-testid="coming"
-              className="flex items-center gap-2.5 border-b border-line py-2 text-[0.9375rem] last:border-0"
+              className="flex items-center gap-3 border-b border-line py-3 text-[1.0625rem] last:border-0"
             >
               {e.kind === 'in' ? (
-                <LogIn size={15} aria-hidden="true" className="shrink-0 text-accent" />
+                <LogIn size={18} aria-hidden="true" className="shrink-0 text-accent" />
               ) : (
-                <LogOut size={15} aria-hidden="true" className="shrink-0 text-muted" />
+                <LogOut size={18} aria-hidden="true" className="shrink-0 text-muted" />
               )}
               <span className="flex-1">
                 {t(e.kind === 'in' ? 'here.came_in' : 'here.left', { name: e.name })}
               </span>
-              <time className="text-xs text-muted tabular-nums">{when(e.at, locale)}</time>
+              <time className="text-sm text-muted tabular-nums">{when(e.at, locale)}</time>
             </li>
           ))}
         </ul>

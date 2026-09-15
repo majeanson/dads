@@ -147,7 +147,7 @@ export function NightEditor({ night, onDone }: { night: DadNight | null; onDone:
         value={weekday}
         onChange={(e) => setWeekday(e.target.value)}
         aria-label={t('n.day')}
-        className={cn(FIELD, 'h-10 w-auto py-0')}
+        className={cn(FIELD, 'h-13 w-auto py-0')}
       >
         {weekdayNames(lang).map((name, index) => (
           <option key={name} value={index}>
@@ -166,16 +166,16 @@ export function NightEditor({ night, onDone }: { night: DadNight | null; onDone:
         onChange={(e) => setTime(e.target.value)}
         aria-label={t('n.time')}
         required
-        className={cn(FIELD, 'h-10 w-auto py-0')}
+        className={cn(FIELD, 'h-13 w-auto py-0')}
       />
 
-      <Button type="submit" look="primary" disabled={busy}>
-        <Check size={15} aria-hidden="true" />
+      <Button type="submit" look="primary" size="lg" disabled={busy}>
+        <Check size={18} aria-hidden="true" />
         {t('n.save')}
       </Button>
       {night ? (
-        <Button look="danger" onClick={() => void clear()} disabled={busy}>
-          <Trash2 size={15} aria-hidden="true" />
+        <Button look="danger" size="lg" onClick={() => void clear()} disabled={busy}>
+          <Trash2 size={18} aria-hidden="true" />
           {t('n.clear')}
         </Button>
       ) : null}

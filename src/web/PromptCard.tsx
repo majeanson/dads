@@ -60,11 +60,11 @@ export function PromptCard({
 
   return (
     <section className="mb-6" data-testid="prompt-card">
-      <p className="m-0 text-lg leading-snug font-medium" data-testid="prompt-body">
+      <p className="m-0 text-2xl leading-snug font-medium" data-testid="prompt-body">
         {promptText(lang, today.prompt)}
       </p>
 
-      <p className="mt-1.5 mb-3 text-sm text-muted">
+      <p className="mt-2 mb-4 text-base text-muted">
         {answered
           ? t('q.you_answered')
           : answersToday.length === 0
@@ -86,17 +86,17 @@ export function PromptCard({
             className={`${FIELD} resize-y`}
           />
           <div className="flex items-center gap-2">
-            <Button type="submit" look="primary" disabled={!canAnswer || !draft.trim()}>
+            <Button type="submit" look="primary" size="lg" disabled={!canAnswer || !draft.trim()}>
               {t('q.answer')}
             </Button>
-            <Button look="quiet" onClick={() => setOpen(false)}>
+            <Button look="quiet" size="lg" onClick={() => setOpen(false)}>
               {t('q.not_now')}
             </Button>
           </div>
         </form>
       ) : (
-        <Button onClick={() => setOpen(true)}>
-          <PenLine size={15} aria-hidden="true" />
+        <Button size="lg" onClick={() => setOpen(true)}>
+          <PenLine size={18} aria-hidden="true" />
           {answered ? t('q.say_more') : t('q.answer')}
         </Button>
       )}

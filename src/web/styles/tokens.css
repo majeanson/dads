@@ -360,9 +360,10 @@
     flex-shrink: 0;
   }
 
+  /* The size is set on the element: a utility is layered after this sheet
+     and wins, so a font-size here was a rule that did nothing. */
   .room-head p {
     margin: 0;
-    font-size: 0.875rem;
   }
 
   /* --- the stage: talk, and the table beside it on a wide screen --- */
@@ -981,10 +982,6 @@
       padding-left: max(0.75rem, env(safe-area-inset-left));
       padding-right: max(0.75rem, env(safe-area-inset-right));
     }
-
-    .room-head h1 {
-      font-size: 1.125rem;
-    }
   }
 
   /* --- the call ----------------------------------------------------------
@@ -1104,7 +1101,7 @@
      switch: on an iPhone that is until the app is on the home screen. */
   .remind-note {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: 1.0625rem;
   }
 
   /* The head-count is a way in, not a link: a group of five men does not need
