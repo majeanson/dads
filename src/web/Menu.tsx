@@ -74,7 +74,10 @@ export function Menu({
           <MessageCircleQuestion size={22} aria-hidden="true" className="text-muted" />
           {t('menu.questions')}
           {todo.prompt ? (
-            <span className="ml-auto text-sm font-normal text-accent" data-testid="mark-prompts">
+            <span
+              className="ml-auto min-w-0 truncate text-sm font-normal text-accent"
+              data-testid="mark-prompts"
+            >
               {t('menu.prompt_waiting')}
             </span>
           ) : null}
@@ -86,7 +89,10 @@ export function Menu({
           <CalendarCheck size={22} aria-hidden="true" className="text-muted" />
           {t('menu.week')}
           {todo.board ? (
-            <span className="ml-auto text-sm font-normal text-accent" data-testid="mark-board">
+            <span
+              className="ml-auto min-w-0 truncate text-sm font-normal text-accent"
+              data-testid="mark-board"
+            >
               {t('menu.board_waiting')}
             </span>
           ) : null}

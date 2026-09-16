@@ -489,11 +489,21 @@
      things stacked in one 34rem column left a 1280x800 laptop cutting the
      last row off, with half the screen empty either side of it. */
   @media (min-width: 48rem) {
+    /* The room widens for home the way it does for the table: two columns
+       inside the conversation's 44rem measure were 20rem each, and a French
+       menu row does not fit in 20rem. */
+    main.room[data-view='home'] {
+      max-width: 60rem;
+    }
     .room[data-view='home'] .home {
-      grid-template-columns: 1fr 1fr;
+      /* minmax(0, 1fr), never a bare 1fr: a bare 1fr is minmax(auto, 1fr)
+         and cannot shrink below its content, so a row with a long mark on it
+         pushed the whole column past the page edge, clipped, in a 940px
+         window. */
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       align-content: start;
       column-gap: clamp(1.5rem, 4vw, 3rem);
-      max-width: 60rem;
+      max-width: none;
     }
     .room[data-view='home'] .home-card {
       grid-row: span 2;

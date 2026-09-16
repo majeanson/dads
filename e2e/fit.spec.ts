@@ -15,6 +15,9 @@ import { E2E_FIT_GROUP } from './global-setup';
  */
 const SMALL = { width: 390, height: 667 };
 const LAPTOP = { width: 1280, height: 800 };
+/** A browser window on a laptop, not maximised: where the two columns first
+ * ran past the page edge, because a bare 1fr cannot shrink below its rows. */
+const WINDOW = { width: 940, height: 540 };
 
 async function comeIn(page: Page, name: string) {
   await page.goto('/');
@@ -42,9 +45,20 @@ function overflow(page: Page, selector: string): Promise<number> {
   }, selector);
 }
 
+/** And past the right-hand edge, which `overflow-x: clip` on the room would
+ * otherwise hide from everything but a dad's eyes. */
+function sideways(page: Page, selector: string): Promise<number> {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel) as HTMLElement | null;
+    if (!el) throw new Error(`${sel}: not on the page`);
+    return Math.max(0, el.scrollWidth - el.clientWidth);
+  }, selector);
+}
+
 for (const [label, viewport] of [
   ['the small phone', SMALL],
   ['a laptop', LAPTOP],
+  ['a laptop window', WINDOW],
 ] as const) {
   test(`home fits ${label} without scrolling`, async ({ browser }) => {
     const context = await browser.newContext({ viewport });
@@ -53,6 +67,8 @@ for (const [label, viewport] of [
     // Let the fonts and the night land before measuring.
     await page.waitForTimeout(300);
     expect(await overflow(page, '.home')).toBe(0);
+    expect(await sideways(page, '.home')).toBe(0);
+    expect(await sideways(page, 'main.room')).toBe(0);
     await context.close();
   });
 }
