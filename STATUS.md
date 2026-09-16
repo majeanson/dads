@@ -8,20 +8,20 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 
 ## What a dad can do
 
-|                     |                                                                                           |
-| ------------------- | ----------------------------------------------------------------------------------------- |
-| **Get in**          | Follow a link, or type the code, and a name. Remembered on that device forever.           |
-| **See at a glance** | The app opens on home, and home is two things: the night, and the way into the talk.      |
-| **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers.                    |
-| **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.   |
-| **Be heard**        | Voice call in the room, camera optional. Full WebRTC mesh.                                |
-| **Show something**  | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.               |
-| **Look at it**      | A photograph opens full-screen in the app, moves to the next one, and saves to the phone. |
-| **Keep it**         | Any dad can take a picture off the shelf so the next upload never reaches it.             |
-| **Answer**          | A curated question every day, answered in front of the others.                            |
-| **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened.                   |
-| **Play**            | Jaffre framed beside the conversation, name passed through, table events in the chat.     |
-| **Turn up**         | A standing dad night: countdown, who's coming, what to get into, a nudge, an .ics.        |
+|                     |                                                                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Get in**          | Follow a link, or type the code, and a name. Remembered on that device forever.                                                      |
+| **See at a glance** | The app opens on home, which asks one question: are you coming on Thursday. The door into the talk and the menu's rows sit under it. |
+| **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers.                                                               |
+| **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.                                              |
+| **Be heard**        | Voice call in the room, camera optional. Full WebRTC mesh.                                                                           |
+| **Show something**  | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.                                                          |
+| **Look at it**      | A photograph opens full-screen in the app, moves to the next one, and saves to the phone.                                            |
+| **Keep it**         | Any dad can take a picture off the shelf so the next upload never reaches it.                                                        |
+| **Answer**          | A curated question every day, answered in front of the others.                                                                       |
+| **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened.                                                              |
+| **Play**            | Jaffre framed beside the conversation, name passed through, table events in the chat.                                                |
+| **Turn up**         | A standing dad night: countdown, who's coming, what to get into, a nudge, an .ics.                                                   |
 
 ## The shape of it
 
@@ -39,7 +39,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 npm run typecheck
 npm run lint
 npm test              # 303, in workerd against the real migrations
-npm run e2e           # 65, against the built stack
+npm run e2e           # 64, against the built stack
 npm run audit:contrast  # 26 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run prove         # 27, against dads.marcportal.com itself
@@ -105,6 +105,12 @@ Worker, the headers that only exist because `public/_headers` shipped, and
 secrets that are only set in production. It never opens the viewer, and a
 headless browser has nothing to say about whether a photograph of somebody's
 child looks right on a phone in a kitchen.
+
+What has NOT been through a phone yet is the day after that (2026-09-15):
+home cut down to the one question, the menu's rows on home itself, the
+header split into its two shapes, and every control at 44px with the one
+action on a sheet bigger still. Playwright checked it at 390px in both
+languages; a thumb in a kitchen has not.
 
 ## The last review
 

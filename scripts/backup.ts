@@ -31,6 +31,8 @@ const TABLES = [
   'commitments',
   'presence',
   'rsvps',
+  'night_items',
+  'reactions',
   'invites',
   'push_subscriptions',
 ];
