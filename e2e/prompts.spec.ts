@@ -87,6 +87,9 @@ test('what the group was asked before is readable, and a dad can add one', async
   // Scoped: the composer's own attach control is also a button, and
   // Playwright matches accessible names by substring.
   await marc.getByTestId('prompt-add').getByRole('button', { name: 'Add', exact: true }).click();
+  // And it says so: the field clearing was the only sign, and a dad who
+  // missed it added the same question twice and was refused.
+  await expect(marc.getByTestId('prompt-added')).toBeVisible();
 
   await marc.getByTestId('prompt-history').click();
   await expect(marc.getByTestId('prompt-list')).toBeVisible();
@@ -106,11 +109,12 @@ test('what the group was asked before is readable, and a dad can add one', async
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toContainText('by Marc');
 
-  // It survives a reload, the row counts it, and going back to the room
-  // still works.
+  // It survives a reload, and going back to the room still works. The row
+  // does NOT count it: added is not asked, and the daily pick has not
+  // reached it yet.
   await marc.reload();
   await open(marc, 'Questions');
-  await expect(marc.getByTestId('prompt-history')).toContainText('1 asked');
+  await expect(marc.getByTestId('prompt-history')).not.toContainText(/d+ asked/);
   await marc.getByTestId('prompt-history').click();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await close(marc);
