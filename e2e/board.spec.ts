@@ -96,6 +96,20 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   await sam.context().close();
 });
 
+test('a half-written week survives a look at the weeks before', async ({ browser }) => {
+  const pat = await comeIn(browser, 'Pat');
+  await open(pat, 'The week');
+  await expect(pat.getByTestId('your-week')).toBeVisible();
+
+  await pat.getByLabel('One line about your week').fill('Started a sentence and');
+  await pat.getByTestId('board-tab-before').click();
+  await expect(pat.getByTestId('your-week')).toBeHidden();
+  await pat.getByTestId('board-tab-now').click();
+  await expect(pat.getByLabel('One line about your week')).toHaveValue('Started a sentence and');
+
+  await pat.context().close();
+});
+
 test('a check-in survives a reload, and the menu still works', async ({ browser }) => {
   // A fresh context is a fresh device, so this is a different dad from the
   // one above — hence a name of his own.

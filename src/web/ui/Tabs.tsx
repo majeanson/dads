@@ -50,6 +50,13 @@ export function Tabs({
   );
 }
 
+/**
+ * A panel stays MOUNTED while another tab is showing, and is hidden with a
+ * class. Radix unmounts the inactive one by default, and a dad who typed half
+ * a line about his week, flipped to Before to check last week's, and came
+ * back found the field empty. With `forceMount` Radix no longer sets
+ * `hidden` itself, so the inactive state does it here.
+ */
 export function TabPanel({
   value,
   children,
@@ -60,7 +67,11 @@ export function TabPanel({
   className?: string;
 }) {
   return (
-    <RadixTabs.Content value={value} className={cn('outline-none', className)}>
+    <RadixTabs.Content
+      value={value}
+      forceMount
+      className={cn('outline-none data-[state=inactive]:hidden', className)}
+    >
       {children}
     </RadixTabs.Content>
   );
