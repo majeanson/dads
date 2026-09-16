@@ -114,7 +114,7 @@ test('what the group was asked before is readable, and a dad can add one', async
   // reached it yet.
   await marc.reload();
   await open(marc, 'Questions');
-  await expect(marc.getByTestId('prompt-history')).not.toContainText(/d+ asked/);
+  await expect(marc.getByTestId('prompt-history')).not.toContainText(/\d+ asked/);
   await marc.getByTestId('prompt-history').click();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await close(marc);
