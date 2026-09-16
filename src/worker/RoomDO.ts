@@ -20,7 +20,8 @@ import {
 } from '../shared/protocol';
 import { tableSaid } from '../shared/jaffre';
 import { englishOf, parseSaid, type Said } from '../shared/said';
-import { notifyGroup, notifyMember } from './push';
+import { isoWeekIn, previousWeek } from '../shared/week';
+import { dadNightReminder, notifyGroup, notifyMember } from './push';
 import type { Env } from './env';
 import { newId } from './identity';
 import { forgetMedia, mediaFor } from './media';
@@ -655,11 +656,7 @@ export class RoomDO extends DurableObject<Env> {
   private async remindOfDadNight(): Promise<void> {
     const groupId = this.groupId();
     if (groupId === undefined) return;
-    await notifyGroup(this.env, groupId, {
-      title: 'dads',
-      body: 'Dad night tomorrow. Coming?',
-      tag: 'dad-night-soon',
-    });
+    await notifyGroup(this.env, groupId, dadNightReminder());
   }
 
   private async openDadNight(now: number): Promise<void> {
@@ -720,7 +717,8 @@ export class RoomDO extends DurableObject<Env> {
    */
   private async closeDadNight(now: number): Promise<void> {
     const night = this.storedNight();
-    const start = night ? previousStart(night, now) : null;
+    if (!night) return;
+    const start = previousStart(night, now);
     if (start === null) return;
 
     const groupId = this.groupId();
@@ -744,7 +742,32 @@ export class RoomDO extends DurableObject<Env> {
       return;
     }
 
-    await this.say('dad night', { k: 'night_done', dads, lines });
+    // And the week beside the night: what is being tried, and how last
+    // week's went. Best-effort — the summary of the evening must not be
+    // lost to a failed read of the board.
+    let week: { tried: number; kept: number; promised: number } = {
+      tried: 0,
+      kept: 0,
+      promised: 0,
+    };
+    try {
+      const thisWeek = isoWeekIn(start, night.tz);
+      const lastWeek = previousWeek(thisWeek);
+      const { results } = await this.env.DB.prepare(
+        'SELECT week, outcome FROM commitments WHERE group_id = ? AND week IN (?, ?)',
+      )
+        .bind(groupId, thisWeek, lastWeek)
+        .all<{ week: string; outcome: string }>();
+      week = {
+        tried: results.filter((r) => r.week === thisWeek).length,
+        promised: results.filter((r) => r.week === lastWeek).length,
+        kept: results.filter((r) => r.week === lastWeek && r.outcome === 'done').length,
+      };
+    } catch (err) {
+      console.error('dad night week count failed', { groupId }, err);
+    }
+
+    await this.say('dad night', { k: 'night_done', dads, lines, ...week });
   }
 
   // -------------------------------------------------------------- presence

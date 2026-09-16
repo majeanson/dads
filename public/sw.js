@@ -1,3 +1,4 @@
+/* global fetch, URL */
 /*
  * The service worker, and it does one job.
  *
@@ -23,6 +24,11 @@ self.addEventListener('push', (event) => {
   }
 
   const title = payload.title || 'dads';
+  // Only the two actions this worker knows how to answer, whatever the
+  // payload says: an action is a button that runs code in here.
+  const actions = Array.isArray(payload.actions)
+    ? payload.actions.filter((a) => a && (a.action === 'rsvp-in' || a.action === 'rsvp-out'))
+    : [];
   event.waitUntil(
     self.registration.showNotification(title, {
       body: payload.body || '',
@@ -31,29 +37,52 @@ self.addEventListener('push', (event) => {
       // One tag for a kind of thing: two reminders for the same night replace
       // each other rather than stacking up on the lock screen.
       tag: payload.tag || 'dads',
+      actions,
     }),
   );
 });
 
+/**
+ * Always this app, never an address out of the payload. Only something
+ * holding our VAPID private key can send one of these, but a notification
+ * that can be talked into opening an arbitrary page is a bad shape to leave
+ * lying around whatever the odds.
+ *
+ * A tab that is already open is the one he wants — focus it rather than
+ * opening a second room beside the first.
+ */
+function openTheApp() {
+  const url = self.registration.scope;
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+    for (const client of windows) {
+      if (client.url.includes(self.registration.scope) && 'focus' in client) {
+        return client.focus();
+      }
+    }
+    return self.clients.openWindow(url);
+  });
+}
+
+/**
+ * "Coming" or "Can't" on the reminder files the answer from here, with the
+ * same cookie the app would send, and the app never has to open. Anything
+ * that goes wrong — the cookie gone, the network, a night that no longer
+ * exists — opens the app instead, where the question is still on the card.
+ */
+function answer(coming) {
+  return fetch(new URL('/api/rsvp', self.registration.scope), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ coming }),
+  })
+    .then((res) => (res.ok ? undefined : openTheApp()))
+    .catch(openTheApp);
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
-  // Always this app, never an address out of the payload. Only something
-  // holding our VAPID private key can send one of these, but a notification
-  // that can be talked into opening an arbitrary page is a bad shape to leave
-  // lying around whatever the odds.
-  const url = self.registration.scope;
-
-  // A tab that is already open is the one he wants — focus it rather than
-  // opening a second room beside the first.
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
-      for (const client of windows) {
-        if (client.url.includes(self.registration.scope) && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      return self.clients.openWindow(url);
-    }),
-  );
+  if (event.action === 'rsvp-in') return event.waitUntil(answer(true));
+  if (event.action === 'rsvp-out') return event.waitUntil(answer(false));
+  event.waitUntil(openTheApp());
 });

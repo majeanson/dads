@@ -1,5 +1,6 @@
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { dadNightReminder, RSVP_ACTIONS } from '../src/worker/push';
 import { acceptableEndpoint } from '../src/worker/routes/push';
 import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
 
@@ -92,6 +93,14 @@ describe('push', () => {
    * nobody watching. Anything that is not a real push service's own address is
    * somebody choosing where the room's server sends its requests.
    */
+  it('puts the two answers on the day-before nudge, by the ids the worker answers', () => {
+    const payload = dadNightReminder();
+    expect(payload.body).toContain('Coming?');
+    expect(payload.actions?.map((a) => a.action)).toEqual([RSVP_ACTIONS.in, RSVP_ACTIONS.out]);
+    // sw.js matches these two strings by hand; a rename here has to reach it.
+    expect(RSVP_ACTIONS).toEqual({ in: 'rsvp-in', out: 'rsvp-out' });
+  });
+
   it('refuses an endpoint that is not a push service', async () => {
     const cookie = await cookieFor();
     for (const endpoint of [

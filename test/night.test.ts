@@ -2,6 +2,7 @@ import { runDurableObjectAlarm } from 'cloudflare:test';
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextStart, NIGHT_DURATION_MS, type DadNight } from '../src/shared/dadNight';
+import { isoWeekIn, previousWeek } from '../src/shared/week';
 import type { ServerFrame } from '../src/shared/protocol';
 import {
   arrived,
@@ -286,6 +287,50 @@ describe('the night itself', () => {
     clockAt(start + NIGHT_DURATION_MS + 1000);
     expect(await fireAlarm(group)).toBe(true);
     await until(() => marc.lines().includes('Dad night done — 2 dads turned up, 3 lines.'));
+  });
+
+  it('carries the week: what is being tried, and how last week went', async () => {
+    const marc = await enter(group, 'Marc');
+    const sam = await enter(group, 'Sam');
+    open.push(marc, sam);
+
+    const members = (
+      await env.DB.prepare('SELECT id FROM members WHERE group_id = ? ORDER BY joined_at')
+        .bind(group.id)
+        .all<{ id: string }>()
+    ).results;
+    const thisWeek = isoWeekIn(start, night.tz);
+    const lastWeek = previousWeek(thisWeek);
+    // This week: one thing being tried. Last week: two promised, one kept.
+    for (const [id, memberId, week, outcome] of [
+      ['c_now', members[0]!.id, thisWeek, 'pending'],
+      ['c_then_marc', members[0]!.id, lastWeek, 'done'],
+      ['c_then_sam', members[1]!.id, lastWeek, 'missed'],
+    ] as const) {
+      await env.DB.prepare(
+        `INSERT INTO commitments (id, group_id, member_id, week, body, outcome, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(id, group.id, memberId, week, 'Bedtime', outcome, Date.now())
+        .run();
+    }
+
+    clockAt(start + 1000);
+    expect(await fireAlarm(group)).toBe(true);
+    await until(() => marc.lines().includes(OPEN));
+    clockAt(start + 60_000);
+    marc.say('made it');
+    await until(() => marc.lines().includes('made it'));
+
+    clockAt(start + NIGHT_DURATION_MS + 1000);
+    expect(await fireAlarm(group)).toBe(true);
+    await until(() =>
+      marc
+        .lines()
+        .includes(
+          'Dad night done — one dad turned up, one line. One thing being tried this week, last week 1 of 2 kept.',
+        ),
+    );
   });
 
   it('says plainly when nobody came', async () => {

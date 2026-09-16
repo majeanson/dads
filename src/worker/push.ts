@@ -185,6 +185,32 @@ export interface PushPayload {
   title: string;
   body: string;
   tag?: string;
+  /** Buttons on the notification. Android shows them; iOS does not, and a
+   * tap there opens the app instead, which is the fallback everywhere. */
+  actions?: { action: string; title: string }[];
+}
+
+/** The action ids the service worker answers. `sw.js` matches these. */
+export const RSVP_ACTIONS = { in: 'rsvp-in', out: 'rsvp-out' } as const;
+
+/**
+ * The day-before nudge, with the answer on it.
+ *
+ * "Coming?" is a question, and on a lock screen the honest place for the
+ * answer is the notification itself: two buttons, and the RSVP is filed
+ * from the service worker without the app opening. A tap on the body still
+ * opens the app, as before.
+ */
+export function dadNightReminder(): PushPayload {
+  return {
+    title: 'dads',
+    body: 'Dad night tomorrow. Coming?',
+    tag: 'dad-night-soon',
+    actions: [
+      { action: RSVP_ACTIONS.in, title: 'Coming' },
+      { action: RSVP_ACTIONS.out, title: 'Can’t' },
+    ],
+  };
 }
 
 /**

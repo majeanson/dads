@@ -21,7 +21,17 @@ export type Said =
   /** `items` is how many things the week put up for it, absent when none. */
   | { k: 'night_open'; items?: number }
   | { k: 'item_added'; name: string; body: string }
-  | { k: 'night_done'; dads: number; lines: number }
+  | {
+      k: 'night_done';
+      dads: number;
+      lines: number;
+      /** Commitments written for the night's week — what is being tried. */
+      tried?: number;
+      /** Last week's commitments, and how many were kept. Absent on a line
+       * said before the summary carried the week. */
+      kept?: number;
+      promised?: number;
+    }
   | { k: 'rsvp'; name: string; coming: boolean }
   | { k: 'check_in'; name: string; rating: number; note: string }
   | { k: 'commitment'; name: string; body: string }
@@ -76,7 +86,17 @@ export function parseSaid(raw: unknown): Said | null {
     case 'night_done': {
       const dads = num(said.dads);
       const lines = num(said.lines);
-      return dads !== null && lines !== null ? { k: 'night_done', dads, lines } : null;
+      if (dads === null || lines === null) return null;
+      const tried = num(said.tried);
+      const kept = num(said.kept);
+      const promised = num(said.promised);
+      return {
+        k: 'night_done',
+        dads,
+        lines,
+        ...(tried !== null ? { tried } : {}),
+        ...(kept !== null && promised !== null ? { kept, promised } : {}),
+      };
     }
     case 'check_in': {
       const name = str(said.name);
@@ -143,13 +163,24 @@ export function describeSaid(t: T, lang: Lang, said: Said, joined = false): stri
         : t(`sys.night_open_items_${plural(lang, said.items)}`, { n: said.items });
     case 'item_added':
       return t('sys.item_added', { name: said.name, body: said.body });
-    case 'night_done':
-      return said.dads === 0
-        ? t('sys.night_done_none')
-        : t('sys.night_done', {
-            dads: t(`sys.night_dads_${plural(lang, said.dads)}`, { n: said.dads }),
-            lines: t(`sys.night_lines_${plural(lang, said.lines)}`, { n: said.lines }),
-          });
+    case 'night_done': {
+      const night =
+        said.dads === 0
+          ? t('sys.night_done_none')
+          : t('sys.night_done', {
+              dads: t(`sys.night_dads_${plural(lang, said.dads)}`, { n: said.dads }),
+              lines: t(`sys.night_lines_${plural(lang, said.lines)}`, { n: said.lines }),
+            });
+      // The week, when there is one to report: what is being tried, and how
+      // last week's went. It is the one line the whole group reads at once.
+      const week = [
+        said.tried ? t(`sys.night_tried_${plural(lang, said.tried)}`, { n: said.tried }) : null,
+        said.promised ? t('sys.night_kept', { kept: said.kept ?? 0, total: said.promised }) : null,
+      ].filter((s): s is string => s !== null);
+      if (week.length === 0) return night;
+      const sentence = week.join(', ');
+      return `${night} ${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`;
+    }
     case 'rsvp':
       return t(said.coming ? 'sys.rsvp_in' : 'sys.rsvp_out', { name: said.name });
     case 'check_in':

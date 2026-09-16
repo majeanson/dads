@@ -189,6 +189,13 @@ weakening `sessionSecret()`.
 - `night_start` posts "the table's open" and arms `night_end`; `night_end`
   counts the window from the **D1 archive** and posts the summary, then arms
   next week. A group with no night arms nothing.
+- **The summary carries the week** (2026-09-16): how many things are being
+  tried this week and how many of last week's were kept, read from
+  `commitments` for the night's ISO week and the one before, in the group's
+  zone. It is the one line the whole group reads at once. Best-effort — a
+  failed read of the board must not cost the evening its summary — and the
+  numbers ride `meta` as optional fields, so a line said before this renders
+  as it always did. Zeros say nothing: "0 things being tried" is furniture.
 - Any dad can set the night — no admin role — and the change is announced in
   the room by name. `PUT /api/night` writes D1 then tells the DO, which
   re-arms, announces, and pushes a `night` frame to open sockets.
@@ -879,6 +886,16 @@ neither see nor scroll anything.
   switch that cannot do anything.
 - Sent from the `night_start` alarm, once, when the table opens. The standing
   night is still the mechanism; this is a nudge for the man who asked for one.
+- **The day-before nudge can be answered from the lock screen** (2026-09-16).
+  `dadNightReminder()` puts two actions on the payload, `rsvp-in` and
+  `rsvp-out` (`RSVP_ACTIONS`, pinned by a test because `sw.js` matches the
+  strings by hand), and the worker answers them with a `PUT /api/rsvp` under
+  the app's own cookie, without opening a window. Anything that goes wrong —
+  the cookie gone, the network, no night — opens the app instead, where the
+  question is still on the card. Android shows the buttons; iOS does not and
+  a tap opens the app, which is the fallback everywhere. The worker shows
+  only the two actions it knows: an action is a button that runs code in
+  there, and the payload does not get to name one.
 
 ## Small things that turned out to matter
 
