@@ -71,6 +71,14 @@ for (const theme of ['light', 'dark'] as const) {
 
     const menu = () => page.getByRole('button', { name: 'Menu' }).click();
     const close = () => page.getByRole('button', { name: 'Close', exact: true }).first().click();
+    // A sheet is ready to scan once it is on the screen and has stopped
+    // moving — waited for, not guessed at.
+    const settled = async () => {
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.evaluate(() =>
+        Promise.all(document.getAnimations().map((an) => an.finished.catch(() => undefined))),
+      );
+    };
 
     await menu();
     found.push(...(await faults(page, 'the menu')));
@@ -89,7 +97,7 @@ for (const theme of ['light', 'dark'] as const) {
     for (const [scene, name] of chat) {
       await menu();
       await page.getByRole('button', { name }).click();
-      await page.waitForTimeout(400);
+      await settled();
       found.push(...(await faults(page, scene)));
       await close();
     }
@@ -99,13 +107,13 @@ for (const theme of ['light', 'dark'] as const) {
     await menu();
     await page.getByRole('button', { name: /^Questions/ }).click();
     await page.getByTestId('prompt-history').click();
-    await page.waitForTimeout(400);
+    await settled();
     found.push(...(await faults(page, 'asked before')));
     await close();
     await menu();
     await page.getByRole('button', { name: /^The week/ }).click();
     await page.getByTestId('board-tab-before').click();
-    await page.waitForTimeout(400);
+    await settled();
     found.push(...(await faults(page, 'the weeks before')));
     await close();
 
@@ -113,7 +121,7 @@ for (const theme of ['light', 'dark'] as const) {
     // door.
     await page.getByTestId('go-home').click();
     await page.getByTestId('dad-night').click();
-    await page.waitForTimeout(400);
+    await settled();
     found.push(...(await faults(page, 'dad night')));
     await close();
 
@@ -124,7 +132,7 @@ for (const theme of ['light', 'dark'] as const) {
     ];
     for (const [scene, name] of rows) {
       await page.getByRole('navigation', { name: 'Rooms' }).getByRole('button', { name }).click();
-      await page.waitForTimeout(400);
+      await settled();
       found.push(...(await faults(page, scene)));
       await close();
     }

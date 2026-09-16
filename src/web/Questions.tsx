@@ -63,10 +63,14 @@ export function Questions({
     };
   }, []);
 
-  const count = state.status === 'ready' ? state.history.length + state.mine.length : 0;
+  // What the group was ASKED, not what its dads have added: a question
+  // written on Tuesday that the daily pick has not reached is not "1 asked".
+  const count = state.status === 'ready' ? state.history.length : 0;
+  const [justAdded, setJustAdded] = useState(false);
 
   function added(entry: PoolEntry) {
     setState((s) => (s.status === 'ready' ? { ...s, mine: [entry, ...s.mine] } : s));
+    setJustAdded(true);
   }
 
   return (
@@ -75,8 +79,15 @@ export function Questions({
         <div className="grid gap-5">
           <PromptCard messages={messages} onAnswer={onAnswer} canAnswer={canAnswer} />
           {/* No heading: the box says what it is. */}
-          <section data-testid="prompt-add">
+          <section data-testid="prompt-add" className="grid gap-2">
             <AddPromptForm onAdded={added} />
+            {/* The field clearing is the only other sign it worked, and a dad
+                who missed it adds the same question again and is refused. */}
+            {justAdded ? (
+              <p className="m-0 text-sm text-muted" role="status" data-testid="prompt-added">
+                {t('q.added')}
+              </p>
+            ) : null}
           </section>
           <Button
             block

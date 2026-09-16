@@ -188,6 +188,7 @@ const EN = {
   'q.history_count_other': '{n} asked',
   'q.back_today': 'Today’s question',
   'q.none_before': 'Nothing before today.',
+  'q.added': 'Added. It goes into the pool the day’s question is picked from.',
 
   // ---------------------------------------------------------- the week
   'b.title': 'The week',
@@ -498,6 +499,7 @@ const FR: Record<Key, string> = {
   'q.history_count_other': '{n} posées',
   'q.back_today': 'La question du jour',
   'q.none_before': 'Rien avant aujourd’hui.',
+  'q.added': 'Ajoutée. Elle est dans la pile où la question du jour est pigée.',
 
   // ------------------------------------------------------------ la semaine
   'b.title': 'La semaine',
