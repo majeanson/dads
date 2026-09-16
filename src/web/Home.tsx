@@ -2,6 +2,7 @@ import { ArrowRight, Check, X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { fetchNight, setRsvp, type NightState } from './api';
 import { plural, useT, weekdayNames } from './i18n';
+import { Logo } from './Logo';
 import { nightAway } from './NightEditor';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
@@ -233,25 +234,33 @@ export function Home({
 
       {/* The door. Talking is what the night is for, so it is a whole control
           of its own — and it says how many lines are waiting, so the man who
-          only came to talk spends one tap and knows why. */}
+          only came to talk spends one tap and knows why.
+
+          It carries the app's own mark, which nothing else on the screen does:
+          the card's answers are filled the same way, and a door that was one
+          more filled bar read as one more answer. The mark on the left and the
+          arrow on the right are what make it a way IN rather than a choice —
+          the same shape as the rows under it, taller, and the only one filled. */}
       <Button
         look="primary"
         className={cn(
-          'home-go h-[3.75rem] w-full rounded-[var(--radius-card)] px-5 text-[1.0625rem]',
-          // Split when there is a count to put at the far end, centred when the
-          // label is alone: `justify-between` with one child leaves it hanging
-          // off the left of a 3.75rem bar.
-          unseen > 0 ? 'justify-between' : 'justify-center',
+          'home-go h-18 w-full justify-start gap-3.5 rounded-[var(--radius-card)] px-4 text-[1.125rem]',
         )}
         onClick={onGo}
         data-testid="home-go"
       >
+        <Logo size={32} hole="var(--accent)" className="shrink-0" />
         <span>{t('home.go')}</span>
         {unseen > 0 ? (
-          <span className="home-new" data-testid="home-new">
+          <span className="home-new ml-auto text-sm font-normal" data-testid="home-new">
             {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
           </span>
         ) : null}
+        <ArrowRight
+          size={22}
+          aria-hidden="true"
+          className={cn('shrink-0', unseen > 0 ? '' : 'ml-auto')}
+        />
       </Button>
 
       {/* Everything else, in what used to be empty space below the door. The
