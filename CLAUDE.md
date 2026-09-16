@@ -135,6 +135,37 @@ weakening `sessionSecret()`.
   off the screen where nobody could reach it. Capped by the variable Radix
   publishes for exactly this, and the marks wrap rather than shrink. Pinned by
   an e2e that presses the far edge of a line and checks all five.
+- **The ordinary chat things** (2026-09-16), each the plain version and no
+  more: an emoji button in the composer (thirty-two, no search, inserted at
+  the caret, offered only where there is a mouse — a phone's keyboard is its
+  own picker and a fourth control on the row is three); a mark without the
+  long press (a small button at the end of the line under a pointer, and a
+  double tap on the words is a thumb on any device); Reply on any line a dad
+  typed; Edit on his own. `MarkRow` in `Marks.tsx` is the one row of five,
+  shared by the long-press menu and the quick button.
+- **A reply carries a SNAPSHOT, not a reference** (migration 0017,
+  `messages.reply` and `tail.reply` as JSON `{id, name, body}`). The original
+  may scroll out of the backfill, be taken back or be changed afterwards, and
+  the quote should still say what he was answering. The room resolves the id
+  — tail first, then the archive joined to `members` for the name — cuts the
+  words to `REPLY_QUOTE_LENGTH`, quotes only what a dad typed, and posts the
+  line WITHOUT a quote when the id is nothing: his words are the thing and
+  the quote is the context. A quote goes nowhere on a tap, for the same
+  reason a search result does.
+- **Editing has retraction's authority and retraction's honesty.** His own,
+  only `chat` and `prompt`, checked in the archive first and the tail too;
+  never to nothing. Not optimistic: an `edited` frame goes to everyone, the
+  editor included, and the composer's field keeps his words until the room
+  took them. `edited_at` is the one fact kept; the words before it are not.
+  **A socket that resumed rather than reloaded is not told about an edit it
+  missed** — the backfill is by seq, and an edit does not move a line's seq.
+  A reload gets the tail, which has the new words. Rare enough to leave, and
+  written down here so it is not a mystery.
+- **Reply and Edit are the composer's state, held in `Room`**, never both at
+  once: the line menu sets one and clears the other, the composer shows a
+  strip above the field saying which, Escape or the X clears it, and the
+  focus call is deferred a tick because Radix hands focus back to the line
+  when its menu closes and would land on top of it.
 - **`LineMenu` is a Radix context menu** — right-click on a laptop and a long
   press on a phone from one primitive, keyboard route included. It wraps only
   chat and prompt lines. The destructive item ARMS on the first select

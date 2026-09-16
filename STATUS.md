@@ -12,7 +12,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | **Get in**          | Follow a link, or type the code, and a name. Remembered on that device forever.                                                      |
 | **See at a glance** | The app opens on home, which asks one question: are you coming on Thursday. The door into the talk and the menu's rows sit under it. |
-| **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers.                                                               |
+| **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers, marks, replies, edits and a way to take a line back.          |
 | **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.                                              |
 | **Be heard**        | Voice call in the room, camera optional. Full WebRTC mesh.                                                                           |
 | **Show something**  | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.                                                          |
@@ -38,8 +38,8 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 303, in workerd against the real migrations
-npm run e2e           # 69, against the built stack
+npm test              # 309, in workerd against the real migrations
+npm run e2e           # 74, against the built stack
 npm run audit:contrast  # 26 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run prove         # 27, against dads.marcportal.com itself
