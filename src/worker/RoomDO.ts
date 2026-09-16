@@ -726,8 +726,9 @@ export class RoomDO extends DurableObject<Env> {
     const groupId = this.groupId();
     if (!groupId) return;
 
-    let dads = 0;
-    let lines = 0;
+    // Assigned in the try or never read: the catch returns.
+    let dads: number;
+    let lines: number;
     try {
       const row = await this.env.DB.prepare(
         `SELECT COUNT(*) AS lines, COUNT(DISTINCT member_id) AS dads
