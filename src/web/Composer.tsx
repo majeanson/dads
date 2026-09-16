@@ -6,7 +6,7 @@ import {
   type FormEvent,
   type RefObject,
 } from 'react';
-import { Mic, Plus, SendHorizontal, Square, X } from 'lucide-react';
+import { Mic, Pencil, Plus, Reply, SendHorizontal, Square, X } from 'lucide-react';
 import { useT } from './i18n';
 import { isImage, prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
@@ -17,6 +17,8 @@ import { EmojiPicker } from './ui/EmojiPicker';
 export interface ComposerHandle {
   /** A file the room was handed — dropped on the page, or pasted. */
   offer: (file: File | undefined) => void;
+  /** Put the caret in the field: he chose Reply or Edit on a line. */
+  focus: () => void;
 }
 
 /**
@@ -36,6 +38,11 @@ export function Composer({
   busy,
   onSend,
   onTyping,
+  replyTo = null,
+  onClearReply,
+  editing = null,
+  onEdit,
+  onCancelEdit,
 }: {
   ref?: RefObject<ComposerHandle | null>;
   /**
@@ -50,6 +57,14 @@ export function Composer({
   busy?: RefObject<boolean>;
   onSend: (body: string, mediaId?: string) => void;
   onTyping: () => void;
+  /** The line he is answering, shown above the field until he sends or clears it. */
+  replyTo?: { name: string; body: string } | null;
+  onClearReply?: () => void;
+  /** The line he is changing: the field holds its words, Send means "change". */
+  editing?: { id: string; body: string } | null;
+  /** False when the room could not be reached; the draft stays. */
+  onEdit?: (id: string, body: string) => boolean;
+  onCancelEdit?: () => void;
 }) {
   const { t } = useT();
   const [draft, setDraft] = useState('');
@@ -66,13 +81,33 @@ export function Composer({
   const recording = recorder.state.kind === 'recording' || recorder.state.kind === 'asking';
   if (busy) busy.current = draft.trim() !== '' || pending !== null || sending || recording;
 
+  // Editing takes the field: his words go in, and what he was typing waits
+  // in the outbox of his own head. Cancelling gives the field back empty.
+  const editingId = editing?.id ?? null;
+  useEffect(() => {
+    if (editing) {
+      setDraft(editing.body);
+      setPending(null);
+    } else setDraft('');
+    // Only when WHICH line changes, not on every render of the same one.
+  }, [editingId]);
+
+  function cancelContext() {
+    if (editing) onCancelEdit?.();
+    else if (replyTo) onClearReply?.();
+  }
+
   async function pick(file: File | undefined) {
     setUploadError(null);
     if (file === undefined) return;
     setPending(await prepare(file));
   }
 
-  useImperativeHandle(ref, () => ({ offer: (file) => void pick(file) }), []);
+  useImperativeHandle(
+    ref,
+    () => ({ offer: (file) => void pick(file), focus: () => say.current?.focus() }),
+    [],
+  );
 
   /**
    * The thumbnail, made and unmade with what it shows.
@@ -136,6 +171,18 @@ export function Composer({
   async function submit(event: FormEvent) {
     event.preventDefault();
     const body = draft.trim();
+
+    // Changing a line: the same Send, a different verb. Not optimistic — the
+    // field clears only once the room took it, and stays if it could not.
+    if (editing) {
+      if (!body || body === editing.body.trim()) return;
+      if (onEdit?.(editing.id, body)) {
+        onCancelEdit?.();
+        say.current?.focus();
+      }
+      return;
+    }
+
     // A photo with no caption is still something said.
     if (!body && pending === null) return;
 
@@ -182,6 +229,42 @@ export function Composer({
         void pick(file);
       }}
     >
+      {/* What this line is: an answer to somebody, or a change to his own.
+          One strip above the field with a way out, and Escape in the field is
+          the same way out. */}
+      {editing || replyTo ? (
+        <p className="context" data-testid={editing ? 'editing' : 'replying'}>
+          {editing ? (
+            <Pencil size={14} aria-hidden="true" className="shrink-0 text-muted" />
+          ) : (
+            <Reply size={14} aria-hidden="true" className="shrink-0 text-muted" />
+          )}
+          <span className="context-what">
+            {editing ? (
+              t('composer.editing')
+            ) : (
+              <>
+                <span className="text-muted">
+                  {t('composer.replying', { name: replyTo!.name })}
+                </span>{' '}
+                {replyTo!.body}
+              </>
+            )}
+          </span>
+          <Button
+            look="quiet"
+            size="iconSm"
+            className="rounded-full"
+            aria-label={t('composer.clear')}
+            onClick={cancelContext}
+            data-testid="context-clear"
+          >
+            <X size={14} aria-hidden="true" />
+            <span className="sr-only">{t('composer.clear')}</span>
+          </Button>
+        </p>
+      ) : null}
+
       {pending !== null ? (
         <p className="pending" data-testid="pending-media">
           {preview === null ? null : <img src={preview} alt="" />}
@@ -273,7 +356,8 @@ export function Composer({
             // websocket, and the line waits in the outbox like any other — so
             // a dad on a wifi-to-LTE hop kept a composer whose `+` did
             // nothing at all, with no disabled look on the label to say why.
-            disabled={sending}
+            // And not while changing a line: an edit is words only.
+            disabled={sending || editing !== null}
           />
 
           <label htmlFor="say" className="sr-only">
@@ -299,13 +383,19 @@ export function Composer({
               autoCapitalize="sentences"
               // The keyboard's own return key says what it does here.
               enterKeyHint="send"
+              onKeyDown={(e) => {
+                if (e.key === 'Escape' && (editing || replyTo)) {
+                  e.preventDefault();
+                  cancelContext();
+                }
+              }}
             />
             <EmojiPicker onPick={insert} className="hidden shrink-0 pointer-fine:inline-flex" />
           </div>
           {/* One or the other, never both: with nothing typed the room is
               asking him to speak, and the moment he types a letter it is
               asking him to send. Four controls on a phone row is three. */}
-          {draft.trim() === '' && pending === null && canRecord() ? (
+          {draft.trim() === '' && pending === null && !editing && canRecord() ? (
             <Button
               look="plain"
               size="icon"
@@ -325,7 +415,11 @@ export function Composer({
               size="icon"
               className="h-11 w-11"
               aria-label={t('composer.send')}
-              disabled={sending || (!draft.trim() && pending === null)}
+              disabled={
+                sending ||
+                (!draft.trim() && pending === null) ||
+                (editing !== null && editing !== undefined && draft.trim() === editing.body.trim())
+              }
               // Pressing Send must not take focus off the field: on a phone
               // that is the keyboard folding away after every line, and on
               // iOS it is the composer jumping too.

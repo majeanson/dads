@@ -272,6 +272,69 @@ test('a dad takes a line back, and it goes for everyone', async ({ browser }) =>
   await dave.context().close();
 });
 
+test('a dad answers a line, and the quote rides above his', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc Reply');
+  const sam = await comeIn(browser, 'Sam Reply');
+
+  await marc.getByLabel('Say something').fill('who has the cards this week');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const asked = sam.getByTestId('line').filter({ hasText: 'who has the cards this week' });
+  await expect(asked).toBeVisible();
+
+  await asked.click({ button: 'right' });
+  await sam.getByTestId('line-reply').click();
+  // The composer says whom he is answering, and the field has the caret.
+  await expect(sam.getByTestId('replying')).toContainText('Replying to Marc Reply');
+  await expect(sam.getByLabel('Say something')).toBeFocused();
+  await sam.getByLabel('Say something').fill('I do, still in the car');
+  await sam.getByRole('button', { name: 'Send' }).click();
+
+  // On both screens: the quote, then his words.
+  for (const page of [sam, marc]) {
+    const answer = page.getByTestId('line').filter({ hasText: 'I do, still in the car' });
+    await expect(answer).toBeVisible();
+    await expect(answer.getByTestId('quote')).toContainText('who has the cards this week');
+    await expect(answer.getByTestId('quote')).toContainText('Marc Reply');
+  }
+  // And the strip is gone once it went.
+  await expect(sam.getByTestId('replying')).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
+test('a dad changes his own line, and the others read the new words', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc Edit');
+  const sam = await comeIn(browser, 'Sam Edit');
+
+  await marc.getByLabel('Say something').fill('see you at nien');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const his = marc.getByTestId('line').filter({ hasText: 'see you at nien' });
+  await expect(sam.getByTestId('line').filter({ hasText: 'see you at nien' })).toBeVisible();
+
+  // His own line offers Edit; the field takes his words.
+  await his.click({ button: 'right' });
+  await marc.getByTestId('line-edit').click();
+  await expect(marc.getByTestId('editing')).toBeVisible();
+  await expect(marc.getByLabel('Say something')).toHaveValue('see you at nien');
+  await marc.getByLabel('Say something').fill('see you at nine');
+  await marc.getByRole('button', { name: 'Send' }).click();
+
+  const fixed = sam.getByTestId('line').filter({ hasText: 'see you at nine' });
+  await expect(fixed).toBeVisible();
+  await expect(fixed.getByTestId('edited')).toBeVisible();
+  await expect(sam.getByTestId('line').filter({ hasText: 'see you at nien' })).toHaveCount(0);
+  await expect(marc.getByTestId('editing')).toHaveCount(0);
+
+  // Somebody else's line offers no Edit.
+  await fixed.click({ button: 'right' });
+  await expect(sam.getByTestId('line-menu')).toBeVisible();
+  await expect(sam.getByTestId('line-edit')).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
 test('a line that is not yours offers no way to take it back', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc Back3');
   const sam = await comeIn(browser, 'Sam Back3');

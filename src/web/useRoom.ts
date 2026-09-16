@@ -106,7 +106,14 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
    * posted twice.
    */
   const outbox = useRef<
-    { cid: string; body: string; mediaId?: string; sentAt?: number; tries: number }[]
+    {
+      cid: string;
+      body: string;
+      mediaId?: string;
+      replyTo?: string;
+      sentAt?: number;
+      tries: number;
+    }[]
   >([]);
   /** Anything at all from the server, pong included. */
   const lastHeard = useRef(0);
@@ -220,6 +227,14 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
             ...s,
             messages: s.messages.map((m) =>
               m.id === frame.id ? { ...m, reactions: frame.reactions } : m,
+            ),
+          }));
+          return;
+        case 'edited':
+          setState((s) => ({
+            ...s,
+            messages: s.messages.map((m) =>
+              m.id === frame.id ? { ...m, body: frame.body, editedAt: frame.editedAt } : m,
             ),
           }));
           return;
@@ -344,9 +359,15 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
    * abandoned swallows sends silently, which is the whole failure this exists
    * to survive.
    */
-  const send = useCallback((body: string, mediaId?: string) => {
+  const send = useCallback((body: string, mediaId?: string, replyTo?: string) => {
     const cid = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    const line = mediaId === undefined ? { cid, body, tries: 0 } : { cid, body, mediaId, tries: 0 };
+    const line = {
+      cid,
+      body,
+      tries: 0,
+      ...(mediaId === undefined ? {} : { mediaId }),
+      ...(replyTo === undefined ? {} : { replyTo }),
+    };
     // Past the cap the oldest goes, not the newest: what he just typed is the
     // one he is still looking at.
     outbox.current = [...outbox.current, line].slice(-OUTBOX_LIMIT);
@@ -410,6 +431,18 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
   }, []);
 
   /**
+   * Change the words of a line you typed. Not optimistic, like taking one
+   * back: the old words stay on his screen until the room says otherwise.
+   * False when the socket is down, so the composer can keep the draft.
+   */
+  const edit = useCallback((id: string, body: string) => {
+    const ws = socket.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    ws.send(JSON.stringify({ t: 'edit', id, body }));
+    return true;
+  }, []);
+
+  /**
    * Put a mark on a line, or take yours off.
    *
    * Optimistic, unlike taking a line back — the opposite call for the
@@ -443,6 +476,7 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
     ...state,
     send,
     retract,
+    edit,
     react,
     answerPrompt,
     relayTableEvent,
@@ -471,15 +505,24 @@ function merge(have: RoomMessage[], incoming: RoomMessage[]): RoomMessage[] {
  */
 function sendLine(
   ws: WebSocket,
-  line: { cid: string; body: string; mediaId?: string; sentAt?: number; tries: number },
+  line: {
+    cid: string;
+    body: string;
+    mediaId?: string;
+    replyTo?: string;
+    sentAt?: number;
+    tries: number;
+  },
 ): void {
   line.sentAt = Date.now();
   line.tries += 1;
   ws.send(
-    JSON.stringify(
-      line.mediaId === undefined
-        ? { t: 'chat', cid: line.cid, body: line.body }
-        : { t: 'chat', cid: line.cid, body: line.body, mediaId: line.mediaId },
-    ),
+    JSON.stringify({
+      t: 'chat',
+      cid: line.cid,
+      body: line.body,
+      ...(line.mediaId === undefined ? {} : { mediaId: line.mediaId }),
+      ...(line.replyTo === undefined ? {} : { replyTo: line.replyTo }),
+    }),
   );
 }

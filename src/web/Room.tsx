@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchTodo, keepMedia, type Session, type Todo } from './api';
+import type { RoomMessage } from '../shared/protocol';
 import { ArrowDown } from 'lucide-react';
 import { CallBar } from './CallBar';
 import { Composer, type ComposerHandle } from './Composer';
@@ -68,6 +69,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const [view, setView] = useState<'home' | 'talk'>('home');
   /** The photo he is looking at full-screen, by media id. */
   const [viewing, setViewing] = useState<string | null>(null);
+  /** The line he is answering, or the one he is changing — never both. */
+  const [replyTo, setReplyTo] = useState<RoomMessage | null>(null);
+  const [editing, setEditing] = useState<RoomMessage | null>(null);
   const [tableOpen, setTableOpen] = useState(false);
   const [todo, setTodo] = useState<Todo>({ prompt: false, board: false });
   const [now, setNow] = useState(() => Date.now());
@@ -361,6 +365,20 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             nameOf={nameOf}
             onReact={(id, emoji, on) => room.react(id, emoji, on, session.member.id)}
             onRetract={room.retract}
+            onReply={(message) => {
+              setEditing(null);
+              setReplyTo(message);
+              // After the menu has closed: Radix hands focus back to the line on
+              // its way out, and that must not land on top of this.
+              setTimeout(() => composer.current?.focus(), 0);
+            }}
+            onEdit={(message) => {
+              setReplyTo(null);
+              setEditing(message);
+              // After the menu has closed: Radix hands focus back to the line on
+              // its way out, and that must not land on top of this.
+              setTimeout(() => composer.current?.focus(), 0);
+            }}
             onKeep={(media) => keep(media.id, !media.kept)}
             onOpenPhoto={setViewing}
             onScroll={seen.onScroll}
@@ -388,7 +406,20 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
                   : ' ')}
           </p>
 
-          <Composer ref={composer} busy={composing} onSend={room.send} onTyping={room.sendTyping} />
+          <Composer
+            ref={composer}
+            busy={composing}
+            onSend={(body, mediaId) => {
+              room.send(body, mediaId, replyTo?.id);
+              setReplyTo(null);
+            }}
+            onTyping={room.sendTyping}
+            replyTo={replyTo === null ? null : { name: replyTo.name, body: replyTo.body }}
+            onClearReply={() => setReplyTo(null)}
+            editing={editing === null ? null : { id: editing.id, body: editing.body }}
+            onEdit={room.edit}
+            onCancelEdit={() => setEditing(null)}
+          />
         </div>
 
         {/* Always mounted: unmounting the iframe restarts a game in progress. */}

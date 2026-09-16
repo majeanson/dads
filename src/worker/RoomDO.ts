@@ -20,6 +20,20 @@ import {
 } from '../shared/protocol';
 import { tableSaid } from '../shared/jaffre';
 import { englishOf, parseSaid, type Said } from '../shared/said';
+import { REPLY_QUOTE_LENGTH, type ReplyTo } from '../shared/protocol';
+
+/** A stored quote, or nothing: a row from before replies existed has none. */
+function parseReply(raw: string | null | undefined): ReplyTo | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw) as Partial<ReplyTo>;
+    return typeof v.id === 'string' && typeof v.name === 'string' && typeof v.body === 'string'
+      ? { id: v.id, name: v.name, body: v.body }
+      : null;
+  } catch {
+    return null;
+  }
+}
 import { isoWeekIn, previousWeek } from '../shared/week';
 import { dadNightReminder, notifyGroup, notifyMember } from './push';
 import type { Env } from './env';
@@ -125,6 +139,8 @@ type TailRow = {
   prompt_id: string | null;
   media_id: string | null;
   meta: string | null;
+  reply: string | null;
+  edited_at: number | null;
 };
 
 export class RoomDO extends DurableObject<Env> {
@@ -183,6 +199,12 @@ export class RoomDO extends DurableObject<Env> {
       }
       if (!columns.includes('meta')) {
         ctx.storage.sql.exec('ALTER TABLE tail ADD COLUMN meta TEXT');
+      }
+      if (!columns.includes('reply')) {
+        ctx.storage.sql.exec('ALTER TABLE tail ADD COLUMN reply TEXT');
+      }
+      if (!columns.includes('edited_at')) {
+        ctx.storage.sql.exec('ALTER TABLE tail ADD COLUMN edited_at INTEGER');
       }
     });
   }
@@ -450,6 +472,11 @@ export class RoomDO extends DurableObject<Env> {
       return;
     }
 
+    if (frame.t === 'edit') {
+      await this.edit(ws, frame.id, who.memberId, frame.body);
+      return;
+    }
+
     const body = frame.body.trim();
     // An attachment is a message in its own right: a photo with no caption is
     // still something said.
@@ -514,7 +541,101 @@ export class RoomDO extends DurableObject<Env> {
     // second thing said.
     if (cid !== undefined && !this.firstTimeSeen(cid)) return;
 
-    await this.post('chat', who.memberId, who.name, body, null, media, null, cid);
+    // What he is answering, as a snapshot taken now: an id the room cannot
+    // find is dropped quietly and the line still posts, because the words
+    // he typed are the thing and the quote is the context.
+    const reply = frame.replyTo === undefined ? null : await this.quoteOf(frame.replyTo);
+
+    await this.post('chat', who.memberId, who.name, body, null, media, null, cid, reply);
+  }
+
+  /**
+   * The line an answer points at, cut down to a quote. The tail first, then
+   * the archive: a man may answer something older than five hundred lines.
+   * Only what a dad typed is quotable — the room's own lines are facts, and
+   * nobody replies to a fact.
+   */
+  private async quoteOf(id: string): Promise<ReplyTo | null> {
+    const cut = (body: string) =>
+      [...body].length > REPLY_QUOTE_LENGTH
+        ? [...body].slice(0, REPLY_QUOTE_LENGTH - 1).join('') + '…'
+        : body;
+    const local = this.ctx.storage.sql
+      .exec<{ name: string; body: string; kind: string; member_id: string | null }>(
+        'SELECT name, body, kind, member_id FROM tail WHERE id = ?',
+        id,
+      )
+      .toArray()[0];
+    if (local !== undefined) {
+      if (local.member_id === null || (local.kind !== 'chat' && local.kind !== 'prompt'))
+        return null;
+      return { id, name: local.name, body: cut(local.body) };
+    }
+    const groupId = this.groupId();
+    if (groupId === undefined) return null;
+    const row = await this.env.DB.prepare(
+      `SELECT m.body, m.kind, m.member_id, mem.display_name AS name
+         FROM messages m LEFT JOIN members mem ON mem.id = m.member_id
+        WHERE m.id = ? AND m.group_id = ?`,
+    )
+      .bind(id, groupId)
+      .first<{ body: string; kind: string; member_id: string | null; name: string | null }>();
+    if (row === null || row.member_id === null || (row.kind !== 'chat' && row.kind !== 'prompt'))
+      return null;
+    return { id, name: row.name ?? '', body: cut(row.body) };
+  }
+
+  /**
+   * Change the words of a line. His own, and only what he typed — the same
+   * rule as taking one back, checked the same way: the archive first, the
+   * tail too, so a line whose archive write failed is still his to fix.
+   * Everyone is told, the editor included: like a retraction, this is not
+   * optimistic, because what he sees should be what the room has.
+   */
+  private async edit(ws: WebSocket, id: string, memberId: string, raw: string): Promise<void> {
+    const body = raw.trim();
+    if (!body) return this.sendTo(ws, { t: 'error', code: 'empty' });
+    if ([...body].length > MAX_MESSAGE_LENGTH)
+      return this.sendTo(ws, { t: 'error', code: 'too_long' });
+
+    const groupId = this.groupId();
+    const own = (kind: string | undefined, owner: string | null | undefined) =>
+      owner === memberId && (kind === 'chat' || kind === 'prompt');
+    let mine = false;
+    if (groupId !== undefined) {
+      const row = await this.env.DB.prepare(
+        'SELECT member_id, kind FROM messages WHERE id = ? AND group_id = ?',
+      )
+        .bind(id, groupId)
+        .first<{ member_id: string | null; kind: string }>();
+      if (row !== null) mine = own(row.kind, row.member_id);
+    }
+    const local = this.ctx.storage.sql
+      .exec<{ member_id: string | null; kind: string }>(
+        'SELECT member_id, kind FROM tail WHERE id = ?',
+        id,
+      )
+      .toArray()[0];
+    if (!mine && local !== undefined) mine = own(local.kind, local.member_id);
+    if (!mine) return;
+
+    const editedAt = Date.now();
+    this.ctx.storage.sql.exec(
+      'UPDATE tail SET body = ?, edited_at = ? WHERE id = ? AND member_id = ?',
+      body,
+      editedAt,
+      id,
+      memberId,
+    );
+    this.broadcast({ t: 'edited', id, body, editedAt });
+    if (groupId !== undefined) {
+      await this.env.DB.prepare(
+        'UPDATE messages SET body = ?, edited_at = ? WHERE id = ? AND group_id = ? AND member_id = ?',
+      )
+        .bind(body, editedAt, id, groupId, memberId)
+        .run()
+        .catch((err: unknown) => console.error('edit: archive kept the old words', { id }, err));
+    }
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
@@ -1136,6 +1257,7 @@ export class RoomDO extends DurableObject<Env> {
     media: Attachment | null = null,
     said: Said | null = null,
     cid?: string,
+    reply: ReplyTo | null = null,
   ): Promise<void> {
     const id = newId('msg');
     const createdAt = Date.now();
@@ -1143,8 +1265,8 @@ export class RoomDO extends DurableObject<Env> {
     const meta = said === null ? null : JSON.stringify(said);
     const seq = this.ctx.storage.sql
       .exec<{ seq: number }>(
-        `INSERT INTO tail (id, kind, member_id, name, body, created_at, prompt_id, media_id, meta)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING seq`,
+        `INSERT INTO tail (id, kind, member_id, name, body, created_at, prompt_id, media_id, meta, reply)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING seq`,
         id,
         kind,
         memberId,
@@ -1154,6 +1276,7 @@ export class RoomDO extends DurableObject<Env> {
         promptId,
         media?.id ?? null,
         meta,
+        reply === null ? null : JSON.stringify(reply),
       )
       .one().seq;
     this.ctx.storage.sql.exec(
@@ -1172,6 +1295,7 @@ export class RoomDO extends DurableObject<Env> {
       promptId,
       media,
       said,
+      reply,
     };
     // Fan out before the archive write: a dad should not wait on D1 to see
     // his own line appear.
@@ -1232,8 +1356,8 @@ export class RoomDO extends DurableObject<Env> {
     try {
       await this.env.DB.prepare(
         `INSERT INTO messages
-           (id, group_id, member_id, kind, body, created_at, prompt_id, media_id, meta)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (id, group_id, member_id, kind, body, created_at, prompt_id, media_id, meta, reply)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           message.id,
@@ -1245,6 +1369,9 @@ export class RoomDO extends DurableObject<Env> {
           message.promptId ?? null,
           message.media?.id ?? null,
           message.said === null || message.said === undefined ? null : JSON.stringify(message.said),
+          message.reply === null || message.reply === undefined
+            ? null
+            : JSON.stringify(message.reply),
         )
         .run();
     } catch (err) {
@@ -1293,6 +1420,8 @@ export class RoomDO extends DurableObject<Env> {
       // A line from before the room knew how to say things twice has no meta,
       // and its English body is what it keeps.
       said: parseSaid(r.meta),
+      reply: parseReply(r.reply),
+      editedAt: r.edited_at ?? null,
     }));
   }
 

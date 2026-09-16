@@ -1,5 +1,5 @@
 import * as ContextMenu from '@radix-ui/react-context-menu';
-import { Copy, Pin, PinOff, Trash2 } from 'lucide-react';
+import { Copy, Pencil, Pin, PinOff, Reply, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useT } from '../i18n';
 import { MarkRow } from '../Marks';
@@ -31,6 +31,8 @@ export function LineMenu({
   keep,
   onRetract,
   onReact,
+  onReply,
+  onEdit,
   children,
 }: {
   body: string;
@@ -44,6 +46,10 @@ export function LineMenu({
   /** Absent when the line is not his — then this is a copy menu and no more. */
   onRetract?: () => void;
   onReact: (emoji: string, on: boolean) => void;
+  /** Answer this line: the composer takes a quote of it. Anybody's. */
+  onReply: () => void;
+  /** Change the words. His own only, like taking it back. */
+  onEdit?: () => void;
   children: ReactNode;
 }) {
   const { t } = useT();
@@ -76,6 +82,18 @@ export function LineMenu({
           <MarkRow mine={mine} onReact={onReact} />
 
           <ContextMenu.Separator className="my-1 h-px bg-line" />
+
+          <ContextMenu.Item className={ITEM} data-testid="line-reply" onSelect={onReply}>
+            <Reply size={15} aria-hidden="true" className="text-muted" />
+            {t('line.reply')}
+          </ContextMenu.Item>
+
+          {onEdit === undefined || body === '' ? null : (
+            <ContextMenu.Item className={ITEM} data-testid="line-edit" onSelect={onEdit}>
+              <Pencil size={15} aria-hidden="true" className="text-muted" />
+              {t('line.edit')}
+            </ContextMenu.Item>
+          )}
 
           {body === '' ? null : (
             <ContextMenu.Item

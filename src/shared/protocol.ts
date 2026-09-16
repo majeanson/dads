@@ -53,6 +53,22 @@ export interface Reaction {
   by: string[];
 }
 
+/**
+ * What a line was answering, as it was at the time.
+ *
+ * A snapshot and not a reference: the original may scroll out of the
+ * backfill, be taken back or be edited afterwards, and the quote should still
+ * say what he was answering. Bounded, because it rides every frame the line
+ * is in.
+ */
+export interface ReplyTo {
+  id: string;
+  name: string;
+  body: string;
+}
+
+export const REPLY_QUOTE_LENGTH = 140;
+
 export interface RoomMessage {
   /** Monotonic per room. What a reconnecting client sends back as `after`. */
   seq: number;
@@ -71,6 +87,10 @@ export interface RoomMessage {
   /** Marks on this line, hydrated from D1 on backfill like the attachment.
    * Absent means none, which is nearly every line. */
   reactions?: Reaction[];
+  /** The line this one answers, if it answers one. */
+  reply?: ReplyTo | null;
+  /** When the man who typed it last changed the words. Null or absent: never. */
+  editedAt?: number | null;
   /**
    * Set on the lines the ROOM writes, never on a line a dad typed: what
    * happened, so each reader's own language can say it. `body` is the English
@@ -121,7 +141,7 @@ export type ClientFrame =
    * same cid, and re-sends on reconnect if it never did. The room uses it to
    * ignore a second copy of one it already posted.
    */
-  | { t: 'chat'; body: string; mediaId?: string; cid?: string }
+  | { t: 'chat'; body: string; mediaId?: string; cid?: string; replyTo?: string }
   /** Sitting down at, getting up from, or muting yourself on the call. */
   | { t: 'call'; join: boolean; muted?: boolean }
   /** One leg of a WebRTC handshake, addressed to one other dad. The room
@@ -140,6 +160,8 @@ export type ClientFrame =
   | { t: 'retract'; id: string }
   /** Put a mark on a line, or take yours off. `on` says which. */
   | { t: 'react'; id: string; emoji: string; on: boolean }
+  /** Change the words of a line you typed. Same authority as taking it back. */
+  | { t: 'edit'; id: string; body: string }
   | { t: 'typing' };
 
 export type ServerFrame =
@@ -184,6 +206,8 @@ export type ServerFrame =
   /** Every mark on one line, after a change. Whole list, not a delta: five
    * dads tapping at once is not worth a merge rule on the client. */
   | { t: 'reacted'; id: string; reactions: Reaction[] }
+  /** A line whose words changed. Everyone is told, the editor included. */
+  | { t: 'edited'; id: string; body: string; editedAt: number }
   | { t: 'typing'; memberId: string; name: string }
   /**
    * A picture taken off the shelf, or put back on it.
@@ -210,12 +234,25 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   const frame = value as { t?: unknown; body?: unknown };
   if (frame.t === 'typing') return { t: 'typing' };
   if (frame.t === 'chat' && typeof frame.body === 'string') {
-    const { mediaId, cid } = value as { mediaId?: unknown; cid?: unknown };
+    const { mediaId, cid, replyTo } = value as {
+      mediaId?: unknown;
+      cid?: unknown;
+      replyTo?: unknown;
+    };
     const chat: ClientFrame = { t: 'chat', body: frame.body };
     if (typeof mediaId === 'string' && mediaId !== '') chat.mediaId = mediaId;
     // Opaque, and bounded so it cannot become a channel of its own.
     if (typeof cid === 'string' && cid !== '' && cid.length <= 64) chat.cid = cid;
+    // An id, resolved by the room: the client never supplies the quote.
+    if (typeof replyTo === 'string' && replyTo !== '' && replyTo.length <= 64)
+      chat.replyTo = replyTo;
     return chat;
+  }
+  if (frame.t === 'edit' && typeof frame.body === 'string') {
+    const { id } = value as { id?: unknown };
+    return typeof id === 'string' && id !== '' && id.length <= 64
+      ? { t: 'edit', id, body: frame.body }
+      : null;
   }
   if (frame.t === 'prompt' && typeof frame.body === 'string')
     return { t: 'prompt', body: frame.body };

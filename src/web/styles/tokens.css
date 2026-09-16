@@ -988,6 +988,33 @@
     grid-template-columns: auto 1fr auto;
   }
 
+  /* What he was answering, above his own words: a name and a cut-down line
+     on a hairline, the way every chat draws a quote. */
+  .line .quote {
+    display: block;
+    margin-bottom: 0.15rem;
+    padding-left: 0.5rem;
+    border-left: 2px solid var(--line);
+    color: var(--muted);
+    font-size: 0.875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .line .quote-who {
+    margin-right: 0.35rem;
+    font-weight: 600;
+  }
+
+  /* One word after the words, not a badge. */
+  .line .edited {
+    margin-left: 0.35rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  .composer .context,
   .composer .pending,
   .composer .error {
     grid-column: 1 / -1;

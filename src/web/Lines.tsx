@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { Attachment as MessageAttachment } from '../shared/protocol';
+import type { Attachment as MessageAttachment, RoomMessage } from '../shared/protocol';
 import { parts, shortLink } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
@@ -33,6 +33,8 @@ export function Lines({
   nameOf,
   onReact,
   onRetract,
+  onReply,
+  onEdit,
   onKeep,
   onOpenPhoto,
   onScroll,
@@ -50,6 +52,8 @@ export function Lines({
   nameOf: (memberId: string) => string;
   onReact: (id: string, emoji: string, on: boolean) => void;
   onRetract: (id: string) => void;
+  onReply: (message: RoomMessage) => void;
+  onEdit: (message: RoomMessage) => void;
   onKeep: (media: MessageAttachment) => void;
   onOpenPhoto: (mediaId: string) => void;
   onScroll: () => void;
@@ -85,6 +89,8 @@ export function Lines({
             }
             onReact={(emoji, on) => onReact(row.message.id, emoji, on)}
             onRetract={row.message.memberId === you ? () => onRetract(row.message.id) : undefined}
+            onReply={() => onReply(row.message)}
+            onEdit={row.message.memberId === you ? () => onEdit(row.message) : undefined}
           >
             <li
               className={`group line line-${row.message.kind}${row.showName ? '' : ' is-continued'}`}
@@ -113,6 +119,15 @@ export function Lines({
               ) : null}
               <span className="who">{row.showName ? row.message.name : ''}</span>
               <span className="body">
+                {/* What he was answering, as it was: a name and a cut-down
+                    line, above his own. It goes nowhere on a tap — the
+                    original may be older than the backfill. */}
+                {row.message.reply ? (
+                  <span className="quote" data-testid="quote">
+                    <span className="quote-who">{row.message.reply.name}</span>
+                    {row.message.reply.body}
+                  </span>
+                ) : null}
                 {row.message.kind === 'prompt' ? (
                   <span className="answer-tag">{t('line.answered')}</span>
                 ) : null}
@@ -131,6 +146,11 @@ export function Lines({
                     <span key={i}>{part.text}</span>
                   ),
                 )}
+                {row.message.editedAt ? (
+                  <span className="edited" data-testid="edited">
+                    {t('line.edited')}
+                  </span>
+                ) : null}
                 {row.message.media ? (
                   <Attachment
                     media={row.message.media}

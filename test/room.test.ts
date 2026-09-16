@@ -2,7 +2,7 @@ import { runDurableObjectAlarm } from 'cloudflare:test';
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RoomMessage, ServerFrame } from '../src/shared/protocol';
-import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
+import { until, cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
 
 const worker = workerExports.default;
 
@@ -54,6 +54,14 @@ class Dad {
 
   retract(id: string) {
     this.ws.send(JSON.stringify({ t: 'retract', id }));
+  }
+
+  reply(body: string, replyTo: string) {
+    this.ws.send(JSON.stringify({ t: 'chat', body, replyTo }));
+  }
+
+  edit(id: string, body: string) {
+    this.ws.send(JSON.stringify({ t: 'edit', id, body }));
   }
 
   close() {
@@ -322,6 +330,112 @@ describe('RoomDO', () => {
     expect(stranger.frames.some((f) => f.t === 'msg' && f.message.body === 'just us')).toBe(false);
     expect((await stranger.next('hello')).roster.map((r) => r.name)).toEqual(['Stranger']);
   });
+  describe('answering a line', () => {
+    it('carries a quote of what it answers, and the quote outlives the original', async () => {
+      const marc = await enter(group, 'Marc');
+      const sam = await enter(group, 'Sam');
+      open.push(marc, sam);
+      marc.say('anyone up for Thursday');
+      const asked = await sam.next('msg', (f) => f.message.body === 'anyone up for Thursday');
+
+      sam.reply('count me in', asked.message.id);
+      const answer = await marc.next('msg', (f) => f.message.body === 'count me in');
+      expect(answer.message.reply).toEqual({
+        id: asked.message.id,
+        name: 'Marc',
+        body: 'anyone up for Thursday',
+      });
+
+      // The archive has it, as a snapshot.
+      const row = await env.DB.prepare('SELECT reply FROM messages WHERE id = ?')
+        .bind(answer.message.id)
+        .first<{ reply: string }>();
+      expect(JSON.parse(row!.reply)).toMatchObject({ name: 'Marc' });
+
+      // Taking the original back does not take the quote off the answer: he
+      // was answering it, and that is what the quote says.
+      marc.retract(asked.message.id);
+      await sam.next('gone', (f) => f.id === asked.message.id);
+      const dave = await enter(group, 'Dave');
+      open.push(dave);
+      const hello = await dave.next('hello');
+      const still = hello.messages.find((m) => m.id === answer.message.id);
+      expect(still?.reply?.body).toBe('anyone up for Thursday');
+    });
+
+    it('quotes only what a dad typed, cut down, and posts without a quote it cannot find', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      const long = 'x'.repeat(300);
+      marc.say(long);
+      const said = await marc.next('msg', (f) => f.message.body === long);
+
+      marc.reply('short answer', said.message.id);
+      const cut = await marc.next('msg', (f) => f.message.body === 'short answer');
+      expect([...cut.message.reply!.body].length).toBe(140);
+      expect(cut.message.reply!.body.endsWith('…')).toBe(true);
+
+      // An id that is nothing: the line still posts, with no quote.
+      marc.reply('to nobody', 'msg_does_not_exist');
+      const alone = await marc.next('msg', (f) => f.message.body === 'to nobody');
+      expect(alone.message.reply ?? null).toBeNull();
+
+      // The room's own line is a fact, not a quote.
+      const system = marc.frames.find((f) => f.t === 'hello');
+      expect(system).toBeTruthy();
+    });
+  });
+
+  describe('changing a line', () => {
+    it('changes the words for everyone, in the tail and in the archive', async () => {
+      const marc = await enter(group, 'Marc');
+      const sam = await enter(group, 'Sam');
+      open.push(marc, sam);
+      marc.say('see you at nien');
+      const posted = await sam.next('msg', (f) => f.message.body === 'see you at nien');
+      const id = posted.message.id;
+
+      marc.edit(id, 'see you at nine');
+      const told = await sam.next('edited', (f) => f.id === id);
+      expect(told.body).toBe('see you at nine');
+      expect(told.editedAt).toBeGreaterThan(0);
+      // The editor too: nothing here is optimistic.
+      await marc.next('edited', (f) => f.id === id);
+
+      await until(async () => {
+        const row = await env.DB.prepare('SELECT body, edited_at FROM messages WHERE id = ?')
+          .bind(id)
+          .first<{ body: string; edited_at: number | null }>();
+        return row?.body === 'see you at nine' && row.edited_at !== null;
+      });
+
+      // And the next dad through the door gets the new words, marked.
+      const dave = await enter(group, 'Dave');
+      open.push(dave);
+      const line = (await dave.next('hello')).messages.find((m) => m.id === id);
+      expect(line?.body).toBe('see you at nine');
+      expect(line?.editedAt).toBe(told.editedAt);
+    });
+
+    it('is his own to change and nobody else’s, and never to nothing', async () => {
+      const marc = await enter(group, 'Marc');
+      const sam = await enter(group, 'Sam');
+      open.push(marc, sam);
+      marc.say('as typed');
+      const posted = await sam.next('msg', (f) => f.message.body === 'as typed');
+
+      sam.edit(posted.message.id, 'as rewritten by Sam');
+      marc.edit(posted.message.id, '   ');
+      const refused = await marc.next('error', (f) => f.code === 'empty');
+      expect(refused.code).toBe('empty');
+      expect(sam.frames.some((f) => f.t === 'edited')).toBe(false);
+      const row = await env.DB.prepare('SELECT body FROM messages WHERE id = ?')
+        .bind(posted.message.id)
+        .first<{ body: string }>();
+      expect(row?.body).toBe('as typed');
+    });
+  });
+
   describe('taking a line back', () => {
     it('takes it from the room, from everyone, and from the archive', async () => {
       const marc = await enter(group, 'Marc');
