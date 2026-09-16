@@ -109,6 +109,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     messages: room.messages,
     view,
     watching,
+    ready: room.connection === 'open',
     bottom,
     lines,
   });

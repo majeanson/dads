@@ -578,6 +578,22 @@ secret, custom domain bound by the route in wrangler.toml.
   it: a count that survived walking through the door would be a badge rather
   than an answer. Read through a ref so scrolling inside the conversation
   never retriggers it.
+- **The door carries the app's own mark** (2026-09-16), and nothing else on
+  the screen does. It was a filled bar with a word on it, exactly like "Set
+  dad night" in the card above, and read as one more answer. Now it is the
+  shape of the rows under it — mark left, words, arrow right — taller, and
+  the only one filled. `Logo.tsx` is `icon.svg` minus the square: the face
+  in `currentColor`, the glasses cut through to a `hole` the caller names, so
+  on the primary button it is the text colour with the fill showing through
+  and needs no colour of its own. The artwork's fixed hexes would have put a
+  pale face on the pale-blue accent dark mode uses. Decorative, `aria-hidden`:
+  the words beside it are the name.
+- **In an empty room the mark starts at nought once the room has said
+  hello.** `useSeen` takes `ready` (`connection === 'open'`) for that. It
+  used to wait for a line to anchor to, and that line became the mark — so
+  the first thing ever said in a group was the one thing the door never
+  counted. The first test in `home.spec.ts` pins it, first because the group
+  is empty only once.
 - **A new line is unseen unless the conversation is on the screen.** `watching`
   is `view === 'talk' && !tableOpen`. The table used to fall through that
   check and count nothing at all.

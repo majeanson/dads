@@ -24,6 +24,24 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
   return page;
 }
 
+test('the first line ever said in a room counts on the door', async ({ browser }) => {
+  // This runs first because the group is empty only once. A device that had
+  // never seen the room waited for a line to anchor its mark to, and that
+  // line BECAME the mark — so the first thing said in a group was the one
+  // thing the door never counted. The room saying hello is the anchor now.
+  const marc = await comeIn(browser, 'Early');
+  const sam = await comeIn(browser, 'Opener');
+  await expect(marc.getByTestId('home-new')).toHaveCount(0);
+
+  await talk(sam);
+  await sam.getByLabel('Say something').fill('is this thing on');
+  await sam.getByRole('button', { name: 'Send' }).click();
+  await expect(marc.getByTestId('home-new')).toContainText('1 new');
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
 test('the app opens on home, and the conversation is one tap away', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
 

@@ -49,6 +49,7 @@ export function useSeen({
   messages,
   view,
   watching,
+  ready,
   bottom,
   lines,
 }: {
@@ -58,6 +59,9 @@ export function useSeen({
   view: 'home' | 'talk';
   /** The conversation is genuinely on the screen — not home, not the table. */
   watching: boolean;
+  /** The room has said hello, so `messages` is the backfill and not merely
+   * nothing yet. What tells an empty room apart from one still loading. */
+  ready: boolean;
   bottom: RefObject<HTMLLIElement | null>;
   lines: RefObject<HTMLOListElement | null>;
 }): Seen {
@@ -112,12 +116,20 @@ export function useSeen({
   // A dad who has never opened this room on this device has nothing to catch
   // up on: the archive is not a backlog. The mark starts at the newest line
   // he was handed rather than at nothing.
+  //
+  // And in a room where nothing has been said, it starts at nought ONCE the
+  // room has said hello — not at the first line to arrive. Waiting for a line
+  // to anchor to made that line the mark, so the first thing ever said in a
+  // group was the one thing the door never counted.
   useEffect(() => {
-    if (seenSeq === null && lastSeq > 0) {
+    if (seenSeq !== null) return;
+    if (lastSeq > 0) {
       setSeenSeq(lastSeq);
       markSeen(groupId, lastSeq);
+    } else if (ready) {
+      setSeenSeq(0);
     }
-  }, [seenSeq, lastSeq, groupId]);
+  }, [seenSeq, lastSeq, ready, groupId]);
 
   /** Straight to the bottom, and everything down to there is read. */
   useEffect(() => {
