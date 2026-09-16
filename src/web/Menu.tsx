@@ -34,14 +34,13 @@ export const ITEM =
  * somebody in, and the settings. The night is not a row here because the
  * card above IS the night, and it carries its own way into the sheet.
  *
- * The CONVERSATION is about talking: the questions (answering one posts a
- * line), the week, the table, and finding a line said before the backfill.
- * Nothing else — the invite and the settings are one tap back, and a menu
- * that offers everything everywhere is a menu a man has to read.
- *
- * The questions and the week are on both on purpose: they are the two things
- * a dad is asked to DO, and a man in the middle of the conversation who is
- * told "your week to fill in" should not have to leave it to do so.
+ * The CONVERSATION carries the FULL menu: the questions (answering one posts
+ * a line), the week, the table, finding a line said before the backfill, the
+ * invite and the settings. Home's is the shorter one — a man standing on home
+ * is one tap from the conversation, but a man in the conversation should not
+ * have to walk back out to change a setting or bring somebody in (2026-09-16;
+ * it used to hold only the talking rows, and a dad told "your week to fill
+ * in" mid-conversation had to leave it to do so).
  *
  * The marks say WHICH thing is waiting, in words, where a dot used to be: a
  * mark says "something", and something is what makes a man ignore it. A mark
@@ -124,19 +123,15 @@ export function Menu({
       {/* Second from the bottom, not first: the room is for the dads who are
           already in it. But it is here at all because everything else in this
           app is worth nothing until the other four are here. */}
-      {home ? (
-        <Button block className={ITEM} onClick={() => onOpen('invite')}>
-          <Send size={22} aria-hidden="true" className="text-muted" />
-          {t('menu.invite')}
-        </Button>
-      ) : null}
+      <Button block className={ITEM} onClick={() => onOpen('invite')}>
+        <Send size={22} aria-hidden="true" className="text-muted" />
+        {t('menu.invite')}
+      </Button>
 
-      {home ? (
-        <Button block className={ITEM} onClick={() => onOpen('settings')}>
-          <SettingsIcon size={22} aria-hidden="true" className="text-muted" />
-          {t('menu.settings')}
-        </Button>
-      ) : null}
+      <Button block className={ITEM} onClick={() => onOpen('settings')}>
+        <SettingsIcon size={22} aria-hidden="true" className="text-muted" />
+        {t('menu.settings')}
+      </Button>
     </nav>
   );
 }

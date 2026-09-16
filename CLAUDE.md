@@ -499,12 +499,13 @@ secret, custom domain bound by the route in wrangler.toml.
   this screen has to displace the night or the door, not join them.
 - **The menu is on home** (2026-09-15), under the door, in what was empty
   space: the same `Menu` component the conversation shows in a sheet, and
-  **which rows it holds depends on the screen**. Home is about the group and
-  the week — Questions, The week, Invite, Settings. The conversation is about
-  talking — Questions, The week, the table, Find. Two rows are on both: the
-  questions and the week, which are the two things a dad is asked to DO
-  (2026-09-16: the week joined the conversation's menu, because a man told
-  "your week to fill in" mid-conversation should not have to leave it).
+  **which rows it holds depends on the screen**. Home holds the SHORT menu —
+  Questions, The week, Invite, Settings — and the conversation holds the FULL
+  one: those four plus the table and Find (2026-09-16; it used to hold only
+  the talking rows, and a man told "your week to fill in" mid-conversation
+  had to walk back out to do it). A man on home is one tap from the
+  conversation; a man in the conversation should not have to leave it for
+  anything.
   **There is no Dad night row anywhere**: home's card IS the night
   and always carries its own way into the sheet (`dad-night` on the card's
   quiet link, or on "Set dad night" when there is none). This is the one
