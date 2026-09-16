@@ -3,7 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ServerFrame } from '../src/shared/protocol';
 import { isoWeekIn, previousWeek } from '../src/shared/week';
 import { buildBoard, currentWeek } from '../src/worker/board';
-import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
+import {
+  arrived,
+  until,
+  cookieFrom,
+  postJoin,
+  resetTables,
+  seedGroup,
+  type SeededGroup,
+} from './helpers';
 
 const worker = workerExports.default;
 
@@ -44,7 +52,9 @@ async function enter(group: SeededGroup, name: string): Promise<Dad> {
     headers: { Upgrade: 'websocket', Cookie: cookie },
   });
   expect(res.status).toBe(101);
-  return new Dad(res.webSocket!, cookie, memberId);
+  const dad = new Dad(res.webSocket!, cookie, memberId);
+  await arrived(dad);
+  return dad;
 }
 
 function put(path: string, cookie: string, body: unknown) {
@@ -374,24 +384,19 @@ describe('the room hears about it', () => {
   it('announces a check-in with what it said', async () => {
     const sam = await enter(group, 'Sam');
     open.push(sam);
-    await settle();
 
     const marc = await joinAs(group, 'Marc');
     await put('/api/check-in', marc.cookie, { rating: 2, note: 'Shouted about shoes.' });
-    await settle(120);
-
-    expect(sam.lines()).toContain('Marc checked in — 2/5. Shouted about shoes.');
+    await until(() => sam.lines().includes('Marc checked in — 2/5. Shouted about shoes.'));
   });
 
   it('announces a commitment and how it went', async () => {
     const sam = await enter(group, 'Sam');
     open.push(sam);
-    await settle();
 
     const marc = await joinAs(group, 'Marc');
     await put('/api/commitment', marc.cookie, { body: 'Phone in the drawer at six' });
-    await settle(120);
-    expect(sam.lines()).toContain('Marc is trying this week: Phone in the drawer at six');
+    await until(() => sam.lines().includes('Marc is trying this week: Phone in the drawer at six'));
 
     const week = await currentWeek(env, group.id);
     await put('/api/commitment-outcome', marc.cookie, {
@@ -399,23 +404,19 @@ describe('the room hears about it', () => {
       outcome: 'done',
       reflection: 'Four nights out of five.',
     });
-    await settle(120);
-    expect(sam.lines()).toContain(
-      'Marc did it: Phone in the drawer at six — Four nights out of five.',
+    await until(() =>
+      sam.lines().includes('Marc did it: Phone in the drawer at six — Four nights out of five.'),
     );
   });
 
   it('says plainly when a dad did not manage it', async () => {
     const sam = await enter(group, 'Sam');
     open.push(sam);
-    await settle();
 
     const marc = await joinAs(group, 'Marc');
     await put('/api/commitment', marc.cookie, { body: 'Read at bedtime' });
     const week = await currentWeek(env, group.id);
     await put('/api/commitment-outcome', marc.cookie, { week, outcome: 'missed', reflection: '' });
-    await settle(120);
-
-    expect(sam.lines()).toContain('Marc didn’t manage: Read at bedtime');
+    await until(() => sam.lines().includes('Marc didn’t manage: Read at bedtime'));
   });
 });

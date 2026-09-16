@@ -3,7 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { hashKey, pickIndex } from '../src/shared/promptPick';
 import type { ServerFrame } from '../src/shared/protocol';
 import { todaysPrompt } from '../src/worker/prompts';
-import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
+import {
+  arrived,
+  until,
+  cookieFrom,
+  postJoin,
+  resetTables,
+  seedGroup,
+  type SeededGroup,
+} from './helpers';
 
 const worker = workerExports.default;
 
@@ -44,7 +52,9 @@ async function enter(group: SeededGroup, name: string): Promise<Dad> {
     headers: { Upgrade: 'websocket', Cookie: cookie },
   });
   expect(res.status).toBe(101);
-  return new Dad(res.webSocket!, cookie);
+  const dad = new Dad(res.webSocket!, cookie);
+  await arrived(dad);
+  return dad;
 }
 
 const settle = (ms = 60) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -205,36 +215,31 @@ describe('answering', () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
-    await settle();
 
     const today = await todaysPrompt(env, group.id);
     marc.answer('  I shouted about shoes. It was not about shoes.  ');
-    await settle(120);
-
+    await until(() => sam.frames.some((f) => f.t === 'msg' && f.message.kind === 'prompt'));
     const seen = sam.frames.find((f) => f.t === 'msg' && f.message.kind === 'prompt');
-    expect(seen).toBeTruthy();
     if (seen?.t !== 'msg') throw new Error('unreachable');
     expect(seen.message.body).toBe('I shouted about shoes. It was not about shoes.');
     expect(seen.message.promptId).toBe(today!.prompt.id);
     expect(seen.message.name).toBe('Marc');
 
-    const row = await env.DB.prepare(
-      'SELECT kind, prompt_id FROM messages WHERE group_id = ? AND kind = ?',
-    )
-      .bind(group.id, 'prompt')
-      .first<{ kind: string; prompt_id: string }>();
-    expect(row?.prompt_id).toBe(today!.prompt.id);
+    // The frame came first; the archive write is its own promise.
+    const row = () =>
+      env.DB.prepare('SELECT kind, prompt_id FROM messages WHERE group_id = ? AND kind = ?')
+        .bind(group.id, 'prompt')
+        .first<{ kind: string; prompt_id: string }>();
+    await until(async () => (await row())?.prompt_id === today!.prompt.id);
   });
 
   it('reports back that you have answered', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
     marc.answer('said my piece');
-    await settle(120);
-
-    const res = await get('/api/prompt', marc.cookie);
-    expect(((await res.json()) as { answered: boolean }).answered).toBe(true);
+    const answered = async () =>
+      ((await (await get('/api/prompt', marc.cookie)).json()) as { answered: boolean }).answered;
+    await until(answered);
   });
 });
 
@@ -326,17 +331,17 @@ describe('the list', () => {
 
   it('returns the answers to one question', async () => {
     const marc = await enter(group, 'Marc');
-    await settle();
     const today = await todaysPrompt(env, group.id);
     marc.answer('the honest version');
-    await settle(120);
-
-    const res = await get(
-      `/api/prompt-answers?promptId=${encodeURIComponent(today!.prompt.id)}`,
-      marc.cookie,
-    );
-    const body = (await res.json()) as { answers: { name: string; body: string }[] };
-    expect(body.answers).toEqual([
+    const answers = async () => {
+      const res = await get(
+        `/api/prompt-answers?promptId=${encodeURIComponent(today!.prompt.id)}`,
+        marc.cookie,
+      );
+      return ((await res.json()) as { answers: { name: string; body: string }[] }).answers;
+    };
+    await until(async () => (await answers()).length === 1);
+    expect(await answers()).toEqual([
       expect.objectContaining({ name: 'Marc', body: 'the honest version' }),
     ]);
 

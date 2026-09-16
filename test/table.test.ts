@@ -11,7 +11,15 @@ import {
 import { englishOf } from '../src/shared/said';
 import { parseClientFrame, type ServerFrame } from '../src/shared/protocol';
 import { tableCodeFor } from '../src/worker/table';
-import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
+import {
+  arrived,
+  until,
+  cookieFrom,
+  postJoin,
+  resetTables,
+  seedGroup,
+  type SeededGroup,
+} from './helpers';
 
 const worker = workerExports.default;
 
@@ -43,15 +51,13 @@ class Dad {
 const settle = (ms = 60) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
- * Waits for a frame to arrive rather than guessing how long it takes.
- *
- * A fixed settle() before an assertion is a race, and under a full suite the
- * machine loses it in a different file every time. Counted in tries rather
- * than against the clock because this file fakes Date.
+ * A frame the room WILL say, sent after the ones it must not. One socket's
+ * frames are handled in order, so once this line has come back the quiet
+ * ones have been and gone — which is a proof, where a pause is a guess.
  */
-async function until(done: () => boolean, tries = 200): Promise<void> {
-  for (let i = 0; i < tries && !done(); i++) await settle(10);
-  expect(done()).toBe(true);
+async function sentinel(dad: Dad): Promise<void> {
+  dad.table({ v: 1, t: 'seated', name: 'Sentinel' });
+  await until(() => dad.lines().includes('Sentinel sat down at the table.'));
 }
 
 async function enter(group: SeededGroup, name: string): Promise<Dad> {
@@ -60,7 +66,9 @@ async function enter(group: SeededGroup, name: string): Promise<Dad> {
     headers: { Upgrade: 'websocket', Cookie: cookie },
   });
   expect(res.status).toBe(101);
-  return new Dad(res.webSocket!, cookie);
+  const dad = new Dad(res.webSocket!, cookie);
+  await arrived(dad);
+  return dad;
 }
 
 describe('table codes', () => {
@@ -257,7 +265,6 @@ describe('table events reaching the room', () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
-    await settle();
 
     marc.table({ v: 1, t: 'seated', name: 'Marc' });
     await until(() => sam.lines().includes('Marc sat down at the table.'));
@@ -271,12 +278,12 @@ describe('table events reaching the room', () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
-    await settle();
 
     // Both browsers have the table open, so both hear jaffre say the same thing.
     marc.table({ v: 1, t: 'game-started' });
     sam.table({ v: 1, t: 'game-started' });
-    await settle(150);
+    await until(() => sam.lines().includes('A game started at the table.'));
+    await sentinel(sam);
 
     const said = sam.lines().filter((b) => b === 'A game started at the table.');
     expect(said).toHaveLength(1);
@@ -285,50 +292,44 @@ describe('table events reaching the room', () => {
   it('says nothing at all about plumbing', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
     marc.table({ v: 1, t: 'ready' });
-    await settle(120);
+    await sentinel(marc);
     expect(marc.lines().some((b) => b.includes('ready'))).toBe(false);
   });
 
   it('keeps the quiet seats out of the conversation', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
     marc.table({ v: 1, t: 'turn', name: 'Marc', seconds: 20 });
     marc.table({ v: 1, t: 'away', name: 'Sam', seconds: 45 });
     marc.table({ v: 1, t: 'back', name: 'Sam' });
     marc.table({ v: 1, t: 'connection', state: 'reconnecting' });
-    await settle(150);
-    expect(marc.lines()).toEqual([]);
+    await sentinel(marc);
+    expect(marc.lines()).toEqual(['Sentinel sat down at the table.']);
   });
 
   it('ignores a frame it does not recognise instead of posting it', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
     const before = marc.lines().length;
 
     marc.table({ v: 1, t: 'seated', name: '' });
     marc.table({ v: 99, t: 'game-over', summary: 'hacked' });
     marc.ws.send(JSON.stringify({ t: 'table', event: { v: 1, t: 'game-over', summary: '' } }));
-    await settle(150);
+    await sentinel(marc);
 
-    expect(marc.lines()).toHaveLength(before);
+    expect(marc.lines()).toHaveLength(before + 1);
   });
 
   it('archives a table line like any other', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
     marc.table({ v: 1, t: 'game-over', summary: '41-37' });
-    await settle(150);
 
-    const row = await env.DB.prepare(
-      "SELECT kind, body FROM messages WHERE group_id = ? AND kind = 'table'",
-    )
-      .bind(group.id)
-      .first<{ kind: string; body: string }>();
-    expect(row?.body).toBe('Game over — 41-37');
+    const row = () =>
+      env.DB.prepare("SELECT kind, body FROM messages WHERE group_id = ? AND kind = 'table'")
+        .bind(group.id)
+        .first<{ kind: string; body: string }>();
+    await until(async () => (await row())?.body === 'Game over — 41-37');
   });
 });

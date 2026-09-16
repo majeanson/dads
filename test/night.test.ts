@@ -3,11 +3,20 @@ import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextStart, NIGHT_DURATION_MS, type DadNight } from '../src/shared/dadNight';
 import type { ServerFrame } from '../src/shared/protocol';
-import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
+import {
+  arrived,
+  until,
+  cookieFrom,
+  postJoin,
+  resetTables,
+  seedGroup,
+  type SeededGroup,
+} from './helpers';
 
 const worker = workerExports.default;
 
 const THURSDAY_NIGHT: DadNight = { weekday: 4, time: '21:00', tz: 'America/Montreal' };
+const OPEN = 'Dad night. The table’s open.';
 
 /**
  * A night whose next occurrence is a few real days away.
@@ -74,7 +83,9 @@ async function enter(group: SeededGroup, name: string, cookie?: string): Promise
     headers: { Upgrade: 'websocket', Cookie: cookie },
   });
   expect(res.status).toBe(101);
-  return new Dad(res.webSocket!, cookie);
+  const dad = new Dad(res.webSocket!, cookie);
+  await arrived(dad);
+  return dad;
 }
 
 /**
@@ -85,18 +96,6 @@ async function enter(group: SeededGroup, name: string, cookie?: string): Promise
  */
 function settle(ms = 40): Promise<void> {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Waits for the lines to arrive rather than guessing how long they take.
- *
- * A fixed settle() before an assertion is a race, and under a full suite the
- * machine loses it in a different file every time. Counted in tries rather
- * than against the clock, because this file fakes Date.
- */
-async function until(done: () => boolean, tries = 200): Promise<void> {
-  for (let i = 0; i < tries && !done(); i++) await settle(10);
-  expect(done()).toBe(true);
 }
 
 async function fireAlarm(group: SeededGroup): Promise<boolean> {
@@ -159,16 +158,13 @@ describe('PUT /api/night', () => {
   it('tells the room who changed it, and pushes it to open sockets', async () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
-    await settle();
 
     await worker.fetch('https://dads.test/api/night', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Cookie: marc.cookie },
       body: JSON.stringify({ night: THURSDAY_NIGHT }),
     });
-    await settle();
-
-    expect(sam.lines()).toContain('Marc set dad night to Thursdays at 21:00.');
+    await until(() => sam.lines().includes('Marc set dad night to Thursdays at 21:00.'));
     const pushed = sam.frames.find((f) => f.t === 'night');
     expect(pushed).toEqual({ t: 'night', night: THURSDAY_NIGHT });
 
@@ -179,16 +175,13 @@ describe('PUT /api/night', () => {
   it('can be cleared', async () => {
     const withNight = await seedGroup({ night: THURSDAY_NIGHT });
     const marc = await enter(withNight, 'Marc');
-    await settle();
 
     await worker.fetch('https://dads.test/api/night', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Cookie: marc.cookie },
       body: JSON.stringify({ night: null }),
     });
-    await settle();
-
-    expect(marc.lines()).toContain('Marc cleared dad night.');
+    await until(() => marc.lines().includes('Marc cleared dad night.'));
     const me = await worker.fetch('https://dads.test/api/me', { headers: { Cookie: marc.cookie } });
     expect(((await me.json()) as { group: { dadNight: unknown } }).group.dadNight).toBeNull();
     marc.close();
@@ -218,23 +211,21 @@ describe('the night itself', () => {
   it('opens the night at the appointed hour, not before', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
 
     // The alarm is armed, but for a few days' time.
     expect(await fireAlarm(group)).toBe(true);
-    await settle();
-    expect(marc.lines()).not.toContain('Dad night. The table’s open.');
 
     clockAt(start + 1000);
     expect(await fireAlarm(group)).toBe(true);
-    await settle();
-    expect(marc.lines()).toContain('Dad night. The table’s open.');
+    await until(() => marc.lines().includes(OPEN));
+    // One socket hears things in order, so a line from the early firing would
+    // have landed ahead of this one. Exactly one is the proof there was none.
+    expect(marc.lines().filter((b) => b === OPEN)).toHaveLength(1);
   });
 
   it('opens with what the week put up for it', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
 
     const who = await env.DB.prepare('SELECT id FROM members WHERE group_id = ?')
       .bind(group.id)
@@ -252,41 +243,37 @@ describe('the night itself', () => {
 
     clockAt(start + 1000);
     expect(await fireAlarm(group)).toBe(true);
-    await settle();
 
     // The count, not the list: the line is what makes a man open the sheet.
-    expect(marc.lines()).toContain('Dad night. The table’s open — 2 things to get into.');
+    await until(() => marc.lines().includes('Dad night. The table’s open — 2 things to get into.'));
   });
 
   it('nudges the day before without saying anything in the room', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
 
     // The reminder is its own timer on the same alarm. Firing it must not
     // open the night — a third kind sharing one alarm is exactly how the
     // start gets eaten.
     clockAt(start - 24 * 60 * 60 * 1000 + 1000);
     expect(await fireAlarm(group)).toBe(true);
-    await settle();
-    expect(marc.lines()).not.toContain('Dad night. The table’s open.');
 
-    // And the night still opens at the hour it always did.
+    // And the night still opens at the hour it always did — once. A line from
+    // the reminder would have arrived ahead of this one on the same socket.
     clockAt(start + 1000);
     expect(await fireAlarm(group)).toBe(true);
-    await settle();
-    expect(marc.lines()).toContain('Dad night. The table’s open.');
+    await until(() => marc.lines().includes(OPEN));
+    expect(marc.lines().filter((b) => b === OPEN)).toHaveLength(1);
   });
 
   it('closes the night with what the group actually did', async () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
-    await settle();
 
     clockAt(start + 1000);
     expect(await fireAlarm(group)).toBe(true);
-    await settle();
+    await until(() => marc.lines().includes(OPEN));
 
     clockAt(start + 60_000);
     marc.say('made it');
@@ -298,52 +285,43 @@ describe('the night itself', () => {
 
     clockAt(start + NIGHT_DURATION_MS + 1000);
     expect(await fireAlarm(group)).toBe(true);
-    await settle();
-
-    expect(marc.lines()).toContain('Dad night done — 2 dads turned up, 3 lines.');
+    await until(() => marc.lines().includes('Dad night done — 2 dads turned up, 3 lines.'));
   });
 
   it('says plainly when nobody came', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
 
     clockAt(start + 1000);
     await fireAlarm(group);
-    await settle();
+    await until(() => marc.lines().includes(OPEN));
 
     clockAt(start + NIGHT_DURATION_MS + 1000);
     await fireAlarm(group);
-    await settle();
-
-    expect(marc.lines()).toContain('Dad night done. Nobody made it this week.');
+    await until(() => marc.lines().includes('Dad night done. Nobody made it this week.'));
   });
 
   it('arms the following week once a night has closed', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
 
     clockAt(start + 1000);
     await fireAlarm(group);
-    await settle();
+    await until(() => marc.lines().includes(OPEN));
     clockAt(start + NIGHT_DURATION_MS + 1000);
     await fireAlarm(group);
-    await settle();
+    await until(() => marc.lines().some((b) => b.startsWith('Dad night done')));
 
     // A week on, the next night opens without anyone reconnecting.
     clockAt(start + 7 * 86_400_000 + 1000);
     expect(await fireAlarm(group)).toBe(true);
-    await settle();
-
-    expect(marc.lines().filter((b) => b === 'Dad night. The table’s open.')).toHaveLength(2);
+    await until(() => marc.lines().filter((b) => b === OPEN).length === 2);
   });
 
   it('does nothing at all for a group with no night set', async () => {
     const quiet = await seedGroup();
     const marc = await enter(quiet, 'Marc');
     open.push(marc);
-    await settle();
     // Nothing armed: no leave pending, no night.
     expect(await fireAlarm(quiet)).toBe(false);
   });

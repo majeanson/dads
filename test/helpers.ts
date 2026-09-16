@@ -1,4 +1,5 @@
 import { env } from 'cloudflare:workers';
+import { expect } from 'vitest';
 import type { DadNight } from '../src/shared/dadNight';
 import { hashInviteCode, randomToken } from '../src/worker/crypto';
 
@@ -67,4 +68,38 @@ export function cookieFrom(res: Response): string {
   const pair = header.split(';')[0] ?? '';
   if (!pair.startsWith('dads_id=')) throw new Error(`no identity cookie in: ${header}`);
   return pair;
+}
+
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Waits for the thing rather than guessing how long it takes.
+ *
+ * A fixed wait before an assertion is a race, and under a full suite a loaded
+ * machine loses it in a different file every time. Counted in tries rather
+ * than against the clock, because the alarm tests fake `Date` and a deadline
+ * computed from `Date.now()` there never arrives. The predicate may read D1:
+ * fan-out happens before the archive write, so a frame having arrived says
+ * nothing about the row.
+ */
+export async function until(done: () => boolean | Promise<boolean>, tries = 300): Promise<void> {
+  for (let i = 0; i < tries; i++) {
+    if (await done()) return;
+    await pause(10);
+  }
+  expect(await done()).toBe(true);
+}
+
+/** A socket is usable once the room has said hello; before that, nothing it
+ * hears is ordered against anything. */
+export function arrived(dad: { frames: { t: string }[] }): Promise<void> {
+  return until(() => dad.frames.some((f) => f.t === 'hello'));
+}
+
+/** Lets the clock move on by a millisecond, so two rows written back to back
+ * cannot share a `created_at` and the order they are pruned in is the order
+ * they were made in. Not for a file that fakes `Date`: it would never move. */
+export async function tick(): Promise<void> {
+  const was = Date.now();
+  await until(() => Date.now() > was);
 }

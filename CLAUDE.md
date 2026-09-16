@@ -1132,8 +1132,21 @@ people use.
   browser suite, or another session. Wait for the frame instead: the `until`
   helper polls a predicate and asserts it, counted in TRIES rather than against
   the clock, because `night.test.ts` fakes `Date` and a deadline computed from
-  `Date.now()` there never arrives. `table.test.ts` and `night.test.ts` have
-  it; the rest still guess, and are the ones that flake.
+  `Date.now()` there never arrives. It lives in `test/helpers.ts` (2026-09-16)
+  and every file waits with it now; `settle()` survives only as a drain after
+  a socket closes, never before an assertion. Its predicate may read D1,
+  because fan-out happens before the archive write and a frame having
+  arrived says nothing about the row. Two shapes to keep:
+  - **A socket's frames are handled in order, so a negative is proven by a
+    sentinel.** "The room said nothing" cannot be waited for, but a frame the
+    room WILL answer, sent after the ones it must not, can be — and once it is
+    back, the quiet ones have been and gone. `table.test.ts` has `sentinel()`;
+    the alarm tests count the open line instead, because a line from the early
+    firing would have landed ahead of the real one on the same socket.
+  - **`enter()` waits for `hello`** (`arrived()`), so nothing is sent on a
+    socket the room has not greeted yet. `tick()` moves the clock a
+    millisecond for rows whose order is `created_at`; it spins for ever in a
+    file that fakes `Date`, so those files never use it.
 - vitest storage is per **file**, not per test. Tests that seed groups call
   `resetTables()` in `beforeEach`; seeded codes are unique by default.
 - e2e `global-setup.ts` migrates the local D1, then drops and recreates one

@@ -1,7 +1,15 @@
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { RoomsOpen, ServerFrame } from '../src/shared/protocol';
-import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
+import {
+  arrived,
+  until,
+  cookieFrom,
+  postJoin,
+  resetTables,
+  seedGroup,
+  type SeededGroup,
+} from './helpers';
 
 const worker = workerExports.default;
 
@@ -37,7 +45,9 @@ async function enter(group: SeededGroup, name: string): Promise<Dad> {
     headers: { Upgrade: 'websocket', Cookie: cookie },
   });
   expect(res.status).toBe(101);
-  return new Dad(res.webSocket!, cookie);
+  const dad = new Dad(res.webSocket!, cookie);
+  await arrived(dad);
+  return dad;
 }
 
 function setRooms(cookie: string, body: unknown) {
@@ -101,15 +111,12 @@ describe('what the group has open', () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
-    await settle();
 
     // Sam, who set nothing up and is nobody's admin.
     expect((await setRooms(sam.cookie, { table: false })).status).toBe(200);
-    await settle(120);
-
     // Marc finds out without a reload.
+    await until(() => marc.frames.some((f) => f.t === 'rooms'));
     const told = marc.frames.find((f) => f.t === 'rooms');
-    expect(told).toBeTruthy();
     if (told?.t !== 'rooms') throw new Error('unreachable');
     expect(told.rooms.table).toBe(false);
   });

@@ -2,7 +2,15 @@ import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ServerFrame } from '../src/shared/protocol';
 import { isoWeekIn, previousWeek } from '../src/shared/week';
-import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
+import {
+  arrived,
+  until,
+  cookieFrom,
+  postJoin,
+  resetTables,
+  seedGroup,
+  type SeededGroup,
+} from './helpers';
 
 const worker = workerExports.default;
 
@@ -43,7 +51,9 @@ async function enter(group: SeededGroup, name: string): Promise<Dad> {
     headers: { Upgrade: 'websocket', Cookie: cookie },
   });
   expect(res.status).toBe(101);
-  return new Dad(res.webSocket!, cookie);
+  const dad = new Dad(res.webSocket!, cookie);
+  await arrived(dad);
+  return dad;
 }
 
 function put(path: string, cookie: string, body: unknown) {
@@ -88,12 +98,10 @@ describe('what is waiting', () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
-    await settle();
 
     marc.answer('I shouted about shoes. It was not about shoes.');
-    await settle(150);
-
-    expect((await todo(marc.cookie)).prompt).toBe(false);
+    // The mark reads D1, and the archive write lands after the fan-out.
+    await until(async () => !(await todo(marc.cookie)).prompt);
     // The one that would make the mark a lie: Sam has not answered, and
     // somebody else's answer must not take the question off his screen.
     expect((await todo(sam.cookie)).prompt).toBe(true);

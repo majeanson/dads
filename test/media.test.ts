@@ -7,7 +7,16 @@ import {
   MAX_UPLOAD_BYTES,
   VOICE_PER_GROUP,
 } from '../src/worker/media';
-import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
+import {
+  arrived,
+  tick,
+  until,
+  cookieFrom,
+  postJoin,
+  resetTables,
+  seedGroup,
+  type SeededGroup,
+} from './helpers';
 
 const worker = workerExports.default;
 
@@ -54,7 +63,9 @@ async function enter(group: SeededGroup, name: string): Promise<Dad> {
     headers: { Upgrade: 'websocket', Cookie: cookie },
   });
   expect(res.status).toBe(101);
-  return new Dad(res.webSocket!, cookie);
+  const dad = new Dad(res.webSocket!, cookie);
+  await arrived(dad);
+  return dad;
 }
 
 function put(cookie: string, body: BodyInit, headers: Record<string, string> = {}) {
@@ -249,7 +260,7 @@ describe('the ten-photo cap', () => {
     for (let i = 0; i < MEDIA_PER_GROUP; i++) {
       ids.push((await uploadOne(cookie, `photo-${i}.png`)).media.id);
       // created_at is the ordering key and the clock is coarse.
-      await settle(2);
+      await tick();
     }
 
     const full = await env.DB.prepare('SELECT COUNT(*) AS n FROM media WHERE group_id = ?')
@@ -284,7 +295,7 @@ describe('the ten-photo cap', () => {
     const photos: string[] = [];
     for (let i = 0; i < MEDIA_PER_GROUP; i++) {
       photos.push((await uploadOne(cookie, `photo-${i}.png`)).media.id);
-      await settle(2);
+      await tick();
     }
 
     // Two shelves. A week of talking is not a reason to throw away pictures of
@@ -292,7 +303,7 @@ describe('the ten-photo cap', () => {
     for (let i = 0; i < 12; i++) {
       const said = await sayOne(cookie, `voice-${i}.webm`);
       expect(said.dropped).toBe(0);
-      await settle(2);
+      await tick();
     }
 
     const still = await worker.fetch(`https://dads.test/api/media?id=${photos[0]}`, {
@@ -312,10 +323,10 @@ describe('the ten-photo cap', () => {
   it('holds thirty voice notes and then lets the oldest go', async () => {
     const cookie = await cookieFor(group);
     const first = (await sayOne(cookie, 'voice-0.webm')).media.id;
-    await settle(2);
+    await tick();
     for (let i = 1; i < VOICE_PER_GROUP; i++) {
       expect((await sayOne(cookie, `voice-${i}.webm`)).dropped).toBe(0);
-      await settle(2);
+      await tick();
     }
 
     expect((await sayOne(cookie, 'voice-last.webm')).dropped).toBe(1);
@@ -328,13 +339,13 @@ describe('the ten-photo cap', () => {
   it('lists the photographs a room still holds, under a week of voice notes', async () => {
     const cookie = await cookieFor(group);
     const photo = (await uploadOne(cookie, 'photo.png')).media.id;
-    await settle(2);
+    await tick();
     // A chatty week. Both are still on their own shelves and both are still
     // held, so a listing bounded by one shelf would have answered with twelve
     // voice notes and no picture at all.
     for (let i = 0; i < 12; i++) {
       await sayOne(cookie, `voice-${i}.webm`);
-      await settle(2);
+      await tick();
     }
 
     const list = (await (
@@ -350,7 +361,7 @@ describe('the ten-photo cap', () => {
     const theirs = await cookieFor(other, 'Stranger');
     for (let i = 0; i < 3; i++) {
       await uploadOne(mine);
-      await settle(2);
+      await tick();
     }
     await uploadOne(theirs);
 
@@ -417,12 +428,12 @@ describe('a photo in the conversation', () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
-    await settle();
 
     const uploaded = await uploadOne(marc.cookie, 'pool.png');
     marc.say('he finally jumped in', uploaded.media.id);
-    await settle(140);
-
+    await until(() =>
+      sam.frames.some((f) => f.t === 'msg' && f.message.body === 'he finally jumped in'),
+    );
     const seen = sam.frames.find((f) => f.t === 'msg' && f.message.body === 'he finally jumped in');
     if (seen?.t !== 'msg') throw new Error('the line never arrived');
     expect(seen.message.media).toMatchObject({
@@ -435,15 +446,13 @@ describe('a photo in the conversation', () => {
   it('lets a photo stand on its own with no caption', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
     const uploaded = await uploadOne(marc.cookie);
     marc.say('', uploaded.media.id);
-    await settle(140);
-
-    const seen = marc.frames.find(
-      (f) => f.t === 'msg' && f.message.media !== null && f.message.kind === 'chat',
+    await until(() =>
+      marc.frames.some(
+        (f) => f.t === 'msg' && f.message.media !== null && f.message.kind === 'chat',
+      ),
     );
-    expect(seen).toBeTruthy();
   });
 
   it('refuses an attachment from another room rather than fetching it', async () => {
@@ -453,11 +462,8 @@ describe('a photo in the conversation', () => {
 
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
     marc.say('look at this', theirs.media.id);
-    await settle(140);
-
-    expect(marc.frames.some((f) => f.t === 'error' && f.code === 'no_media')).toBe(true);
+    await until(() => marc.frames.some((f) => f.t === 'error' && f.code === 'no_media'));
     expect(marc.frames.some((f) => f.t === 'msg' && f.message.body === 'look at this')).toBe(false);
   });
 
@@ -471,13 +477,10 @@ describe('a photo in the conversation', () => {
     const sam = await enter(group, 'Sam');
     const marc = await enter(group, 'Marc');
     open.push(sam, marc);
-    await settle();
 
     const his = await uploadOne(sam.cookie, 'his-kid.png');
     marc.say('mine now', his.media.id);
-    await settle(140);
-
-    expect(marc.frames.some((f) => f.t === 'error' && f.code === 'no_media')).toBe(true);
+    await until(() => marc.frames.some((f) => f.t === 'error' && f.code === 'no_media'));
     expect(marc.frames.some((f) => f.t === 'msg' && f.message.body === 'mine now')).toBe(false);
 
     // And it is still there for the man it belongs to.
@@ -495,16 +498,13 @@ describe('a photo in the conversation', () => {
     // had touched.
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
 
     const uploaded = await uploadOne(marc.cookie, 'once.png');
     marc.say('here he is', uploaded.media.id);
-    await settle(160);
-    expect(marc.frames.some((f) => f.t === 'msg' && f.message.body === 'here he is')).toBe(true);
+    await until(() => marc.frames.some((f) => f.t === 'msg' && f.message.body === 'here he is'));
 
     marc.say('and again', uploaded.media.id);
-    await settle(160);
-    expect(marc.frames.some((f) => f.t === 'error' && f.code === 'no_media')).toBe(true);
+    await until(() => marc.frames.some((f) => f.t === 'error' && f.code === 'no_media'));
     expect(marc.frames.some((f) => f.t === 'msg' && f.message.body === 'and again')).toBe(false);
   });
 
@@ -516,13 +516,17 @@ describe('a photo in the conversation', () => {
     // line entirely.
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
 
     const uploaded = await uploadOne(marc.cookie, 'again.png');
     marc.say('in the pool', uploaded.media.id, 'c-recovered');
-    await settle(160);
+    await until(() => marc.frames.some((f) => f.t === 'msg' && f.message.body === 'in the pool'));
     marc.say('in the pool', uploaded.media.id, 'c-recovered');
-    await settle(160);
+    // A line the room will post, sent after the one it must drop: the socket
+    // is handled in order, so once this is back the re-send has been dealt with.
+    marc.say('and that was that');
+    await until(() =>
+      marc.frames.some((f) => f.t === 'msg' && f.message.body === 'and that was that'),
+    );
 
     expect(
       marc.frames.filter((f) => f.t === 'msg' && f.message.body === 'in the pool'),
@@ -533,45 +537,34 @@ describe('a photo in the conversation', () => {
   it('archives the attachment alongside the line', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
     const uploaded = await uploadOne(marc.cookie);
     marc.say('for the record', uploaded.media.id);
-    await settle(160);
 
-    const row = await env.DB.prepare(
-      'SELECT media_id FROM messages WHERE group_id = ? AND body = ?',
-    )
-      .bind(group.id, 'for the record')
-      .first<{ media_id: string }>();
-    expect(row?.media_id).toBe(uploaded.media.id);
+    const row = () =>
+      env.DB.prepare('SELECT media_id FROM messages WHERE group_id = ? AND body = ?')
+        .bind(group.id, 'for the record')
+        .first<{ media_id: string }>();
+    await until(async () => (await row())?.media_id === uploaded.media.id);
   });
 
   it('quietly loses the picture once it has fallen off, rather than showing a broken one', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);
-    await settle();
 
     const uploaded = await uploadOne(marc.cookie, 'first.png');
     marc.say('the first one', uploaded.media.id);
-    await settle(140);
+    await until(() => marc.frames.some((f) => f.t === 'msg' && f.message.body === 'the first one'));
 
     // Push it off the end.
     for (let i = 0; i < MEDIA_PER_GROUP; i++) {
       await uploadOne(marc.cookie, `filler-${i}.png`);
-      await settle(2);
+      await tick();
     }
 
     const again = await enter(group, 'Marc');
     open.push(again);
-    const hello = await new Promise<ServerFrame>((resolve) => {
-      const check = () => {
-        const f = again.frames.find((x) => x.t === 'hello');
-        if (f) resolve(f);
-        else setTimeout(check, 20);
-      };
-      check();
-    });
-    if (hello.t !== 'hello') throw new Error('unreachable');
+    const hello = again.frames.find((x) => x.t === 'hello');
+    if (hello?.t !== 'hello') throw new Error('unreachable');
 
     const line = hello.messages.find((m) => m.body === 'the first one');
     expect(line).toBeTruthy();
@@ -607,13 +600,13 @@ describe('keeping a photograph', () => {
   it('survives a shelf-full of uploads, and does not take up a place', async () => {
     const cookie = await cookieFor(group);
     const first = (await uploadOne(cookie, 'the-one.png')).media.id;
-    await settle(2);
+    await tick();
     expect((await keep(cookie, first, true)).status).toBe(200);
 
     // A whole shelf on top of it, which without the keep would have taken it.
     for (let i = 0; i < MEDIA_PER_GROUP + 2; i++) {
       await uploadOne(cookie, `photo-${i}.png`);
-      await settle(2);
+      await tick();
     }
 
     const still = await worker.fetch(`https://dads.test/api/media?id=${first}`, {
@@ -634,13 +627,13 @@ describe('keeping a photograph', () => {
   it('goes back on the shelf when it is let go', async () => {
     const cookie = await cookieFor(group);
     const one = (await uploadOne(cookie, 'the-one.png')).media.id;
-    await settle(2);
+    await tick();
     await keep(cookie, one, true);
     expect((await keep(cookie, one, false)).status).toBe(200);
 
     for (let i = 0; i < MEDIA_PER_GROUP; i++) {
       await uploadOne(cookie, `photo-${i}.png`);
-      await settle(2);
+      await tick();
     }
 
     const gone = await worker.fetch(`https://dads.test/api/media?id=${one}`, {
@@ -668,7 +661,7 @@ describe('keeping a photograph', () => {
     for (let i = 0; i < KEPT_PER_GROUP; i++) {
       const id = (await uploadOne(cookie, `keep-${i}.png`)).media.id;
       expect((await keep(cookie, id, true)).status).toBe(200);
-      await settle(2);
+      await tick();
     }
 
     const one = (await uploadOne(cookie, 'one-too-many.png')).media.id;
@@ -716,15 +709,14 @@ describe('keeping a photograph', () => {
     // Two dads looking at the same picture must not disagree about it.
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
-    await settle();
 
     const id = (await uploadOne(marc.cookie, 'ours.png')).media.id;
     marc.say('look at this', id);
-    await settle();
+    await until(() => marc.frames.some((f) => f.t === 'msg' && f.message.body === 'look at this'));
 
     marc.frames.length = 0;
     expect((await keep(sam.cookie, id, true)).status).toBe(200);
-    await settle();
+    await until(() => marc.frames.some((f) => f.t === 'kept'));
 
     expect(marc.frames).toContainEqual({ t: 'kept', mediaId: id, on: true });
 
@@ -735,16 +727,14 @@ describe('keeping a photograph', () => {
 
   it('is still kept after a reload, because the backfill carries it', async () => {
     const marc = await enter(group, 'Marc');
-    await settle();
     const id = (await uploadOne(marc.cookie, 'ours.png')).media.id;
     marc.say('look at this', id);
-    await settle();
+    await until(() => marc.frames.some((f) => f.t === 'msg' && f.message.body === 'look at this'));
     await keep(marc.cookie, id, true);
     marc.close();
     await settle();
 
     const again = await enter(group, 'Marc');
-    await settle();
     const hello = again.frames.find((f) => f.t === 'hello');
     const line = hello!.messages.find((m) => m.media?.id === id);
     expect(line?.media?.kept).toBe(true);
