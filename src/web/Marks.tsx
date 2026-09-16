@@ -1,4 +1,7 @@
-import type { Reaction, RoomMessage } from '../shared/protocol';
+import * as Popover from '@radix-ui/react-popover';
+import { SmilePlus } from 'lucide-react';
+import { useState } from 'react';
+import { REACTIONS, type Reaction, type RoomMessage } from '../shared/protocol';
 import { useT } from './i18n';
 import { cn } from './ui/cn';
 
@@ -64,5 +67,108 @@ export function Marks({
         );
       })}
     </span>
+  );
+}
+
+/**
+ * The five, in a row. Shared by the long-press menu and the quick button,
+ * so there is one place that decides what a mark looks like. The ones
+ * already his are outlined; they wrap rather than shrink when squeezed.
+ */
+export function MarkRow({
+  mine,
+  onReact,
+}: {
+  mine: string[];
+  onReact: (emoji: string, on: boolean) => void;
+}) {
+  const { t } = useT();
+  return (
+    <div className="flex flex-wrap gap-0.5" role="group" aria-label={t('line.react')}>
+      {REACTIONS.map((emoji) => {
+        const on = mine.includes(emoji);
+        return (
+          <button
+            key={emoji}
+            type="button"
+            aria-pressed={on}
+            aria-label={emoji}
+            data-testid={`react-${emoji}`}
+            onClick={() => onReact(emoji, !on)}
+            className={cn(
+              'grid h-10 min-w-9 flex-1 cursor-pointer place-items-center rounded-app',
+              'border text-lg transition-colors duration-75',
+              on ? 'border-accent bg-panel' : 'border-transparent hover:border-edge',
+            )}
+          >
+            {emoji}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * A mark without the long press, for a mouse.
+ *
+ * On a laptop nobody long-presses and a right-click is a thing a man has to
+ * be told about, so a small button appears at the end of the line under the
+ * pointer and opens the same five. Hidden where the pointer is a thumb: a
+ * phone has the long press, the double tap, and no hover to reveal this on.
+ * Always in the tree so the clock's column keeps one width; only its opacity
+ * moves.
+ */
+export function QuickMark({
+  mine,
+  onReact,
+}: {
+  mine: string[];
+  onReact: (emoji: string, on: boolean) => void;
+}) {
+  const { t } = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label={t('line.react')}
+          data-testid="quick-mark"
+          className={cn(
+            'hidden h-7 w-7 cursor-pointer place-items-center rounded-app border border-transparent text-muted',
+            'pointer-fine:grid',
+            'transition-opacity duration-75 hover:border-edge hover:text-ink',
+            'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+            open && 'opacity-100',
+          )}
+        >
+          <SmilePlus size={15} aria-hidden="true" />
+          <span className="sr-only">{t('line.react')}</span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          side="top"
+          align="end"
+          sideOffset={4}
+          collisionPadding={12}
+          className={[
+            'z-50 w-max max-w-[var(--radix-popper-available-width)] rounded-lg',
+            'border border-line bg-paper p-1 text-ink shadow-lg',
+            'data-[state=open]:animate-in data-[state=open]:fade-in',
+          ].join(' ')}
+          data-testid="quick-marks"
+        >
+          <MarkRow
+            mine={mine}
+            onReact={(emoji, on) => {
+              onReact(emoji, on);
+              setOpen(false);
+            }}
+          />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

@@ -1,8 +1,8 @@
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { Copy, Pin, PinOff, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { REACTIONS } from '../../shared/protocol';
 import { useT } from '../i18n';
+import { MarkRow } from '../Marks';
 import { cn } from './cn';
 
 const ITEM = [
@@ -73,28 +73,7 @@ export function LineMenu({
           {/* The marks first, because it is the one anybody presses. They
               share the row and wrap rather than shrinking to nothing when the
               menu is squeezed; the ones already yours are outlined. */}
-          <div className="flex flex-wrap gap-0.5" role="group" aria-label={t('line.react')}>
-            {REACTIONS.map((emoji) => {
-              const on = mine.includes(emoji);
-              return (
-                <button
-                  key={emoji}
-                  type="button"
-                  aria-pressed={on}
-                  aria-label={emoji}
-                  data-testid={`react-${emoji}`}
-                  onClick={() => onReact(emoji, !on)}
-                  className={cn(
-                    'grid h-10 min-w-9 flex-1 cursor-pointer place-items-center rounded-app',
-                    'border text-lg transition-colors duration-75',
-                    on ? 'border-accent bg-panel' : 'border-transparent hover:border-edge',
-                  )}
-                >
-                  {emoji}
-                </button>
-              );
-            })}
-          </div>
+          <MarkRow mine={mine} onReact={onReact} />
 
           <ContextMenu.Separator className="my-1 h-px bg-line" />
 

@@ -326,6 +326,51 @@ test('a mark says you read it without spending a line', async ({ browser }) => {
   await sam.context().close();
 });
 
+test('a mouse gets a button for a mark, and a double tap is a thumb', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc Quick');
+  const sam = await comeIn(browser, 'Sam Quick');
+
+  await marc.getByLabel('Say something').fill('anyone else up at five');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const line = sam.getByTestId('line').filter({ hasText: 'anyone else up at five' });
+  await expect(line).toBeVisible();
+
+  // The button is there for the pointer and shows itself under it.
+  await line.hover();
+  await line.getByTestId('quick-mark').click();
+  await sam.getByTestId('quick-marks').getByTestId('react-❤️').click();
+  await expect(line.getByTestId('mark')).toContainText('1');
+
+  // A double tap on the words is a thumb, and another takes it off.
+  const his = marc.getByTestId('line').filter({ hasText: 'anyone else up at five' });
+  await his.locator('.body').dblclick();
+  await expect(his.getByTestId('mark').filter({ hasText: '👍' })).toContainText('1');
+  await his.locator('.body').dblclick();
+  await expect(his.getByTestId('mark').filter({ hasText: '👍' })).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
+test('a laptop gets an emoji button, and it lands where the caret is', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc Emoji');
+
+  const field = marc.getByLabel('Say something');
+  await field.fill('made it through the week');
+  // The caret after "made it": the emoji goes there, not at the end.
+  await field.evaluate((el: HTMLInputElement) => el.setSelectionRange(7, 7));
+  await marc.getByTestId('emoji').click();
+  await marc.getByTestId('emoji-picker').getByRole('button', { name: '🍺' }).click();
+  await expect(field).toHaveValue('made it🍺 through the week');
+  // And the field kept focus, so he just keeps typing.
+  await expect(field).toBeFocused();
+
+  await marc.getByRole('button', { name: 'Send' }).click();
+  await expect(marc.getByTestId('line').filter({ hasText: 'made it🍺 through' })).toBeVisible();
+
+  await marc.context().close();
+});
+
 test('every mark is reachable wherever on the line he presses', async ({ browser }) => {
   // The menu is anchored at the point he pressed, so pressing near the right
   // edge of a phone leaves it about two hundred pixels — and a fixed width

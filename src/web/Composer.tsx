@@ -12,6 +12,7 @@ import { isImage, prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
+import { EmojiPicker } from './ui/EmojiPicker';
 
 export interface ComposerHandle {
   /** A file the room was handed — dropped on the page, or pasted. */
@@ -116,6 +117,20 @@ export function Composer({
       result.error === 'too_large' ? t('composer.too_large') : t('composer.upload_failed'),
     );
     return null;
+  }
+
+  /** Into the field where the caret is, and the caret after it. */
+  function insert(emoji: string) {
+    const field = say.current;
+    const at = field?.selectionStart ?? draft.length;
+    const to = field?.selectionEnd ?? at;
+    const next = draft.slice(0, at) + emoji + draft.slice(to);
+    setDraft(next);
+    onTyping();
+    requestAnimationFrame(() => {
+      field?.focus();
+      field?.setSelectionRange(at + emoji.length, at + emoji.length);
+    });
   }
 
   async function submit(event: FormEvent) {
@@ -264,23 +279,29 @@ export function Composer({
           <label htmlFor="say" className="sr-only">
             {t('composer.say')}
           </label>
-          <input
-            ref={say}
-            id="say"
-            // 16px: anything smaller and iOS zooms the page in when he taps
-            // the field, and does not zoom it back out.
-            className="h-11 min-w-0 rounded-lg border-0 bg-transparent px-2 text-base text-ink placeholder:text-muted/70 focus:outline-none"
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              onTyping();
-            }}
-            placeholder={pending === null ? t('composer.say') : t('composer.caption')}
-            autoComplete="off"
-            autoCapitalize="sentences"
-            // The keyboard's own return key says what it does here.
-            enterKeyHint="send"
-          />
+          {/* The field and the emoji button share the middle cell, so the row
+              is still three controls wide: the button only exists where there
+              is a mouse, and a phone's keyboard is its own picker. */}
+          <div className="flex min-w-0 items-center">
+            <input
+              ref={say}
+              id="say"
+              // 16px: anything smaller and iOS zooms the page in when he taps
+              // the field, and does not zoom it back out.
+              className="h-11 min-w-0 flex-1 rounded-lg border-0 bg-transparent px-2 text-base text-ink placeholder:text-muted/70 focus:outline-none"
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                onTyping();
+              }}
+              placeholder={pending === null ? t('composer.say') : t('composer.caption')}
+              autoComplete="off"
+              autoCapitalize="sentences"
+              // The keyboard's own return key says what it does here.
+              enterKeyHint="send"
+            />
+            <EmojiPicker onPick={insert} className="hidden shrink-0 pointer-fine:inline-flex" />
+          </div>
           {/* One or the other, never both: with nothing typed the room is
               asking him to speak, and the moment he types a letter it is
               asking him to send. Four controls on a phone row is three. */}

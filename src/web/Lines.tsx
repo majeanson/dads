@@ -5,7 +5,7 @@ import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
 import { Face } from './Face';
 import { useT } from './i18n';
-import { Marks, marksOf } from './Marks';
+import { Marks, marksOf, QuickMark } from './Marks';
 import type { Row } from './messageGroups';
 import { LineMenu } from './ui/LineMenu';
 
@@ -87,8 +87,17 @@ export function Lines({
             onRetract={row.message.memberId === you ? () => onRetract(row.message.id) : undefined}
           >
             <li
-              className={`line line-${row.message.kind}${row.showName ? '' : ' is-continued'}`}
+              className={`group line line-${row.message.kind}${row.showName ? '' : ' is-continued'}`}
               data-testid="line"
+              // A double tap is a thumb, the way every other chat has taught
+              // it: the first mark goes on, and off again on the next. Not on
+              // a link, a photo or a control, each of which a double tap would
+              // also open twice.
+              onDoubleClick={(event) => {
+                if ((event.target as HTMLElement).closest('a, button, img, video, audio')) return;
+                const on = !marksOf(row.message, you).includes('👍');
+                onReact(row.message.id, '👍', on);
+              }}
             >
               {/* Only at the top of a run. A face on every line of one turn is
                   the app repeating who is talking between every sentence,
@@ -135,7 +144,13 @@ export function Lines({
                   onToggle={(emoji, on) => onReact(row.message.id, emoji, on)}
                 />
               </span>
-              <time className="when">{clock(row.message.createdAt)}</time>
+              <span className="when flex items-start gap-1">
+                <time>{clock(row.message.createdAt)}</time>
+                <QuickMark
+                  mine={marksOf(row.message, you)}
+                  onReact={(emoji, on) => onReact(row.message.id, emoji, on)}
+                />
+              </span>
             </li>
           </LineMenu>
         ) : (
