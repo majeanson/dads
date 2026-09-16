@@ -7,8 +7,7 @@ import { Here } from './Here';
 import { Invite } from './Invite';
 import { Menu, type SheetName } from './Menu';
 import { Night } from './Night';
-import { PromptCard } from './PromptCard';
-import { PromptList } from './PromptList';
+import { Questions } from './Questions';
 import { Settings } from './Settings';
 import { useT } from './i18n';
 import { Sheet } from './ui/Sheet';
@@ -106,10 +105,12 @@ export function Sheets({
 
   if (open === 'prompts') {
     return (
-      <Sheet title={t('q.title')} onClose={close}>
-        <PromptCard messages={messages} onAnswer={onAnswerPrompt} canAnswer={canAnswer} />
-        <PromptList />
-      </Sheet>
+      <Questions
+        messages={messages}
+        onAnswer={onAnswerPrompt}
+        canAnswer={canAnswer}
+        onClose={close}
+      />
     );
   }
 

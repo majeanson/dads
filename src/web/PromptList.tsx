@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react';
 import {
   addPrompt,
   fetchPromptAnswers,
-  fetchPrompts,
   type HistoryEntry,
   type PoolEntry,
   type PromptAnswer,
@@ -20,58 +19,26 @@ const ADD_ERRORS: Record<string, Key> = {
 };
 
 /**
- * What has been asked before, and how to ask something new.
+ * What has been asked before, and what this group has added.
  *
  * The curated hundred are deliberately NOT listed. They are the pool the daily
  * pick draws from, not reading material: a dad scrolling a hundred questions
  * nobody has answered is a dad doing filing. What is worth showing is what
- * this group has actually said, and the door to add one of your own.
+ * this group has actually been asked, and the questions its own dads wrote.
+ *
+ * Presentational: `Questions` fetches, because the row that opens this wants
+ * the count before anybody has pressed it.
  */
-export function PromptList() {
+export function PromptList({ mine, history }: { mine: PoolEntry[]; history: HistoryEntry[] }) {
   const { t, lang } = useT();
-  const [state, setState] = useState<
-    | { status: 'loading' }
-    | { status: 'error' }
-    | { status: 'ready'; mine: PoolEntry[]; history: HistoryEntry[] }
-  >({ status: 'loading' });
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchPrompts()
-      .then((data) => {
-        if (cancelled) return;
-        setState({
-          status: 'ready',
-          // A dad's own questions are the ones with a group behind them; the
-          // library rows carry no group and are not shown.
-          mine: data.pool.filter((p) => p.groupId !== null),
-          // Today's is the card above this list. Printing it again under
-          // 'asked before' is the same question twice on one small screen.
-          history: data.history.filter((h) => h.promptId !== data.today?.prompt.id),
-        });
-      })
-      .catch(() => !cancelled && setState({ status: 'error' }));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (state.status === 'loading') return <p className="text-muted">{t('q.loading')}</p>;
-  if (state.status === 'error') return <p className="text-muted">{t('q.failed')}</p>;
-
-  const { mine, history } = state;
-
-  function added(entry: PoolEntry) {
-    setState((s) => (s.status === 'ready' ? { ...s, mine: [entry, ...s.mine] } : s));
-  }
 
   return (
-    <div data-testid="prompt-list">
-      {/* Nothing at all until the group has been asked something before:
-          a heading over "nothing yet" is two lines saying nothing. */}
-      {history.length === 0 ? null : (
-        <section className="mb-6">
-          <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('q.asked_before')}</h2>
+    <div data-testid="prompt-list" className="grid gap-6">
+      <section>
+        <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('q.asked_before')}</h2>
+        {history.length === 0 ? (
+          <p className="m-0 text-[1.0625rem] text-muted">{t('q.none_before')}</p>
+        ) : (
           <ol className="m-0 list-none border-t border-line p-0">
             {history.map((h) => (
               <PromptRow
@@ -82,14 +49,13 @@ export function PromptList() {
               />
             ))}
           </ol>
-        </section>
-      )}
+        )}
+      </section>
 
-      <section>
-        {/* No heading: the box says what it is. */}
-        <AddPromptForm onAdded={added} />
-        {mine.length === 0 ? null : (
-          <ol className="m-0 mt-3 list-none border-t border-line p-0">
+      {mine.length === 0 ? null : (
+        <section>
+          <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('q.add_label')}</h2>
+          <ol className="m-0 list-none border-t border-line p-0">
             {mine.map((p) => (
               <PromptRow
                 key={p.id}
@@ -100,8 +66,8 @@ export function PromptList() {
               />
             ))}
           </ol>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }
@@ -171,7 +137,8 @@ function PromptRow({
   );
 }
 
-function AddPromptForm({ onAdded }: { onAdded: (entry: PoolEntry) => void }) {
+/** One line and a button: a question of your own, into the group's pool. */
+export function AddPromptForm({ onAdded }: { onAdded: (entry: PoolEntry) => void }) {
   const { t } = useT();
   const [body, setBody] = useState('');
   const [error, setError] = useState<string | null>(null);

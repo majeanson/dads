@@ -83,6 +83,7 @@ for (const theme of ['light', 'dark'] as const) {
     // What the conversation's menu holds.
     const chat: [string, RegExp][] = [
       ['the questions', /^Questions/],
+      ['the week, from the conversation', /^The week/],
       ['finding a line', /^Find something/],
     ];
     for (const [scene, name] of chat) {
@@ -92,6 +93,21 @@ for (const theme of ['light', 'dark'] as const) {
       found.push(...(await faults(page, scene)));
       await close();
     }
+
+    // The two screens behind those: what was asked before, and the weeks
+    // behind this one.
+    await menu();
+    await page.getByRole('button', { name: /^Questions/ }).click();
+    await page.getByTestId('prompt-history').click();
+    await page.waitForTimeout(400);
+    found.push(...(await faults(page, 'asked before')));
+    await close();
+    await menu();
+    await page.getByRole('button', { name: /^The week/ }).click();
+    await page.getByTestId('board-tab-before').click();
+    await page.waitForTimeout(400);
+    found.push(...(await faults(page, 'the weeks before')));
+    await close();
 
     // And what home holds: the night, from its card, and the rows under the
     // door.

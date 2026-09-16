@@ -452,13 +452,15 @@
   .home {
     display: none;
     grid-auto-rows: min-content;
-    /* Wide enough to separate the two blocks at a glance. They are the whole
-       screen; the space between them is what says there are two. */
-    gap: 2.25rem;
+    /* Wide enough to separate the blocks at a glance, and scaled to the
+       screen's height: every size on this screen is a clamp on dvh, so the
+       card, the door and the rows fit a 667px phone WITHOUT scrolling and
+       still fill an 932px one. The overflow below is the safety net, not
+       the plan. */
+    gap: clamp(0.75rem, 2.5dvh, 2.25rem);
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-bottom: 1rem;
     /* A column, not a page. The room is 44rem and 74rem with the table open,
        and a way-in button 74rem wide is a button nobody aims at. */
     max-width: 34rem;
@@ -482,6 +484,23 @@
     }
   }
 
+  /* Anything wider than a phone — a laptop, a tablet, a phone on its side —
+     puts the card on the left and the door and the rows on the right. Three
+     things stacked in one 34rem column left a 1280x800 laptop cutting the
+     last row off, with half the screen empty either side of it. */
+  @media (min-width: 48rem) {
+    .room[data-view='home'] .home {
+      grid-template-columns: 1fr 1fr;
+      align-content: start;
+      column-gap: clamp(1.5rem, 4vw, 3rem);
+      max-width: 60rem;
+    }
+    .room[data-view='home'] .home-card {
+      grid-row: span 2;
+      align-self: start;
+    }
+  }
+
   .room[data-view='home'] .stage {
     display: none;
   }
@@ -497,10 +516,10 @@
   .home-card {
     display: grid;
     justify-items: stretch;
-    gap: 0.5rem;
+    gap: clamp(0.25rem, 1dvh, 0.5rem);
     border-radius: var(--radius-card);
     background: var(--bg-soft);
-    padding: 2.25rem 1.5rem;
+    padding: clamp(1rem, 3dvh, 2.25rem) clamp(1.1rem, 4vw, 1.5rem);
   }
 
   /* The day and the hour, stacked and huge: the one question this screen
@@ -515,7 +534,7 @@
 
   .home-day,
   .home-time {
-    font-size: clamp(2.75rem, 14vw, 3.75rem);
+    font-size: clamp(2rem, min(14vw, 6dvh), 3.75rem);
     line-height: 1;
     letter-spacing: -0.02em;
   }
@@ -529,7 +548,7 @@
      thing on the screen, small enough to be read. */
   .home-none {
     margin: 0 0 0.5rem;
-    font-size: clamp(1.75rem, 8vw, 2.25rem);
+    font-size: clamp(1.5rem, min(8vw, 4.5dvh), 2.25rem);
     line-height: 1.1;
     text-wrap: balance;
   }
@@ -543,7 +562,7 @@
 
   /* Who has said yes, at ink: it is the thing that actually decides turnout. */
   .home-coming {
-    margin: 0.4rem 0 0;
+    margin: 0.25rem 0 0;
     font-size: 1.0625rem;
     text-wrap: pretty;
   }
@@ -641,7 +660,7 @@
      things rather than a stack. */
   .menu {
     display: grid;
-    gap: 0.75rem;
+    gap: clamp(0.4rem, 1dvh, 0.75rem);
   }
 
   /* --- what was said --- */

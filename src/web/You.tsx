@@ -100,29 +100,59 @@ export function You({
   const hasFace = preview !== null || face !== undefined;
 
   return (
-    <div className="grid gap-4" data-testid="you">
-      <div className="flex items-center gap-4">
+    <div className="grid gap-3" data-testid="you">
+      {/* The face and the name on one row: they are the two things that say
+          who he is, and stacked with a label each they were a third of the
+          settings screen on a phone. */}
+      <form onSubmit={(e) => void rename(e)} className="flex items-center gap-3">
         {preview === null ? (
-          <Face memberId={memberId} name={name} version={face} size={72} />
+          <Face memberId={memberId} name={name} version={face} size={56} />
         ) : (
           <img
             src={preview}
             alt=""
             aria-hidden="true"
-            width={72}
-            height={72}
-            className="inline-block h-18 w-18 shrink-0 rounded-full object-cover"
+            width={56}
+            height={56}
+            className="inline-block h-14 w-14 shrink-0 rounded-full object-cover"
           />
         )}
+        <label htmlFor="myname" className="sr-only">
+          {t('you.name')}
+        </label>
+        <input
+          id="myname"
+          className={`${FIELD} min-w-0 flex-1`}
+          value={draft}
+          maxLength={32}
+          placeholder={t('you.name')}
+          autoComplete="given-name"
+          autoCapitalize="words"
+          enterKeyHint="done"
+          disabled={busy}
+          onChange={(e) => setDraft(e.target.value)}
+          data-testid="my-name"
+        />
+        {/* Only once there is something to save. A permanently greyed-out
+            button beside a field he is not editing is a control that spends
+            a row of the screen saying nothing. */}
+        {draft.trim() !== '' && draft.trim() !== name ? (
+          <Button type="submit" look="primary" size="lg" className="shrink-0" disabled={busy}>
+            <Check size={18} aria-hidden="true" />
+            {t('you.save')}
+          </Button>
+        ) : null}
+      </form>
 
+      <div>
         <div className="flex flex-wrap gap-2">
           {/* A label, not a button wrapping an input: the file picker is the
               input, and a label with a real box is what a thumb presses. */}
           <label
             htmlFor="face"
             className={[
-              // The same shape as a `lg` Button, because it sits beside one.
-              'inline-flex h-13 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-5',
+              // The same shape as a Button, because it sits beside one.
+              'inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-4',
               'border border-edge text-[1.0625rem] font-medium transition-colors duration-75',
               'hover:border-accent hover:text-accent',
               'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2',
@@ -147,42 +177,13 @@ export function You({
               seconds is not the same act as taking back something you said,
               and two red buttons in one app teaches nobody anything. */}
           {hasFace ? (
-            <Button look="quiet" size="lg" disabled={busy} onClick={() => void remove()}>
+            <Button look="quiet" disabled={busy} onClick={() => void remove()}>
               <Trash2 size={18} aria-hidden="true" />
               {t('you.remove_face')}
             </Button>
           ) : null}
         </div>
       </div>
-
-      <form onSubmit={(e) => void rename(e)} className="grid gap-1.5">
-        <label htmlFor="myname" className="text-base text-muted">
-          {t('you.name')}
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="myname"
-            className={`${FIELD} min-w-0 flex-1`}
-            value={draft}
-            maxLength={32}
-            autoComplete="given-name"
-            autoCapitalize="words"
-            enterKeyHint="done"
-            disabled={busy}
-            onChange={(e) => setDraft(e.target.value)}
-            data-testid="my-name"
-          />
-          {/* Only once there is something to save. A permanently greyed-out
-              button beside a field he is not editing is a control that spends
-              a row of the screen saying nothing. */}
-          {draft.trim() !== '' && draft.trim() !== name ? (
-            <Button type="submit" look="primary" size="lg" className="shrink-0" disabled={busy}>
-              <Check size={18} aria-hidden="true" />
-              {t('you.save')}
-            </Button>
-          ) : null}
-        </div>
-      </form>
 
       {error === null ? null : (
         <p className="text-[1.0625rem] text-danger" role="alert">

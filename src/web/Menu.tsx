@@ -24,7 +24,8 @@ export type SheetName =
  * control radius, so the two screens a dad actually touches agree with each
  * other.
  */
-const ITEM = 'h-16 gap-3.5 rounded-[var(--radius-control)] px-4 text-[1.125rem]';
+export const ITEM =
+  'h-[clamp(2.75rem,6dvh,4rem)] gap-3.5 rounded-[var(--radius-control)] px-4 text-[1.125rem]';
 
 /**
  * The rest of the app, as rows — and which rows depends on where he is.
@@ -34,12 +35,13 @@ const ITEM = 'h-16 gap-3.5 rounded-[var(--radius-control)] px-4 text-[1.125rem]'
  * card above IS the night, and it carries its own way into the sheet.
  *
  * The CONVERSATION is about talking: the questions (answering one posts a
- * line), the table, and finding a line said before the backfill. Nothing
- * else — the week, the invite, the settings are one tap back, and a menu
+ * line), the week, the table, and finding a line said before the backfill.
+ * Nothing else — the invite and the settings are one tap back, and a menu
  * that offers everything everywhere is a menu a man has to read.
  *
- * The questions are on both on purpose: today's question is the day's thing
- * to do, and its answers are the conversation.
+ * The questions and the week are on both on purpose: they are the two things
+ * a dad is asked to DO, and a man in the middle of the conversation who is
+ * told "your week to fill in" should not have to leave it to do so.
  *
  * The marks say WHICH thing is waiting, in words, where a dot used to be: a
  * mark says "something", and something is what makes a man ignore it. A mark
@@ -80,7 +82,7 @@ export function Menu({
         </Button>
       ) : null}
 
-      {home && rooms.week ? (
+      {rooms.week ? (
         <Button block className={ITEM} onClick={() => onOpen('board')}>
           <CalendarCheck size={22} aria-hidden="true" className="text-muted" />
           {t('menu.week')}

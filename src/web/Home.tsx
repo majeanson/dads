@@ -116,7 +116,7 @@ export function Home({
             <Button
               look="primary"
               size="lg"
-              className="home-answer"
+              className="home-answer h-[clamp(2.75rem,6dvh,3.25rem)]"
               onClick={onNight}
               data-testid="dad-night"
             >
@@ -179,7 +179,7 @@ export function Home({
                 <Button
                   look="primary"
                   size="lg"
-                  className="home-answer"
+                  className="home-answer h-[clamp(2.75rem,6dvh,3.25rem)]"
                   disabled={busy}
                   onClick={() => void answer(true)}
                   data-testid="home-in"
@@ -189,7 +189,7 @@ export function Home({
                 </Button>
                 <Button
                   size="lg"
-                  className="home-answer"
+                  className="home-answer h-[clamp(2.75rem,6dvh,3.25rem)]"
                   disabled={busy}
                   onClick={() => void answer(false)}
                   data-testid="home-out"
@@ -202,7 +202,7 @@ export function Home({
               <Button
                 look={mine.coming ? 'primary' : 'plain'}
                 size="lg"
-                className="home-answer"
+                className="home-answer h-[clamp(2.75rem,6dvh,3.25rem)]"
                 disabled={busy}
                 onClick={() => void answer(!mine.coming)}
                 aria-label={mine.coming ? t('n.youre_in_change') : t('n.youre_out_change')}
@@ -222,7 +222,12 @@ export function Home({
                 calendar, changing it. Always here, because the card is the
                 only place the night lives on this screen: there is no Dad
                 night row under it saying the same thing twice. */}
-            <Button look="quiet" className="home-items" onClick={onNight} data-testid="dad-night">
+            <Button
+              look="quiet"
+              className="home-items h-10"
+              onClick={onNight}
+              data-testid="dad-night"
+            >
               {items === 0
                 ? t('home.night_more')
                 : t(`home.items_${plural(lang, items)}`, { n: items })}
@@ -244,7 +249,7 @@ export function Home({
       <Button
         look="primary"
         className={cn(
-          'home-go h-18 w-full justify-start gap-3.5 rounded-[var(--radius-card)] px-4 text-[1.125rem]',
+          'home-go h-[clamp(3rem,6.5dvh,4.5rem)] w-full justify-start gap-3.5 rounded-[var(--radius-card)] px-4 text-[1.125rem]',
         )}
         onClick={onGo}
         data-testid="home-go"

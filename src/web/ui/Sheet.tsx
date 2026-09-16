@@ -45,9 +45,14 @@ export function Sheet({
         >
           {/* Big, because on a phone this header is the top of the whole
               screen rather than the lip of a panel: it is the one word that
-              says where he is. */}
-          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-5 py-4">
-            <Dialog.Title className="display m-0 text-3xl">{title}</Dialog.Title>
+              says where he is. But it and the padding give way first on a
+              SHORT screen, so what the sheet is for keeps the room: on a
+              667px phone the title at 30px with a row of padding each side
+              was a fifth of the screen before a word of content. */}
+          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-5 py-[clamp(0.6rem,1.6dvh,1rem)]">
+            <Dialog.Title className="display m-0 text-[clamp(1.5rem,4.2dvh,1.875rem)]">
+              {title}
+            </Dialog.Title>
             <Dialog.Close asChild>
               {/* The word is still there for anything reading the page aloud,
                   and for a test: an icon with no name is a button nobody can
@@ -58,7 +63,7 @@ export function Sheet({
               </Button>
             </Dialog.Close>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-[clamp(0.9rem,2dvh,1.25rem)]">
             {children}
           </div>
         </Dialog.Content>

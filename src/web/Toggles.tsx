@@ -49,7 +49,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
     // The same 64px and the same size of word as a Switch row: these sit in
     // one list with those, and a list that answers three questions in two
     // sizes makes a dad work out which is which.
-    <div className="flex min-h-16 items-center justify-between gap-3 border-b border-line py-2.5">
+    <div className="flex min-h-[clamp(2.75rem,6dvh,4rem)] items-center justify-between gap-3 border-b border-line py-2.5">
       <span className="text-[1.125rem] text-muted">{label}</span>
       {children}
     </div>

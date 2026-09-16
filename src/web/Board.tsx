@@ -13,6 +13,7 @@ import { useT, type Key, type T } from './i18n';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
 import { FIELD } from './ui/field';
+import { TabPanel, Tabs } from './ui/Tabs';
 
 const RATING: Key[] = [
   'b.rating_1',
@@ -39,6 +40,7 @@ function outcomeWord(t: T, outcome: 'pending' | 'done' | 'missed'): string {
 export function Board({ onChanged }: { onChanged?: () => void } = {}) {
   const { t, lang } = useT();
   const [data, setData] = useState<BoardData | null | 'loading'>('loading');
+  const [tab, setTab] = useState<'now' | 'before'>('now');
   const reload = useCallback(() => {
     fetchBoard()
       .then((d) => {
@@ -56,38 +58,65 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
 
   const [thisWeek, ...before] = data.weeks;
   const mine = thisWeek?.rows.find((r) => r.memberId === data.you) ?? null;
+  // A week nobody filled in is not a week worth printing: four 'nothing from
+  // anyone' headings is a scroll through an empty diary.
+  const filled = before.filter((w) => w.rows.some((r) => r.checkIn ?? r.commitment));
 
   return (
-    <div data-testid="board">
-      {data.pending ? <HowDidItGo pending={data.pending} onSaved={reload} /> : null}
+    <div data-testid="board" className="grid gap-4">
+      {/* What this is, in one line, because "The week" on its own was a title
+          a dad had to work out. */}
+      <p className="m-0 text-[1.0625rem] text-muted">{t('b.intro')}</p>
 
-      <section>
-        <YourWeek row={mine} onSaved={reload} />
-        {/* Your own row stays in the list, not just in the editor above it:
-            the whole feature is group-visible by design, and you should be
-            able to read your week in the same words everyone else reads it. */}
-        <WeekRows rows={thisWeek?.rows ?? []} you={data.you} className="mt-4" />
-      </section>
+      {/* This week is the sheet; the weeks behind it are a tab, so the thing
+          he came to do is on the screen and the diary is one tap away. */}
+      <Tabs
+        value={tab}
+        onChange={(v) => setTab(v === 'before' ? 'before' : 'now')}
+        label={t('b.title')}
+        tabs={[
+          { value: 'now', label: t('b.this_week'), testId: 'board-tab-now' },
+          { value: 'before', label: t('b.before'), testId: 'board-tab-before' },
+        ]}
+      >
+        <TabPanel value="now" className="grid gap-5">
+          {data.pending ? <HowDidItGo pending={data.pending} onSaved={reload} /> : null}
 
-      {/* A week nobody filled in is not a week worth printing: four
-          'nothing from anyone' headings is a scroll through an empty diary. */}
-      {before
-        .filter((w) => w.rows.some((r) => r.checkIn ?? r.commitment))
-        .map((w) => {
-          const kept = w.rows.filter((r) => r.commitment?.outcome === 'done').length;
-          const promised = w.rows.filter((r) => r.commitment).length;
-          return (
-            <section key={w.week} className="mt-6">
-              {/* The follow-through number is the whole point of the week
-                behind you, so it stays — as words, not a badge. */}
-              <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">
-                {t('b.week_of', { date: weekDate(w.week, lang) })}
-                {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
-              </h2>
-              <WeekRows rows={w.rows} you={data.you} />
-            </section>
-          );
-        })}
+          {/* No heading over the form: the line above and the question in it
+              say whose week this is. */}
+          <YourWeek row={mine} onSaved={reload} />
+
+          {/* Your own row stays in the list, not just in the editor above it:
+              the whole feature is group-visible by design, and you should be
+              able to read your week in the same words everyone else reads it. */}
+          <section>
+            <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('b.everyone')}</h2>
+            <WeekRows rows={thisWeek?.rows ?? []} you={data.you} />
+          </section>
+        </TabPanel>
+
+        <TabPanel value="before" className="grid gap-6">
+          {filled.length === 0 ? (
+            <p className="m-0 text-[1.0625rem] text-muted">{t('b.no_before')}</p>
+          ) : (
+            filled.map((w) => {
+              const kept = w.rows.filter((r) => r.commitment?.outcome === 'done').length;
+              const promised = w.rows.filter((r) => r.commitment).length;
+              return (
+                <section key={w.week}>
+                  {/* The follow-through number is the whole point of the week
+                      behind you, so it stays — as words, not a badge. */}
+                  <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">
+                    {t('b.week_of', { date: weekDate(w.week, lang) })}
+                    {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
+                  </h2>
+                  <WeekRows rows={w.rows} you={data.you} />
+                </section>
+              );
+            })
+          )}
+        </TabPanel>
+      </Tabs>
     </div>
   );
 }
@@ -198,17 +227,17 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
   }
 
   return (
-    <form className="grid gap-4" data-testid="your-week" onSubmit={submit}>
+    <form className="grid gap-3" data-testid="your-week" onSubmit={submit}>
       <fieldset className="m-0 flex flex-wrap items-center gap-2 border-0 p-0">
-        <legend className="mb-2 text-base text-muted">{t('b.how_was')}</legend>
+        <legend className="mb-1.5 text-base text-muted">{t('b.how_was')}</legend>
         {[1, 2, 3, 4, 5].map((n) => (
           <label
             key={n}
             className={cn(
-              // Five of these at 52px and four gaps sit inside a 360px phone
+              // Five of these at 48px and four gaps sit inside a 360px phone
               // with room to spare, and a number is the easiest thing in the
               // app to miss with a thumb when it is 40.
-              'relative grid h-13 w-13 cursor-pointer place-items-center rounded-[var(--radius-control)] border text-lg tabular-nums',
+              'relative grid h-12 w-12 cursor-pointer place-items-center rounded-[var(--radius-control)] border text-lg tabular-nums',
               'transition-colors duration-75',
               rating === n
                 ? 'border-accent bg-accent text-on-accent'
@@ -251,26 +280,30 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
         <label htmlFor="commitment" className="text-base text-muted">
           {t('b.commit_label')}
         </label>
-        <input
-          id="commitment"
-          value={commitment}
-          onChange={(e) => setCommitment(e.target.value)}
-          placeholder={t('b.commit_placeholder')}
-          maxLength={200}
-          className={FIELD}
-        />
+        {/* Save beside the last field rather than under it, the way Add sits
+            beside a question: one row fewer, and the whole form fits a 667px
+            phone above the list of everyone's week. */}
+        <div className="flex gap-2">
+          <input
+            id="commitment"
+            value={commitment}
+            onChange={(e) => setCommitment(e.target.value)}
+            placeholder={t('b.commit_placeholder')}
+            maxLength={200}
+            className={`${FIELD} min-w-0 flex-1`}
+          />
+          <Button
+            type="submit"
+            look="primary"
+            size="lg"
+            className="shrink-0"
+            disabled={busy || (!checkInChanged && !commitmentChanged)}
+          >
+            <Check size={18} aria-hidden="true" />
+            {t('b.save')}
+          </Button>
+        </div>
       </div>
-
-      <Button
-        type="submit"
-        look="primary"
-        size="lg"
-        className="justify-self-start"
-        disabled={busy || (!checkInChanged && !commitmentChanged)}
-      >
-        <Check size={18} aria-hidden="true" />
-        {t('b.save')}
-      </Button>
     </form>
   );
 }
@@ -296,7 +329,7 @@ function HowDidItGo({
 
   return (
     <section
-      className="mb-6 rounded-[var(--radius-control)] border border-line bg-panel p-4"
+      className="rounded-[var(--radius-control)] border border-line bg-panel p-4"
       data-testid="how-did-it-go"
     >
       <p className="m-0 text-[1.0625rem]">

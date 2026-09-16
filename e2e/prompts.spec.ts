@@ -74,32 +74,44 @@ test('what the group was asked before is readable, and a dad can add one', async
   const marc = await comeIn(browser, 'Marc');
 
   await open(marc, 'Questions');
-  await expect(marc.getByTestId('prompt-list')).toBeVisible();
 
-  // Not the curated hundred: they are a pool to draw from, not reading
-  // material. And nothing at all where there is nothing — this group has only
-  // ever been asked today's question, so there is no "asked before" section
-  // and no heading over an empty one.
-  await expect(marc.getByRole('heading', { name: /^Asked before/ })).toHaveCount(0);
+  // Today's question is the screen. What was asked before is behind one row
+  // — on a phone it was a scroll past the one question that matters — and
+  // the row carries no count while there is nothing behind it.
+  await expect(marc.getByTestId('prompt-list')).toHaveCount(0);
   await expect(marc.getByLabel('A question for the group')).toBeVisible();
 
-  // Today's question is printed once, on the card, and is NOT repeated in the
-  // list underneath it.
-  const question = await marc.getByTestId('prompt-body').textContent();
-  await expect(marc.getByTestId('prompt-row').filter({ hasText: question! })).toHaveCount(0);
-
-  // A dad adds one of his own; it appears immediately under Yours.
+  // A dad adds one of his own, from today's screen.
   const own = `What are you not saying to your kid? ${Date.now()}`;
   await marc.getByLabel('A question for the group').fill(own);
   // Scoped: the composer's own attach control is also a button, and
   // Playwright matches accessible names by substring.
-  await marc.getByTestId('prompt-list').getByRole('button', { name: 'Add', exact: true }).click();
+  await marc.getByTestId('prompt-add').getByRole('button', { name: 'Add', exact: true }).click();
+
+  await marc.getByTestId('prompt-history').click();
+  await expect(marc.getByTestId('prompt-list')).toBeVisible();
+
+  // Not the curated hundred: they are a pool to draw from, not reading
+  // material. This group has only ever been asked today's question, so
+  // "before" says so in words rather than listing nothing.
+  await expect(marc.getByText('Nothing before today.')).toBeVisible();
+
+  // Today's question is printed once, on the card, and is NOT repeated here.
+  await marc.getByTestId('prompt-today').click();
+  const question = await marc.getByTestId('prompt-body').textContent();
+  await marc.getByTestId('prompt-history').click();
+  await expect(marc.getByTestId('prompt-row').filter({ hasText: question! })).toHaveCount(0);
+
+  // His own is here, under the group's questions, with his name on it.
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toContainText('by Marc');
 
-  // It survives a reload, and going back to the room still works.
+  // It survives a reload, the row counts it, and going back to the room
+  // still works.
   await marc.reload();
   await open(marc, 'Questions');
+  await expect(marc.getByTestId('prompt-history')).toContainText('1 asked');
+  await marc.getByTestId('prompt-history').click();
   await expect(marc.getByTestId('prompt-row').filter({ hasText: own })).toBeVisible();
   await close(marc);
   await talk(marc);

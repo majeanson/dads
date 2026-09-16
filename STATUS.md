@@ -18,8 +18,8 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 | **Show something**  | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.                                                          |
 | **Look at it**      | A photograph opens full-screen in the app, moves to the next one, and saves to the phone.                                            |
 | **Keep it**         | Any dad can take a picture off the shelf so the next upload never reaches it.                                                        |
-| **Answer**          | A curated question every day, answered in front of the others.                                                                       |
-| **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened.                                                              |
+| **Answer**          | A curated question every day, answered in front of the others. What was asked before is one row away.                                |
+| **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened. The weeks before are a tab.                                  |
 | **Play**            | Jaffre framed beside the conversation, name passed through, table events in the chat.                                                |
 | **Turn up**         | A standing dad night: countdown, who's coming, what to get into, a nudge, an .ics.                                                   |
 
@@ -39,7 +39,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 npm run typecheck
 npm run lint
 npm test              # 303, in workerd against the real migrations
-npm run e2e           # 64, against the built stack
+npm run e2e           # 65, against the built stack
 npm run audit:contrast  # 26 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run prove         # 27, against dads.marcportal.com itself

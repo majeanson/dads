@@ -182,13 +182,19 @@ const EN = {
   'q.add_too_long': 'That’s long for a question — 240 characters or fewer.',
   'q.add_already': 'That one is already in the list.',
   'q.add_unknown': 'Couldn’t add that. Try again.',
+  'q.history': 'What was asked before',
+  'q.history_title': 'Asked before',
+  'q.history_count_one': '1 asked',
+  'q.history_count_other': '{n} asked',
+  'q.back_today': 'Today’s question',
+  'q.none_before': 'Nothing before today.',
 
   // ---------------------------------------------------------- the week
   'b.title': 'The week',
   'b.loading': 'One moment…',
   'b.failed': 'That didn’t load.',
   'b.this_week': 'This week',
-  'b.how_was': 'Your week',
+  'b.how_was': 'How was your week?',
   'b.note_label': 'One line about your week',
   'b.note_placeholder': 'One honest line',
   'b.commit_label': 'One thing to try',
@@ -209,6 +215,10 @@ const EN = {
   'b.rating_4': 'good',
   'b.rating_5': 'great',
   'b.week_of': 'week of {date}',
+  'b.before': 'Before',
+  'b.intro': 'One number, one honest line, one thing to try. The whole group reads it.',
+  'b.everyone': 'Everyone, this week',
+  'b.no_before': 'No week behind you yet.',
 
   // --------------------------------------------------------- the table
   't.title': 'The table',
@@ -482,13 +492,19 @@ const FR: Record<Key, string> = {
   'q.add_too_long': 'C’est long pour une question — 240 caractères maximum.',
   'q.add_already': 'Celle-là est déjà dans la liste.',
   'q.add_unknown': 'Ça n’a pas marché. Réessaie.',
+  'q.history': 'Ce qui a été demandé avant',
+  'q.history_title': 'Demandées avant',
+  'q.history_count_one': '1 posée',
+  'q.history_count_other': '{n} posées',
+  'q.back_today': 'La question du jour',
+  'q.none_before': 'Rien avant aujourd’hui.',
 
   // ------------------------------------------------------------ la semaine
   'b.title': 'La semaine',
   'b.loading': 'Un instant…',
   'b.failed': 'Ça n’a pas chargé.',
   'b.this_week': 'Cette semaine',
-  'b.how_was': 'Ta semaine',
+  'b.how_was': 'Ta semaine, c’était comment?',
   'b.note_label': 'Une ligne sur ta semaine',
   'b.note_placeholder': 'Une ligne honnête',
   'b.commit_label': 'Une affaire à essayer',
@@ -509,6 +525,10 @@ const FR: Record<Key, string> = {
   'b.rating_4': 'bonne',
   'b.rating_5': 'excellente',
   'b.week_of': 'semaine du {date}',
+  'b.before': 'Avant',
+  'b.intro': 'Un chiffre, une ligne honnête, une affaire à essayer. Tout le monde le lit.',
+  'b.everyone': 'Tout le monde, cette semaine',
+  'b.no_before': 'Pas encore de semaine derrière toi.',
 
   // -------------------------------------------------------------- la table
   't.title': 'La table',

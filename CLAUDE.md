@@ -501,9 +501,11 @@ secret, custom domain bound by the route in wrangler.toml.
   space: the same `Menu` component the conversation shows in a sheet, and
   **which rows it holds depends on the screen**. Home is about the group and
   the week — Questions, The week, Invite, Settings. The conversation is about
-  talking — Questions, the table, Find. Nothing is on both except the
-  questions, which are the day's thing to do AND the conversation's raw
-  material. **There is no Dad night row anywhere**: home's card IS the night
+  talking — Questions, The week, the table, Find. Two rows are on both: the
+  questions and the week, which are the two things a dad is asked to DO
+  (2026-09-16: the week joined the conversation's menu, because a man told
+  "your week to fill in" mid-conversation should not have to leave it).
+  **There is no Dad night row anywhere**: home's card IS the night
   and always carries its own way into the sheet (`dad-night` on the card's
   quiet link, or on "Set dad night" when there is none). This is the one
   exception to "displace the night or the door": the rows sit below both and
@@ -682,6 +684,38 @@ neither see nor scroll anything.
   its answer**, never on the newest line of any kind. `nightPulse` and
   `todoPulse` are that; `/api/todo` was keyed on every line, so five dads
   talking through an evening each spent a round trip per line.
+
+## Fitting the screen (2026-09-16)
+
+- **Home never scrolls, and neither does a sheet that can help it.** Every
+  size on home is a `clamp()` on `dvh` — the card's padding, the day and the
+  hour, the answers, the door, the menu rows and every gap — so the three
+  blocks fit a 667px phone with nothing cut off and still fill a 932px one.
+  The multipliers were set against a measured budget (`scrollHeight` against
+  `clientHeight` at 390×667, 390×844, 430×932, 1280×800, 1024×600 and 844×390)
+  and are tight: the small phone fits with about ten pixels to spare. Change
+  one and re-measure; `overflow-y: auto` on `.home` is the safety net, not the
+  plan. The dvh sizes are in Tailwind arbitrary values
+  (`h-[clamp(2.75rem,6dvh,4rem)]`) where a component is sized by a utility,
+  because a utility beats a layered rule.
+- **Above 48rem home is two columns**: the card on the left, the door and the
+  rows on the right. Three things stacked in one 34rem column cut the last row
+  off a 1280×800 laptop with half the screen empty either side.
+- **A row is never under 44px** (`2.75rem` is every row's floor), and the day
+  and the hour never under 2rem. Below that the fit is the scroll's problem.
+- **A sheet's chrome gives way first.** The title and its padding are clamped
+  on dvh in `Sheet.tsx`; the content area still scrolls, because a list of
+  everyone's week or every question before today can always be taller than a
+  phone. What each sheet does to fit: the questions keep only TODAY on the
+  first screen and put what was asked before behind one row with the count
+  on it (`Questions.tsx`, `prompt-history`, with `prompt-today` as the way
+  back); the week puts the weeks behind this one on a tab (`ui/Tabs.tsx`,
+  Radix, inside a sheet only — the "no tab strip over the room" rule stands)
+  and sits Save beside the last field; settings puts the face beside the name
+  with the label sr-only. Both were measured at 390×667 in both languages.
+- **The week says what it is.** One line under the title, and "Everyone, this
+  week" over the rows: "The week" on its own was a title a dad had to work
+  out, with a form and a list that did not say whose they were.
 
 ## Shape of the room
 
