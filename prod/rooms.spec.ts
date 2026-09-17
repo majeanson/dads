@@ -16,10 +16,26 @@ import { MARK, named, talk } from './names';
  */
 test.describe.configure({ mode: 'serial' });
 
-/** Unique per run: the word is UNIQUE across every room in the live database,
- * and yesterday's run is still in there if a sweep ever failed. */
-const WORD = `${MARK}word ${Math.random().toString(36).slice(2, 8)}`;
+/**
+ * Unique per run AND per attempt.
+ *
+ * The word is UNIQUE across every room in the live database: a retry that
+ * reused it would be refused by the room its own first attempt had just
+ * made, and would then look like a broken feature rather than a retry.
+ */
+let WORD = '';
 const ROOM = named('room');
+
+/**
+ * Whether this run got its room.
+ *
+ * Opening one is rate-limited on the real Worker — three per address per day,
+ * which is the feature — so a suite run four times in an afternoon will be
+ * refused, correctly. That is not a failure of the deployment and must not be
+ * reported as one: the first test skips the file when it happens, and says
+ * why.
+ */
+let opened = false;
 
 async function atTheDoor(browser: Browser): Promise<Page> {
   const context = await browser.newContext();
@@ -28,7 +44,10 @@ async function atTheDoor(browser: Browser): Promise<Page> {
   return page;
 }
 
-test('a dad opens a room on the real thing, and a second dad joins it', async ({ browser }) => {
+test('a dad opens a room on the real thing, and a second dad joins it', async ({
+  browser,
+}, info) => {
+  WORD = `${MARK}word ${Math.random().toString(36).slice(2, 8)}${info.retry}`;
   const maker = await atTheDoor(browser);
   await maker.getByTestId('start-room').click();
   await maker.getByLabel('What to call it').fill(ROOM);
@@ -36,8 +55,21 @@ test('a dad opens a room on the real thing, and a second dad joins it', async ({
   await maker.getByLabel('Your name').fill(named('maker'));
   await maker.getByTestId('open-room').click();
 
+  // Three rooms per address per day is the real limit on the real Worker, and
+  // being refused by it is the feature working. Say so and stop, rather than
+  // reporting the deployment broken.
+  const spent = maker.getByRole('alert').filter({ hasText: 'enough rooms for one day' });
+  // Whichever answer the real Worker gives, waited for rather than guessed
+  // at: an immediate isVisible() is false for a refusal still in flight.
+  await expect(spent.or(maker.getByTestId('connection')).first()).toBeVisible({ timeout: 20_000 });
+  if (await spent.isVisible()) {
+    await maker.context().close();
+    test.skip(true, 'the day’s three rooms are spent — the limit is doing its job');
+  }
+
   // Through the real door: a real group row, a real member, a real cookie.
   await expect(maker.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  opened = true;
   await expect(maker.getByRole('heading', { name: ROOM })).toBeVisible();
 
   const guest = await atTheDoor(browser);
@@ -63,6 +95,7 @@ test('a dad opens a room on the real thing, and a second dad joins it', async ({
 });
 
 test('the word it was opened with is taken, for everybody', async ({ browser }) => {
+  test.skip(!opened, 'no room was opened this run');
   // Unique across the whole live database, which is the thing that cannot be
   // tested anywhere else: two rooms behind one word would hand a dad who
   // typed the right thing a room full of strangers.
@@ -79,6 +112,7 @@ test('the word it was opened with is taken, for everybody', async ({ browser }) 
 });
 
 test('its creator owns the switches, and a guest does not', async ({ browser }) => {
+  test.skip(!opened, 'no room was opened this run');
   const maker = await atTheDoor(browser);
   await maker.getByLabel('Code').fill(WORD);
   await maker.getByLabel('Your name').fill(named('maker'));
@@ -107,6 +141,7 @@ test('its creator owns the switches, and a guest does not', async ({ browser }) 
 });
 
 test('the calendar picks a night, and it can be called off again', async ({ browser }) => {
+  test.skip(!opened, 'no room was opened this run');
   const page = await atTheDoor(browser);
   await page.getByLabel('Code').fill(WORD);
   await page.getByLabel('Your name').fill(named('picker'));

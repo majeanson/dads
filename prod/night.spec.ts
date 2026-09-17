@@ -10,8 +10,25 @@ import { comeIn, home, named, note } from './names';
  */
 test.describe.configure({ mode: 'serial' });
 
+/**
+ * Whether this group has a night on the books.
+ *
+ * Read, never assumed — the same rule as the three switches. A room opened
+ * yesterday has no night until somebody picks one, and a suite that demands
+ * one would fail on the group's own state rather than on anything the
+ * deployment got wrong. The tests that need an evening skip without one.
+ */
+async function hasNight(page: import('@playwright/test').Page): Promise<boolean> {
+  return page.evaluate(async () => {
+    const r = await fetch('/api/me');
+    if (!r.ok) return false;
+    return ((await r.json()) as { group: { dadNight: unknown } }).group.dadNight !== null;
+  });
+}
+
 test('the night reads the same on home, the header and the sheet', async ({ browser }) => {
   const marc = await comeIn(browser, 'nightreader');
+  test.skip(!(await hasNight(marc)), 'this group has no night on the books');
 
   await expect(marc.getByTestId('night-soon')).toBeVisible();
 
@@ -31,24 +48,27 @@ test('the night reads the same on home, the header and the sheet', async ({ brow
 test('saying you are coming is said out loud, and can be taken back', async ({ browser }) => {
   const who = named('coming');
   const marc = await comeIn(browser, 'coming');
+  test.skip(!(await hasNight(marc)), 'this group has no night on the books');
   const sam = await comeIn(browser, 'watching');
 
   await home(marc);
   await marc.getByTestId('dad-night').click();
   await marc.getByTestId('rsvp-in').click();
   await expect(marc.getByTestId('rsvp-who')).toContainText(who);
-  await expect(sam.getByTestId('line').filter({ hasText: `${who} is in.` })).toBeVisible({
-    timeout: 15_000,
-  });
 
-  // Changing his mind rewrites the answer; the room reads as if he had only
-  // ever said the last thing.
+  // The other man finds out on the night's own screen, live over the real
+  // socket. The room used to say it in a line; the conversation is what the
+  // dads typed now, and the answer itself is better than a sentence about it.
+  await home(sam);
+  await sam.getByTestId('dad-night').click();
+  await expect(sam.getByTestId('rsvp-who')).toContainText(who, { timeout: 15_000 });
+
+  // Changing his mind rewrites the answer rather than adding to it.
   await marc.getByTestId('rsvp-out').click();
   await expect(marc.getByTestId('rsvp-who')).toContainText(new RegExp(`Can’t: .*${who}`));
-  await expect(sam.getByTestId('line').filter({ hasText: `${who} can’t make it.` })).toBeVisible({
+  await expect(sam.getByTestId('rsvp-who')).toContainText(new RegExp(`Can’t: .*${who}`), {
     timeout: 15_000,
   });
-  await expect(sam.getByTestId('line').filter({ hasText: `${who} is in.` })).toHaveCount(0);
 
   await marc.context().close();
   await sam.context().close();
@@ -58,6 +78,7 @@ test('what we should get into survives to the night, and is only its author’s 
   browser,
 }) => {
   const marc = await comeIn(browser, 'asker');
+  test.skip(!(await hasNight(marc)), 'this group has no night on the books');
   const sam = await comeIn(browser, 'reader');
 
   const thing = note('something to bring up');
@@ -69,13 +90,13 @@ test('what we should get into survives to the night, and is only its author’s 
   const mine = marc.getByTestId('agenda-item').filter({ hasText: thing });
   await expect(mine).toBeVisible();
   await expect(mine).toContainText(named('asker'));
-  await expect(sam.getByTestId('line').filter({ hasText: thing })).toBeVisible({ timeout: 15_000 });
 
-  // Sam sees it and cannot take it back.
+  // Sam sees it on the sheet — which is where the things themselves are —
+  // and cannot take it back.
   await home(sam);
   await sam.getByTestId('dad-night').click();
   const theirs = sam.getByTestId('agenda-item').filter({ hasText: thing });
-  await expect(theirs).toBeVisible();
+  await expect(theirs).toBeVisible({ timeout: 15_000 });
   await expect(theirs.getByRole('button', { name: 'Take it back' })).toHaveCount(0);
 
   // The author can, and the server agrees.
@@ -90,6 +111,7 @@ test('the night is a real calendar entry, repeating in the group’s own zone', 
   browser,
 }) => {
   const marc = await comeIn(browser, 'calendar');
+  test.skip(!(await hasNight(marc)), 'this group has no night on the books');
 
   const res = await marc.request.get('/api/night.ics');
   expect(res.status()).toBe(200);
