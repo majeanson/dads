@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import { E2E_FIT_GROUP } from './global-setup';
 
 /**
@@ -103,6 +103,42 @@ test('every sheet fits the small phone without scrolling', async ({ browser }) =
     await expect(page.getByRole('dialog')).toHaveCount(0);
   }
   expect(over).toEqual([]);
+  await context.close();
+});
+
+/** A dad in the fit group, on the narrowest phone, reading in French. */
+async function narrow(browser: Browser, name: string) {
+  const context = await browser.newContext({ viewport: NARROW });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await page.getByLabel('Code').fill(E2E_FIT_GROUP.code);
+  await page.getByLabel('Ton nom').fill(name);
+  await page.getByRole('button', { name: 'Entre' }).click();
+  await expect(page.getByTestId('connection')).toBeVisible();
+  return { context, page };
+}
+
+test('the menu fits a narrow phone in French, with both marks on it', async ({ browser }) => {
+  // A dad who has just arrived has a question he has not answered and a week
+  // he has not filled in, so both rows carry their mark — and a mark is the
+  // longest a row ever gets. In French, on a 360px phone, that row made the
+  // whole nav wider than the sheet it sits in: a menu row never wraps, and
+  // an implicit grid column takes the width of its widest child.
+  const { context, page } = await narrow(browser, 'Fit Menu');
+  await page.getByTestId('home-go').click();
+  await page.getByRole('button', { name: 'Menu' }).click();
+  const nav = page.getByRole('navigation', { name: 'Rooms' });
+  await expect(nav).toBeVisible();
+  // The marks really are on it: without them this proves nothing.
+  await expect(page.getByTestId('mark-prompts')).toBeVisible();
+  await expect(page.getByTestId('mark-board')).toBeVisible();
+  await page.waitForTimeout(200);
+
+  expect(await sideways(page, '.menu')).toBe(0);
+  expect(await sideways(page, '[role="dialog"] > div:last-child')).toBe(0);
+  expect(await sideways(page, 'html')).toBe(0);
+
   await context.close();
 });
 

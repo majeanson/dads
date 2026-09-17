@@ -670,6 +670,12 @@
      things rather than a stack. */
   .menu {
     display: grid;
+    /* minmax(0, 1fr), not the implicit `auto`: an auto column takes the
+       width of its widest child and a menu row never wraps, so one long row
+       — a French label with a mark beside it on a 360px phone — made this
+       whole nav wider than the sheet it sits in. A row gives way; the sheet
+       does not. */
+    grid-template-columns: minmax(0, 1fr);
     gap: clamp(0.4rem, 1dvh, 0.75rem);
   }
 

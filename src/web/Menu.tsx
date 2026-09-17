@@ -71,8 +71,8 @@ export function Menu({
     <nav className="menu" aria-label="Rooms">
       {rooms.questions ? (
         <Button block className={ITEM} onClick={() => onOpen('prompts')}>
-          <MessageCircleQuestion size={22} aria-hidden="true" className="text-muted" />
-          {t('menu.questions')}
+          <MessageCircleQuestion size={22} aria-hidden="true" className="shrink-0 text-muted" />
+          <span className="min-w-0 truncate">{t('menu.questions')}</span>
           {todo.prompt ? (
             <span
               className="ml-auto min-w-0 truncate text-sm font-normal text-accent"
@@ -86,8 +86,8 @@ export function Menu({
 
       {rooms.week ? (
         <Button block className={ITEM} onClick={() => onOpen('board')}>
-          <CalendarCheck size={22} aria-hidden="true" className="text-muted" />
-          {t('menu.week')}
+          <CalendarCheck size={22} aria-hidden="true" className="shrink-0 text-muted" />
+          <span className="min-w-0 truncate">{t('menu.week')}</span>
           {todo.board ? (
             <span
               className="ml-auto min-w-0 truncate text-sm font-normal text-accent"
@@ -110,8 +110,10 @@ export function Menu({
             onOpen(null);
           }}
         >
-          <Spade size={22} aria-hidden="true" className="text-muted" />
-          {tableOpen ? t('menu.close_table') : t('menu.open_table')}
+          <Spade size={22} aria-hidden="true" className="shrink-0 text-muted" />
+          <span className="min-w-0 truncate">
+            {tableOpen ? t('menu.close_table') : t('menu.open_table')}
+          </span>
         </Button>
       ) : null}
 
@@ -121,8 +123,8 @@ export function Menu({
           about the conversation, so it is offered from the conversation. */}
       {!home ? (
         <Button block className={ITEM} onClick={() => onOpen('find')}>
-          <Search size={22} aria-hidden="true" className="text-muted" />
-          {t('menu.find')}
+          <Search size={22} aria-hidden="true" className="shrink-0 text-muted" />
+          <span className="min-w-0 truncate">{t('menu.find')}</span>
         </Button>
       ) : null}
 
@@ -130,13 +132,13 @@ export function Menu({
           already in it. But it is here at all because everything else in this
           app is worth nothing until the other four are here. */}
       <Button block className={ITEM} onClick={() => onOpen('invite')}>
-        <Send size={22} aria-hidden="true" className="text-muted" />
-        {t('menu.invite')}
+        <Send size={22} aria-hidden="true" className="shrink-0 text-muted" />
+        <span className="min-w-0 truncate">{t('menu.invite')}</span>
       </Button>
 
       <Button block className={ITEM} onClick={() => onOpen('settings')}>
-        <SettingsIcon size={22} aria-hidden="true" className="text-muted" />
-        {t('menu.settings')}
+        <SettingsIcon size={22} aria-hidden="true" className="shrink-0 text-muted" />
+        <span className="min-w-0 truncate">{t('menu.settings')}</span>
       </Button>
     </nav>
   );

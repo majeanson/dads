@@ -764,6 +764,13 @@ neither see nor scroll anything.
   off a 1280×800 laptop with half the screen empty either side.
 - **A row is never under 44px** (`2.75rem` is every row's floor), and the day
   and the hour never under 2rem. Below that the fit is the scroll's problem.
+- **A grid column is `minmax(0, 1fr)`, never the implicit `auto`.** An auto
+  track takes the width of its widest child, and nothing in a menu row or a
+  sheet row wraps — so one long row in French on a 360px phone made the whole
+  nav, and the questions sheet, wider than the screen. `.menu` and the
+  questions grid both say it out loud now, and every label inside a row is
+  `min-w-0 truncate` so the WORDS give way rather than the layout. The same
+  rule the header has had since M8, in the two places that had not learned it.
 - **A row with a count on it is wider than the same row without one.**
   The questions' "what was asked before" fit a 360px phone in French until
   the group had been asked anything, and then it did not: a button never
