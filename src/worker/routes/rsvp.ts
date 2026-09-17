@@ -12,9 +12,27 @@ export const MAX_ITEM_LENGTH = 200;
 /** Enough for an evening. Past this the list stops being a list. */
 const MAX_ITEMS = 30;
 
+/**
+ * What a dad can answer, here and on the calendar that picks the next night.
+ *
+ * "Maybe" arrived with the calendar and belongs on both. On a standing night
+ * two answers were enough — it is Thursday, you are coming or you are not —
+ * but a night being ARRANGED asks the question of a man who often genuinely
+ * does not know yet, and pushing that into "can't" loses the date for
+ * everybody while pushing it into "in" is a promise he did not make.
+ */
+export type Answer = 'in' | 'maybe' | 'out';
+
+export function parseAnswer(value: unknown): Answer | null {
+  return value === 'in' || value === 'maybe' || value === 'out' ? value : null;
+}
+
 export interface Rsvp {
   memberId: string;
   name: string;
+  answer: Answer;
+  /** The old two-answer shape, kept on the wire for a home-screen app still
+   * running the build before "maybe" existed. `answer` is the truth. */
   coming: boolean;
 }
 
@@ -52,6 +70,7 @@ async function answersFor(env: Env, session: Session, occurrence: number): Promi
   return results.map((r) => ({
     memberId: r.member_id,
     name: r.display_name,
+    answer: parseAnswer(r.answer) ?? 'out',
     coming: r.answer === 'in',
   }));
 }
@@ -189,11 +208,16 @@ export async function getRsvps(
 }
 
 /**
- * PUT /api/rsvp — { coming: boolean }
+ * PUT /api/rsvp — { answer: 'in' | 'maybe' | 'out' }
  *
  * Announced in the room by name, like the night itself and like a check-in:
  * saying you are coming where the others can see it is the entire mechanism.
  * Changing your mind rewrites the row and says so again.
+ *
+ * `{ coming: boolean }` is still accepted, and has to be: the notification
+ * actions in `public/sw.js` answer from the lock screen, and a phone with the
+ * app on its home screen can go days between reloads. An old client saying
+ * `true` means "in", which is exactly what it meant before.
  */
 export async function putRsvp(
   request: Request,
@@ -203,20 +227,20 @@ export async function putRsvp(
   const session = await currentSession(request, env, isProduction);
   if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 });
 
-  let body: { coming?: unknown };
+  let body: { answer?: unknown; coming?: unknown };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: 'bad_request' }, { status: 400 });
   }
-  if (typeof body.coming !== 'boolean') {
-    return Response.json({ error: 'bad_request' }, { status: 400 });
-  }
+  const answer =
+    parseAnswer(body.answer) ??
+    (typeof body.coming === 'boolean' ? (body.coming ? 'in' : 'out') : null);
+  if (answer === null) return Response.json({ error: 'bad_request' }, { status: 400 });
 
   const occurrence = occurrenceOf(session.group.dadNight);
   if (occurrence === null) return Response.json({ error: 'no_night' }, { status: 409 });
 
-  const coming = body.coming;
   const before = await env.DB.prepare(
     'SELECT answer FROM rsvps WHERE group_id = ? AND member_id = ? AND occurrence = ?',
   )
@@ -229,13 +253,18 @@ export async function putRsvp(
      ON CONFLICT(group_id, member_id, occurrence)
        DO UPDATE SET answer = ?4, updated_at = ?5`,
   )
-    .bind(session.group.id, session.member.id, occurrence, coming ? 'in' : 'out', Date.now())
+    .bind(session.group.id, session.member.id, occurrence, answer, Date.now())
     .run();
 
   // The same answer twice is a dad pressing the button he already pressed;
   // the room does not need to hear about it.
-  if (before?.answer !== (coming ? 'in' : 'out')) {
-    await announce(env, session, { k: 'rsvp', name: session.member.displayName, coming });
+  if (before?.answer !== answer) {
+    await announce(env, session, {
+      k: 'rsvp',
+      name: session.member.displayName,
+      coming: answer === 'in',
+      answer,
+    });
   }
 
   return Response.json({

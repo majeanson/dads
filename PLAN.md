@@ -8,22 +8,22 @@ at the table while you do.
 
 ## Locked decisions
 
-| Question      | Decision                                                                                                                                                          |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entry         | Invite code / passphrase per group. Name on first entry, remembered per device.                                                                                   |
-| Core loop     | Live room (presence + chat) + daily prompt + play-while-you-talk.                                                                                                 |
-| Growth engine | Weekly check-in (1–5 + one line) **and** weekly commitments, both group-visible.                                                                                  |
-| Co-presence   | Scheduled dad night (recurring slot, countdown, reminders).                                                                                                       |
-| Rooms         | Multi-group from day one, keyed by roomId.                                                                                                                        |
-| Stack         | Cloudflare Workers + Durable Objects + D1 + React/Vite.                                                                                                           |
-| Storage       | DO = live (presence, chat, ws). D1 = durable (check-ins, commitments, prompts, history).                                                                          |
-| Jaffre        | Iframe the deployed jaffre + postMessage bridge. No changes to jaffre internals.                                                                                  |
-| Prompts       | Curated JSON starter set + dads can submit into their group's pool.                                                                                               |
-| Repo          | `~/Documents/WebApp/dads`, own git repo. Never touches the WebApp parent repo.                                                                                    |
-| Docs          | No life-as-code. Plain repo + CLAUDE.md.                                                                                                                          |
-| Design        | Card-night clubhouse: dark, felt green + wood, the table is the centrepiece.                                                                                      |
-| Design, again | M7 made it plain and library-free. **Reversed 2026-09-10**: Tailwind + Radix + lucide on our own palette — controls that read as controls, icons, and some depth. |
-| v1 scope      | Everything, Jaffre embed included.                                                                                                                                |
+| Question      | Decision                                                                                                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Entry         | Invite code / passphrase per group. Name on first entry, remembered per device.                                                                                                                                    |
+| Core loop     | Live room (presence + chat) + daily prompt + play-while-you-talk.                                                                                                                                                  |
+| Growth engine | Weekly check-in (1–5 + one line) **and** weekly commitments, both group-visible.                                                                                                                                   |
+| Co-presence   | Scheduled dad night (recurring slot, countdown, reminders). **Widened 2026-09-17**: still the default, but a night can be set to happen once, and when it does the group picks the next date on a shared calendar. |
+| Rooms         | Multi-group from day one, keyed by roomId.                                                                                                                                                                         |
+| Stack         | Cloudflare Workers + Durable Objects + D1 + React/Vite.                                                                                                                                                            |
+| Storage       | DO = live (presence, chat, ws). D1 = durable (check-ins, commitments, prompts, history).                                                                                                                           |
+| Jaffre        | Iframe the deployed jaffre + postMessage bridge. No changes to jaffre internals.                                                                                                                                   |
+| Prompts       | Curated JSON starter set + dads can submit into their group's pool.                                                                                                                                                |
+| Repo          | `~/Documents/WebApp/dads`, own git repo. Never touches the WebApp parent repo.                                                                                                                                     |
+| Docs          | No life-as-code. Plain repo + CLAUDE.md.                                                                                                                                                                           |
+| Design        | Card-night clubhouse: dark, felt green + wood, the table is the centrepiece.                                                                                                                                       |
+| Design, again | M7 made it plain and library-free. **Reversed 2026-09-10**: Tailwind + Radix + lucide on our own palette — controls that read as controls, icons, and some depth.                                                  |
+| v1 scope      | Everything, Jaffre embed included.                                                                                                                                                                                 |
 
 ## Architecture
 

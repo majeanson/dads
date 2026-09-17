@@ -30,6 +30,7 @@ interface GroupRow {
   invite_code_hash: string;
   dad_night_weekday: number | null;
   dad_night_time: string | null;
+  dad_night_date: string | null;
   dad_night_tz: string;
   questions_on: number;
   week_on: number;
@@ -66,10 +67,19 @@ export function roomsFrom(row: {
 export function nightFrom(row: {
   dad_night_weekday: number | null;
   dad_night_time: string | null;
+  dad_night_date: string | null;
   dad_night_tz: string;
 }): DadNight | null {
   if (row.dad_night_weekday === null || row.dad_night_time === null) return null;
-  return { weekday: row.dad_night_weekday, time: row.dad_night_time, tz: row.dad_night_tz };
+  return {
+    weekday: row.dad_night_weekday,
+    time: row.dad_night_time,
+    tz: row.dad_night_tz,
+    // Absent rather than null when it repeats: this shape is JSON.stringify'd
+    // and compared against itself in the DO to decide whether the schedule
+    // actually changed, and `{date: null}` is not the same string as `{}`.
+    ...(row.dad_night_date ? { date: row.dad_night_date } : {}),
+  };
 }
 
 /**
@@ -112,7 +122,7 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
   }
 
   const columns = `id, slug, name, invite_code_salt, invite_code_hash,
-                    dad_night_weekday, dad_night_time, dad_night_tz,
+                    dad_night_weekday, dad_night_time, dad_night_date, dad_night_tz,
                     questions_on, week_on, table_on`;
 
   let group: GroupRow | undefined;
@@ -233,7 +243,7 @@ export async function currentSession(
 
   const row = await env.DB.prepare(
     `SELECT m.id AS member_id, m.display_name, g.id AS group_id, g.slug, g.name,
-            g.dad_night_weekday, g.dad_night_time, g.dad_night_tz,
+            g.dad_night_weekday, g.dad_night_time, g.dad_night_date, g.dad_night_tz,
             g.questions_on, g.week_on, g.table_on, m.avatar_at
        FROM members m JOIN groups g ON g.id = m.group_id
       WHERE m.id = ? AND m.group_id = ?`,
@@ -247,6 +257,7 @@ export async function currentSession(
       name: string;
       dad_night_weekday: number | null;
       dad_night_time: string | null;
+      dad_night_date: string | null;
       dad_night_tz: string;
       questions_on: number;
       week_on: number;

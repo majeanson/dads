@@ -1,12 +1,21 @@
-import { ArrowRight, Check, X } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
-import { fetchNight, setRsvp, type NightState } from './api';
+import {
+  fetchNight,
+  fetchPoll,
+  setRsvp,
+  type Answer as AnswerKind,
+  type NightState,
+  type PollState,
+} from './api';
 import { plural, useT, weekdayNames } from './i18n';
 import { Logo } from './Logo';
 import { nightAway } from './NightEditor';
+import { bestDays } from './Poll';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
-import type { DadNight } from '../shared/dadNight';
+import { dayNameShort } from '../shared/calendarMonth';
+import { stillToCome, type DadNight } from '../shared/dadNight';
 
 /**
  * Where the app opens, and it asks ONE question.
@@ -28,6 +37,7 @@ import type { DadNight } from '../shared/dadNight';
 export function Home({
   night,
   answered,
+  pollPulse,
   you,
   unseen,
   onGo,
@@ -45,6 +55,10 @@ export function Home({
    * evening is not a reason to re-read the night thirty times.
    */
   answered: number;
+  /** Bumped when the room says somebody marked the calendar. Same rule as
+   * `answered`: the KIND of change that can move this screen, never every
+   * line said in a chatty evening. */
+  pollPulse: number;
   you: string;
   unseen: number;
   onGo: () => void;
@@ -59,8 +73,19 @@ export function Home({
 }) {
   const { t, lang } = useT();
   const [state, setState] = useState<NightState | null>(null);
+  const [poll, setPoll] = useState<PollState | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+
+  /**
+   * Is there an evening to come, or is the question when the next one is?
+   *
+   * `night === null` is not the test any more. A night arranged for one
+   * evening is still in the group's row the morning after it happened, and a
+   * screen that answered "Thursday" the day after Thursday would be the app
+   * insisting on a night that is over.
+   */
+  const upcoming = stillToCome(night, now);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,16 +100,31 @@ export function Home({
     };
   }, [night, answered]);
 
+  // The calendar, and only while it is the question being asked. A group with
+  // a night on the books has no poll and pays nothing for this.
+  useEffect(() => {
+    if (upcoming) return;
+    let cancelled = false;
+    fetchPoll()
+      .then((p) => !cancelled && setPoll(p))
+      .catch(() => {
+        // Same rule as the night: nothing beats a wrong empty calendar.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [upcoming, night, pollPulse]);
+
   // The countdown is the one thing here that goes stale while he looks at it.
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(timer);
   }, []);
 
-  async function answer(coming: boolean) {
+  async function answer(next: AnswerKind) {
     setBusy(true);
     try {
-      setState(await setRsvp(coming));
+      setState(await setRsvp(next));
     } catch {
       // The room is the record; a failed press leaves this as it was.
     } finally {
@@ -94,10 +134,12 @@ export function Home({
 
   const answers = state?.answers ?? [];
   const mine = answers.find((a) => a.memberId === you) ?? null;
-  const coming = answers.filter((a) => a.coming);
-  const not = answers.filter((a) => !a.coming);
+  const coming = answers.filter((a) => a.answer === 'in');
+  const might = answers.filter((a) => a.answer === 'maybe');
+  const not = answers.filter((a) => a.answer === 'out');
   const items = state?.items.length ?? 0;
   const away = night === null ? null : nightAway(t, lang, night, now);
+  const best = poll === null ? [] : bestDays(poll, you, 2);
 
   return (
     <div className="home" data-testid="home">
@@ -107,12 +149,36 @@ export function Home({
       <section className="home-card">
         <h2 className="sr-only">{t('n.title')}</h2>
 
-        {night === null ? (
+        {!upcoming || night === null ? (
           <>
-            {/* The empty state keeps the card's shape and its size. A group
-                with no night has the same question as a group with one, and a
-                whisper is the wrong way to ask it. */}
-            <p className="home-none display">{t('n.none')}</p>
+            {/*
+             * No evening to come, so the screen asks the only question that
+             * matters: when's the next one. It keeps the card's shape and its
+             * size, because a group with nothing on the books has the SAME
+             * question as a group with a night — a louder one, if anything —
+             * and a whisper is the wrong way to ask it.
+             *
+             * The days with the most dads on them, and then one button into
+             * the calendar. The calendar itself lives in the sheet: a month
+             * grid is the right way to answer this and the wrong thing to put
+             * on a screen that has to fit a 667px phone with a door under it.
+             */}
+            <p className="home-none display">{t('p.title')}</p>
+            {poll === null ? null : best.length === 0 ? (
+              <p className="home-coming" data-testid="home-poll-none">
+                {t('p.nobody')}
+              </p>
+            ) : (
+              <p className="home-coming" data-testid="home-poll-best">
+                {best
+                  .map((d) =>
+                    t(`p.tally_in_${plural(lang, d.in)}`, { n: d.in }).concat(
+                      ` — ${dayNameShort(lang, d.day)}`,
+                    ),
+                  )
+                  .join(' · ')}
+              </p>
+            )}
             <Button
               look="primary"
               size="lg"
@@ -120,7 +186,7 @@ export function Home({
               onClick={onNight}
               data-testid="dad-night"
             >
-              {t('n.set')}
+              {t('p.pick_days')}
             </Button>
           </>
         ) : (
@@ -130,6 +196,15 @@ export function Home({
                 and it should be answered from across the kitchen. */}
             <p className="home-when" data-testid="home-when">
               <span className="home-day display">{weekdayNames(lang)[night.weekday]}</span>
+              {/* Which Thursday, and only for a night that happens once. A
+                  standing slot does not need it — every Thursday is the
+                  answer — and putting a date under a weekly night would be
+                  the card claiming the week after is not on. */}
+              {night.date ? (
+                <span className="home-date" data-testid="home-date">
+                  {dayNameShort(lang, night.date)}
+                </span>
+              ) : null}
               <span className="home-time display">{night.time}</span>
             </p>
 
@@ -153,6 +228,9 @@ export function Home({
                       coming.length > 0
                         ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
                         : null,
+                      might.length > 0
+                        ? t('n.maybe_list', { names: might.map((a) => a.name).join(', ') })
+                        : null,
                       not.length > 0
                         ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
                         : null,
@@ -162,61 +240,45 @@ export function Home({
             </p>
 
             {/*
-             * One question, one answer.
+             * One question, three answers, all three on the screen from the
+             * start and the one he gave filled in.
              *
-             * Until he has said, both are offered: a man who cannot come must
-             * not have to say he can — the room announces an RSVP by name, and
-             * saying yes then no would put two lines in the conversation about
-             * one evening.
+             * It used to be two buttons that collapsed into one toggle once he
+             * had answered, and the reason was sound: an RSVP is announced by
+             * name, so a man who cannot come must not have to say he can and
+             * then take it back. Three answers cannot be a toggle — pressing
+             * one to cycle through the other two is a button that has to
+             * explain itself — so they simply all stay, and pressing another
+             * changes his mind. The same rule, kept by different means.
              *
-             * Once he has answered it is a single button showing what he said,
-             * and pressing it changes his mind. What the press does is in the
-             * accessible name rather than on the screen, because a label
-             * explaining a button is a button that needed explaining.
+             * No icons here, unlike everywhere else: three controls across a
+             * 390px card in French ("Je suis là · Peut-être · Je peux pas")
+             * has room for the words or for the glyphs, and the words are the
+             * ones that say anything.
              */}
-            {mine === null ? (
-              <div className="home-answers">
-                <Button
-                  look="primary"
-                  size="lg"
-                  className="home-answer h-[clamp(2.75rem,6dvh,3.25rem)]"
-                  disabled={busy}
-                  onClick={() => void answer(true)}
-                  data-testid="home-in"
-                >
-                  <Check size={18} aria-hidden="true" />
-                  {t('n.im_in')}
-                </Button>
-                <Button
-                  size="lg"
-                  className="home-answer h-[clamp(2.75rem,6dvh,3.25rem)]"
-                  disabled={busy}
-                  onClick={() => void answer(false)}
-                  data-testid="home-out"
-                >
-                  <X size={18} aria-hidden="true" />
-                  {t('n.cant')}
-                </Button>
-              </div>
-            ) : (
-              <Button
-                look={mine.coming ? 'primary' : 'plain'}
-                size="lg"
-                className="home-answer h-[clamp(2.75rem,6dvh,3.25rem)]"
-                disabled={busy}
-                onClick={() => void answer(!mine.coming)}
-                aria-label={mine.coming ? t('n.youre_in_change') : t('n.youre_out_change')}
-                data-testid={mine.coming ? 'home-in' : 'home-out'}
-                data-coming={mine.coming ? 'yes' : 'no'}
-              >
-                {mine.coming ? (
-                  <Check size={18} aria-hidden="true" />
-                ) : (
-                  <X size={18} aria-hidden="true" />
-                )}
-                <span aria-hidden="true">{mine.coming ? t('n.youre_in') : t('n.youre_out')}</span>
-              </Button>
-            )}
+            <div className="home-answers">
+              <Answer
+                answer="in"
+                mine={mine?.answer ?? null}
+                busy={busy}
+                onAnswer={answer}
+                testId="home-in"
+              />
+              <Answer
+                answer="maybe"
+                mine={mine?.answer ?? null}
+                busy={busy}
+                onAnswer={answer}
+                testId="home-maybe"
+              />
+              <Answer
+                answer="out"
+                mine={mine?.answer ?? null}
+                busy={busy}
+                onAnswer={answer}
+                testId="home-out"
+              />
+            </div>
 
             {/* The way into the rest of the night — what to get into, the
                 calendar, changing it. Always here, because the card is the
@@ -273,5 +335,47 @@ export function Home({
           table, which only makes sense beside a conversation. */}
       {menu}
     </div>
+  );
+}
+
+/**
+ * One of the three answers.
+ *
+ * The chosen one is filled and the other two are plain, so what he said is on
+ * the screen without a word explaining it. The accessible name carries what
+ * pressing it would DO — "You're in. Press to say you might make it." is a
+ * sentence a screen reader needs and a sighted man does not, because he can
+ * see which one is filled.
+ */
+function Answer({
+  answer,
+  mine,
+  busy,
+  onAnswer,
+  testId,
+}: {
+  answer: AnswerKind;
+  mine: AnswerKind | null;
+  busy: boolean;
+  onAnswer: (answer: AnswerKind) => void;
+  testId: string;
+}) {
+  const { t } = useT();
+  const chosen = mine === answer;
+  const label = answer === 'in' ? t('n.im_in') : answer === 'maybe' ? t('n.maybe') : t('n.cant');
+
+  return (
+    <Button
+      look={chosen ? (answer === 'out' ? 'danger' : 'primary') : 'plain'}
+      size="lg"
+      className="home-answer h-[clamp(2.75rem,6dvh,3.25rem)] px-2 text-base"
+      disabled={busy}
+      aria-pressed={chosen}
+      onClick={() => void onAnswer(answer)}
+      data-testid={testId}
+      data-mine={chosen ? 'yes' : 'no'}
+    >
+      {label}
+    </Button>
   );
 }

@@ -56,13 +56,49 @@ describe('saying whether you are coming', () => {
     let res = await worker.fetch(put(marc, true));
     expect(res.status).toBe(200);
     let body = (await res.json()) as { answers: { name: string; coming: boolean }[] };
-    expect(body.answers).toEqual([{ memberId: expect.any(String), name: 'Marc', coming: true }]);
+    // `coming` rides along beside `answer` for a home-screen app still running
+    // the build before "maybe" existed; `answer` is what the app reads.
+    expect(body.answers).toEqual([
+      { memberId: expect.any(String), name: 'Marc', coming: true, answer: 'in' },
+    ]);
 
     res = await worker.fetch(put(marc, false));
     body = (await res.json()) as { answers: { name: string; coming: boolean }[] };
     // Rewritten, not appended: a man has one answer for one evening.
     expect(body.answers).toHaveLength(1);
     expect(body.answers[0]!.coming).toBe(false);
+  });
+
+  it('takes a maybe, which is the answer a man arranging a night often has', async () => {
+    const group = await seedGroup({ night: { weekday: 4, time: '21:00', tz: 'America/Montreal' } });
+    const marc = await comeIn(group.code, 'Marc');
+
+    const res = await worker.fetch(
+      new Request('https://dads.test/api/rsvp', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', cookie: marc },
+        body: JSON.stringify({ answer: 'maybe' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { answers: { answer: string; coming: boolean }[] };
+    expect(body.answers[0]!.answer).toBe('maybe');
+    // A maybe is not a yes for the old two-answer shape, which is the closer
+    // of the two and the one a stale client should read.
+    expect(body.answers[0]!.coming).toBe(false);
+  });
+
+  it('refuses an answer it has never heard of', async () => {
+    const group = await seedGroup({ night: { weekday: 4, time: '21:00', tz: 'America/Montreal' } });
+    const marc = await comeIn(group.code, 'Marc');
+    const res = await worker.fetch(
+      new Request('https://dads.test/api/rsvp', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', cookie: marc },
+        body: JSON.stringify({ answer: 'probably' }),
+      }),
+    );
+    expect(res.status).toBe(400);
   });
 
   it('keeps the dads apart', async () => {

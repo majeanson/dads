@@ -1,4 +1,5 @@
 import { plural, nightWhen, translator, type Lang, type T } from './dictionary';
+import { dayName } from './calendarMonth';
 import type { DadNight } from './dadNight';
 
 /**
@@ -16,8 +17,15 @@ import type { DadNight } from './dadNight';
  * the English body stands, which is exactly the right outcome for them.
  */
 export type Said =
-  | { k: 'night_set'; by: string; weekday: number; time: string }
+  /** `date` only when the night was arranged for one evening rather than set
+   * as a standing slot — "Marc locked in Thursday 24 September" reads nothing
+   * like "Marc set dad night to Thursdays". */
+  | { k: 'night_set'; by: string; weekday: number; time: string; date?: string }
   | { k: 'night_cleared'; by: string }
+  /** The one-off has been and gone, so the group has no next night. Said by
+   * the room itself, right after the summary, because the moment everybody is
+   * still there is the moment the next one gets arranged. */
+  | { k: 'poll_open' }
   /** `items` is how many things the week put up for it, absent when none. */
   | { k: 'night_open'; items?: number }
   | { k: 'item_added'; name: string; body: string }
@@ -32,7 +40,12 @@ export type Said =
       kept?: number;
       promised?: number;
     }
-  | { k: 'rsvp'; name: string; coming: boolean }
+  /**
+   * `coming` is what every line written before "maybe" existed carries, and is
+   * still written beside `answer` so a client running last week's build reads
+   * a maybe as the "can't" it is closer to. `answer` is the truth.
+   */
+  | { k: 'rsvp'; name: string; coming: boolean; answer?: 'in' | 'maybe' | 'out' }
   | { k: 'check_in'; name: string; rating: number; note: string }
   | { k: 'commitment'; name: string; body: string }
   | { k: 'outcome'; name: string; body: string; note: string; done: boolean }
@@ -64,8 +77,12 @@ export function parseSaid(raw: unknown): Said | null {
       const by = str(said.by);
       const weekday = num(said.weekday);
       const time = str(said.time);
-      return by && weekday !== null && time ? { k: 'night_set', by, weekday, time } : null;
+      const date = str(said.date);
+      if (!by || weekday === null || !time) return null;
+      return { k: 'night_set', by, weekday, time, ...(date ? { date } : {}) };
     }
+    case 'poll_open':
+      return { k: 'poll_open' };
     case 'night_cleared': {
       const by = str(said.by);
       return by ? { k: 'night_cleared', by } : null;
@@ -81,7 +98,14 @@ export function parseSaid(raw: unknown): Said | null {
     }
     case 'rsvp': {
       const name = str(said.name);
-      return name ? { k: 'rsvp', name, coming: said.coming === true } : null;
+      if (!name) return null;
+      const answer = said.answer === 'in' || said.answer === 'maybe' || said.answer === 'out';
+      return {
+        k: 'rsvp',
+        name,
+        coming: said.coming === true,
+        ...(answer ? { answer: said.answer as 'in' | 'maybe' | 'out' } : {}),
+      };
     }
     case 'night_done': {
       const dads = num(said.dads);
@@ -151,10 +175,21 @@ export function describeSaid(t: T, lang: Lang, said: Said, joined = false): stri
       // Only the weekday and the clock are read; the zone is the group's and
       // does not belong in a sentence about it.
       const night: DadNight = { weekday: said.weekday, time: said.time, tz: 'UTC' };
+      // A date is a night the group ARRANGED, and the sentence says so: "set
+      // dad night to Thursdays" is a standing appointment, and this is not.
+      if (said.date) {
+        return t('sys.night_picked', {
+          by: said.by,
+          when: dayName(lang, said.date),
+          time: said.time,
+        });
+      }
       return t('sys.night_set', { by: said.by, when: nightWhen(lang, night) });
     }
     case 'night_cleared':
       return t('sys.night_cleared', { by: said.by });
+    case 'poll_open':
+      return t('sys.poll_open');
     case 'night_open':
       // The count, never the list: the room line is what makes a man open the
       // sheet, and the sheet is where the detail lives. Same rule as the week.
@@ -181,8 +216,10 @@ export function describeSaid(t: T, lang: Lang, said: Said, joined = false): stri
       const sentence = week.join(', ');
       return `${night} ${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`;
     }
-    case 'rsvp':
-      return t(said.coming ? 'sys.rsvp_in' : 'sys.rsvp_out', { name: said.name });
+    case 'rsvp': {
+      const answer = said.answer ?? (said.coming ? 'in' : 'out');
+      return t(`sys.rsvp_${answer}`, { name: said.name });
+    }
     case 'check_in':
       return t(said.note ? 'sys.check_in_note' : 'sys.check_in', {
         name: said.name,

@@ -1,7 +1,7 @@
 import { runDurableObjectAlarm } from 'cloudflare:test';
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextStart, NIGHT_DURATION_MS, type DadNight } from '../src/shared/dadNight';
+import { civilDayIn, nextStart, NIGHT_DURATION_MS, type DadNight } from '../src/shared/dadNight';
 import { isoWeekIn, previousWeek } from '../src/shared/week';
 import type { ServerFrame } from '../src/shared/protocol';
 import {
@@ -369,5 +369,110 @@ describe('the night itself', () => {
     open.push(marc);
     // Nothing armed: no leave pending, no night.
     expect(await fireAlarm(quiet)).toBe(false);
+  });
+});
+
+/**
+ * A night arranged for one evening, rather than a standing slot.
+ *
+ * The same alarm and the same summary; the difference is what happens after.
+ * A weekly night arms the following week and says nothing more. A one-off has
+ * used itself up, so the room asks the question that has to be asked while
+ * everybody is still there.
+ */
+describe('a night that happens once', () => {
+  const ASK = 'That’s the night done. When’s the next one?';
+  let group: SeededGroup;
+  let night: DadNight;
+  let start: number;
+  const open: Dad[] = [];
+
+  beforeEach(async () => {
+    realClock();
+    await resetTables();
+    const upcoming = upcomingNight();
+    start = upcoming.start;
+    night = { ...upcoming.night, date: civilDayIn(start, upcoming.night.tz) };
+    group = await seedGroup({ night });
+  });
+
+  afterEach(async () => {
+    realClock();
+    open.splice(0).forEach((d) => d.close());
+    await settle();
+  });
+
+  it('opens and closes like any other, then asks when the next one is', async () => {
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+
+    clockAt(start + 1000);
+    expect(await fireAlarm(group)).toBe(true);
+    await until(() => marc.lines().includes(OPEN));
+
+    clockAt(start + 60_000);
+    marc.say('made it');
+    await until(() => marc.lines().includes('made it'));
+
+    clockAt(start + NIGHT_DURATION_MS + 1000);
+    expect(await fireAlarm(group)).toBe(true);
+    await until(() => marc.lines().includes(ASK));
+    // In that order: the evening is summed up, and only then is the next one
+    // asked about. One socket hears things in order, so this is the proof.
+    const said = marc.lines();
+    expect(said.findIndex((b) => b.startsWith('Dad night done'))).toBeLessThan(said.indexOf(ASK));
+  });
+
+  it('arms nothing afterwards, because there is nothing left to arm', async () => {
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+
+    clockAt(start + 1000);
+    await fireAlarm(group);
+    await until(() => marc.lines().includes(OPEN));
+    clockAt(start + NIGHT_DURATION_MS + 1000);
+    await fireAlarm(group);
+    await until(() => marc.lines().includes(ASK));
+
+    // A week on, a standing night would have opened again. This one is over.
+    clockAt(start + 7 * 86_400_000 + 1000);
+    expect(await fireAlarm(group)).toBe(false);
+    expect(marc.lines().filter((b) => b === OPEN)).toHaveLength(1);
+  });
+
+  it('does not ask a group whose night comes round again', async () => {
+    const weekly = await seedGroup({ night: { ...night, date: null } });
+    const marc = await enter(weekly, 'Marc');
+    open.push(marc);
+
+    clockAt(start + 1000);
+    await fireAlarm(weekly);
+    await until(() => marc.lines().includes(OPEN));
+    clockAt(start + NIGHT_DURATION_MS + 1000);
+    await fireAlarm(weekly);
+    // The summary is the sentinel: once it is back, anything the room was
+    // going to say about the poll has already been and gone.
+    await until(() => marc.lines().some((b) => b.startsWith('Dad night done')));
+    expect(marc.lines()).not.toContain(ASK);
+  });
+
+  it('announces a date being locked in as a date, not as a standing night', async () => {
+    const fresh = await seedGroup();
+    const marc = await enter(fresh, 'Marc');
+    open.push(marc);
+
+    const day = civilDayIn(Date.now() + 9 * 86_400_000, 'America/Montreal');
+    const res = await worker.fetch('https://dads.test/api/poll/pick', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: marc.cookie },
+      body: JSON.stringify({ day, time: '20:30' }),
+    });
+    expect(res.status).toBe(200);
+
+    await until(() => marc.lines().some((b) => b.startsWith('Marc locked in ')));
+    expect(marc.lines().some((b) => b.includes('set dad night to'))).toBe(false);
+    // And every open socket is handed the new night without a reload.
+    const pushed = marc.frames.filter((f) => f.t === 'night').at(-1);
+    expect(pushed).toMatchObject({ t: 'night', night: { date: day, time: '20:30' } });
   });
 });

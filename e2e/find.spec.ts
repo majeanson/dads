@@ -94,6 +94,10 @@ test('the room’s own lines are not findable', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc Furniture');
   await menu(marc);
   await marc.getByTestId('dad-night').click();
+  // The standing slot is behind one row now: with nothing on the books the
+  // sheet IS the calendar, and a weekly-night form open under it would be a
+  // second answer to the same question.
+  await marc.getByTestId('night-standing').click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
   await marc.getByRole('button', { name: 'Save' }).click();

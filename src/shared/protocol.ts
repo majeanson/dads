@@ -219,6 +219,16 @@ export type ServerFrame =
    */
   | { t: 'kept'; mediaId: string; on: boolean }
   | { t: 'night'; night: DadNight | null }
+  /**
+   * Somebody marked the calendar that picks the next night.
+   *
+   * A nudge and not the marks themselves: the calendar is read over HTTP, and
+   * a frame that carried five dads' answers for a fortnight would be the
+   * whole poll fanned out on every tap. The client answers it by re-reading.
+   * Nothing is said in the conversation — sixty lines about one decision is
+   * how a conversation becomes a calendar.
+   */
+  | { t: 'poll' }
   | { t: 'rooms'; rooms: RoomsOpen }
   /**
    * A frame the room would not take.

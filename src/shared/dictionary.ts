@@ -1,3 +1,4 @@
+import { dayName } from './calendarMonth';
 import type { DadNight } from '../shared/dadNight';
 
 export type Lang = 'en' | 'fr';
@@ -287,11 +288,45 @@ const EN = {
   'n.countdown_hours_other': 'in {n} hours',
   'n.countdown_days_one': 'tomorrow',
   'n.countdown_days_other': 'in {n} days',
+  'n.when_once': '{day} at {time}',
+  'n.maybe': 'Maybe',
+  'n.youre_maybe': 'You might',
+  'n.maybe_list': 'Might: {names}',
+  'n.repeat': 'Always the same day',
+  'n.repeat_off': 'We’ll pick the next one at the end of the night.',
+  'n.once_only': 'Just this once.',
+
+  // ----------------------------------------------- picking the next one
+  'p.title': 'When’s the next one?',
+  'p.pick_days': 'Pick your days',
+  'p.nobody': 'Nobody has picked a day yet.',
+  'p.how': 'Tap a day once for yes, again for maybe, again for no.',
+  'p.best': 'Most of you can do',
+  'p.lock': 'Lock it in',
+  'p.lock_day': 'Lock in {day} at {time}',
+  'p.time': 'Starts at',
+  'p.prev_month': 'The month before',
+  'p.next_month': 'The month after',
+  'p.failed': 'That didn’t go through. Try again.',
+  'p.standing': 'Same night every week instead',
+  'p.cell': '{day} — {tally}, {yours}',
+  'p.tally_none': 'nobody yet',
+  'p.tally_in_one': '1 can',
+  'p.tally_in_other': '{n} can',
+  'p.tally_maybe_one': '1 might',
+  'p.tally_maybe_other': '{n} might',
+  'p.yours_none': 'you haven’t said',
+  'p.yours_in': 'you can',
+  'p.yours_maybe': 'you might',
+  'p.yours_out': 'you can’t',
 
   // ------------------------------------------- what the room says itself
   'sys.night_set': '{by} set dad night to {when}.',
+  'sys.night_picked': '{by} locked in {when} at {time}.',
+  'sys.poll_open': 'That’s the night done. When’s the next one?',
   'sys.night_cleared': '{by} cleared dad night.',
   'sys.rsvp_in': '{name} is in.',
+  'sys.rsvp_maybe': '{name} might make it.',
   'sys.rsvp_out': '{name} can’t make it.',
   'sys.night_open': 'Dad night. The table’s open.',
   'sys.night_open_items_one': 'Dad night. The table’s open — one thing to get into.',
@@ -609,11 +644,45 @@ const FR: Record<Key, string> = {
   'n.countdown_hours_other': 'dans {n} heures',
   'n.countdown_days_one': 'demain',
   'n.countdown_days_other': 'dans {n} jours',
+  'n.when_once': 'le {day} à {time}',
+  'n.maybe': 'Peut-être',
+  'n.youre_maybe': 'Peut-être',
+  'n.maybe_list': 'Peut-être : {names}',
+  'n.repeat': 'Toujours la même journée',
+  'n.repeat_off': 'On choisira la prochaine à la fin de la soirée.',
+  'n.once_only': 'Juste cette fois-là.',
+
+  // ------------------------------------------ choisir la prochaine fois
+  'p.title': 'C’est quand la prochaine ?',
+  'p.pick_days': 'Choisis tes journées',
+  'p.nobody': 'Personne a choisi de journée encore.',
+  'p.how': 'Tape une journée : oui, peut-être, non.',
+  'p.best': 'La journée qui marche pour le plus de monde',
+  'p.lock': 'C’est réglé',
+  'p.lock_day': 'Règle ça pour le {day} à {time}',
+  'p.time': 'Ça commence à',
+  'p.prev_month': 'Le mois d’avant',
+  'p.next_month': 'Le mois d’après',
+  'p.failed': 'Ça n’a pas passé. Réessaie.',
+  'p.standing': 'La même soirée chaque semaine',
+  'p.cell': '{day} — {tally}, {yours}',
+  'p.tally_none': 'personne encore',
+  'p.tally_in_one': '1 peut',
+  'p.tally_in_other': '{n} peuvent',
+  'p.tally_maybe_one': '1 peut-être',
+  'p.tally_maybe_other': '{n} peut-être',
+  'p.yours_none': 't’as pas répondu',
+  'p.yours_in': 'tu peux',
+  'p.yours_maybe': 'peut-être',
+  'p.yours_out': 'tu peux pas',
 
   // ------------------------------------------------- ce que la salle dit
   'sys.night_set': '{by} a mis la soirée de gars {when}.',
+  'sys.night_picked': '{by} a réglé ça : le {when} à {time}.',
+  'sys.poll_open': 'La soirée est finie. C’est quand la prochaine ?',
   'sys.night_cleared': '{by} a effacé la soirée de gars.',
   'sys.rsvp_in': '{name} est là.',
+  'sys.rsvp_maybe': '{name} est peut-être là.',
   'sys.rsvp_out': '{name} peut pas.',
   'sys.night_open': 'Soirée de gars. La table est ouverte.',
   'sys.night_open_items_one': 'Soirée de gars. La table est ouverte — une affaire à jaser.',
@@ -672,6 +741,15 @@ export function plural(lang: Lang, n: number): 'one' | 'other' {
 
 /** "Thursdays at 21:00" / "les jeudis à 21:00". */
 export function nightWhen(lang: Lang, night: DadNight): string {
+  // A night arranged for one evening says which evening. "Thursdays at 21:00"
+  // is a standing appointment and would be a lie about a night that happens
+  // once, which is the whole difference between the two.
+  if (night.date) {
+    return translator(lang)('n.when_once', {
+      day: dayName(lang, night.date),
+      time: night.time,
+    });
+  }
   return translator(lang)('n.when', {
     weekday: WEEKDAYS[lang][night.weekday] ?? '',
     time: night.time,

@@ -102,6 +102,7 @@ test('what the room says about itself is read in each dad’s own language', asy
   // Marc sets the night, in French, from home's card.
   await marc.getByRole('button', { name: 'Ferme', exact: true }).click();
   await marc.getByTestId('dad-night').click();
+  await marc.getByTestId('night-standing').click();
   await marc.getByLabel('Jour').selectOption('4');
   await marc.getByLabel('Heure').fill('21:00');
   await marc.getByRole('button', { name: 'Enregistre' }).click();

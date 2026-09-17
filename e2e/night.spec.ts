@@ -29,6 +29,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
 
   // It is set where it is answered: home's card, which is the night.
   await night(marc);
+  await marc.getByTestId('night-standing').click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
   await marc.getByRole('button', { name: 'Save' }).click();

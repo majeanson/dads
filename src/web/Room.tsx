@@ -317,6 +317,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
       <Home
         night={room.night}
         answered={nightPulse}
+        pollPulse={room.pollPulse}
         you={session.member.id}
         unseen={seen.unseen}
         onGo={() => setView('talk')}
@@ -438,6 +439,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         roster={room.roster}
         call={room.call}
         night={room.night}
+        pollPulse={room.pollPulse}
         rooms={room.rooms}
         todo={todo}
         tableOpen={tableOpen}

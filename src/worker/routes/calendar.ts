@@ -1,4 +1,4 @@
-import { NIGHT_DURATION_MS, nextStart } from '../../shared/dadNight';
+import { NIGHT_DURATION_MS, nextStart, repeats } from '../../shared/dadNight';
 import type { Env } from '../env';
 import { currentSession } from './auth';
 
@@ -57,11 +57,19 @@ export async function getNightIcs(
     'PRODID:-//dads//dad night//EN',
     'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
-    `UID:dad-night-${session.group.id}@dads`,
+    // The standing night is one event for ever, so one id. An arranged evening
+    // is its own event and carries its date in the id: adding next month's
+    // must not silently rewrite the one already in a man's calendar, and
+    // rewriting it is exactly what a repeated UID asks a calendar to do.
+    `UID:dad-night-${session.group.id}${night.date ? `-${night.date}` : ''}@dads`,
     `DTSTAMP:${utcStamp(Date.now())}`,
     `DTSTART;TZID=${night.tz}:${civilStamp(start, night.tz)}`,
     `DURATION:PT${NIGHT_DURATION_MS / 3_600_000}H`,
-    `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[night.weekday] ?? 'TH'}`,
+    // A night arranged for one evening gets no rule. An RRULE on it would put
+    // a standing Thursday in five men's calendars off the back of one date
+    // they agreed to, and taking a wrong repeating event out of a phone is
+    // harder than putting the right single one in.
+    ...(repeats(night) ? [`RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[night.weekday] ?? 'TH'}`] : []),
     `SUMMARY:${session.group.name}`,
     'END:VEVENT',
     'END:VCALENDAR',

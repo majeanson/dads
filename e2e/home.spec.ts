@@ -67,6 +67,10 @@ test('home says when the night is, and takes his answer', async ({ browser }) =>
   // Set from the card itself: the night has no row of its own, on home or in
   // the conversation, because the card IS the night.
   await marc.getByTestId('dad-night').click();
+  // The standing slot is behind one row now: with nothing on the books the
+  // sheet IS the calendar, and a weekly-night form open under it would be a
+  // second answer to the same question.
+  await marc.getByTestId('night-standing').click();
   await marc.getByLabel('Day').selectOption('4');
   await marc.getByLabel('Time').fill('21:00');
   await marc.getByRole('button', { name: 'Save' }).click();

@@ -10,6 +10,7 @@ import { getTodo } from './routes/todo';
 import { getMedia, keepMediaRoute, listMedia, uploadMedia } from './routes/media';
 import { deleteFace, getFace, putFace, putName } from './routes/me';
 import { setNight } from './routes/night';
+import { getPoll, pickDay, putVote } from './routes/poll';
 import { getPresence } from './routes/presence';
 import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
 import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp';
@@ -117,6 +118,15 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'DELETE /api/night-item':
       return removeNightItem(request, env, url, prod);
+
+    case 'GET /api/poll':
+      return getPoll(request, env, prod);
+
+    case 'PUT /api/poll':
+      return putVote(request, env, prod);
+
+    case 'POST /api/poll/pick':
+      return pickDay(request, env, prod);
 
     case 'GET /api/night.ics':
       return getNightIcs(request, env, prod);

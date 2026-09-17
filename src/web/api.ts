@@ -109,10 +109,13 @@ export async function setNight(night: NightInput | null): Promise<void> {
   if (!res.ok) throw new Error(`PUT /api/night ${res.status}`);
 }
 
+/** What a dad can answer, on the night and on the calendar that picks it. */
+export type Answer = 'in' | 'maybe' | 'out';
+
 export interface Rsvp {
   memberId: string;
   name: string;
-  coming: boolean;
+  answer: Answer;
 }
 
 export interface NightItem {
@@ -136,14 +139,61 @@ export async function fetchNight(): Promise<NightState> {
   return (await res.json()) as NightState;
 }
 
-export async function setRsvp(coming: boolean): Promise<NightState> {
+export async function setRsvp(answer: Answer): Promise<NightState> {
   const res = await fetch('/api/rsvp', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ coming }),
+    body: JSON.stringify({ answer }),
   });
   if (!res.ok) throw new Error(`PUT /api/rsvp ${res.status}`);
   return (await res.json()) as NightState;
+}
+
+export interface DayVote {
+  memberId: string;
+  name: string;
+  answer: Answer;
+}
+
+export interface PollState {
+  /** Whether the group is being asked when the next one is — which is exactly
+   * when it has no night still to come. Decided by the server. */
+  open: boolean;
+  /** Today as the GROUP's calendar reads it. A phone in another country must
+   * not be able to vote on a day that is already over back home. */
+  today: string;
+  /** The hour the lock-in offers, which is the one they last used. */
+  time: string;
+  days: { day: string; votes: DayVote[] }[];
+}
+
+export async function fetchPoll(): Promise<PollState> {
+  const res = await fetch('/api/poll');
+  if (!res.ok) throw new Error(`GET /api/poll ${res.status}`);
+  return (await res.json()) as PollState;
+}
+
+/** A mark on one day, or `null` to take it off — which is a different thing
+ * from "can't": one is a man who has not looked at that day. */
+export async function setVote(day: string, answer: Answer | null): Promise<PollState> {
+  const res = await fetch('/api/poll', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ day, answer }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/poll ${res.status}`);
+  return (await res.json()) as PollState;
+}
+
+/** That's the night. Any dad may, and the room says who did. */
+export async function pickDay(day: string, time: string): Promise<PollState> {
+  const res = await fetch('/api/poll/pick', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ day, time }),
+  });
+  if (!res.ok) throw new Error(`POST /api/poll/pick ${res.status}`);
+  return ((await res.json()) as { poll: PollState }).poll;
 }
 
 /** Something to get into on the night. Anyone may add; the room hears it. */

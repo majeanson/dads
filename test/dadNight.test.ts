@@ -6,9 +6,14 @@ import {
   isValidNight,
   NIGHT_DURATION_MS,
   nextStart,
+  instantOfDay,
+  parseDay,
   parseTime,
   phaseOf,
   previousStart,
+  repeats,
+  stillToCome,
+  weekdayOf,
   type DadNight,
 } from '../src/shared/dadNight';
 
@@ -199,5 +204,98 @@ describe('countdown', () => {
     expect(countdown(23.9 * 3_600_000)).toBe('in 23 hours');
     expect(countdown(24 * 3_600_000)).toBe('in 1 day');
     expect(countdown(6.9 * 86_400_000)).toBe('in 6 days');
+  });
+});
+
+/**
+ * A night arranged for one evening.
+ *
+ * The slot is still a slot — a civil date and a wall-clock time in the group's
+ * zone, never an instant — so everything DST-related below has to hold for a
+ * one-off exactly as it does for the weekly one.
+ */
+describe('a night that happens once', () => {
+  const ONCE: DadNight = { ...MONTREAL, date: '2026-03-26' };
+
+  it('starts on its own date and nowhere else', () => {
+    const start = nextStart(ONCE, at('2026-03-01T12:00:00Z'))!;
+    expect(wallClock(start)).toBe('Thu, 2026-03-26, 21:00');
+  });
+
+  it('is not found in the week before it, the way a weekly slot would be', () => {
+    // 19 March 2026 is also a Thursday. A search that walked seven days from
+    // today would land on it; a one-off is simply its own date.
+    const from = at('2026-03-16T12:00:00Z');
+    expect(nextStart(MONTREAL, from)).not.toBe(nextStart(ONCE, from));
+    expect(wallClock(nextStart(ONCE, from)!)).toBe('Thu, 2026-03-26, 21:00');
+  });
+
+  it('runs out: after its evening there is no next start at all', () => {
+    const after = at('2026-03-27T12:00:00Z');
+    expect(nextStart(ONCE, after)).toBeNull();
+    expect(previousStart(ONCE, after)).not.toBeNull();
+    expect(phaseOf(ONCE, after)).toBeNull();
+    expect(stillToCome(ONCE, after)).toBe(false);
+    // Which is the whole mechanism: a weekly night never runs out.
+    expect(stillToCome(MONTREAL, after)).toBe(true);
+  });
+
+  it('is live during its own window and not a week later', () => {
+    const during = at('2026-03-27T02:00:00Z');
+    expect(phaseOf(ONCE, during)?.kind).toBe('live');
+    expect(stillToCome(ONCE, during)).toBe(true);
+    expect(currentWindow(ONCE, at('2026-04-03T02:00:00Z'))).toBeNull();
+  });
+
+  it('keeps its wall-clock hour across a daylight-saving shift', () => {
+    // Montreal springs forward on 8 March 2026, so these two are the same
+    // civil hour and a different number of hours from UTC.
+    const before: DadNight = { ...MONTREAL, date: '2026-03-05' };
+    const after: DadNight = { ...MONTREAL, date: '2026-03-12' };
+    expect(wallClock(nextStart(before, at('2026-03-01T12:00:00Z'))!)).toBe(
+      'Thu, 2026-03-05, 21:00',
+    );
+    expect(wallClock(nextStart(after, at('2026-03-01T12:00:00Z'))!)).toBe('Thu, 2026-03-12, 21:00');
+  });
+
+  it('refuses a date that disagrees with the weekday beside it', () => {
+    // 26 March 2026 is a Thursday (4). Anything else is two answers to one
+    // question, and the route derives the weekday from the date so that this
+    // cannot arrive in the first place.
+    expect(isValidNight(ONCE)).toBe(true);
+    expect(isValidNight({ ...ONCE, weekday: 2 })).toBe(false);
+    expect(isValidNight({ ...MONTREAL, date: '2026-02-30' })).toBe(false);
+    expect(isValidNight({ ...MONTREAL, date: 'next thursday' })).toBe(false);
+  });
+
+  it('knows which of the two it is', () => {
+    expect(repeats(MONTREAL)).toBe(true);
+    expect(repeats(ONCE)).toBe(false);
+    expect(repeats({ ...MONTREAL, date: null })).toBe(true);
+    expect(formatNight(ONCE)).toBe('Thursday 2026-03-26 at 21:00');
+  });
+});
+
+describe('civil dates', () => {
+  it('reads a real one and refuses the rest', () => {
+    expect(parseDay('2026-03-26')).toEqual({ year: 2026, month: 3, day: 26 });
+    expect(parseDay('2024-02-29')).not.toBeNull();
+    expect(parseDay('2026-02-29')).toBeNull();
+    expect(parseDay('2026-13-01')).toBeNull();
+    expect(parseDay('2026-3-26')).toBeNull();
+    expect(parseDay('')).toBeNull();
+  });
+
+  it('knows the weekday, with no zone involved', () => {
+    expect(weekdayOf('2026-03-26')).toBe(4);
+    expect(weekdayOf('2026-03-29')).toBe(0);
+    expect(weekdayOf('nope')).toBeNull();
+  });
+
+  it('turns a date and an hour into the instant that zone reads it at', () => {
+    expect(wallClock(instantOfDay('2026-03-26', '21:00', MONTREAL.tz)!)).toBe(
+      'Thu, 2026-03-26, 21:00',
+    );
+    expect(instantOfDay('2026-03-26', '99:99', MONTREAL.tz)).toBeNull();
   });
 });

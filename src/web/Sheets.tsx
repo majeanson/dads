@@ -36,6 +36,7 @@ export function Sheets({
   roster,
   call,
   night,
+  pollPulse,
   rooms,
   todo,
   tableOpen,
@@ -57,6 +58,10 @@ export function Sheets({
   roster: RosterEntry[];
   call: CallMember[];
   night: DadNight | null;
+  /** Bumped when the room says somebody marked the calendar that picks the
+   * next night. The dad-night sheet holds it when there is nothing on the
+   * books. */
+  pollPulse: number;
   rooms: RoomsOpen;
   todo: Todo;
   tableOpen: boolean;
@@ -125,7 +130,7 @@ export function Sheets({
   if (open === 'night') {
     return (
       <Sheet title={t('n.title')} onClose={close}>
-        <Night night={night} you={you} />
+        <Night night={night} you={you} pollPulse={pollPulse} />
       </Sheet>
     );
   }

@@ -451,6 +451,11 @@
    */
   .home {
     display: none;
+    /* One column that can shrink, not the implicit `auto` one that cannot:
+       the card, the door and the menu rows all hold things that never wrap,
+       and an auto track hands them the whole page to be too wide on. The
+       two-column rule below says the same thing twice over. */
+    grid-template-columns: minmax(0, 1fr);
     grid-auto-rows: min-content;
     /* Wide enough to separate the blocks at a glance, and scaled to the
        screen's height: every size on this screen is a clamp on dvh, so the
@@ -525,6 +530,11 @@
    */
   .home-card {
     display: grid;
+    /* Explicit, never the implicit `auto`: an auto track takes the width of
+       its widest child, and the three answers are buttons, which never wrap.
+       "Je suis là · Peut-être · Je peux pas" then made the card — and the
+       screen — wider than a 360px phone. */
+    grid-template-columns: minmax(0, 1fr);
     justify-items: stretch;
     gap: clamp(0.25rem, 1dvh, 0.5rem);
     border-radius: var(--radius-card);
@@ -577,12 +587,27 @@
     text-wrap: pretty;
   }
 
-  /* Both answers while he has given neither, side by side and equal: a man
-     who cannot come must not have to say he can. */
+  /* Which Thursday, for a night arranged rather than standing. Between the
+     day and the hour, smaller than both: the weekday is what a man reads from
+     across the kitchen and the date is what he checks once he has. */
+  .home-date {
+    color: var(--muted);
+    font-size: clamp(1rem, min(4.5vw, 2dvh), 1.25rem);
+    line-height: 1.2;
+  }
+
+  /*
+   * The three answers, side by side and equal.
+   *
+   * `minmax(0, 1fr)` and not `1fr`: an implicit track takes the width of its
+   * widest child and a button never wraps, so "Je peux pas" in a 1fr column
+   * made the card — and the screen — wider than the phone. The words truncate
+   * before the layout gives, which is the rule everywhere else in here.
+   */
   .home-answers {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.375rem;
     margin-top: 0.5rem;
   }
 
@@ -1229,5 +1254,100 @@
      line sits under the first rather than arriving as separate news. */
   .line.is-joined {
     padding-top: 0;
+  }
+}
+
+@layer components {
+  /*
+   * The calendar that picks the next night.
+   *
+   * A month a dad can page forward through, seven columns wide, and every
+   * cell is one control: a thumb is 44px and a date is two characters, so
+   * there is no room for a control INSIDE the cell — the cell is it.
+   *
+   * `minmax(0, 1fr)` and not the implicit `auto`, for the reason written down
+   * everywhere else in this file: an auto track takes the width of its widest
+   * child, and a two-digit date in a cell with a count on it would make the
+   * whole grid wider than the sheet holding it.
+   */
+  .cal {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+
+  .cal-head {
+    padding-bottom: 0.25rem;
+    color: var(--muted);
+    font-size: 0.8125rem;
+    text-align: center;
+  }
+
+  /*
+   * A day.
+   *
+   * His own answer is the PAINT — filled for yes, ringed for maybe, struck
+   * through for no — rather than a glyph in a corner. Three states told apart
+   * at arm's length, with no 13px icon competing with the date for the middle
+   * of a cell; the words are in the accessible name, which is where a man who
+   * cannot see the paint is reading anyway.
+   */
+  .cal-day {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 2.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+
+  .cal-day[data-mine='in'] {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  /* An inset ring rather than a 2px border: a border that grows moves the
+     number half a pixel, and a calendar where the dates twitch as they are
+     marked is a calendar that feels broken. */
+  .cal-day[data-mine='maybe'] {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .cal-day[data-mine='out'] .cal-num {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+
+  /* A day that has been and gone. No border at all: it is not a control, and
+     an outline says it is one. */
+  .cal-day:disabled {
+    border-color: transparent;
+    color: var(--muted);
+    cursor: default;
+  }
+
+  /* How many dads can do it — the one number that decides anything here. It
+     inherits inside a filled cell rather than staying muted, because muted on
+     the accent is a pair nothing else in the app renders and the audit has
+     never checked it. */
+  .cal-count {
+    position: absolute;
+    right: 0.25rem;
+    bottom: 0.0625rem;
+    color: var(--muted);
+    font-size: 0.6875rem;
+    line-height: 1;
+  }
+
+  .cal-day[data-mine='in'] .cal-count {
+    color: inherit;
   }
 }

@@ -232,6 +232,13 @@ export class RoomDO extends DurableObject<Env> {
       return new Response(null, { status: 204 });
     }
 
+    // Somebody marked the calendar that picks the next night. A nudge to
+    // re-read, nothing more: see the `poll` frame in protocol.ts.
+    if (url.pathname === '/poll' && request.method === 'POST') {
+      this.broadcast({ t: 'poll' });
+      return new Response(null, { status: 204 });
+    }
+
     // What the group has open changed. Nothing is said in the conversation —
     // a switch is not news — but every open room finds out at once.
     if (url.pathname === '/rooms' && request.method === 'POST') {
@@ -892,6 +899,18 @@ export class RoomDO extends DurableObject<Env> {
     }
 
     await this.say('dad night', { k: 'night_done', dads, lines, ...week });
+
+    /**
+     * And, for a night that was arranged rather than standing, the question
+     * that has to be asked before everybody puts their phone down.
+     *
+     * A standing night says nothing here: next Thursday is next Thursday and
+     * a weekly line saying so is furniture. A one-off has just used itself up,
+     * so the group now has no next night — and the moment they are all still
+     * in the room is the moment that gets answered. After this, home is the
+     * calendar for everyone, because nobody has an evening still to come.
+     */
+    if (nextStart(night, now) === null) await this.say('dad night', { k: 'poll_open' });
   }
 
   // -------------------------------------------------------------- presence
@@ -1529,7 +1548,14 @@ export class RoomDO extends DurableObject<Env> {
 }
 
 function nightChange(byName: string, night: DadNight | null): Said {
-  return night
-    ? { k: 'night_set', by: byName, weekday: night.weekday, time: night.time }
-    : { k: 'night_cleared', by: byName };
+  if (!night) return { k: 'night_cleared', by: byName };
+  return {
+    k: 'night_set',
+    by: byName,
+    weekday: night.weekday,
+    time: night.time,
+    // A date makes it the other sentence: a night arranged for one evening is
+    // not somebody setting a standing appointment.
+    ...(night.date ? { date: night.date } : {}),
+  };
 }

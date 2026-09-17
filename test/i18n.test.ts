@@ -28,7 +28,16 @@ describe('the dictionary', () => {
     // a rule that would also wave through a whole untranslated screen.
     // '{when} · {countdown}' is punctuation and two holes: there is nothing
     // in it to translate, and both sides fill it from translated parts.
-    const SAME_IN_BOTH = ['Code', 'Menu', 'Messages', '…', '{when} · {countdown}'];
+    const SAME_IN_BOTH = [
+      'Code',
+      'Menu',
+      'Messages',
+      '…',
+      '{when} · {countdown}',
+      // Same again: a calendar cell's accessible name is three holes and
+      // punctuation, and every one of them is filled from a translated part.
+      '{day} — {tally}, {yours}',
+    ];
     const suspicious = EN_KEYS.filter(
       (key) => TABLES.en[key] === TABLES.fr[key] && !SAME_IN_BOTH.includes(TABLES.en[key]),
     );

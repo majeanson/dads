@@ -25,6 +25,16 @@ export interface RoomState {
   night: DadNight | null;
   /** The same, for what the group has open. */
   rooms: RoomsOpen;
+  /**
+   * Bumped every time the room says somebody marked the calendar that picks
+   * the next night.
+   *
+   * A counter and not the marks: five dads marking a fortnight is sixty
+   * events, and fanning the whole poll out on each of them would put a
+   * calendar nobody is looking at through every open socket. Whoever IS
+   * looking re-reads on the change; everyone else holds a number.
+   */
+  pollPulse: number;
   /** Lines typed while the socket was down, waiting to go. */
   waiting: number;
 }
@@ -89,6 +99,7 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
     call: [],
     night: initialNight,
     rooms: initialRooms,
+    pollPulse: 0,
     waiting: 0,
   });
 
@@ -301,6 +312,12 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
           return;
         case 'night':
           setState((s) => ({ ...s, night: frame.night }));
+          return;
+        case 'poll':
+          // A counter, not the marks: the calendar is read over HTTP and this
+          // is only the nudge that says it is worth re-reading. Whoever is
+          // looking at it answers by fetching; everyone else pays nothing.
+          setState((s) => ({ ...s, pollPulse: s.pollPulse + 1 }));
           return;
         case 'rooms':
           setState((s) => ({ ...s, rooms: frame.rooms }));

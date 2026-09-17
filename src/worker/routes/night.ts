@@ -1,7 +1,7 @@
-import { isValidNight, type DadNight } from '../../shared/dadNight';
+import { isValidNight, weekdayOf, type DadNight } from '../../shared/dadNight';
 import type { Env } from '../env';
 import { IDENTITY_HEADERS } from '../RoomDO';
-import { currentSession } from './auth';
+import { currentSession, type Session } from './auth';
 
 /**
  * PUT /api/night — { night: DadNight | null }
@@ -39,31 +39,66 @@ export async function setNight(
     const candidate = body.night as Partial<DadNight>;
     if (typeof candidate.tz === 'string' && candidate.tz !== '') tz = candidate.tz;
 
+    /**
+     * A date means it happens once; no date means every week.
+     *
+     * The weekday is DERIVED from the date rather than believed, so the two
+     * halves of "Thursday the 24th" can never disagree — a client that sent a
+     * stale weekday beside a fresh date would otherwise arm the room for the
+     * wrong evening and nothing would ever notice.
+     */
+    const date =
+      typeof candidate.date === 'string' && candidate.date !== '' ? candidate.date : null;
+    const weekday = date !== null ? weekdayOf(date) : Number(candidate.weekday);
+    if (weekday === null) return Response.json({ error: 'bad_night' }, { status: 400 });
+
     night = {
-      weekday: Number(candidate.weekday),
+      weekday,
       time: String(candidate.time ?? ''),
       // Only for validation: what is actually written is COALESCE'd below, so
       // an unchanged zone stays exactly as the group has it.
       tz: tz ?? session.group.dadNight?.tz ?? 'America/Montreal',
+      ...(date !== null ? { date } : {}),
     };
     if (!isValidNight(night)) return Response.json({ error: 'bad_night' }, { status: 400 });
   }
 
+  return Response.json({ night: await writeNight(env, session, night, tz) });
+}
+
+/**
+ * Write the group's night and tell the room about it.
+ *
+ * Shared with the calendar that picks the next one: locking a date in IS
+ * setting the night, and two routes writing the same four columns in two
+ * slightly different ways is how they come to disagree.
+ *
+ * `tz` is the zone the caller is allowed to move the group to, and is almost
+ * always null — see the comment on the request body above.
+ */
+export async function writeNight(
+  env: Env,
+  session: Session,
+  night: DadNight | null,
+  tz: string | null = null,
+): Promise<DadNight | null> {
   await env.DB.prepare(
     `UPDATE groups
-        SET dad_night_weekday = ?, dad_night_time = ?, dad_night_tz = COALESCE(?, dad_night_tz)
+        SET dad_night_weekday = ?, dad_night_time = ?, dad_night_date = ?,
+            dad_night_tz = COALESCE(?, dad_night_tz)
       WHERE id = ?`,
   )
-    .bind(night?.weekday ?? null, night?.time ?? null, tz, session.group.id)
+    .bind(night?.weekday ?? null, night?.time ?? null, night?.date ?? null, tz, session.group.id)
     .run();
 
   // What the room is told must be what the group actually has, not what the
   // request happened to carry.
-  if (night !== null) {
+  let settled = night;
+  if (settled !== null) {
     const stored = await env.DB.prepare('SELECT dad_night_tz FROM groups WHERE id = ?')
       .bind(session.group.id)
       .first<{ dad_night_tz: string }>();
-    night = { ...night, tz: stored?.dad_night_tz ?? night.tz };
+    settled = { ...settled, tz: stored?.dad_night_tz ?? settled.tz };
   }
 
   // Tell the room: it re-arms its timers, announces the change and pushes the
@@ -75,8 +110,8 @@ export async function setNight(
       'Content-Type': 'application/json',
       [IDENTITY_HEADERS.groupId]: session.group.id,
     },
-    body: JSON.stringify({ night, byName: session.member.displayName }),
+    body: JSON.stringify({ night: settled, byName: session.member.displayName }),
   });
 
-  return Response.json({ night });
+  return settled;
 }

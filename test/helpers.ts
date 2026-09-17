@@ -25,8 +25,9 @@ export async function seedGroup(
   const night = overrides.night;
   await env.DB.prepare(
     `INSERT INTO groups (id, slug, name, invite_code_hash, invite_code_salt,
-                         dad_night_weekday, dad_night_time, dad_night_tz, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                         dad_night_weekday, dad_night_time, dad_night_date, dad_night_tz,
+                         created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -36,6 +37,7 @@ export async function seedGroup(
       salt,
       night?.weekday ?? null,
       night?.time ?? null,
+      night?.date ?? null,
       night?.tz ?? 'America/Montreal',
       Date.now(),
     )

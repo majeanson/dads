@@ -207,6 +207,66 @@ weakening `sessionSecret()`.
 - `src/shared/dadNight.ts` is pure and is the only place instants are computed.
   A slot is `(weekday, "HH:MM", IANA zone)`, never a timestamp, so 21:00 stays
   21:00 across DST. Do not "simplify" it to a stored UTC time.
+- **A night either repeats or happens once, and `date` is the whole
+  difference** (2026-09-17, migration 0018). `DadNight.date` is a civil date
+  in the group's zone — "2026-09-24", never an instant, for exactly the reason
+  the weekday is one — and a night that carries one does not repeat. One field
+  rather than a `repeats` flag beside a date: a weekly night has no particular
+  date and a one-off has exactly one, so there is nothing to keep in step.
+  `weekday` is DERIVED from the date on the way in, so the two halves of
+  "Thursday the 24th" can never disagree and arm the room for the wrong
+  evening. This reverses PLAN.md's "recurring slot": the standing night is
+  still the best mechanism and still the default, but a group whose weeks do
+  not look the same had no way to arrange one here, so it happened in another
+  app and the room found out afterwards.
+- **`stillToCome(night, now)` is the test, not `night === null`.** A one-off
+  is still in the group's row the morning after it happened; a screen that
+  answered "Thursday" the day after Thursday would be the app insisting on a
+  night that is over. Nothing is cleared when a one-off passes — `nextStart`
+  simply returns null, `occurrenceOf` with it, and the group is a group being
+  asked when the next one is. That is also why nothing races: no write, no
+  frame, no alarm.
+- **The calendar is the poll, and there is no poll table** (`night_votes`).
+  A poll is open exactly when there is no night still to come, which the
+  group's own row already answers — one less thing that can fall out of step.
+  Any dad marks any day on a month he can page forward through; the cell IS
+  the control and a tap cycles can → might → can't → nothing said, which is a
+  different thing from "can't". Locking a day in writes the night through the
+  same `writeNight` the editor uses and deletes every vote: a date is only
+  picked once.
+- **Marking the calendar says nothing in the room.** Five dads marking a
+  fortnight is sixty lines about one decision, which is how a conversation
+  becomes a calendar. Two moments are announced — the poll OPENING
+  (`poll_open`, said by the room right after the summary when a one-off ends)
+  and the date being locked in (`night_set` with a date, which reads as
+  "locked in" and not as "set dad night to Thursdays"). Everyone looking at
+  the calendar right now finds out through a `poll` frame, which is a nudge
+  to re-read and not the marks themselves.
+- **Any dad locks it in, and no rule does it for him.** Same as the night and
+  the three switches: there is no admin in a group of five friends, and a rule
+  that picked the leader at some hour would be deciding a tie, or a late vote,
+  on behalf of men who are all in the same conversation and can simply say.
+- **A one-off `.ics` gets no RRULE and its own UID.** An RRULE would put a
+  standing Thursday in five calendars off the back of one date they agreed to,
+  and a repeated UID asks a calendar to REWRITE the event already in it.
+- **An RSVP has three answers now** (`in` / `maybe` / `out`), and so does a
+  vote. Two were enough for a standing night — it is Thursday, you are coming
+  or you are not — but a night being arranged asks the question of a man who
+  often genuinely does not know, and pushing that into "can't" loses the date
+  for everybody while pushing it into "in" is a promise he did not make.
+  `coming` still rides beside `answer` on the wire, and `PUT /api/rsvp` still
+  takes `{ coming }`, because `public/sw.js` answers from the lock screen and
+  a home-screen app can go days between reloads.
+- **Home's three answers are all on the screen from the start.** The old rule
+  — both answers until he has given one, because an RSVP is announced by name
+  and a man who cannot come must not have to say he can — is kept by different
+  means: three answers cannot be a toggle, so they simply all stay and the one
+  he gave is filled in. No icons on that row; three controls across a 390px
+  card in French has room for the words or the glyphs, not both.
+- **Two consecutive RSVP lines from one dad are one change of mind**, and
+  `supersedes` in `messageGroups.ts` drops the earlier — which predates
+  "maybe" and is why an e2e cannot expect to find "might make it" after he has
+  said he is in. Step into the conversation and look before changing it.
 - The DO has exactly one alarm, so the `schedule` table multiplexes it
   alongside the leave-grace `leaving` table. `rescheduleAlarm()` always arms
   the earliest across both. Anything new that wants a timer goes in `schedule`.
@@ -236,12 +296,27 @@ weakening `sessionSecret()`.
   21:00 across a DST shift, for the same reason a night is a slot. No VTIMEZONE
   travels with it — every calendar resolves IANA names, and a hand-rolled one
   that drifts is worse than none.
-- The night is set from the menu's dad-night item, NOT from Settings. Settings
-  is what a dad sets once; the night is what the group keeps deciding, and it
-  belongs beside the answer to it.
+- The night is set from home's card, NOT from Settings. Settings is what a dad
+  sets once; the night is what the group keeps deciding, and it belongs beside
+  the answer to it.
+- **The standing-night form is collapsed behind one row** (`night-standing`),
+  in both states and for two different reasons. With a night on the books it
+  is a thing a dad occasionally changes. With none the sheet IS the calendar,
+  and the form REPLACES it when opened rather than joining it, because a
+  weekly slot and a day everyone voted for are two answers to one question.
+  That is why the open/closed state lives in `Night` and not in `Change`.
+- **`getByLabel` matches by substring, and the calendar is thirty labels
+  saying "…day".** "Always the same day" and "Thursday, September 10 — …" both
+  answer `getByLabel('Day')`. Every label in the night sheet needs
+  `{ exact: true }` now, which is the header rule from M8 arriving somewhere
+  new. The poll's time field carries no `aria-label` for the same family of
+  reason: its visible label is its name, and a name that does not contain the
+  words beside it is a control a voice user cannot ask for.
 - `night_start` posts "the table's open" and arms `night_end`; `night_end`
   counts the window from the **D1 archive** and posts the summary, then arms
-  next week. A group with no night arms nothing.
+  next week. A group with no night arms nothing — and a one-off that has just
+  happened is such a group, so it arms nothing and, after the summary, says
+  `poll_open`. That is the moment to ask: everybody is still in the room.
 - **The summary carries the week** (2026-09-16): how many things are being
   tried this week and how many of last week's were kept, read from
   `commitments` for the night's ISO week and the one before, in the group's
@@ -557,6 +632,14 @@ secret, custom domain bound by the route in wrangler.toml.
   count is the way into the roster) and so did what is waiting for HIM, which
   lives behind the Menu button and carries its own mark. Anything proposed for
   this screen has to displace the night or the door, not join them.
+- **With no evening to come, the ONE question becomes "when's the next one?"**
+  (2026-09-17). The card keeps its shape, its size and its type: a group with
+  nothing on the books has the same question as a group with a night, a louder
+  one if anything, and the old "No dad night yet" was a whisper. It shows the
+  two days the most dads can do, and its one button opens the calendar. The
+  MONTH GRID itself stays in the sheet — it is the right way to answer this
+  and the wrong thing to put on a screen that has to fit a 667px phone with a
+  door and four menu rows under it.
 - **The menu is on home** (2026-09-15), under the door, in what was empty
   space: the same `Menu` component the conversation shows in a sheet, and
   **which rows it holds depends on the screen**. Home holds the SHORT menu —

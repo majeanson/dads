@@ -32,6 +32,7 @@ const TABLES = [
   'presence',
   'rsvps',
   'night_items',
+  'night_votes',
   'reactions',
   'invites',
   'push_subscriptions',
@@ -88,12 +89,28 @@ const dump: Record<string, unknown> = {
   takenAt: new Date().toISOString(),
   source: remote ? 'remote' : 'local',
 };
+/** Tables this build knows about that the database has not got yet. */
+const missing: string[] = [];
 
 for (const table of TABLES) {
-  const rows = query(`SELECT * FROM ${table}`, remote);
+  // A table this build knows about may not be in the database yet: a backup
+  // is worth most in the minutes BEFORE a migration runs, which is exactly
+  // when the newest table in this list does not exist. Losing one empty
+  // table is nothing; losing the whole backup because of it is the failure
+  // this file exists to prevent. Named in the dump either way, so a restore
+  // can tell "there were no rows" from "nobody looked".
+  let rows: Record<string, unknown>[];
+  try {
+    rows = query(`SELECT * FROM ${table}`, remote);
+  } catch {
+    console.error(`${table}: not in the database (not migrated yet?) — skipped`);
+    missing.push(table);
+    continue;
+  }
   dump[table] = rows;
   console.log(`${table}: ${rows.length}`);
 }
+if (missing.length > 0) dump.missingTables = missing;
 
 // The invite tokens and the device-token hashes are in here. It is a copy of
 // the database and should be treated as one; backups/ is gitignored for that

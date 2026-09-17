@@ -17,6 +17,22 @@ export interface DadNight {
   time: string;
   /** IANA zone name, e.g. "America/Montreal". */
   tz: string;
+  /**
+   * The one date it happens on, "YYYY-MM-DD" in the group's zone — or absent,
+   * which means it happens every week.
+   *
+   * A civil date rather than an instant, for the same reason the weekly slot
+   * is a weekday and not a timestamp: 21:00 on the 27th is 21:00 whatever the
+   * offset is doing that week. `weekday` still agrees with it and is derived
+   * from it on the way in, so the two can never disagree about which day this
+   * is.
+   *
+   * This one field IS the "always the same day" switch. A night that repeats
+   * has no particular date; a one-off has exactly one. Once its evening has
+   * been and gone there is no next start, and a group with no next start is a
+   * group whose next question is when the next one is.
+   */
+  date?: string | null;
 }
 
 /** How long a dad night counts as "on". Long enough to cover a late arrival. */
@@ -137,6 +153,40 @@ export function civilDayIn(ts: number, tz: string): string {
   return `${c.year}-${pad(c.month)}-${pad(c.day)}`;
 }
 
+/** "YYYY-MM-DD" → its parts, or null if it is not a real date. */
+export function parseDay(day: string): { year: number; month: number; day: number } | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const date = Number(match[3]);
+  // Round-tripping is what catches the 31st of February: Date normalises it
+  // into March, and the parts then do not match what was asked for.
+  const check = new Date(Date.UTC(year, month - 1, date));
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== date
+  ) {
+    return null;
+  }
+  return { year, month, day: date };
+}
+
+/** Which weekday a civil date falls on, 0 = Sunday. No zone involved. */
+export function weekdayOf(day: string): number | null {
+  const parts = parseDay(day);
+  return parts === null ? null : civilWeekday(parts.year, parts.month, parts.day);
+}
+
+/** The instant a wall-clock time on a civil date falls at, in a given zone. */
+export function instantOfDay(day: string, time: string, tz: string): number | null {
+  const date = parseDay(day);
+  const clock = parseTime(time);
+  if (!date || !clock) return null;
+  return instantOfCivil(date.year, date.month, date.day, clock.hour, clock.minute, tz);
+}
+
 export function parseTime(time: string): { hour: number; minute: number } | null {
   const match = /^(\d{2}):(\d{2})$/.exec(time);
   if (!match) return null;
@@ -156,13 +206,23 @@ export function isValidTimeZone(tz: string): boolean {
 }
 
 export function isValidNight(night: DadNight): boolean {
-  return (
+  const slot =
     Number.isInteger(night.weekday) &&
     night.weekday >= 0 &&
     night.weekday <= 6 &&
     parseTime(night.time) !== null &&
-    isValidTimeZone(night.tz)
-  );
+    isValidTimeZone(night.tz);
+  if (!slot) return false;
+  if (night.date === undefined || night.date === null) return true;
+  // A date that disagrees with the weekday beside it is two answers to one
+  // question. The route derives the weekday FROM the date, so this cannot
+  // happen; refusing it here is what keeps that true.
+  return weekdayOf(night.date) === night.weekday;
+}
+
+/** Does it happen again next week, or was it arranged for one evening? */
+export function repeats(night: DadNight): boolean {
+  return night.date === undefined || night.date === null;
 }
 
 /**
@@ -188,13 +248,33 @@ function findStart(
   return null;
 }
 
+/**
+ * The one instant a one-off starts at, or null for a weekly slot.
+ *
+ * Separate from `findStart` on purpose: a one-off is not searched for, it is
+ * simply the date it was arranged on — and a search that walks seven days out
+ * from today would find it only in the week it happens to fall in.
+ */
+function fixedStart(night: DadNight): number | null {
+  if (repeats(night)) return null;
+  return instantOfDay(night.date as string, night.time, night.tz);
+}
+
 /** The next start strictly after `from`. */
 export function nextStart(night: DadNight, from: number): number | null {
+  if (!repeats(night)) {
+    const ts = fixedStart(night);
+    return ts !== null && ts > from ? ts : null;
+  }
   return findStart(night, from, 1, (ts) => ts > from);
 }
 
 /** The most recent start at or before `at`. */
 export function previousStart(night: DadNight, at: number): number | null {
+  if (!repeats(night)) {
+    const ts = fixedStart(night);
+    return ts !== null && ts <= at ? ts : null;
+  }
   return findStart(night, at, -1, (ts) => ts <= at);
 }
 
@@ -218,9 +298,22 @@ export function phaseOf(night: DadNight, at: number): NightPhase | null {
   return { kind: 'upcoming', start, startsIn: start - at };
 }
 
-/** "Thursdays at 21:00" */
+/** "Thursdays at 21:00", or "Thursday 24 at 21:00" for a night arranged once. */
 export function formatNight(night: DadNight): string {
-  return `${WEEKDAY_NAMES[night.weekday] ?? '?'}s at ${night.time}`;
+  const day = WEEKDAY_NAMES[night.weekday] ?? '?';
+  return repeats(night) ? `${day}s at ${night.time}` : `${day} ${night.date} at ${night.time}`;
+}
+
+/**
+ * Is there an evening still to come?
+ *
+ * A weekly slot always has one. A one-off has one until it happens, and after
+ * that the group has no night — which is not a group that forgot to set one,
+ * it is a group whose next question is when the next one is. Every screen that
+ * used to ask `night === null` asks this instead.
+ */
+export function stillToCome(night: DadNight | null, at: number): boolean {
+  return night !== null && phaseOf(night, at) !== null;
 }
 
 /**
