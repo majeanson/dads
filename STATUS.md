@@ -114,6 +114,48 @@ languages; a thumb in a kitchen has not.
 
 ## The last review
 
+A hostile read over the fortnight that brought replies, edits, marks and the
+emoji picker found three defects, and running `prove` against the live site
+straight afterwards found two more. All five are fixed and every one is
+pinned by a test.
+
+- **An edit was cleared from the composer the moment `ws.send` did not
+  throw** — the one thing this app has always said delivery is not. A man in
+  a dead spot pressed Send, his new words vanished, and the line went on
+  saying what it always said. An edit waits for its own line to come back
+  changed now, keeps his words when it does not, and says so.
+- **An `error` frame dropped the oldest line in the outbox**, which was a
+  guess dressed as a rule: everything a dad can send is refused with the same
+  handful of codes, so a refused edit threw away a perfectly good chat line.
+  A refusal carries the sender's `cid` back and the outbox drops the line it
+  names.
+- **A quote outlived the retraction of the line it quoted** — the one place
+  "a line can be taken back, and then it is gone" was not true, with his
+  words back on every screen under somebody's answer. It goes now, in the
+  tail and the archive; a quote still outlives an EDIT, which is what a
+  snapshot is for.
+- **The questions sheet was 26px wider than a 360px phone in French**, with
+  the Add button off the right-hand edge. A menu row never wraps, and an
+  implicit `auto` grid column takes the width of its widest child.
+- **And so was the menu itself**, for a dad who had just arrived — because he
+  is the one with both marks on his rows, which is the widest a row ever
+  gets. Both grids are `minmax(0, 1fr)` now and every label gives way before
+  the layout does.
+
+The last two are the more interesting pair. Nothing local could have caught
+either: the row that overflowed carries a COUNT, and a group that has never
+been asked anything has no count on it — every local fixture was such a
+group, so the row fit until the day the real one did not. The e2e fixture has
+three days of questions behind it now, and the suite measures both sheets at
+360 in French.
+
+The pass confirmed clean: the reply snapshot's resolution and its bounds, the
+edit and retract authority checks against the archive and the tail, the mark
+allowlist before it reaches a column, the group scoping on every write, and
+the double tap's exclusion of links, photographs and controls.
+
+## The review before that
+
 A hostile read over the fortnight that brought search, the viewer, keeping a
 photograph, home and the `Room.tsx` decomposition found five defects. Four are
 fixed, three of them pinned by a test:
@@ -130,13 +172,13 @@ fixed, three of them pinned by a test:
 - **The same picture could be hung on two lines**, and retracting either
   deleted the blob out from under the other. No client could reach it; the
   room refuses it now, and a re-sent line is still dropped silently rather
-  than refused, because an `error` frame costs the outbox its oldest line.
+  than refused, because an `error` frame costs the outbox the line it names.
 
 The pass confirmed clean: the search route's parameterisation and its LIKE
 escaping, the keep route's group scoping and its 404-not-403 refusal, the
 content-type allowlist, and the seen-mark's derivation.
 
-## The review before that
+## And the one before that
 
 A fresh adversarial review found eleven defects; all eleven are fixed and
 four now have tests pinning them. Three mattered:
