@@ -38,6 +38,7 @@ export function Sheets({
   night,
   pollPulse,
   rooms,
+  members,
   createdBy,
   ownerName,
   todo,
@@ -51,6 +52,10 @@ export function Sheets({
 }: {
   open: SheetName | null;
   onOpen: (sheet: SheetName | null) => void;
+  /** Everyone in the group, present or not. The roster is who is connected;
+   * handing the room over is not a thing to offer only about men who happen
+   * to be online. */
+  members: RosterEntry[];
   /** The member who opened this room, or null for a room that has no creator
    * — every room made before rooms had one, where the switches stay
    * everybody's. */
@@ -171,6 +176,7 @@ export function Sheets({
           face: roster.find((m) => m.memberId === you)?.face,
         }}
         // A room with no creator is everybody's, which is what it always was.
+        members={members}
         mine={createdBy == null || createdBy === you}
         ownerName={createdBy == null ? '' : (ownerName ?? '')}
         onSignOut={onSignOut}

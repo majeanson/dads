@@ -139,6 +139,40 @@ export async function createInvite(): Promise<{ url: string; expiresAt: number }
   return { url: `${location.origin}/i/${body.token}`, expiresAt: body.expiresAt };
 }
 
+/** What can go wrong changing a room's word. */
+export type WordError = 'code_too_short' | 'code_too_long' | 'code_taken' | 'not_yours' | 'unknown';
+
+/**
+ * Change the word that opens this room. The creator's, like the switches.
+ *
+ * There is no "current word" to show anywhere in this app: it is kept as a
+ * PBKDF2 hash and nothing knows the plaintext. This only ever sets a new one,
+ * and the invite links that were out die with it.
+ */
+export async function setRoomWord(
+  code: string,
+): Promise<{ ok: true } | { ok: false; error: WordError }> {
+  const res = await fetch('/api/rooms/word', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  if (res.ok) return { ok: true };
+  const body = (await res.json().catch(() => ({}))) as { error?: WordError };
+  return { ok: false, error: body.error ?? 'unknown' };
+}
+
+/** Hand the room to another dad. One way: getting it back is him handing it
+ * over. */
+export async function handRoom(memberId: string): Promise<void> {
+  const res = await fetch('/api/rooms/owner', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ memberId }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/rooms/owner ${res.status}`);
+}
+
 export async function leave(): Promise<void> {
   await fetch('/api/leave', { method: 'POST' });
 }

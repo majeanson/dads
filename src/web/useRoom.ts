@@ -25,6 +25,9 @@ export interface RoomState {
   night: DadNight | null;
   /** The same, for what the group has open. */
   rooms: RoomsOpen;
+  /** And for whose room it is: handed over mid-evening, the man who received
+   * it must not have to reload to be told the switches are his. */
+  createdBy: string | null;
   /**
    * Bumped every time the room says somebody marked the calendar that picks
    * the next night.
@@ -85,7 +88,12 @@ const RECONNECT_MAX_MS = 15_000;
  * what it missed (`after=<last seq>`), so a phone that hopped networks sees
  * the three lines it lost, not the whole evening again.
  */
-export function useRoom(enabled: boolean, initialNight: DadNight | null, initialRooms: RoomsOpen) {
+export function useRoom(
+  enabled: boolean,
+  initialNight: DadNight | null,
+  initialRooms: RoomsOpen,
+  initialOwner: string | null,
+) {
   /** Set by the call, read by the socket. A ref so a new peer never rebuilds
    * the connection. */
   const onSignalRef = useRef<(from: string, name: string, payload: unknown) => void>(() => {});
@@ -99,6 +107,7 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
     call: [],
     night: initialNight,
     rooms: initialRooms,
+    createdBy: initialOwner,
     pollPulse: 0,
     waiting: 0,
   });
@@ -298,6 +307,9 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
           return;
         case 'roster':
           setState((s) => ({ ...s, roster: frame.roster }));
+          return;
+        case 'owner':
+          setState((s) => ({ ...s, createdBy: frame.createdBy }));
           return;
         case 'member':
           // Upsert rather than replace: this is one dad changing, and the

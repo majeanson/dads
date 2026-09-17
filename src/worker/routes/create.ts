@@ -29,9 +29,11 @@ import { MAX_NAME_LENGTH, type Session } from './auth';
  * owns the three switches — see `putRooms`.
  */
 
-/** Long enough that ten guesses per ten minutes is hopeless. */
-const MIN_CODE_LENGTH = 4;
-const MAX_CODE_LENGTH = 64;
+/** Long enough that ten guesses per ten minutes is hopeless. Shared with the
+ * route that changes a room's word: the floor is about the word, not about
+ * which door it was typed at. */
+export const MIN_CODE_LENGTH = 4;
+export const MAX_CODE_LENGTH = 64;
 const MAX_ROOM_NAME = 40;
 
 /**

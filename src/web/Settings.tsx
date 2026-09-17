@@ -7,7 +7,8 @@ import { Toggles } from './Toggles';
 import { You } from './You';
 import { Button } from './ui/Button';
 import { Switch } from './ui/Switch';
-import type { RoomsOpen } from '../shared/protocol';
+import type { RoomsOpen, RosterEntry } from '../shared/protocol';
+import { TheRoom } from './TheRoom';
 
 /**
  * Everything a dad might ever change, in one place.
@@ -21,6 +22,7 @@ export function Settings({
   you,
   mine,
   ownerName,
+  members,
   onSignOut,
 }: {
   rooms: RoomsOpen;
@@ -31,6 +33,8 @@ export function Settings({
   mine: boolean;
   /** Who did open it, when it was not him. Empty if the room has no creator. */
   ownerName: string;
+  /** Everyone in the group, for handing the room to one of them. */
+  members: RosterEntry[];
   onSignOut: () => void;
 }) {
   const { t } = useT();
@@ -93,6 +97,15 @@ export function Settings({
             />
           ))}
         </div>
+
+        {/* The rest of owning a room, and only for the man who does: the word
+            that opens it, and handing it on. A room with no creator shows
+            neither, because there is nobody they would belong to. */}
+        {mine && ownerName !== '' ? (
+          <div className="mt-4">
+            <TheRoom members={members} you={you.memberId} />
+          </div>
+        ) : null}
       </section>
 
       <section>

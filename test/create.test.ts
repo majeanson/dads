@@ -156,6 +156,116 @@ describe('opening a room', () => {
       expect(after?.questions_on).toBe(0);
     });
 
+    it('lets the creator change the word, and nobody else', async () => {
+      const made = await worker.fetch(
+        postRoom({ name: 'Word Room', code: 'the first word', displayName: 'Marc' }),
+      );
+      const creator = cookieFrom(made);
+      const sam = cookieFrom(
+        await worker.fetch(postJoin({ code: 'the first word', displayName: 'Sam' })),
+      );
+
+      const word = (cookie: string, code: string) =>
+        worker.fetch('https://dads.test/api/rooms/word', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Cookie: cookie },
+          body: JSON.stringify({ code }),
+        });
+
+      expect((await word(sam, 'sam picks this')).status).toBe(403);
+      expect((await word(creator, 'ab')).status).toBe(400);
+      expect((await word(creator, 'the second word')).status).toBe(200);
+
+      // The new one opens it and the old one does not, which is the whole
+      // point of being able to change it.
+      expect(
+        (await worker.fetch(postJoin({ code: 'the second word', displayName: 'Dave' }))).status,
+      ).toBe(200);
+      expect(
+        (await worker.fetch(postJoin({ code: 'the first word', displayName: 'Dave' }))).status,
+      ).toBe(401);
+
+      // And Sam is still in it: a passphrase changing must never cost a group
+      // its members or its history.
+      const me = await worker.fetch('https://dads.test/api/me', { headers: { Cookie: sam } });
+      expect(me.status).toBe(200);
+      expect(((await me.json()) as { group: { name: string } }).group.name).toBe('Word Room');
+    });
+
+    it('will not take a word another room is using', async () => {
+      await worker.fetch(postRoom({ name: 'Other', code: 'already spoken for', displayName: 'A' }));
+      const mine = cookieFrom(
+        await worker.fetch(postRoom({ name: 'Mine', code: 'my own word', displayName: 'B' })),
+      );
+      const res = await worker.fetch('https://dads.test/api/rooms/word', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: mine },
+        body: JSON.stringify({ code: 'already spoken for' }),
+      });
+      expect(res.status).toBe(409);
+    });
+
+    it('kills the invite links that were out when the word changes', async () => {
+      const creator = cookieFrom(
+        await worker.fetch(postRoom({ name: 'Linked', code: 'the old word', displayName: 'Marc' })),
+      );
+      const invite = await worker.fetch('https://dads.test/api/invite', {
+        method: 'POST',
+        headers: { Cookie: creator },
+      });
+      expect(invite.status).toBe(200);
+      const token = ((await invite.json()) as { token: string }).token;
+
+      await worker.fetch('https://dads.test/api/rooms/word', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: creator },
+        body: JSON.stringify({ code: 'the new word' }),
+      });
+
+      // A link is its own secret and the word does not technically touch it —
+      // but a man changing the word is closing a door, and keys left on the
+      // step would make the feature a lie.
+      const followed = await worker.fetch(postJoin({ invite: token, displayName: 'Stranger' }));
+      expect(followed.status).toBe(401);
+    });
+
+    it('hands the room over, once, and only to somebody in it', async () => {
+      const creator = cookieFrom(
+        await worker.fetch(
+          postRoom({ name: 'Handed', code: 'a word to hand', displayName: 'Marc' }),
+        ),
+      );
+      const samJoin = await worker.fetch(postJoin({ code: 'a word to hand', displayName: 'Sam' }));
+      const sam = cookieFrom(samJoin);
+      const samId = ((await samJoin.json()) as { member: { id: string } }).member.id;
+
+      const hand = (cookie: string, memberId: string) =>
+        worker.fetch('https://dads.test/api/rooms/owner', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Cookie: cookie },
+          body: JSON.stringify({ memberId }),
+        });
+
+      // Not a member of this room: the switches would land where nobody here
+      // could reach them.
+      expect((await hand(creator, 'mem_notinthisroom')).status).toBe(400);
+
+      expect((await hand(creator, samId)).status).toBe(200);
+
+      // It is Sam's room now — and Marc's switches are not his any more,
+      // which is what "one way" means.
+      const rooms = (cookie: string) =>
+        worker.fetch('https://dads.test/api/rooms', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Cookie: cookie },
+          body: JSON.stringify({ week: false }),
+        });
+      expect((await rooms(sam)).status).toBe(200);
+      expect((await rooms(creator)).status).toBe(403);
+      // And he cannot take it back.
+      expect((await hand(creator, samId)).status).toBe(403);
+    });
+
     it('leaves a room with no creator exactly as it was: everybody’s', async () => {
       // Every group that predates this has created_by NULL, and the rule it
       // agreed to was that any dad may change the switches. That still holds.

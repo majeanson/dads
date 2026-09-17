@@ -231,6 +231,15 @@ export type ServerFrame =
   | { t: 'poll' }
   | { t: 'rooms'; rooms: RoomsOpen }
   /**
+   * The room changed hands.
+   *
+   * Pushed for the same reason the switches are: the man it was handed TO has
+   * to find out without reloading, or he is looking at a room he now owns and
+   * being told the switches are somebody else's. Null is a room with no
+   * creator, which is what every room made before creators existed has.
+   */
+  | { t: 'owner'; createdBy: string | null }
+  /**
    * A frame the room would not take.
    *
    * `cid` is the sender's own id for the line, echoed back when the refused

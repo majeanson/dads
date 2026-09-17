@@ -31,6 +31,18 @@ export type Said =
    * happening. It carries the date so the room can say which evening.
    */
   | { k: 'night_off'; by: string; date: string }
+  /**
+   * The word that opens the room changed, and who changed it.
+   *
+   * Never the word itself. The men in the room do not need it — they are
+   * already inside — and a line in an archive is the last place a passphrase
+   * should live. It is said at all because somebody was about to text the old
+   * one to a friend.
+   */
+  | { k: 'word_changed'; by: string }
+  /** The room handed from one man to another. Both names, because it is a
+   * fact about both of them. */
+  | { k: 'room_handed'; by: string; to: string }
   /** The one-off has been and gone, so the group has no next night. Said by
    * the room itself, right after the summary, because the moment everybody is
    * still there is the moment the next one gets arranged. */
@@ -100,6 +112,15 @@ export function parseSaid(raw: unknown): Said | null {
       const by = str(said.by);
       const date = str(said.date);
       return by && date ? { k: 'night_off', by, date } : null;
+    }
+    case 'word_changed': {
+      const by = str(said.by);
+      return by ? { k: 'word_changed', by } : null;
+    }
+    case 'room_handed': {
+      const by = str(said.by);
+      const to = str(said.to);
+      return by && to ? { k: 'room_handed', by, to } : null;
     }
     case 'night_open': {
       const items = num(said.items);
@@ -204,6 +225,10 @@ export function describeSaid(t: T, lang: Lang, said: Said, joined = false): stri
       return t('sys.night_cleared', { by: said.by });
     case 'night_off':
       return t('sys.night_off', { by: said.by, when: dayName(lang, said.date) });
+    case 'word_changed':
+      return t('sys.word_changed', { by: said.by });
+    case 'room_handed':
+      return t('sys.room_handed', { by: said.by, to: said.to });
     case 'poll_open':
       return t('sys.poll_open');
     case 'night_open':

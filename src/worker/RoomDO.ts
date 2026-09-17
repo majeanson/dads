@@ -256,6 +256,14 @@ export class RoomDO extends DurableObject<Env> {
     // whether it survives the next upload is a fact about the room, so every
     // open phone hears it rather than only the one that asked. The Worker has
     // already written it to D1.
+    // The room changed hands. Nothing is said here — the route says it, by
+    // name, like the night — this only carries the fact to open phones.
+    if (url.pathname === '/owner' && request.method === 'POST') {
+      const { createdBy } = (await request.json()) as { createdBy: string | null };
+      this.broadcast({ t: 'owner', createdBy });
+      return new Response(null, { status: 204 });
+    }
+
     if (url.pathname === '/kept' && request.method === 'POST') {
       const { mediaId, on } = (await request.json()) as { mediaId: string; on: boolean };
       this.broadcast({ t: 'kept', mediaId, on });
@@ -402,6 +410,15 @@ export class RoomDO extends DurableObject<Env> {
       if (wasLeaving) await this.rescheduleAlarm();
       else await this.notePresence(memberId, name, 'in');
       this.broadcastRoster();
+      // And WHO he is, not just that he is here.
+      //
+      // `members` — everyone in the group, present or not — was only ever
+      // built at hello, so a dad who was already connected when somebody new
+      // came through the door did not have him in it until a reload. His
+      // face was missing from his lines, and he could not be picked in a list
+      // of the group's men. The frame is an upsert on every client, so
+      // sending it on each genuine arrival costs a message and settles it.
+      this.broadcast({ t: 'member', member: { memberId, name, ...(face ? { face } : {}) } });
     }
 
     return new Response(null, { status: 101, webSocket: client });

@@ -126,3 +126,53 @@ test('a dad who followed an invite link is never asked to open a room', async ({
   await expect(page.getByTestId('start-room')).toHaveCount(0);
   await page.context().close();
 });
+
+test('the creator changes the word, then hands the room on', async ({ browser }) => {
+  // Owning the switches without these two was half a feature: a word that got
+  // out could be changed by nobody in the room, and a creator who drifted
+  // away left the other four frozen for ever.
+  const first = `e2e handed ${Math.random().toString(36).slice(2, 8)}`;
+  const second = `${first} again`;
+
+  const maker = await atTheDoor(browser);
+  await maker.getByTestId('start-room').click();
+  await maker.getByLabel('What to call it').fill('The Handover');
+  await maker.getByLabel('The word to get in').fill(first);
+  await maker.getByLabel('Your name').fill('Marc Handing');
+  await maker.getByTestId('open-room').click();
+  await expect(maker.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+
+  // The word: never shown, only replaced.
+  await openSettings(maker);
+  await expect(maker.getByTestId('room-word')).toHaveValue('');
+  await maker.getByTestId('room-word').fill(second);
+  await maker.getByRole('button', { name: 'Change it' }).click();
+  await expect(maker.getByTestId('room-word-done')).toBeVisible({ timeout: 15_000 });
+  await maker.getByRole('button', { name: 'Close', exact: true }).click();
+
+  // The new one opens it; the old one opens nothing.
+  const guest = await atTheDoor(browser);
+  await guest.getByLabel('Code').fill(first);
+  await guest.getByLabel('Your name').fill('Sam Handed');
+  await guest.getByRole('button', { name: 'Come in' }).click();
+  await expect(guest.getByRole('alert')).toBeVisible();
+  await guest.getByLabel('Code').fill(second);
+  await guest.getByRole('button', { name: 'Come in' }).click();
+  await expect(guest.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+
+  // Handing it over, armed once because it cannot be undone from this side.
+  await openSettings(maker);
+  await maker.getByTestId('hand-to').selectOption({ label: 'Sam Handed' });
+  await maker.getByTestId('hand-over').click();
+  await maker.getByTestId('hand-over').click();
+
+  // It is Sam's room now: his switches move and Marc's have gone from his
+  // screen altogether.
+  await openSettings(guest);
+  await expect(guest.getByTestId('rooms-owner')).toContainText('you opened this room');
+  await guest.getByTestId('room-week').click();
+  await expect(guest.getByTestId('room-week')).not.toBeChecked();
+
+  await maker.context().close();
+  await guest.context().close();
+});

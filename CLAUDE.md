@@ -827,6 +827,34 @@ secret, custom domain bound by the route in wrangler.toml.
   member and the cookie are made together. Asking a man to type the word he
   invented thirty seconds ago is asking him to prove he is himself.
 
+- **The word is the creator's to change, and the room is his to hand on.**
+  Owning the switches without those two was half a feature: a word that got
+  out could be changed by nobody in the room — the only rotation was a script
+  on a laptop with the repo on it — and a creator who drifted away froze the
+  switches for the other four for ever. `PUT /api/rooms/word` and
+  `PUT /api/rooms/owner`, both creator-only, both announced by name.
+- **The app can never show the current word**, here or anywhere: it is kept as
+  a PBKDF2 hash and nothing knows the plaintext, which is the same reason an
+  invite link carries its own secret. The form only ever SETS a new one, and
+  the line in the room says the word changed without saying what to.
+- **Changing the word kills the invite links that were out.** They are a
+  separate secret and rotating the word does not technically touch them — but
+  a man changing the word is closing a door, and leaving keys on the step that
+  still open it would make the feature a lie. Everything else survives, as
+  `--rotate` has always promised: the members, the archive, the board.
+- **Handing it over is one way.** Once it is his, getting it back is him
+  handing it back, which is the honest shape for a thing exactly one man
+  holds. The client arms the button and puts his NAME in the confirming label,
+  so the second press is about a person rather than a control.
+- **Who owns it rides the socket, like the switches do.** An `owner` frame,
+  seeded from the session and kept current after — the man it was handed TO
+  must not have to reload to stop being told the switches are somebody else's.
+- **A genuine arrival broadcasts a `member` frame.** `members` — everyone in
+  the group — was only built at hello, so a dad already connected when
+  somebody new came through the door did not have him until a reload: no face
+  beside his lines, and not in any list of the group's men. Found by the
+  handover picker being empty.
+
 ## The three switches
 
 - **The three switches are the CREATOR's** (2026-09-17), and this reverses

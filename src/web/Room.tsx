@@ -52,7 +52,7 @@ const NOTE_MS = 6000;
  */
 export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
   const { t, lang } = useT();
-  const room = useRoom(true, session.group.dadNight, session.group.rooms);
+  const room = useRoom(true, session.group.dadNight, session.group.rooms, session.group.createdBy);
   const [sheet, setSheet] = useState<SheetName | null>(null);
   /**
    * Home or the conversation.
@@ -441,7 +441,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         night={room.night}
         pollPulse={room.pollPulse}
         rooms={room.rooms}
-        createdBy={session.group.createdBy}
+        members={room.members}
+        createdBy={room.createdBy}
         // From `members` and not the roster: the man who opened the room is
         // very often not the one sitting in it tonight.
         ownerName={room.members.find((m) => m.memberId === session.group.createdBy)?.name ?? ''}
