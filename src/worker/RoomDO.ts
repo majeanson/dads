@@ -1,12 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import {
-  currentWindow,
-  isValidNight,
-  nextStart,
-  NIGHT_DURATION_MS,
-  previousStart,
-  type DadNight,
-} from '../shared/dadNight';
+import { currentWindow, isValidNight, nextStart, type DadNight } from '../shared/dadNight';
 import {
   MAX_MESSAGE_LENGTH,
   type Attachment,
@@ -18,8 +11,7 @@ import {
   type RosterEntry,
   type ServerFrame,
 } from '../shared/protocol';
-import { tableSaid } from '../shared/jaffre';
-import { englishOf, parseSaid, type Said } from '../shared/said';
+import { parseSaid, type Said } from '../shared/said';
 import { REPLY_QUOTE_LENGTH, type ReplyTo } from '../shared/protocol';
 
 /** A stored quote, or nothing: a row from before replies existed has none. */
@@ -34,7 +26,6 @@ function parseReply(raw: string | null | undefined): ReplyTo | null {
     return null;
   }
 }
-import { isoWeekIn, previousWeek } from '../shared/week';
 import { dadNightReminder, notifyGroup, notifyMember } from './push';
 import type { Env } from './env';
 import { newId } from './identity';
@@ -77,12 +68,6 @@ const FRESH_BACKFILL = 80;
  */
 const LEAVE_GRACE_MS = 15_000;
 
-/**
- * Every dad with the table open relays the same jaffre event, so "a game
- * started" would arrive once per framed browser. The room keeps the last
- * table line and drops an identical one that follows close behind.
- */
-const TABLE_DEDUPE_MS = 20_000;
 /** A hand takes a minute or two; a nudge per hand is a nag. */
 const TURN_NUDGE_EVERY_MS = 3 * 60_000;
 
@@ -221,17 +206,9 @@ export class RoomDO extends DurableObject<Env> {
     // The group's night changed while dads were connected. Only the Worker
     // can reach this.
     if (url.pathname === '/night' && request.method === 'POST') {
-      const { night, byName } = (await request.json()) as {
-        night: DadNight | null;
-        byName: string;
-      };
-      // Read BEFORE it is applied: calling off an evening the group had
-      // arranged and clearing a standing night are different news, and the
-      // only thing that tells them apart is what was there a moment ago.
-      const was = this.storedNight();
+      const { night } = (await request.json()) as { night: DadNight | null };
       this.applyNight(night);
       this.broadcast({ t: 'night', night });
-      await this.say(byName, nightChange(byName, night, was));
       await this.rescheduleAlarm();
       return new Response(null, { status: 204 });
     }
@@ -240,6 +217,15 @@ export class RoomDO extends DurableObject<Env> {
     // re-read, nothing more: see the `poll` frame in protocol.ts.
     if (url.pathname === '/poll' && request.method === 'POST') {
       this.broadcast({ t: 'poll' });
+      return new Response(null, { status: 204 });
+    }
+
+    // A screen that reads over HTTP should look again. Only the Worker can
+    // reach this; see the `stir` frame in protocol.ts for why it exists.
+    if (url.pathname === '/stir' && request.method === 'POST') {
+      const { what } = (await request.json()) as { what: 'night' | 'todo' };
+      if (what !== 'night' && what !== 'todo') return new Response('bad stir', { status: 400 });
+      this.broadcast({ t: 'stir', what });
       return new Response(null, { status: 204 });
     }
 
@@ -290,7 +276,7 @@ export class RoomDO extends DurableObject<Env> {
      * reach this, and it has already written the change to D1.
      */
     if (url.pathname === '/member' && request.method === 'POST') {
-      const { groupId, memberId, name, face, was } = (await request.json()) as {
+      const { groupId, memberId, name, face } = (await request.json()) as {
         groupId: string;
         memberId: string;
         name: string;
@@ -321,11 +307,7 @@ export class RoomDO extends DurableObject<Env> {
         t: 'member',
         member: { memberId, name, face: face ?? undefined },
       });
-      // A name changing with nothing said is four men wondering who the new
-      // bloke is. A face changing is not news.
-      if (typeof was === 'string' && was !== '' && was !== name) {
-        await this.say(name, { k: 'renamed', was, now: name });
-      }
+
       return Response.json({ ok: true });
     }
 
@@ -339,18 +321,6 @@ export class RoomDO extends DurableObject<Env> {
         .one().n;
       this.ctx.storage.sql.exec('DELETE FROM tail WHERE body LIKE ?', like);
       return Response.json({ dropped: before });
-    }
-
-    // Something happened outside the socket that the room should know about:
-    // a check-in, a commitment, how last week went. Only the Worker can reach
-    // this. The board is where the detail lives; this is what makes anyone
-    // look at the board.
-    if (url.pathname === '/announce' && request.method === 'POST') {
-      const { name, said } = (await request.json()) as { name: string; said: unknown };
-      const parsed = parseSaid(typeof said === 'string' ? said : JSON.stringify(said));
-      if (parsed === null) return new Response('bad said', { status: 400 });
-      await this.say(name, parsed);
-      return new Response(null, { status: 204 });
     }
 
     if (request.headers.get('Upgrade') !== 'websocket') {
@@ -477,15 +447,9 @@ export class RoomDO extends DurableObject<Env> {
     }
 
     if (frame.t === 'table') {
-      const said = tableSaid(frame.event);
-      // Every framed dad relays the same event, so the room drops one it has
-      // just printed. Compared on the English, which is what the tail holds
-      // whatever anyone is reading.
-      if (said && !this.recentlySaid(englishOf(said))) {
-        await this.say(who.name, said, 'table');
-      }
-      // His turn has sat for twenty seconds: the one line of this that goes
-      // to a phone, and only to his.
+      // The frame still comes, and still does exactly one thing: his turn has
+      // sat for twenty seconds, so his phone hears about it. What the table
+      // is doing is on the table, which is on the screen beside this.
       if (frame.event.t === 'turn') await this.nudgeTurn(frame.event.name);
       return;
     }
@@ -813,8 +777,9 @@ export class RoomDO extends DurableObject<Env> {
 
   private async openDadNight(now: number): Promise<void> {
     const night = this.storedNight();
+    // Still counted, and still said — to the phones that asked to be told,
+    // which is not the conversation.
     const items = await this.itemsUpForTonight(night, now);
-    await this.say('dad night', items > 0 ? { k: 'night_open', items } : { k: 'night_open' });
 
     const window = night ? currentWindow(night, now) : null;
     // If the alarm ran so late that the window already closed, there is
@@ -867,71 +832,22 @@ export class RoomDO extends DurableObject<Env> {
    * it showed up. Counted from the D1 archive rather than the capped tail,
    * because the archive is the record.
    */
-  private async closeDadNight(now: number): Promise<void> {
-    const night = this.storedNight();
-    if (!night) return;
-    const start = previousStart(night, now);
-    if (start === null) return;
-
-    const groupId = this.groupId();
-    if (!groupId) return;
-
-    // Assigned in the try or never read: the catch returns.
-    let dads: number;
-    let lines: number;
-    try {
-      const row = await this.env.DB.prepare(
-        `SELECT COUNT(*) AS lines, COUNT(DISTINCT member_id) AS dads
-           FROM messages
-          WHERE group_id = ? AND kind = 'chat' AND created_at >= ? AND created_at < ?`,
-      )
-        .bind(groupId, start, start + NIGHT_DURATION_MS)
-        .first<{ lines: number; dads: number }>();
-      dads = row?.dads ?? 0;
-      lines = row?.lines ?? 0;
-    } catch (err) {
-      console.error('dad night summary failed', { groupId }, err);
-      return;
-    }
-
-    // And the week beside the night: what is being tried, and how last
-    // week's went. Best-effort — the summary of the evening must not be
-    // lost to a failed read of the board.
-    let week: { tried: number; kept: number; promised: number } = {
-      tried: 0,
-      kept: 0,
-      promised: 0,
-    };
-    try {
-      const thisWeek = isoWeekIn(start, night.tz);
-      const lastWeek = previousWeek(thisWeek);
-      const { results } = await this.env.DB.prepare(
-        'SELECT week, outcome FROM commitments WHERE group_id = ? AND week IN (?, ?)',
-      )
-        .bind(groupId, thisWeek, lastWeek)
-        .all<{ week: string; outcome: string }>();
-      week = {
-        tried: results.filter((r) => r.week === thisWeek).length,
-        promised: results.filter((r) => r.week === lastWeek).length,
-        kept: results.filter((r) => r.week === lastWeek && r.outcome === 'done').length,
-      };
-    } catch (err) {
-      console.error('dad night week count failed', { groupId }, err);
-    }
-
-    await this.say('dad night', { k: 'night_done', dads, lines, ...week });
-
-    /**
-     * And, for a night that was arranged rather than standing, the question
-     * that has to be asked before everybody puts their phone down.
-     *
-     * A standing night says nothing here: next Thursday is next Thursday and
-     * a weekly line saying so is furniture. A one-off has just used itself up,
-     * so the group now has no next night — and the moment they are all still
-     * in the room is the moment that gets answered. After this, home is the
-     * calendar for everyone, because nobody has an evening still to come.
-     */
-    if (nextStart(night, now) === null) await this.say('dad night', { k: 'poll_open' });
+  /**
+   * The evening's window has closed.
+   *
+   * It used to count the room — how many turned up, how many lines, what the
+   * week had in it — and post the whole thing as one line. The conversation
+   * is what the dads typed now, and every number that line carried is on a
+   * screen of its own: who came is the night sheet, the week is the week.
+   *
+   * What survives is the SCHEDULE. The alarm still has to fire, because a
+   * night that has been and gone is what makes the next one arrangeable —
+   * and a one-off that has used itself up leaves the group with no evening
+   * to come, which is what turns home back into the calendar. That happens
+   * because the night's date is in the past, not because anybody was told.
+   */
+  private async closeDadNight(_now: number): Promise<void> {
+    return Promise.resolve();
   }
 
   // -------------------------------------------------------------- presence
@@ -1321,10 +1237,6 @@ export class RoomDO extends DurableObject<Env> {
       .map((r) => r.id);
   }
 
-  private async say(name: string, said: Said, kind: 'system' | 'table' = 'system'): Promise<void> {
-    await this.post(kind, null, name, englishOf(said), null, null, said);
-  }
-
   private async post(
     kind: RoomMessage['kind'],
     memberId: string | null,
@@ -1407,18 +1319,6 @@ export class RoomDO extends DurableObject<Env> {
       // Nobody is waiting on this, and nothing downstream depends on it.
       console.error('presence write failed', { groupId, name, kind }, err);
     }
-  }
-
-  /** Has this exact line already gone out in the last few seconds? */
-  private recentlySaid(body: string): boolean {
-    const row = this.ctx.storage.sql
-      .exec<{ created_at: number }>(
-        `SELECT created_at FROM tail WHERE kind = 'table' AND body = ?
-          ORDER BY seq DESC LIMIT 1`,
-        body,
-      )
-      .toArray()[0];
-    return row !== undefined && Date.now() - row.created_at < TABLE_DEDUPE_MS;
   }
 
   private groupId(): string | undefined {
@@ -1566,20 +1466,4 @@ export class RoomDO extends DurableObject<Env> {
       }
     }
   }
-}
-
-function nightChange(byName: string, night: DadNight | null, was: DadNight | null): Said {
-  // An evening that was arranged for one date, and is now not happening: the
-  // room says which evening, and asks the question that follows from it.
-  if (!night && was?.date) return { k: 'night_off', by: byName, date: was.date };
-  if (!night) return { k: 'night_cleared', by: byName };
-  return {
-    k: 'night_set',
-    by: byName,
-    weekday: night.weekday,
-    time: night.time,
-    // A date makes it the other sentence: a night arranged for one evening is
-    // not somebody setting a standing appointment.
-    ...(night.date ? { date: night.date } : {}),
-  };
 }

@@ -7,9 +7,8 @@ import {
   type Outcome,
 } from '../board';
 import type { Env } from '../env';
-import type { Said } from '../../shared/said';
-import { newId } from '../identity';
 import { IDENTITY_HEADERS } from '../RoomDO';
+import { newId } from '../identity';
 import { currentSession, type Session } from './auth';
 
 async function requireSession(
@@ -21,21 +20,31 @@ async function requireSession(
   return session ?? Response.json({ error: 'unauthorized' }, { status: 401 });
 }
 
-/**
- * Tells the room. The board is where this lives, but a line in the room is
- * what makes anyone look at the board — and being seen is the point.
- */
-async function announce(env: Env, session: Session, said: Said): Promise<void> {
+/** Tell the open phones to look again. Not news — a nudge; see the `stir`
+ * frame in protocol.ts. */
+async function stir(env: Env, session: Session): Promise<void> {
   const stub = env.ROOM.get(env.ROOM.idFromName(session.group.id));
-  await stub.fetch('https://room/announce', {
+  await stub.fetch('https://room/stir', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       [IDENTITY_HEADERS.groupId]: session.group.id,
     },
-    body: JSON.stringify({ name: session.member.displayName, said }),
+    body: JSON.stringify({ what: 'todo' }),
   });
 }
+
+/**
+ * Nothing is said in the conversation.
+ *
+ * It used to be: the board wrote a line, the RSVP wrote a line, the night
+ * sheet wrote a line carrying the thing itself. In a week of five men that was
+ * twenty-odd lines the room wrote about itself, against however many the dads
+ * actually typed — and every one of them had a screen of its own already. The
+ * conversation is what a dad typed and what he posted; the views are where
+ * everything else lives, and the menu carries a mark when one of them wants
+ * him.
+ */
 
 /** GET /api/board — the last six weeks, everyone's. */
 export async function getBoard(
@@ -91,13 +100,7 @@ export async function putCheckIn(
     .bind(newId('chk'), session.group.id, session.member.id, week, rating, note, now)
     .run();
 
-  await announce(env, session, {
-    k: 'check_in',
-    name: session.member.displayName,
-    rating,
-    note,
-  });
-
+  await stir(env, session);
   return Response.json({ week, rating, note });
 }
 
@@ -139,7 +142,7 @@ export async function putCommitment(
     .bind(newId('cmt'), session.group.id, session.member.id, week, body, Date.now())
     .run();
 
-  await announce(env, session, { k: 'commitment', name: session.member.displayName, body });
+  await stir(env, session);
   return Response.json({ week, body, outcome: 'pending' });
 }
 
@@ -190,13 +193,6 @@ export async function putCommitmentOutcome(
     .bind(outcome, reflection, Date.now(), session.group.id, session.member.id, week)
     .run();
 
-  await announce(env, session, {
-    k: 'outcome',
-    name: session.member.displayName,
-    body: existing.body,
-    note: reflection,
-    done: outcome === 'done',
-  });
-
+  await stir(env, session);
   return Response.json({ week, outcome, reflection });
 }

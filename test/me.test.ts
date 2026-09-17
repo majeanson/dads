@@ -31,7 +31,7 @@ describe('a dad’s own name', () => {
     group = await seedGroup();
   });
 
-  it('can be changed after the door, and the room says so', async () => {
+  it('can be changed after the door, and nothing is said about it', async () => {
     const cookie = await comeIn(group, 'Marc');
     const res = await worker.fetch(put('/api/me/name', cookie, { name: 'Marc-antoine' }));
     expect(res.status).toBe(200);
@@ -41,20 +41,13 @@ describe('a dad’s own name', () => {
       .first<{ display_name: string }>();
     expect(row?.display_name).toBe('Marc-antoine');
 
-    // A name changing with nothing said is four men wondering who the new
-    // bloke is, so the room carries a line — with the meta that lets it be
-    // read in either language.
-    const line = await env.DB.prepare(
-      `SELECT body, meta FROM messages WHERE group_id = ? ORDER BY created_at DESC LIMIT 1`,
-    )
+    // And nothing is said about it. Who is who is the roster's job, and it
+    // is one tap behind the head-count; a line in the conversation about a
+    // man changing his name is the room talking about itself.
+    const lines = await env.DB.prepare('SELECT COUNT(*) AS n FROM messages WHERE group_id = ?')
       .bind(group.id)
-      .first<{ body: string; meta: string | null }>();
-    expect(line?.body).toBe('Marc goes by Marc-antoine now.');
-    expect(JSON.parse(line?.meta ?? 'null')).toEqual({
-      k: 'renamed',
-      was: 'Marc',
-      now: 'Marc-antoine',
-    });
+      .first<{ n: number }>();
+    expect(lines?.n).toBe(0);
   });
 
   it('refuses a stranger, an empty name and a very long one', async () => {

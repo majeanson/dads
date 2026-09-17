@@ -977,6 +977,43 @@ neither see nor scroll anything.
   week" over the rows: "The week" on its own was a title a dad had to work
   out, with a form and a list that did not say whose they were.
 
+## The conversation is what a dad typed
+
+- **The room writes no lines** (2026-09-17). It used to narrate itself: every
+  RSVP, every check-in, every promise and how it went, every thing put up for
+  the night, every seat taken at the table, a name changing, a night being
+  set. In a week of five men that was twenty-odd lines the room wrote about
+  itself against however many they actually typed — and every one of them had
+  a screen of its own already. `say()` is gone, `/announce` is gone, and the
+  conversation is messages and media.
+- **Where each of them went**, because "we have views for them" is only true
+  if it is checked: who is coming is home's card and the night sheet; what is
+  up for the evening is the night sheet; the week is the week, with a mark on
+  the menu row when his is empty; the night being set or moved is the card and
+  the header; who is who is the roster behind the head-count; the table is the
+  table, on screen beside the room; the word and the owner are Settings.
+- **The lines were doing TWO jobs, and only one of them was news.** The other
+  was telling the screens to look again — home read `rsvp`/`item_added` off
+  the message list, and the marks read `check_in`/`commitment`/`outcome`.
+  That half had to stay, so it is a `stir` frame carrying nothing but which
+  kind of thing changed. Take one away and home sits there showing who was
+  coming an hour ago.
+- **A stir belongs on a WRITE.** One on the GET that reads the night told
+  every open phone to read again, and their reads told each other, until
+  Chrome started refusing to make requests (`ERR_INSUFFICIENT_RESOURCES`) and
+  every fetch in the sheet was cancelled by the next one.
+- **A sheet that is open has to keep up now.** The night sheet used to be read
+  once and left: a dad with it open watched the others answer in the
+  conversation instead, because the room said so in words. It re-reads on the
+  stir, which is what makes "the views have it" true rather than nearly true.
+- **The push notifications are NOT the conversation** and are untouched: the
+  day-before nudge, the table's open, a turn left sitting. A line in the room
+  and a phone buzzing in a pocket are different things, and it was always the
+  second one that reached a dad who was not looking.
+- **`said.ts` and the `meta` column stay**, unreachable for anything new.
+  They render a line from an archive written before this, and they are what a
+  single line would be rebuilt on if one ever earns its way back.
+
 ## Shape of the room
 
 - **The room is the conversation and the call. That is the whole screen.**

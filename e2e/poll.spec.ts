@@ -124,13 +124,15 @@ test('the calendar is shared, and any dad locks the day in', async ({ browser })
   await sam.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(sam.getByTestId('home-when')).toContainText('20:30');
 
-  // Marc's sheet is still open over his room; a dialog backdrop swallows
-  // everything under it, so it is closed before he goes anywhere.
+  // Marc's screen has the date too, without a reload and without being told
+  // in a sentence: the night itself reaches every open phone, and home is
+  // where a man looks for when the next one is.
   await marc.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(marc.getByTestId('home-when')).toContainText('20:30', { timeout: 15_000 });
+
+  // And the conversation carries none of it.
   await talk(marc);
-  await expect(marc.getByTestId('line').filter({ hasText: 'Sam Picker locked in' })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(marc.getByTestId('line')).toHaveCount(0);
 
   await marc.context().close();
   await sam.context().close();
@@ -194,24 +196,15 @@ test('there are three answers now, and the third is maybe', async ({ browser }) 
   await expect(marc.getByTestId('home-maybe')).toHaveAttribute('data-mine', 'yes');
   await expect(marc.getByTestId('home-in')).toHaveAttribute('data-mine', 'no');
 
-  // And the room hears it in its own words, not as a yes or a no.
-  await talk(marc);
-  await expect(
-    marc.getByTestId('line').filter({ hasText: 'Marc Maybe might make it.' }),
-  ).toBeVisible();
-
-  await home(marc);
+  // Changing his mind rewrites the answer rather than adding to it, which is
+  // what the card shows and what the room is spared: a man who said he might
+  // and then that he is coming has not said two things.
   await marc.getByTestId('home-in').click();
   await expect(marc.getByTestId('home-who-coming')).toContainText('In: Marc Maybe');
   await expect(marc.getByTestId('home-who-coming')).not.toContainText('Might:');
 
-  // Changing his mind leaves ONE line, the same as it always has: a man who
-  // said he might and then that he is coming has not said two things.
   await talk(marc);
-  await expect(marc.getByTestId('line').filter({ hasText: 'Marc Maybe is in.' })).toBeVisible();
-  await expect(
-    marc.getByTestId('line').filter({ hasText: 'Marc Maybe might make it.' }),
-  ).toHaveCount(0);
+  await expect(marc.getByTestId('line')).toHaveCount(0);
 
   await marc.context().close();
 });
@@ -249,14 +242,12 @@ test('a date that was locked in can be moved, and called off', async ({ browser 
   await expect(marc.getByTestId('poll')).toBeVisible({ timeout: 15_000 });
   await expect(marc.getByTestId('night-when')).toHaveCount(0);
 
-  // And the room says which evening is off, rather than "cleared dad night".
+  // Nothing is said about it in the conversation. The state is the news:
+  // home asks when the next one is, which is the question that follows.
   await marc.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(marc.getByTestId('home-poll-none')).toBeVisible({ timeout: 15_000 });
   await talk(marc);
-  // By name: the helper that clears the books at the top of another test in
-  // this file calls an evening off too, so "called off" alone finds two.
-  await expect(marc.getByTestId('line').filter({ hasText: 'Marc Mover called off' })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(marc.getByTestId('line')).toHaveCount(0);
 
   await marc.context().close();
 });

@@ -55,9 +55,17 @@ const settle = (ms = 60) => new Promise<void>((resolve) => setTimeout(resolve, m
  * frames are handled in order, so once this line has come back the quiet
  * ones have been and gone — which is a proof, where a pause is a guess.
  */
+/**
+ * Proof that the quiet ones stayed quiet.
+ *
+ * A socket's frames are handled in order, so a line the room WILL answer,
+ * sent after the ones it must not, is back only once they have been and gone.
+ * It used to be a table event itself; the table writes no lines at all now,
+ * so it is an ordinary chat line — which is the only kind there is.
+ */
 async function sentinel(dad: Dad): Promise<void> {
-  dad.table({ v: 1, t: 'seated', name: 'Sentinel' });
-  await until(() => dad.lines().includes('Sentinel sat down at the table.'));
+  dad.ws.send(JSON.stringify({ t: 'chat', body: 'sentinel' }));
+  await until(() => dad.lines().includes('sentinel'));
 }
 
 async function enter(group: SeededGroup, name: string): Promise<Dad> {
@@ -261,75 +269,41 @@ describe('table events reaching the room', () => {
     await settle();
   });
 
-  it('relays what the table said to everyone', async () => {
+  it('says nothing in the room, whatever the table does', async () => {
+    /*
+     * The table used to narrate itself into the conversation: who sat down,
+     * who got up, a game starting, a game's final score. On an evening of
+     * cards that is a line every couple of minutes, in the room where the
+     * dads are trying to talk — and all of it is already on the table, which
+     * is on the screen beside them.
+     *
+     * The frame still comes, and still does exactly one thing: a turn that
+     * has sat for twenty seconds nudges the phone of the one dad it is about.
+     */
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
 
     marc.table({ v: 1, t: 'seated', name: 'Marc' });
-    await until(() => sam.lines().includes('Marc sat down at the table.'));
-    const kind = sam.frames.find(
-      (f) => f.t === 'msg' && f.message.body === 'Marc sat down at the table.',
-    );
-    expect(kind?.t === 'msg' && kind.message.kind).toBe('table');
-  });
-
-  it('says it once even though every framed dad relays it', async () => {
-    const marc = await enter(group, 'Marc');
-    const sam = await enter(group, 'Sam');
-    open.push(marc, sam);
-
-    // Both browsers have the table open, so both hear jaffre say the same thing.
     marc.table({ v: 1, t: 'game-started' });
     sam.table({ v: 1, t: 'game-started' });
-    await until(() => sam.lines().includes('A game started at the table.'));
-    await sentinel(sam);
-
-    const said = sam.lines().filter((b) => b === 'A game started at the table.');
-    expect(said).toHaveLength(1);
-  });
-
-  it('says nothing at all about plumbing', async () => {
-    const marc = await enter(group, 'Marc');
-    open.push(marc);
-    marc.table({ v: 1, t: 'ready' });
-    await sentinel(marc);
-    expect(marc.lines().some((b) => b.includes('ready'))).toBe(false);
-  });
-
-  it('keeps the quiet seats out of the conversation', async () => {
-    const marc = await enter(group, 'Marc');
-    open.push(marc);
-    marc.table({ v: 1, t: 'turn', name: 'Marc', seconds: 20 });
-    marc.table({ v: 1, t: 'away', name: 'Sam', seconds: 45 });
-    marc.table({ v: 1, t: 'back', name: 'Sam' });
-    marc.table({ v: 1, t: 'connection', state: 'reconnecting' });
-    await sentinel(marc);
-    expect(marc.lines()).toEqual(['Sentinel sat down at the table.']);
-  });
-
-  it('ignores a frame it does not recognise instead of posting it', async () => {
-    const marc = await enter(group, 'Marc');
-    open.push(marc);
-    const before = marc.lines().length;
-
-    marc.table({ v: 1, t: 'seated', name: '' });
-    marc.table({ v: 99, t: 'game-over', summary: 'hacked' });
-    marc.ws.send(JSON.stringify({ t: 'table', event: { v: 1, t: 'game-over', summary: '' } }));
-    await sentinel(marc);
-
-    expect(marc.lines()).toHaveLength(before + 1);
-  });
-
-  it('archives a table line like any other', async () => {
-    const marc = await enter(group, 'Marc');
-    open.push(marc);
+    marc.table({ v: 1, t: 'left', name: 'Marc' });
     marc.table({ v: 1, t: 'game-over', summary: '41-37' });
+    marc.table({ v: 1, t: 'turn', name: 'Marc', seconds: 20 });
+    marc.table({ v: 1, t: 'ready' });
+    // Not even a shape it does not know.
+    marc.ws.send(JSON.stringify({ t: 'table', event: { v: 99, t: 'game-over', summary: 'x' } }));
 
-    const row = () =>
-      env.DB.prepare("SELECT kind, body FROM messages WHERE group_id = ? AND kind = 'table'")
-        .bind(group.id)
-        .first<{ kind: string; body: string }>();
-    await until(async () => (await row())?.body === 'Game over — 41-37');
+    await sentinel(sam);
+    expect(sam.lines()).toEqual(['sentinel']);
+
+    // And nothing reached the archive either, which is what a search would
+    // have had to wade through.
+    const rows = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM messages WHERE group_id = ? AND kind = 'table'",
+    )
+      .bind(group.id)
+      .first<{ n: number }>();
+    expect(rows?.n).toBe(0);
   });
 });

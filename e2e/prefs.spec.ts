@@ -84,9 +84,11 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
 });
 
-test('what the room says about itself is read in each dad’s own language', async ({ browser }) => {
-  // Two dads, same room, different languages — the point of translating the
-  // room's own lines rather than archiving a sentence.
+test('the app’s own words follow each dad, in the room they share', async ({ browser }) => {
+  // The room writes no lines of its own any more, so there is no sentence in
+  // the conversation left to translate. What is still two languages in one
+  // room is everything the APP says — the night on home, the menu's rows, the
+  // week — and it is per dad and per device rather than per group.
   const fr = await browser.newContext();
   const en = await browser.newContext();
   const marc = await fr.newPage();
@@ -103,29 +105,20 @@ test('what the room says about itself is read in each dad’s own language', asy
   await marc.getByRole('button', { name: 'Ferme', exact: true }).click();
   await marc.getByTestId('dad-night').click();
   await marc.getByTestId('night-standing').click();
-  await marc.getByLabel('Jour').selectOption('4');
-  await marc.getByLabel('Heure').fill('21:00');
+  await marc.getByLabel('Jour', { exact: true }).selectOption('4');
+  await marc.getByLabel('Heure', { exact: true }).fill('21:00');
   await marc.getByRole('button', { name: 'Enregistre' }).click();
   await marc.getByRole('button', { name: 'Ferme', exact: true }).click();
+
+  // One night, two screens, two languages — and Sam was told without being
+  // sent a sentence: the frame carried the night, and his own app says it in
+  // his own words.
+  await expect(marc.getByTestId('home-when')).toContainText('jeudi', { ignoreCase: true });
+  await expect(sam.getByTestId('home-when')).toContainText('Thursday', { timeout: 15_000 });
+
+  // And the conversation stayed the conversation.
   await talk(marc);
-
-  // The same event, two rooms, two languages.
-  await expect(
-    marc.getByTestId('line').filter({ hasText: 'a mis la soirée de gars les jeudis à 21:00' }),
-  ).toBeVisible();
-  await expect(
-    sam.getByTestId('line').filter({ hasText: 'set dad night to Thursdays at 21:00' }),
-  ).toBeVisible();
-
-  // And Sam switching over re-reads the line he already has.
-  await home(sam);
-  await sam.getByRole('button', { name: 'Settings' }).click();
-  await sam.getByRole('button', { name: 'FR', exact: true }).click();
-  await sam.getByRole('button', { name: 'Ferme', exact: true }).click();
-  await talk(sam);
-  await expect(
-    sam.getByTestId('line').filter({ hasText: 'a mis la soirée de gars les jeudis à 21:00' }),
-  ).toBeVisible();
+  await expect(marc.getByTestId('line')).toHaveCount(0);
 
   await fr.close();
   await en.close();
@@ -200,7 +193,7 @@ test('the phone’s own chrome follows the theme it was asked for', async ({ pag
   expect(await bar()).toBeNull();
 });
 
-test('a dad changes the name he goes by, and the others are told', async ({ browser }) => {
+test('a dad changes the name he goes by, and the roster follows', async ({ browser }) => {
   const marc = await browser.newContext();
   const marcPage = await marc.newPage();
   await comeIn(marcPage, 'Gus');
@@ -213,17 +206,14 @@ test('a dad changes the name he goes by, and the others are told', async ({ brow
   await marcPage.getByTestId('my-name').fill('Gus-antoine');
   await marcPage.getByTestId('you').getByRole('button', { name: 'Save' }).click();
 
-  // The other dad hears it by name rather than watching a stranger appear in
-  // the roster.
-  await expect(
-    samPage.getByTestId('line').filter({ hasText: 'Gus goes by Gus-antoine now' }),
-  ).toBeVisible();
-
-  // And the roster changes without anybody reconnecting.
+  // Who is who is the roster's job, and it changes without anybody
+  // reconnecting. The room used to say it in a line as well; that was the
+  // room talking about itself, one tap from the screen that answers it.
   await samPage.getByTestId('connection').click();
-  await expect(
-    samPage.getByTestId('roster-entry').filter({ hasText: 'Gus-antoine' }),
-  ).toBeVisible();
+  await expect(samPage.getByTestId('roster-entry').filter({ hasText: 'Gus-antoine' })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(samPage.getByTestId('line')).toHaveCount(0);
 
   await marc.close();
   await sam.close();

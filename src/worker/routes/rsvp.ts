@@ -1,8 +1,7 @@
 import { currentWindow, nextStart, type DadNight } from '../../shared/dadNight';
-import type { Said } from '../../shared/said';
 import type { Env } from '../env';
-import { newId } from '../identity';
 import { IDENTITY_HEADERS } from '../RoomDO';
+import { newId } from '../identity';
 import { currentSession, type Session } from './auth';
 
 /** Long enough for the thought, short enough that it is not the conversation
@@ -101,9 +100,9 @@ export async function itemsFor(
 /**
  * POST /api/night-item — { body }
  *
- * Announced by name, with the thing itself. This is the one line in the room
- * that carries its own detail rather than pointing at a sheet: half the value
- * of a man writing it down is another man reading it and thinking of his own.
+ * Nothing is said in the room. It used to be the one line that carried its own
+ * detail rather than pointing at a sheet — and the sheet is where the things
+ * themselves are, one tap away, kept up to date by the nudge below.
  */
 export async function addNightItem(
   request: Request,
@@ -138,8 +137,7 @@ export async function addNightItem(
     .bind(newId('item'), session.group.id, session.member.id, occurrence, body, Date.now())
     .run();
 
-  await announce(env, session, { k: 'item_added', name: session.member.displayName, body });
-
+  await stir(env, session);
   return Response.json({
     occurrence,
     answers: await answersFor(env, session, occurrence),
@@ -169,6 +167,7 @@ export async function removeNightItem(
 
   const occurrence = occurrenceOf(session.group.dadNight);
   if (occurrence === null) return Response.json({ occurrence: null, answers: [], items: [] });
+  await stir(env, session);
   return Response.json({
     occurrence,
     answers: await answersFor(env, session, occurrence),
@@ -176,18 +175,31 @@ export async function removeNightItem(
   });
 }
 
-/** The room's own voice, from a route rather than from a socket. */
-async function announce(env: Env, session: Session, said: Said): Promise<void> {
+/** Tell the open phones to look again. Not news — a nudge; see the `stir`
+ * frame in protocol.ts. */
+async function stir(env: Env, session: Session): Promise<void> {
   const stub = env.ROOM.get(env.ROOM.idFromName(session.group.id));
-  await stub.fetch('https://room/announce', {
+  await stub.fetch('https://room/stir', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       [IDENTITY_HEADERS.groupId]: session.group.id,
     },
-    body: JSON.stringify({ name: session.member.displayName, said }),
+    body: JSON.stringify({ what: 'night' }),
   });
 }
+
+/**
+ * Nothing is said in the conversation.
+ *
+ * It used to be: the board wrote a line, the RSVP wrote a line, the night
+ * sheet wrote a line carrying the thing itself. In a week of five men that was
+ * twenty-odd lines the room wrote about itself, against however many the dads
+ * actually typed — and every one of them had a screen of its own already. The
+ * conversation is what a dad typed and what he posted; the views are where
+ * everything else lives, and the menu carries a mark when one of them wants
+ * him.
+ */
 
 /** GET /api/night — the evening, who is coming, and what is up for it. */
 export async function getRsvps(
@@ -200,6 +212,9 @@ export async function getRsvps(
 
   const occurrence = occurrenceOf(session.group.dadNight);
   if (occurrence === null) return Response.json({ occurrence: null, answers: [], items: [] });
+  // No stir on a READ, obviously. One here told every open phone to read
+  // again, and their reads told each other, until the browsers started
+  // refusing to make requests at all.
   return Response.json({
     occurrence,
     answers: await answersFor(env, session, occurrence),
@@ -241,11 +256,9 @@ export async function putRsvp(
   const occurrence = occurrenceOf(session.group.dadNight);
   if (occurrence === null) return Response.json({ error: 'no_night' }, { status: 409 });
 
-  const before = await env.DB.prepare(
-    'SELECT answer FROM rsvps WHERE group_id = ? AND member_id = ? AND occurrence = ?',
-  )
-    .bind(session.group.id, session.member.id, occurrence)
-    .first<{ answer: string }>();
+  // What he answered before is nobody's business now: it was read to decide
+  // whether the room should say so, and the room says nothing about an RSVP.
+  // Home shows who is coming, which is the question that was being answered.
 
   await env.DB.prepare(
     `INSERT INTO rsvps (group_id, member_id, occurrence, answer, updated_at)
@@ -256,17 +269,7 @@ export async function putRsvp(
     .bind(session.group.id, session.member.id, occurrence, answer, Date.now())
     .run();
 
-  // The same answer twice is a dad pressing the button he already pressed;
-  // the room does not need to hear about it.
-  if (before?.answer !== answer) {
-    await announce(env, session, {
-      k: 'rsvp',
-      name: session.member.displayName,
-      coming: answer === 'in',
-      answer,
-    });
-  }
-
+  await stir(env, session);
   return Response.json({
     occurrence,
     answers: await answersFor(env, session, occurrence),

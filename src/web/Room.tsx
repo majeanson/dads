@@ -127,14 +127,15 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   }, []);
 
   /**
-   * The newest line that could change who is coming, or what is up for the
-   * night. Home re-reads the night when this moves, and not when anything
-   * else does: an evening of talk is not a reason to fetch it thirty times.
+   * When to look again at who is coming, and at what is waiting for him.
+   *
+   * These used to be derived from the room's own lines — the newest one
+   * saying somebody had RSVP'd, or filled in his week. Those lines were doing
+   * two jobs at once, and only one of them was news: the conversation is what
+   * the dads typed now, and the looking-again is a `stir` frame that carries
+   * nothing but "this kind of thing changed".
    */
-  const nightPulse = room.messages.reduce(
-    (seq, m) => (m.said?.k === 'rsvp' || m.said?.k === 'item_added' ? m.seq : seq),
-    0,
-  );
+  const nightPulse = room.nightPulse;
 
   /**
    * The newest line that could change what is waiting for him.
@@ -144,16 +145,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
    * spent a round trip per line asking a question whose answer only moves
    * when somebody files an answer, a check-in, a promise or its outcome.
    */
-  const todoPulse = room.messages.reduce(
-    (seq, m) =>
-      m.kind === 'prompt' ||
-      m.said?.k === 'check_in' ||
-      m.said?.k === 'commitment' ||
-      m.said?.k === 'outcome'
-        ? m.seq
-        : seq,
-    0,
-  );
+  const todoPulse = room.todoPulse;
 
   useEffect(refreshTodo, [refreshTodo, todoPulse]);
 
@@ -440,6 +432,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         call={room.call}
         night={room.night}
         pollPulse={room.pollPulse}
+        nightPulse={nightPulse}
         rooms={room.rooms}
         members={room.members}
         createdBy={room.createdBy}

@@ -28,6 +28,12 @@ class Dad {
       this.frames.push(JSON.parse(event.data as string) as ServerFrame);
     });
   }
+  /** A line the room WILL answer, for proving that the quiet ones stayed
+   * quiet: frames arrive in order, so once this is back the others have been
+   * and gone. */
+  say(body: string) {
+    this.ws.send(JSON.stringify({ t: 'chat', body }));
+  }
   lines(): string[] {
     return this.frames.flatMap((f) =>
       f.t === 'hello' ? f.messages.map((m) => m.body) : f.t === 'msg' ? [f.message.body] : [],
@@ -381,42 +387,43 @@ describe('the room hears about it', () => {
     await settle();
   });
 
-  it('announces a check-in with what it said', async () => {
+  it('says nothing in the room about any of it', async () => {
+    /*
+     * The week used to write a line for every check-in, every commitment and
+     * every outcome — fifteen in a week of five men, against however many they
+     * actually typed. All of it is on the week's own screen, and the menu
+     * carries a mark when his row is empty, so the conversation stayed the
+     * conversation and these stopped being said.
+     *
+     * Proven with a sentinel: a socket's frames arrive in order, so a line the
+     * room WILL answer, sent after the ones it must not, is back only once the
+     * quiet ones have been and gone.
+     */
     const sam = await enter(group, 'Sam');
     open.push(sam);
 
     const marc = await joinAs(group, 'Marc');
     await put('/api/check-in', marc.cookie, { rating: 2, note: 'Shouted about shoes.' });
-    await until(() => sam.lines().includes('Marc checked in — 2/5. Shouted about shoes.'));
-  });
-
-  it('announces a commitment and how it went', async () => {
-    const sam = await enter(group, 'Sam');
-    open.push(sam);
-
-    const marc = await joinAs(group, 'Marc');
     await put('/api/commitment', marc.cookie, { body: 'Phone in the drawer at six' });
-    await until(() => sam.lines().includes('Marc is trying this week: Phone in the drawer at six'));
-
     const week = await currentWeek(env, group.id);
     await put('/api/commitment-outcome', marc.cookie, {
       week,
       outcome: 'done',
       reflection: 'Four nights out of five.',
     });
-    await until(() =>
-      sam.lines().includes('Marc did it: Phone in the drawer at six — Four nights out of five.'),
-    );
-  });
 
-  it('says plainly when a dad did not manage it', async () => {
-    const sam = await enter(group, 'Sam');
-    open.push(sam);
+    sam.say('and that is the sentinel');
+    await until(() => sam.lines().includes('and that is the sentinel'));
+    expect(sam.lines()).toEqual(['and that is the sentinel']);
 
-    const marc = await joinAs(group, 'Marc');
-    await put('/api/commitment', marc.cookie, { body: 'Read at bedtime' });
-    const week = await currentWeek(env, group.id);
-    await put('/api/commitment-outcome', marc.cookie, { week, outcome: 'missed', reflection: '' });
-    await until(() => sam.lines().includes('Marc didn’t manage: Read at bedtime'));
+    // And every word of it is still there to be read, on the screen it
+    // belongs to.
+    const board = await worker.fetch('https://dads.test/api/board', {
+      headers: { Cookie: marc.cookie },
+    });
+    const body = JSON.stringify(await board.json());
+    expect(body).toContain('Shouted about shoes.');
+    expect(body).toContain('Phone in the drawer at six');
+    expect(body).toContain('Four nights out of five.');
   });
 });

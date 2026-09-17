@@ -37,6 +37,7 @@ export function Sheets({
   call,
   night,
   pollPulse,
+  nightPulse,
   rooms,
   members,
   createdBy,
@@ -75,6 +76,8 @@ export function Sheets({
    * next night. The dad-night sheet holds it when there is nothing on the
    * books. */
   pollPulse: number;
+  /** And when somebody answers, or puts something up for the evening. */
+  nightPulse: number;
   rooms: RoomsOpen;
   todo: Todo;
   tableOpen: boolean;
@@ -143,7 +146,7 @@ export function Sheets({
   if (open === 'night') {
     return (
       <Sheet title={t('n.title')} onClose={close}>
-        <Night night={night} you={you} pollPulse={pollPulse} />
+        <Night night={night} you={you} pollPulse={pollPulse} nightPulse={nightPulse} />
       </Sheet>
     );
   }

@@ -39,11 +39,21 @@ export function Night({
   night,
   you,
   pollPulse,
+  nightPulse,
 }: {
   night: DadNight | null;
   you: string;
   /** Bumped when the room says somebody marked the calendar. */
   pollPulse: number;
+  /**
+   * Bumped when somebody answers, or puts something up for the evening.
+   *
+   * This sheet used to be read once and left: a dad with it open watched the
+   * others answer in the conversation instead, because the room said so in
+   * words. It says nothing now, so the screen showing the answer has to be
+   * the one that keeps up.
+   */
+  nightPulse: number;
 }) {
   const { t, lang } = useT();
   const [state, setState] = useState<NightState | null>(null);
@@ -67,7 +77,7 @@ export function Night({
     return () => {
       cancelled = true;
     };
-  }, [night]);
+  }, [night, nightPulse]);
 
   async function act(work: Promise<NightState>) {
     setBusy(true);

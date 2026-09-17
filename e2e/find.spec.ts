@@ -89,24 +89,22 @@ test('a photograph on a result is shown, not offered to be opened', async ({ bro
   await marc.context().close();
 });
 
-test('the room’s own lines are not findable', async ({ browser }) => {
-  // Setting the night makes the room say so, by name — a line nobody typed.
+test('setting the night leaves nothing in the conversation to find', async ({ browser }) => {
+  // This used to prove that search skipped the room's own lines. The room
+  // writes none: setting a night is a thing home and the night sheet SHOW,
+  // and a line about it was the app narrating its own state back at itself.
   const marc = await comeIn(browser, 'Marc Furniture');
   await menu(marc);
   await marc.getByTestId('dad-night').click();
-  // The standing slot is behind one row now: with nothing on the books the
-  // sheet IS the calendar, and a weekly-night form open under it would be a
-  // second answer to the same question.
   await marc.getByTestId('night-standing').click();
-  await marc.getByLabel('Day').selectOption('4');
-  await marc.getByLabel('Time').fill('21:00');
+  await marc.getByLabel('Day', { exact: true }).selectOption('4');
+  await marc.getByLabel('Time', { exact: true }).fill('21:00');
   await marc.getByRole('button', { name: 'Save' }).click();
   await marc.getByRole('button', { name: 'Close', exact: true }).click();
 
+  // Not in the conversation, and so not in the archive either.
   await talk(marc);
-  await expect(marc.getByTestId('line').filter({ hasText: 'Marc Furniture' })).toBeVisible();
-
-  // His own name is in that line, and it is still not a result.
+  await expect(marc.getByTestId('line').filter({ hasText: 'Marc Furniture' })).toHaveCount(0);
   await openFind(marc);
   await marc.getByLabel('Find something said').fill('Furniture');
   await expect(marc.getByTestId('find-nothing')).toBeVisible();

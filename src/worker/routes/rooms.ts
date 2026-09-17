@@ -2,7 +2,6 @@ import { IDENTITY_HEADERS } from '../RoomDO';
 import type { Env } from '../env';
 import { sessionSecret } from '../env';
 import type { RoomsOpen } from '../../shared/protocol';
-import type { Said } from '../../shared/said';
 import { hashInviteCode, inviteCodeLookup, randomToken } from '../crypto';
 import { currentSession, type Session } from './auth';
 import { MAX_CODE_LENGTH, MIN_CODE_LENGTH } from './create';
@@ -170,10 +169,6 @@ export async function putWord(
 
   await env.DB.prepare('DELETE FROM invites WHERE group_id = ?').bind(session.group.id).run();
 
-  // Said out loud, without the word in it. The other dads do not need the new
-  // one — they are already inside — but a man who was about to send the old
-  // one to a friend needs to know it has stopped working.
-  await announce(env, session, { k: 'word_changed', by: session.member.displayName });
   return Response.json({ ok: true });
 }
 
@@ -225,24 +220,5 @@ export async function putOwner(
     body: JSON.stringify({ createdBy: to.id }),
   });
 
-  await announce(env, session, {
-    k: 'room_handed',
-    by: session.member.displayName,
-    to: to.display_name,
-  });
   return Response.json({ createdBy: to.id });
-}
-
-/** One line in the room, by name. Both of these are news in a way a switch is
- * not: they change who can get in, and who decides. */
-async function announce(env: Env, session: Session, said: Said): Promise<void> {
-  const stub = env.ROOM.get(env.ROOM.idFromName(session.group.id));
-  await stub.fetch('https://room/announce', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      [IDENTITY_HEADERS.groupId]: session.group.id,
-    },
-    body: JSON.stringify({ name: session.member.displayName, said }),
-  });
 }

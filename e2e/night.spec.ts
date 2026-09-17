@@ -42,9 +42,10 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   // close the night is, and this test runs on every day of the week.
   await expect(marc.getByTestId('night-soon')).toBeVisible();
   await expect(sam.getByTestId('night-soon')).toBeVisible();
-  await expect(
-    sam.getByTestId('line').filter({ hasText: 'Marc set dad night to Thursdays at 21:00.' }),
-  ).toBeVisible();
+  // Sam's screen has it without a reload and without being told in words:
+  // the night is a thing the app SHOWS, in the header and on home, and a
+  // line saying it had been set was the room narrating its own state.
+  await expect(sam.getByTestId('line')).toHaveCount(0);
 
   // It survives a reload, because it lives in D1 and not in the tab. A reload
   // lands on home, where the night is the first thing on the screen rather
@@ -61,13 +62,16 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await marc.getByTestId('night-soon').click();
   await marc.getByTestId('rsvp-in').click();
   await expect(marc.getByTestId('rsvp-who')).toContainText('In: Marc');
-  await expect(sam.getByTestId('line').filter({ hasText: 'Marc is in.' })).toBeVisible();
+  // Sam finds out on the night's own screen, live — the answer itself rather
+  // than a sentence about somebody having answered.
+  await night(sam);
+  await expect(sam.getByTestId('rsvp-who')).toContainText('In: Marc', { timeout: 15_000 });
 
   // Changing his mind rewrites the answer rather than adding a second one.
   await marc.getByTestId('rsvp-out').click();
   await expect(marc.getByTestId('rsvp-who')).toContainText('Can’t: Marc');
   await expect(marc.getByTestId('rsvp-who')).not.toContainText('In: Marc');
-  await expect(sam.getByTestId('line').filter({ hasText: 'Marc can’t make it.' })).toBeVisible();
+  await expect(sam.getByTestId('rsvp-who')).toContainText('Can’t: Marc', { timeout: 15_000 });
 
   // And the thing the standing slot was always missing: what we are there to
   // talk about. Marc puts one up on Tuesday; it is there on Thursday, and Sam
@@ -76,14 +80,12 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   await marc.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(marc.getByTestId('agenda-item')).toContainText('How do you handle bedtime?');
   await expect(marc.getByTestId('agenda-item')).toContainText('Marc');
-  await expect(
-    sam.getByTestId('line').filter({ hasText: 'Marc, for dad night: How do you handle bedtime?' }),
-  ).toBeVisible();
 
-  // Sam sees it in his own sheet, and cannot take back what he did not write.
-  await night(sam);
+  // Sam sees it in his own sheet — which is where the things themselves are,
+  // and always was — without touching anything: the sheet has been open in
+  // front of him the whole time and keeps up on its own.
   const samsView = sam.getByTestId('agenda-item').filter({ hasText: 'bedtime' });
-  await expect(samsView).toBeVisible();
+  await expect(samsView).toBeVisible({ timeout: 15_000 });
   await expect(samsView.getByRole('button', { name: 'Take it back' })).toHaveCount(0);
 
   // Marc can.

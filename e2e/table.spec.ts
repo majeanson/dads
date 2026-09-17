@@ -94,18 +94,23 @@ test('the group gets its own table, addressed to the dad by name', async ({ brow
   await marc.context().close();
 });
 
-test('what the table says reaches the room, once', async ({ browser }) => {
+test('what the table says stays at the table', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
   // The frame is mounted from the start whether or not it is on screen — that
   // is what keeps a game alive across a closed table — so both browsers relay
-  // the same event without either of them opening anything.
-  const line = sam.getByTestId('line').filter({ hasText: 'A game started at the table' });
-  await expect(line).toHaveCount(1);
-  await expect(
-    marc.getByTestId('line').filter({ hasText: 'A game started at the table' }),
-  ).toHaveCount(1);
+  // the stub's events without either of them opening anything.
+  //
+  // None of it becomes a line. On an evening of cards that was a sentence
+  // every couple of minutes, in the room where the dads are trying to talk,
+  // about a game that is on the screen beside them. The frame still carries
+  // one thing: a turn left sitting nudges the phone of the dad it is about,
+  // which is the test below.
+  await talk(sam);
+  await talk(marc);
+  await expect(sam.getByTestId('line')).toHaveCount(0);
+  await expect(marc.getByTestId('line')).toHaveCount(0);
 
   await marc.context().close();
   await sam.context().close();

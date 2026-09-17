@@ -38,6 +38,9 @@ export interface RoomState {
    * looking re-reads on the change; everyone else holds a number.
    */
   pollPulse: number;
+  /** The same nudge for the night's own screen, and for his marks. */
+  nightPulse: number;
+  todoPulse: number;
   /** Lines typed while the socket was down, waiting to go. */
   waiting: number;
 }
@@ -109,6 +112,8 @@ export function useRoom(
     rooms: initialRooms,
     createdBy: initialOwner,
     pollPulse: 0,
+    nightPulse: 0,
+    todoPulse: 0,
     waiting: 0,
   });
 
@@ -330,6 +335,13 @@ export function useRoom(
           // is only the nudge that says it is worth re-reading. Whoever is
           // looking at it answers by fetching; everyone else pays nothing.
           setState((s) => ({ ...s, pollPulse: s.pollPulse + 1 }));
+          return;
+        case 'stir':
+          setState((s) =>
+            frame.what === 'night'
+              ? { ...s, nightPulse: s.nightPulse + 1 }
+              : { ...s, todoPulse: s.todoPulse + 1 },
+          );
           return;
         case 'rooms':
           setState((s) => ({ ...s, rooms: frame.rooms }));

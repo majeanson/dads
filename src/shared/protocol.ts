@@ -220,6 +220,21 @@ export type ServerFrame =
   | { t: 'kept'; mediaId: string; on: boolean }
   | { t: 'night'; night: DadNight | null }
   /**
+   * Something changed that a screen reads over HTTP: who is coming and what
+   * is up for the night ('night'), or what is waiting for HIM ('todo').
+   *
+   * A nudge and not the data, exactly like the `poll` frame beside it —
+   * whoever is looking answers by fetching, and everyone else pays nothing.
+   *
+   * It exists because those screens used to re-read when a LINE went past
+   * saying somebody had RSVP'd or filled in his week. Those lines were doing
+   * two jobs: telling the room, and telling the screens to look again. The
+   * room's half is gone — the conversation is what the dads typed — and this
+   * is the half that had to stay, or home would sit there showing who was
+   * coming an hour ago.
+   */
+  | { t: 'stir'; what: 'night' | 'todo' }
+  /**
    * Somebody marked the calendar that picks the next night.
    *
    * A nudge and not the marks themselves: the calendar is read over HTTP, and
