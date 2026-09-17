@@ -123,3 +123,32 @@ test('what the group was asked before is readable, and a dad can add one', async
 
   await marc.context().close();
 });
+
+test('today’s answers are under today’s question', async ({ browser }) => {
+  // The count was the whole of it: "3 answers." and a full stop, with the
+  // answers two screens away — close the sheet, walk into the conversation,
+  // scroll past whatever has been said since. A question from March expanded
+  // to show its answers and today's did not, which is the wrong way round.
+  const marc = await comeIn(browser, 'Marc Reader');
+  const sam = await comeIn(browser, 'Sam Reader');
+
+  await open(sam, 'Questions');
+  await sam.getByRole('button', { name: 'Answer', exact: true }).click();
+  await sam.getByLabel('Your answer').fill('bedtime, mostly');
+  await sam.getByRole('button', { name: 'Answer', exact: true }).click();
+  await close(sam);
+
+  // Marc opens the question and reads it there, without leaving the sheet.
+  await open(marc, 'Questions');
+  const answers = marc.getByTestId('prompt-answers');
+  await expect(answers).toBeVisible({ timeout: 15_000 });
+  await expect(answers).toContainText('bedtime, mostly');
+  await expect(answers).toContainText('Sam Reader');
+
+  // And the box underneath says what it is, so an answer does not become
+  // next week's question.
+  await expect(marc.getByTestId('prompt-add')).toContainText('own');
+
+  await marc.context().close();
+  await sam.context().close();
+});

@@ -219,6 +219,8 @@ const EN = {
   // -------------------------------------------------------- the questions
   'q.title': 'Questions',
   'q.nobody_answered': 'Nobody yet.',
+  'q.what_they_said': 'What the others said',
+  'q.add_heading': 'Ask the group something of your own',
   'q.answers_one': '1 answer.',
   'q.answers_other': '{n} answers.',
   'q.you_answered': 'You answered.',
@@ -257,6 +259,7 @@ const EN = {
   'b.failed': 'That didn’t load.',
   'b.this_week': 'This week',
   'b.how_was': 'How was your week?',
+  'b.scale': '1 rough · 5 great',
   'b.note_label': 'One line about your week',
   'b.note_placeholder': 'One honest line',
   'b.commit_label': 'One thing to try',
@@ -634,6 +637,8 @@ const FR: Record<Key, string> = {
   // -------------------------------------------------------- les questions
   'q.title': 'Les questions',
   'q.nobody_answered': 'Personne encore.',
+  'q.what_they_said': 'Ce que les autres ont dit',
+  'q.add_heading': 'Demande-leur quelque chose à toi',
   'q.answers_one': '1 réponse.',
   'q.answers_other': '{n} réponses.',
   'q.you_answered': 'Tu as répondu.',
@@ -672,6 +677,7 @@ const FR: Record<Key, string> = {
   'b.failed': 'Ça n’a pas chargé.',
   'b.this_week': 'Cette semaine',
   'b.how_was': 'Ta semaine, c’était comment?',
+  'b.scale': '1 dur · 5 super',
   'b.note_label': 'Une ligne sur ta semaine',
   'b.note_placeholder': 'Une ligne honnête',
   'b.commit_label': 'Une affaire à essayer',

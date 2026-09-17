@@ -83,8 +83,14 @@ export function Questions({
            minmax(0, 1fr) is what stops a child widening its own container. */
         <div className="grid grid-cols-1 gap-5">
           <PromptCard messages={messages} onAnswer={onAnswer} canAnswer={canAnswer} />
-          {/* No heading: the box says what it is. */}
+          {/* A heading, because the box does NOT say what it is.
+              
+              Answering today's question is behind a button, so the only field
+              on this screen was the one that adds a question to the group's
+              pool — and an empty box under a question reads as the place to
+              answer it. A man's answer became next week's question. */}
           <section data-testid="prompt-add" className="grid gap-2">
+            <h3 className="m-0 text-[1.0625rem] font-semibold text-muted">{t('q.add_heading')}</h3>
             <AddPromptForm onAdded={added} />
             {/* The field clearing is the only other sign it worked, and a dad
                 who missed it adds the same question again and is refused. */}

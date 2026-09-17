@@ -366,6 +366,30 @@ weakening `sessionSecret()`.
   the constructor. `CREATE TABLE IF NOT EXISTS` does nothing to an existing
   table, so every future DO column needs the same treatment.
 
+## What the two sheets got wrong
+
+A read of the questions and the week for what a dad meets on first sight
+(2026-09-17). Four things, all of them the same mistake in different clothes:
+the screen knew something and did not say it.
+
+- **Today's answers are under today's question.** The card said "3 answers."
+  and stopped — while a question from March expanded to show its answers. The
+  one anybody cares about was the one you had to leave the sheet, walk into
+  the conversation and scroll for. They are in `room.messages` already, so
+  showing them costs a fetch of nothing.
+- **The box under today's question says what it is for.** Answering is behind
+  a button, so the only FIELD on that screen was the one that adds a question
+  to the group's pool — and an empty box under a question reads as the place
+  to answer it. A man's answer became next week's question.
+- **The 1–5 says which end is which, on the screen.** Five bare numbers do not
+  say whether 1 is a good week or a bad one. The words were there in the
+  accessible name only, so a screen reader was told what a sighted dad had to
+  guess — backwards, on the most-used control in the app.
+- **The week's note field has a visible label**, like the field under it. A
+  placeholder is not a label: it goes the moment he types, it is the first
+  thing a low-vision setting drops, and the two fields on one short form were
+  following two different rules.
+
 ## The board (M5)
 
 - `src/shared/week.ts` is pure ISO-8601 week numbering, computed in the

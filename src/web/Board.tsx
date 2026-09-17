@@ -229,7 +229,14 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
   return (
     <form className="grid gap-3" data-testid="your-week" onSubmit={submit}>
       <fieldset className="m-0 flex flex-wrap items-center gap-2 border-0 p-0">
-        <legend className="mb-1.5 text-base text-muted">{t('b.how_was')}</legend>
+        {/* Which end is which, on the screen and not only in the accessible
+            name. Five bare numbers do not say whether 1 is a good week or a
+            bad one, and a screen reader was being told something a sighted
+            dad had to guess — the wrong way round for the most-used control
+            on this sheet. */}
+        <legend className="mb-1.5 text-base text-muted">
+          {t('b.how_was')} <span className="text-sm whitespace-nowrap">({t('b.scale')})</span>
+        </legend>
         {[1, 2, 3, 4, 5].map((n) => (
           <label
             key={n}
@@ -264,17 +271,23 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
         ))}
       </fieldset>
 
-      <label htmlFor="note" className="sr-only">
-        {t('b.note_label')}
-      </label>
-      <input
-        id="note"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder={t('b.note_placeholder')}
-        maxLength={280}
-        className={FIELD}
-      />
+      {/* A visible label, like the field below it. A placeholder is not a
+          label: it goes the moment he types, it is the first thing a low
+          vision setting drops, and the two fields on this form were using
+          two different rules. */}
+      <div className="grid gap-1.5">
+        <label htmlFor="note" className="text-base text-muted">
+          {t('b.note_label')}
+        </label>
+        <input
+          id="note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder={t('b.note_placeholder')}
+          maxLength={280}
+          className={FIELD}
+        />
+      </div>
 
       <div className="grid gap-1.5">
         <label htmlFor="commitment" className="text-base text-muted">

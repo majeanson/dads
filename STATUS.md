@@ -39,7 +39,7 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 npm run typecheck
 npm run lint
 npm test              # 352, in workerd against the real migrations
-npm run e2e           # 91, against the built stack
+npm run e2e           # 92, against the built stack
 npm run audit:contrast  # 26 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run prove         # 32, against dads.marcportal.com itself

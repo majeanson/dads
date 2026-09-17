@@ -72,6 +72,27 @@ export function PromptCard({
             : t(`q.answers_${plural(lang, answersToday.length)}`, { n: answersToday.length })}
       </p>
 
+      {/* What they said, here, under the question it answers.
+          
+          The count was the whole of it before: "3 answers." and a full stop,
+          with the answers themselves two screens away — close the sheet, walk
+          into the conversation, scroll past whatever has been said since. A
+          question from March expanded to show its answers and today's did
+          not, which is exactly the wrong way round. They are in the room's
+          own messages already, so this costs nothing to read. */}
+      {answersToday.length > 0 ? (
+        <section className="mb-4" data-testid="prompt-answers">
+          <h3 className="m-0 mb-1 text-sm font-semibold text-muted">{t('q.what_they_said')}</h3>
+          <ul className="m-0 list-none border-l-2 border-line py-0 pl-3">
+            {answersToday.map((m) => (
+              <li key={m.id} className="py-1.5 text-base" data-testid="prompt-answer">
+                <span className="font-semibold">{m.name}</span> {m.body}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {open ? (
         <form className="grid gap-2" onSubmit={submit}>
           <label htmlFor="answer" className="sr-only">
