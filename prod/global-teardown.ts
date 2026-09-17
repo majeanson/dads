@@ -54,6 +54,12 @@ async function forgetInTheRoom(base: string, secret: string): Promise<void> {
  * Order matters. The messages, the answers, the marks and the agenda items
  * reference the members, so the members go last; the R2 blobs behind any
  * uploads are left to the media cap, which is the thing that owns them.
+ *
+ * And the ROOMS this suite opens, since rooms can be opened through the app.
+ * A test that makes one and leaves it behind is a permanent row in the real
+ * database with a word nobody knows, growing by one every run — and it takes
+ * a join word out of circulation for ever, because words are unique across
+ * every room. They are named with the same marker as everything else.
  */
 export default async function globalTeardown(): Promise<void> {
   // The room's own memory first, while the members are still there to be
@@ -67,6 +73,9 @@ export default async function globalTeardown(): Promise<void> {
 
   const like = `'${MARK}%'`;
   const mine = `SELECT id FROM members WHERE display_name LIKE ${like}`;
+  /** Rooms this suite opened. Named with the marker, like everything else it
+   * invents, so the sweep can find them and the dads' own room cannot match. */
+  const rooms = `SELECT id FROM groups WHERE name LIKE ${like}`;
 
   const statements = [
     `DELETE FROM night_items WHERE member_id IN (${mine})`,
@@ -87,6 +96,23 @@ export default async function globalTeardown(): Promise<void> {
     // this safe to key on a body match.
     `DELETE FROM messages WHERE member_id IS NULL AND body LIKE '%${MARK}%'`,
     `DELETE FROM members WHERE display_name LIKE ${like}`,
+    // Everything in a room the suite opened, then the room. Its members are
+    // gone by now — they carry the marker too — so this is the room itself
+    // and whatever hangs off it that nothing above reached.
+    `DELETE FROM night_votes WHERE group_id IN (${rooms})`,
+    `DELETE FROM rsvps WHERE group_id IN (${rooms})`,
+    `DELETE FROM night_items WHERE group_id IN (${rooms})`,
+    `DELETE FROM check_ins WHERE group_id IN (${rooms})`,
+    `DELETE FROM commitments WHERE group_id IN (${rooms})`,
+    `DELETE FROM presence WHERE group_id IN (${rooms})`,
+    `DELETE FROM reactions WHERE group_id IN (${rooms})`,
+    `DELETE FROM invites WHERE group_id IN (${rooms})`,
+    `DELETE FROM media WHERE group_id IN (${rooms})`,
+    `DELETE FROM messages WHERE group_id IN (${rooms})`,
+    `DELETE FROM prompt_days WHERE group_id IN (${rooms})`,
+    `DELETE FROM prompts WHERE group_id IN (${rooms})`,
+    `DELETE FROM members WHERE group_id IN (${rooms})`,
+    `DELETE FROM groups WHERE name LIKE ${like}`,
   ];
 
   for (const sql of statements) {
