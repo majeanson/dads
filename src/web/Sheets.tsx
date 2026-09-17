@@ -38,6 +38,8 @@ export function Sheets({
   night,
   pollPulse,
   rooms,
+  createdBy,
+  ownerName,
   todo,
   tableOpen,
   faceOf,
@@ -49,6 +51,12 @@ export function Sheets({
 }: {
   open: SheetName | null;
   onOpen: (sheet: SheetName | null) => void;
+  /** The member who opened this room, or null for a room that has no creator
+   * — every room made before rooms had one, where the switches stay
+   * everybody's. */
+  createdBy?: string | null;
+  /** That man's name, for the line above the switches. */
+  ownerName?: string;
   /** Which screen the menu was opened from. */
   view: 'home' | 'talk';
   /** The reader's own member id. */
@@ -162,6 +170,9 @@ export function Sheets({
           name: youName,
           face: roster.find((m) => m.memberId === you)?.face,
         }}
+        // A room with no creator is everybody's, which is what it always was.
+        mine={createdBy == null || createdBy === you}
+        ownerName={createdBy == null ? '' : (ownerName ?? '')}
         onSignOut={onSignOut}
       />
     </Sheet>

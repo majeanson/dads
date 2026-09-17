@@ -19,11 +19,18 @@ import type { RoomsOpen } from '../shared/protocol';
 export function Settings({
   rooms,
   you,
+  mine,
+  ownerName,
   onSignOut,
 }: {
   rooms: RoomsOpen;
   /** Him, from the roster — which is where his face's version lives. */
   you: { memberId: string; name: string; face?: number };
+  /** Whether the three switches are his: he opened the room, or the room has
+   * no creator and they are everybody's, as they were before creators. */
+  mine: boolean;
+  /** Who did open it, when it was not him. Empty if the room has no creator. */
+  ownerName: string;
   onSignOut: () => void;
 }) {
   const { t } = useT();
@@ -33,6 +40,7 @@ export function Settings({
   const [busy, setBusy] = useState(false);
 
   async function toggle(key: keyof RoomsOpen) {
+    if (!mine) return;
     const next = { ...shown, [key]: !shown[key] };
     setShown(next);
     setBusy(true);
@@ -63,16 +71,23 @@ export function Settings({
 
       <section>
         <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('set.rooms')}</h2>
-        {/* Any dad, like the night: there is no admin in a room of five
-            friends, and inventing one for three switches would be inventing
-            one. */}
+        {/* These three decide what the room IS, so they belong to the man who
+            opened it. Said in words rather than shown as three dead switches
+            with no explanation: a control a dad cannot work is a control that
+            needs to say why. A room with no creator says nothing, because
+            there is nothing to say — they are everybody's, as they were. */}
+        {ownerName === '' ? null : (
+          <p className="m-0 mb-1 text-sm text-muted" data-testid="rooms-owner">
+            {mine ? t('set.yours_to_change') : t('set.owner', { name: ownerName })}
+          </p>
+        )}
         <div className="border-t border-line">
           {rows.map((row) => (
             <Switch
               key={row.key}
               label={row.label}
               checked={shown[row.key]}
-              disabled={busy}
+              disabled={busy || !mine}
               onChange={() => void toggle(row.key)}
               testId={`room-${row.key}`}
             />

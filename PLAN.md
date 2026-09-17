@@ -8,22 +8,22 @@ at the table while you do.
 
 ## Locked decisions
 
-| Question      | Decision                                                                                                                                                                                                           |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Entry         | Invite code / passphrase per group. Name on first entry, remembered per device.                                                                                                                                    |
-| Core loop     | Live room (presence + chat) + daily prompt + play-while-you-talk.                                                                                                                                                  |
-| Growth engine | Weekly check-in (1–5 + one line) **and** weekly commitments, both group-visible.                                                                                                                                   |
-| Co-presence   | Scheduled dad night (recurring slot, countdown, reminders). **Widened 2026-09-17**: still the default, but a night can be set to happen once, and when it does the group picks the next date on a shared calendar. |
-| Rooms         | Multi-group from day one, keyed by roomId.                                                                                                                                                                         |
-| Stack         | Cloudflare Workers + Durable Objects + D1 + React/Vite.                                                                                                                                                            |
-| Storage       | DO = live (presence, chat, ws). D1 = durable (check-ins, commitments, prompts, history).                                                                                                                           |
-| Jaffre        | Iframe the deployed jaffre + postMessage bridge. No changes to jaffre internals.                                                                                                                                   |
-| Prompts       | Curated JSON starter set + dads can submit into their group's pool.                                                                                                                                                |
-| Repo          | `~/Documents/WebApp/dads`, own git repo. Never touches the WebApp parent repo.                                                                                                                                     |
-| Docs          | No life-as-code. Plain repo + CLAUDE.md.                                                                                                                                                                           |
-| Design        | Card-night clubhouse: dark, felt green + wood, the table is the centrepiece.                                                                                                                                       |
-| Design, again | M7 made it plain and library-free. **Reversed 2026-09-10**: Tailwind + Radix + lucide on our own palette — controls that read as controls, icons, and some depth.                                                  |
-| v1 scope      | Everything, Jaffre embed included.                                                                                                                                                                                 |
+| Question      | Decision                                                                                                                                                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entry         | Invite code / passphrase per group. Name on first entry, remembered per device. **Widened 2026-09-17**: anybody at the door can open a room of their own and share its word; the man who opens it owns its three switches. |
+| Core loop     | Live room (presence + chat) + daily prompt + play-while-you-talk.                                                                                                                                                          |
+| Growth engine | Weekly check-in (1–5 + one line) **and** weekly commitments, both group-visible.                                                                                                                                           |
+| Co-presence   | Scheduled dad night (recurring slot, countdown, reminders). **Widened 2026-09-17**: still the default, but a night can be set to happen once, and when it does the group picks the next date on a shared calendar.         |
+| Rooms         | Multi-group from day one, keyed by roomId.                                                                                                                                                                                 |
+| Stack         | Cloudflare Workers + Durable Objects + D1 + React/Vite.                                                                                                                                                                    |
+| Storage       | DO = live (presence, chat, ws). D1 = durable (check-ins, commitments, prompts, history).                                                                                                                                   |
+| Jaffre        | Iframe the deployed jaffre + postMessage bridge. No changes to jaffre internals.                                                                                                                                           |
+| Prompts       | Curated JSON starter set + dads can submit into their group's pool.                                                                                                                                                        |
+| Repo          | `~/Documents/WebApp/dads`, own git repo. Never touches the WebApp parent repo.                                                                                                                                             |
+| Docs          | No life-as-code. Plain repo + CLAUDE.md.                                                                                                                                                                                   |
+| Design        | Card-night clubhouse: dark, felt green + wood, the table is the centrepiece.                                                                                                                                               |
+| Design, again | M7 made it plain and library-free. **Reversed 2026-09-10**: Tailwind + Radix + lucide on our own palette — controls that read as controls, icons, and some depth.                                                          |
+| v1 scope      | Everything, Jaffre embed included.                                                                                                                                                                                         |
 
 ## Architecture
 
@@ -68,6 +68,9 @@ Repo init, Vite + React + TS, Worker + wrangler.jsonc, D1 migrations runner, vit
 `/join` with code → verify against `invite_code_hash` → pick display name → signed cookie
 (HMAC, Worker secret) binding member_id + group_id. Rejoin from same device is silent.
 Group creation is a seeded script/CLI, not a public flow, in v1.
+**Reversed 2026-09-17**: `POST /api/rooms/new` is a public flow. The CLI stays
+— it is how the real group was made and how a code is rotated — but it is no
+longer the only way a room comes to exist.
 
 **M2 — The room, live**
 RoomDO with WebSocket hibernation: presence roster, chat, typing, join/leave system lines.

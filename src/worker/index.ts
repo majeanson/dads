@@ -14,6 +14,7 @@ import { getPoll, pickDay, putVote } from './routes/poll';
 import { getPresence } from './routes/presence';
 import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
 import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp';
+import { postRoom } from './routes/create';
 import { putRooms } from './routes/rooms';
 import { search } from './routes/search';
 import { getTable } from './routes/table';
@@ -100,6 +101,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'POST /api/invite':
       return createInvite(request, env, prod);
+
+    case 'POST /api/rooms/new':
+      return postRoom(request, env, prod);
 
     case 'PUT /api/rooms':
       return putRooms(request, env, prod);

@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { join, type JoinFailure, type Session } from './api';
 import { plural, useT, type Key, type T } from './i18n';
+import { NewRoom } from './NewRoom';
 import { LangToggle } from './Toggles';
 import { Button } from './ui/Button';
 import { useFreshBuild } from './useFreshBuild';
@@ -42,6 +43,10 @@ function inviteFromUrl(): string {
 export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void }) {
   const { t, lang } = useT();
   const [invite] = useState(inviteFromUrl);
+  /** The door has two sides now: walking in, and opening one. A dad who was
+   * sent a link is never shown the second — he has already been let in by
+   * whoever sent it, and a form for making his own would be an odd answer. */
+  const [making, setMaking] = useState(false);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   // The door too, held back while he is typing into it.
@@ -70,72 +75,94 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
           whole product and it is here because a stranger who has been handed
           a code should recognise where he has landed. */}
       <img src="/icon.svg" alt="" width={64} height={64} className="mb-5 rounded-2xl shadow-sm" />
-      <h1 className="display m-0 text-4xl">dads</h1>
-      <p className="mt-2 mb-8 text-[1.0625rem] text-muted">
-        {invite ? t('join.invited') : t('join.lede')}
-      </p>
+      {making ? (
+        <NewRoom onMade={onJoined} onBack={() => setMaking(false)} />
+      ) : (
+        <>
+          <h1 className="display m-0 text-4xl">dads</h1>
+          <p className="mt-2 mb-8 text-[1.0625rem] text-muted">
+            {invite ? t('join.invited') : t('join.lede')}
+          </p>
 
-      <form onSubmit={submit} className="grid gap-4">
-        {/* A dad who followed a link has already been let in by whoever sent
+          <form onSubmit={submit} className="grid grid-cols-1 gap-4">
+            {/* A dad who followed a link has already been let in by whoever sent
             it. Asking him for the passphrase as well would be asking him to
             prove it twice. */}
-        {invite ? null : (
-          <div className="grid gap-1.5">
-            <label htmlFor="code" className="text-base text-muted">
-              {t('join.code')}
-            </label>
-            <input
-              id="code"
-              name="code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              autoComplete="off"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              enterKeyHint="next"
-              className={FIELD}
-              // The only thing anyone comes here to do.
-              autoFocus
-            />
-          </div>
-        )}
+            {invite ? null : (
+              <div className="grid gap-1.5">
+                <label htmlFor="code" className="text-base text-muted">
+                  {t('join.code')}
+                </label>
+                <input
+                  id="code"
+                  name="code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
+                  className={FIELD}
+                  // The only thing anyone comes here to do.
+                  autoFocus
+                />
+              </div>
+            )}
 
-        <div className="grid gap-1.5">
-          <label htmlFor="name" className="text-base text-muted">
-            {t('join.name')}
-          </label>
-          <input
-            id="name"
-            name="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="given-name"
-            autoCapitalize="words"
-            enterKeyHint="go"
-            maxLength={32}
-            className={FIELD}
-            autoFocus={invite !== ''}
-          />
-        </div>
+            <div className="grid gap-1.5">
+              <label htmlFor="name" className="text-base text-muted">
+                {t('join.name')}
+              </label>
+              <input
+                id="name"
+                name="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="given-name"
+                autoCapitalize="words"
+                enterKeyHint="go"
+                maxLength={32}
+                className={FIELD}
+                autoFocus={invite !== ''}
+              />
+            </div>
 
-        <Button
-          type="submit"
-          look="primary"
-          size="lg"
-          disabled={busy}
-          className="mt-1 justify-center"
-        >
-          {busy ? t('join.opening') : t('join.come_in')}
-          <ArrowRight size={18} aria-hidden="true" />
-        </Button>
-      </form>
+            <Button
+              type="submit"
+              look="primary"
+              size="lg"
+              disabled={busy}
+              className="mt-1 justify-center"
+            >
+              {busy ? t('join.opening') : t('join.come_in')}
+              <ArrowRight size={18} aria-hidden="true" />
+            </Button>
+          </form>
 
-      {error ? (
-        <p className="mt-4 text-[1.0625rem] text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
+          {error ? (
+            <p className="mt-4 text-[1.0625rem] text-danger" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          {/* Under the one question this screen exists to ask, never beside it:
+          nearly everybody who lands here was sent a word by a friend. A man
+          who followed an invite link is not offered it at all — he is already
+          being let into somebody's room. */}
+          {invite ? null : (
+            <Button
+              look="quiet"
+              size="lg"
+              onClick={() => setMaking(true)}
+              className="mt-4 justify-center"
+              data-testid="start-room"
+            >
+              {t('new.start')}
+            </Button>
+          )}
+        </>
+      )}
 
       {/* The one thing a stranger at the door can change. The theme follows
           his phone and needs no asking; the language does. */}

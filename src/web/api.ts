@@ -12,6 +12,10 @@ export interface Session {
     name: string;
     dadNight: DadNight | null;
     rooms: RoomsOpen;
+    /** The member who opened the room, and the only one whose switches these
+     * are. Null for a room made before rooms had creators: then they are
+     * everybody's, as they were. */
+    createdBy: string | null;
   };
   member: { id: string; displayName: string };
 }
@@ -75,6 +79,49 @@ export async function join(
     };
   }
 
+  const body = (await res.json()) as Session & { deviceToken: string };
+  writeDeviceToken(body.deviceToken);
+  return { ok: true, session: { group: body.group, member: body.member } };
+}
+
+/** What can go wrong opening a room. */
+export type CreateError =
+  | 'missing_room_name'
+  | 'room_name_too_long'
+  | 'code_too_short'
+  | 'code_too_long'
+  | 'code_taken'
+  | 'missing_name'
+  | 'name_too_long'
+  | 'too_many_rooms'
+  | 'unknown';
+
+/**
+ * Open a room of your own, and walk straight into it.
+ *
+ * One call, not two: the room and its first member are made together and the
+ * cookie comes back with them, so a man who has just named his room is not
+ * then asked to type its word to get in.
+ */
+export async function createRoom(
+  name: string,
+  code: string,
+  displayName: string,
+): Promise<
+  { ok: true; session: Session } | { ok: false; error: CreateError; retryAfterSeconds?: number }
+> {
+  const res = await fetch('/api/rooms/new', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, code, displayName, deviceToken: readDeviceToken() }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: CreateError;
+      retryAfterSeconds?: number;
+    };
+    return { ok: false, error: body.error ?? 'unknown', retryAfterSeconds: body.retryAfterSeconds };
+  }
   const body = (await res.json()) as Session & { deviceToken: string };
   writeDeviceToken(body.deviceToken);
   return { ok: true, session: { group: body.group, member: body.member } };

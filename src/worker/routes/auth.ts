@@ -1,6 +1,6 @@
 import type { DadNight } from '../../shared/dadNight';
 import type { RoomsOpen } from '../../shared/protocol';
-import { hashDeviceToken, randomToken, verifyInviteCode } from '../crypto';
+import { hashDeviceToken, inviteCodeLookup, randomToken, verifyInviteCode } from '../crypto';
 import type { Env } from '../env';
 import { sessionSecret } from '../env';
 import {
@@ -28,6 +28,7 @@ interface GroupRow {
   name: string;
   invite_code_salt: string;
   invite_code_hash: string;
+  created_by: string | null;
   dad_night_weekday: number | null;
   dad_night_time: string | null;
   dad_night_date: string | null;
@@ -44,6 +45,12 @@ export interface Session {
     name: string;
     dadNight: DadNight | null;
     rooms: RoomsOpen;
+    /**
+     * The member who opened the room, and the only one who may change what it
+     * has open. Null for every room made before rooms had creators — and for
+     * those, the three switches stay everybody's, which is what they were.
+     */
+    createdBy: string | null;
   };
   member: { id: string; displayName: string; avatarAt: number | null };
 }
@@ -121,7 +128,7 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
     return Response.json({ error: 'name_too_long' }, { status: 400 });
   }
 
-  const columns = `id, slug, name, invite_code_salt, invite_code_hash,
+  const columns = `id, slug, name, invite_code_salt, invite_code_hash, created_by,
                     dad_night_weekday, dad_night_time, dad_night_date, dad_night_tz,
                     questions_on, week_on, table_on`;
 
@@ -135,13 +142,50 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
           .first<GroupRow>()) ?? undefined;
     }
   } else {
-    const { results } = await env.DB.prepare(`SELECT ${columns} FROM groups LIMIT ?`)
-      .bind(GROUP_SCAN_LIMIT)
-      .all<GroupRow>();
-    for (const candidate of results) {
-      if (await verifyInviteCode(code, candidate.invite_code_salt, candidate.invite_code_hash)) {
-        group = candidate;
-        break;
+    // The word names its own room: one indexed lookup, then one PBKDF2 to
+    // verify it. What this replaces was a scan that derived once per room
+    // until something matched, which was fine while there was one room and
+    // is neither correct nor affordable now that anyone can open one.
+    const lookup = await inviteCodeLookup(sessionSecret(env, isProduction), code);
+    group =
+      (await env.DB.prepare(`SELECT ${columns} FROM groups WHERE invite_code_lookup = ?`)
+        .bind(lookup)
+        .first<GroupRow>()) ?? undefined;
+    if (group && !(await verifyInviteCode(code, group.invite_code_salt, group.invite_code_hash))) {
+      group = undefined;
+    }
+
+    // Rooms made before the fingerprint existed have none, so they still have
+    // to be found the old way — and then they are GIVEN one, here, on the
+    // first correct word anybody types at them.
+    //
+    // Healed on use rather than written by the script that makes them,
+    // because the fingerprint is keyed with the Worker's secret and
+    // `create-group.ts` runs on a laptop that does not have production's.
+    // A secret you cannot read is the whole point of a secret; a room that
+    // teaches itself the fast path on its first join costs nothing and asks
+    // nobody for it.
+    if (!group) {
+      const { results } = await env.DB.prepare(
+        `SELECT ${columns} FROM groups WHERE invite_code_lookup IS NULL LIMIT ?`,
+      )
+        .bind(GROUP_SCAN_LIMIT)
+        .all<GroupRow>();
+      for (const candidate of results) {
+        if (await verifyInviteCode(code, candidate.invite_code_salt, candidate.invite_code_hash)) {
+          group = candidate;
+          await env.DB.prepare(
+            'UPDATE groups SET invite_code_lookup = ? WHERE id = ? AND invite_code_lookup IS NULL',
+          )
+            .bind(lookup, candidate.id)
+            // A UNIQUE index stands behind that column, so two old rooms that
+            // happen to share a word will see the second write refused. That
+            // is the right outcome — the scan goes on serving it exactly as
+            // it did — and it is not a reason to refuse the dad his door.
+            .run()
+            .catch((err: unknown) => console.error('join: could not learn the word', err));
+          break;
+        }
       }
     }
   }
@@ -197,6 +241,7 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
       name: group.name,
       dadNight: nightFrom(group),
       rooms: roomsFrom(group),
+      createdBy: group.created_by ?? null,
     },
     // A dad coming through the door has no face yet, and a returning one is
     // about to be handed his by the roster anyway.
@@ -244,7 +289,7 @@ export async function currentSession(
   const row = await env.DB.prepare(
     `SELECT m.id AS member_id, m.display_name, g.id AS group_id, g.slug, g.name,
             g.dad_night_weekday, g.dad_night_time, g.dad_night_date, g.dad_night_tz,
-            g.questions_on, g.week_on, g.table_on, m.avatar_at
+            g.questions_on, g.week_on, g.table_on, g.created_by, m.avatar_at
        FROM members m JOIN groups g ON g.id = m.group_id
       WHERE m.id = ? AND m.group_id = ?`,
   )
@@ -262,6 +307,7 @@ export async function currentSession(
       questions_on: number;
       week_on: number;
       table_on: number;
+      created_by: string | null;
       avatar_at: number | null;
     }>();
 
@@ -273,6 +319,7 @@ export async function currentSession(
       name: row.name,
       dadNight: nightFrom(row),
       rooms: roomsFrom(row),
+      createdBy: row.created_by,
     },
     member: { id: row.member_id, displayName: row.display_name, avatarAt: row.avatar_at },
   };

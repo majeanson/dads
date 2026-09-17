@@ -242,10 +242,13 @@ weakening `sessionSecret()`.
   "locked in" and not as "set dad night to Thursdays"). Everyone looking at
   the calendar right now finds out through a `poll` frame, which is a nudge
   to re-read and not the marks themselves.
-- **Any dad locks it in, and no rule does it for him.** Same as the night and
-  the three switches: there is no admin in a group of five friends, and a rule
-  that picked the leader at some hour would be deciding a tie, or a late vote,
-  on behalf of men who are all in the same conversation and can simply say.
+- **Any dad locks it in, and no rule does it for him.** Same as the night:
+  there is no admin over what a group decides together, and a rule that picked
+  the leader at some hour would be deciding a tie, or a late vote, on behalf
+  of men who are all in the same conversation and can simply say. (The three
+  switches are no longer an example of this — since 2026-09-17 they are the
+  room creator's. What a room IS and what a group DECIDES are different
+  questions, and only the first one has an owner.)
 - **A one-off `.ics` gets no RRULE and its own UID.** An RRULE would put a
   standing Thursday in five calendars off the back of one date they agreed to,
   and a repeated UID asks a calendar to REWRITE the event already in it.
@@ -767,13 +770,66 @@ secret, custom domain bound by the route in wrangler.toml.
   conversation and is idempotent, because these suites walk through screens
   and it must not matter which one the last step left him on.
 
+## A room of your own
+
+- **Anybody at the door can open a room** (2026-09-17), which reverses
+  PLAN.md's "group creation is a seeded script/CLI, not a public flow".
+  `scripts/create-group.ts` stays — it made the real group and it is how a
+  code is rotated — but it is no longer the only way a room exists. What that
+  costs is that this app is now open to whoever finds the address, and three
+  things pay for it: three rooms per address per day (counted in
+  `join_attempts`, its own bucket so a wrong code and a new room cannot lock
+  each other out), a four-character floor on the word, and the word being
+  unique across every room.
+- **The word is a fingerprint now, not a scan.** Joining used to run a
+  100,000-iteration PBKDF2 against every group in turn until one matched,
+  capped at fifty. With one room that is one derivation; with rooms anybody
+  can make it is two failures waiting — past the fiftieth room a dad with a
+  perfectly good word is told it opens nothing, and every wrong guess costs
+  fifty derivations. `invite_code_lookup` is the normalized word HMAC'd with
+  the Worker secret, UNIQUE, so a word finds its room in one indexed read and
+  PBKDF2 only verifies. Keyed rather than plain for the reason the IP buckets
+  are: a bare hash of a short human word is a dictionary attack against a
+  stolen dump.
+- **A room LEARNS its word on the first join, rather than being told it.**
+  The fingerprint is keyed with the Worker's secret, and `create-group.ts`
+  runs on a laptop that does not have production's — a secret you cannot read
+  is the whole point of one. So rooms made by the script carry NULL, the
+  bounded scan still finds them, and the first correct word anybody types
+  writes the fingerprint for next time. Do not "fix" this by putting the
+  production secret on a laptop.
+- **Two rooms cannot share a word.** The door takes a word and nothing else,
+  so a duplicate would hand a dad who typed the right thing a room full of
+  strangers — the old scan gave him whichever row came first. The second room
+  is refused, both by a SELECT for the clear message and by the UNIQUE index
+  for the two that raced.
+- **The door offers it under the question, never beside it.** Nearly everybody
+  who loads that page was sent a word by a friend, and the screen should ask
+  the one thing they came to answer. A dad who followed an invite LINK is not
+  offered it at all: he is already being let into somebody's room.
+- **Opening a room lets him in on the same submit.** The room, its first
+  member and the cookie are made together. Asking a man to type the word he
+  invented thirty seconds ago is asking him to prove he is himself.
+
 ## The three switches
 
-- **`PUT /api/rooms` is any dad's to change and nobody's to own**, like the
-  night. Two dads seeing different menus is how a group stops sharing a room,
-  so it is the group's setting and not each man's, and it is announced to
-  nothing — a switch is not news, and the change reaches every open socket
-  anyway.
+- **The three switches are the CREATOR's** (2026-09-17), and this reverses
+  what stood here: they were any dad's to change and nobody's to own. They
+  decide what the room IS — whether it asks a question every day, keeps a
+  week, has a table in it — and a man who opened a room for a purpose should
+  not have that purpose changed by whoever wandered in. It is still the
+  GROUP's setting and not each man's: two dads seeing different menus is how
+  a group stops sharing a room. What changed is who holds the switch.
+- **A room with no creator keeps the old rule exactly.** `created_by` is NULL
+  for every room made before rooms had creators, and for those the switches
+  stay everybody's. That is not a gap to close later; it is what those rooms
+  agreed to, and the real group is one of them.
+- **The night, the board, the poll and keeping a photograph are NOT this.**
+  There is still no admin for the things a group decides together — when to
+  meet, what to try this week, which photograph survives. Ownership reaches
+  exactly as far as what the room is made of, and no further.
+- It is announced to nothing — a switch is not news, and the change reaches
+  every open socket anyway.
 - **A switch is a boolean or it is absent.** Anything else used to reach
   `Number()`, and a NaN bound to D1 is a NULL rather than a nought: the row's
   NOT NULL constraint threw and the dad got a 500 with a stack behind it. A

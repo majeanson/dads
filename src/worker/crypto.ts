@@ -60,6 +60,23 @@ export function normalizeInviteCode(code: string): string {
   return code.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/**
+ * The same word, as something the database can be asked about.
+ *
+ * PBKDF2 is deliberately slow and salted per group, which makes it useless
+ * for FINDING a room: you would have to derive once per room to know which
+ * one a typed word belongs to. This is the index — one HMAC, keyed with the
+ * Worker secret, over the same normalized word. It says which row to check;
+ * `verifyInviteCode` still does the checking.
+ *
+ * Keyed rather than plain, for the reason the IP buckets are: a bare SHA of a
+ * short human word is a dictionary attack against a stolen database dump, and
+ * the secret is not in the dump.
+ */
+export async function inviteCodeLookup(secret: string, code: string): Promise<string> {
+  return hmac(secret, `code:${normalizeInviteCode(code)}`);
+}
+
 export async function hashInviteCode(code: string, salt: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw',

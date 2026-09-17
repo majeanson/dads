@@ -441,6 +441,10 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         night={room.night}
         pollPulse={room.pollPulse}
         rooms={room.rooms}
+        createdBy={session.group.createdBy}
+        // From `members` and not the roster: the man who opened the room is
+        // very often not the one sitting in it tonight.
+        ownerName={room.members.find((m) => m.memberId === session.group.createdBy)?.name ?? ''}
         todo={todo}
         tableOpen={tableOpen}
         faceOf={faceOf}
