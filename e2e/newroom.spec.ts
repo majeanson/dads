@@ -176,3 +176,56 @@ test('the creator changes the word, then hands the room on', async ({ browser })
   await maker.context().close();
   await guest.context().close();
 });
+
+test('one phone, two rooms, and a way between them', async ({ browser }) => {
+  // The device token is looked up per group, so joining a second room never
+  // cost him the first — but without its word written down somewhere there
+  // was no way back, and nothing in the app said which rooms he was in.
+  const word = `e2e second ${Math.random().toString(36).slice(2, 8)}`;
+  const page = await atTheDoor(browser);
+
+  // He is in the room this file opened at the top; now he opens another on
+  // the same phone.
+  await page.getByLabel('Code').fill(WORD);
+  await page.getByLabel('Your name').fill('Marc Two');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByRole('heading', { name: ROOM })).toBeVisible({ timeout: 20_000 });
+
+  // In the conversation, where the full menu is: home holds the short one,
+  // and a fifth row there puts the door off the bottom of a small phone. The
+  // row is there with ONE room too, because it is also the only way to get
+  // another — a man already inside cannot reach the door.
+  await talk(page);
+  await menu(page);
+  await page.getByTestId('menu-rooms').click();
+  await expect(page.getByTestId('my-room')).toHaveCount(1);
+
+  await page.getByTestId('rooms-start').click();
+  await page.getByLabel('What to call it').fill('The Second Lot');
+  await page.getByLabel('The word to get in').fill(word);
+  await page.getByLabel('Your name').fill('Marc Elsewhere');
+  await page.getByTestId('open-room').click();
+  await expect(page.getByRole('heading', { name: 'The Second Lot' })).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // Now there are two, and the row carries the count. Back into the
+  // conversation first: opening a room lands him on home, like any arrival.
+  await talk(page);
+  await menu(page);
+  await expect(page.getByTestId('menu-rooms')).toContainText('2');
+  await page.getByTestId('menu-rooms').click();
+  await expect(page.getByTestId('my-rooms')).toBeVisible();
+  const rows = page.getByTestId('my-room');
+  await expect(rows).toHaveCount(2);
+  // The one he is standing in says so; the other says what he is called there.
+  await expect(rows.filter({ hasText: 'The Second Lot' })).toHaveAttribute('data-current', 'yes');
+  await expect(rows.filter({ hasText: ROOM })).toContainText('Marc Two');
+
+  // And going back needs no word.
+  await rows.filter({ hasText: ROOM }).click();
+  await expect(page.getByRole('heading', { name: ROOM })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+
+  await page.context().close();
+});

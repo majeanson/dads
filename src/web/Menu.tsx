@@ -1,5 +1,6 @@
 import {
   CalendarCheck,
+  DoorOpen,
   MessageCircleQuestion,
   Search,
   Send,
@@ -13,7 +14,7 @@ import { Button } from './ui/Button';
 
 /** What is open over the room, if anything. */
 export type SheetName =
-  'menu' | 'here' | 'prompts' | 'board' | 'night' | 'find' | 'invite' | 'settings';
+  'menu' | 'here' | 'prompts' | 'board' | 'night' | 'find' | 'invite' | 'rooms' | 'settings';
 
 /**
  * One shape for every row in the menu.
@@ -52,6 +53,7 @@ export function Menu({
   rooms,
   todo,
   tableOpen,
+  mine,
   onToggleTable,
   onOpen,
 }: {
@@ -60,6 +62,8 @@ export function Menu({
   rooms: RoomsOpen;
   todo: Todo;
   tableOpen: boolean;
+  /** How many rooms this phone is in. One is the normal answer. */
+  mine: number;
   onToggleTable: () => void;
   /** Opens a sheet; null closes whatever this menu is sitting in. */
   onOpen: (sheet: SheetName | null) => void;
@@ -135,6 +139,22 @@ export function Menu({
         <Send size={22} aria-hidden="true" className="shrink-0 text-muted" />
         <span className="min-w-0 truncate">{t('menu.invite')}</span>
       </Button>
+
+      {/* In the conversation only, like Find — home holds the short menu and
+          a fifth row there puts the door off the bottom of a 667px phone,
+          which the fit suite measures. Always present with one room, though,
+          because this is also the only way to get ANOTHER: a man already
+          inside cannot reach the door, and starting a room lives on the door.
+          The count appears when there is something to count. */}
+      {!home ? (
+        <Button block className={ITEM} onClick={() => onOpen('rooms')} data-testid="menu-rooms">
+          <DoorOpen size={22} aria-hidden="true" className="shrink-0 text-muted" />
+          <span className="min-w-0 truncate">{t('menu.rooms')}</span>
+          {mine > 1 ? (
+            <span className="ml-auto shrink-0 text-sm font-normal text-muted">{mine}</span>
+          ) : null}
+        </Button>
+      ) : null}
 
       <Button block className={ITEM} onClick={() => onOpen('settings')}>
         <SettingsIcon size={22} aria-hidden="true" className="shrink-0 text-muted" />

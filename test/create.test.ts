@@ -313,3 +313,90 @@ describe('a room’s address', () => {
     expect(slugOf('   ')).toMatch(/^room-/);
   });
 });
+
+describe('the rooms one phone is in', () => {
+  beforeEach(async () => {
+    await resetTables();
+  });
+
+  const mine = (deviceToken: string) =>
+    worker.fetch(
+      new Request('https://dads.test/api/rooms/mine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceToken }),
+      }),
+    );
+  const move = (groupId: string, deviceToken: string) =>
+    worker.fetch(
+      new Request('https://dads.test/api/rooms/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId, deviceToken }),
+      }),
+    );
+
+  it('lists both, and moves between them without the word', async () => {
+    // One phone, two rooms. This always worked at the door — the device token
+    // is looked up per group, so joining the second never cost him the first
+    // — but there was no way back without the first room's word written down
+    // somewhere, and nothing ever told him which rooms he was in.
+    const first = await worker.fetch(
+      postRoom({ name: 'The Thursday Lot', code: 'the first room', displayName: 'Marc' }),
+    );
+    const token = ((await first.json()) as { deviceToken: string }).deviceToken;
+
+    // The same phone: the browser sends the token it already has, which is
+    // what makes the second room HIS second room rather than a stranger's.
+    const second = await worker.fetch(
+      postRoom({
+        name: 'The Other Lot',
+        code: 'the second room',
+        displayName: 'Marc T',
+        deviceToken: token,
+      }),
+    );
+    expect(second.status).toBe(200);
+    const secondId = ((await second.clone().json()) as { group: { id: string } }).group.id;
+
+    const joined = await worker.fetch(
+      postJoin({ code: 'the first room', displayName: 'Marc', deviceToken: token }),
+    );
+    expect(joined.status).toBe(200);
+
+    const list = (await (await mine(token)).json()) as {
+      rooms: { name: string; displayName: string; current: boolean }[];
+    };
+    expect(list.rooms.map((r) => r.name).sort()).toEqual(['The Other Lot', 'The Thursday Lot']);
+
+    // And moving is a cookie, not a password.
+    const moved = await move(secondId, token);
+    expect(moved.status).toBe(200);
+    const cookie = cookieFrom(moved);
+    const me = await worker.fetch('https://dads.test/api/me', { headers: { Cookie: cookie } });
+    expect(((await me.json()) as { group: { name: string } }).group.name).toBe('The Other Lot');
+  });
+
+  it('will not move a phone into a room it was never in', async () => {
+    const mine1 = await worker.fetch(
+      postRoom({ name: 'His', code: 'his own room', displayName: 'Marc' }),
+    );
+    const token = ((await mine1.json()) as { deviceToken: string }).deviceToken;
+    const theirs = await worker.fetch(
+      postRoom({ name: 'Theirs', code: 'somebody elses', displayName: 'Sam' }),
+    );
+    const theirId = ((await theirs.json()) as { group: { id: string } }).group.id;
+
+    // The device token is the whole claim, so a stranger's room is a 403 and
+    // not a hint that it exists.
+    const refused = await move(theirId, token);
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { error: string }).error).toBe('not_yours');
+
+    // And a made-up token is nobody.
+    expect((await mine('not-a-real-token')).status).toBe(200);
+    expect(
+      ((await (await mine('not-a-real-token')).json()) as { rooms: unknown[] }).rooms,
+    ).toHaveLength(0);
+  });
+});

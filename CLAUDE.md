@@ -855,6 +855,31 @@ secret, custom domain bound by the route in wrangler.toml.
   beside his lines, and not in any list of the group's men. Found by the
   handover picker being empty.
 
+- **A phone can be in several rooms, and always could.** The device token is
+  looked up per GROUP, so joining a second room never cost a dad the first and
+  typing the first one's word again brought him back as himself with all his
+  history. What was missing was any way to know which rooms he was in, or to
+  get back without that word written down somewhere.
+- **The device token is what proves it**, here as at the door: 256 bits this
+  Worker issued, stored only as an HMAC. A browser holding one IS the man who
+  joined, so switching needs no password and cannot reach a room he was never
+  let into. `POST /api/rooms/mine` lists them; `/switch` mints the cookie for
+  one of them and 403s for anything else, with no hint that it exists.
+- **Switching RELOADS.** The socket, the session, the seen-marks, the night
+  and every screen read from them are keyed to the group; starting again is
+  the honest way to change all of it at once, and it costs what a tap costs.
+- **The sheet is also the only way to GET another room.** A man already inside
+  cannot reach the door, and both "start a room" and the word field live on
+  the door — so they live in here too. Without that, the feature was a list
+  that could never grow past one.
+- **The row is in the conversation's menu, not home's.** Home holds the short
+  menu and a fifth row there puts the door off the bottom of a 667px phone,
+  which `e2e/fit.spec.ts` measures. It is present with ONE room, unlike the
+  count beside it, because adding is what it is for.
+- **A man may go by different names in different rooms**, and the list is the
+  one place both are on screen: the room he is in says "you're here", the
+  others say what he is called there.
+
 ## The three switches
 
 - **The three switches are the CREATOR's** (2026-09-17), and this reverses

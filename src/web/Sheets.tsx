@@ -6,6 +6,7 @@ import { Find } from './Find';
 import { Here } from './Here';
 import { Invite } from './Invite';
 import { Menu, type SheetName } from './Menu';
+import { MyRooms } from './MyRooms';
 import { Night } from './Night';
 import { Questions } from './Questions';
 import { Settings } from './Settings';
@@ -44,6 +45,7 @@ export function Sheets({
   ownerName,
   todo,
   tableOpen,
+  mine,
   faceOf,
   onToggleTable,
   onAnswerPrompt,
@@ -81,6 +83,8 @@ export function Sheets({
   rooms: RoomsOpen;
   todo: Todo;
   tableOpen: boolean;
+  /** How many rooms this phone is in. */
+  mine: number;
   faceOf: (memberId: string | null) => number | undefined;
   onToggleTable: () => void;
   onAnswerPrompt: (body: string) => boolean;
@@ -101,6 +105,7 @@ export function Sheets({
           rooms={rooms}
           todo={todo}
           tableOpen={tableOpen}
+          mine={mine}
           onToggleTable={onToggleTable}
           onOpen={onOpen}
         />
@@ -155,6 +160,14 @@ export function Sheets({
     return (
       <Sheet title={t('find.title')} onClose={close}>
         <Find faceOf={(memberId) => faceOf(memberId)} />
+      </Sheet>
+    );
+  }
+
+  if (open === 'rooms') {
+    return (
+      <Sheet title={t('rooms.title')} onClose={close}>
+        <MyRooms onClose={close} />
       </Sheet>
     );
   }

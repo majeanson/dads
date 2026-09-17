@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchTodo, keepMedia, type Session, type Todo } from './api';
+import { fetchMyRooms, fetchTodo, keepMedia, type Session, type Todo } from './api';
 import type { RoomMessage } from '../shared/protocol';
 import { ArrowDown } from 'lucide-react';
 import { CallBar } from './CallBar';
@@ -74,6 +74,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const [editing, setEditing] = useState<RoomMessage | null>(null);
   const [tableOpen, setTableOpen] = useState(false);
   const [todo, setTodo] = useState<Todo>({ prompt: false, board: false });
+  /**
+   * How many rooms this phone is in.
+   *
+   * Asked once, at the door's other side: it changes when he joins or opens
+   * another, and both of those reload the app anyway. One is the normal
+   * answer, and one means the menu says nothing about rooms at all.
+   */
+  const [mine, setMine] = useState(1);
   const [now, setNow] = useState(() => Date.now());
   /**
    * The room's one line of status, above the composer.
@@ -117,6 +125,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
     bottom,
     lines,
   });
+
+  useEffect(() => {
+    fetchMyRooms()
+      .then((rooms) => setMine(Math.max(1, rooms.length)))
+      .catch(() => {
+        // One is the safe answer: no row, and nothing lost.
+      });
+  }, []);
 
   const refreshTodo = useCallback(() => {
     fetchTodo()
@@ -325,6 +341,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               rooms={room.rooms}
               todo={todo}
               tableOpen={tableOpen}
+              mine={mine}
               onToggleTable={() => setTableOpen((v) => !v)}
               onOpen={setSheet}
             />
@@ -441,6 +458,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         ownerName={room.members.find((m) => m.memberId === session.group.createdBy)?.name ?? ''}
         todo={todo}
         tableOpen={tableOpen}
+        mine={mine}
         faceOf={faceOf}
         onToggleTable={() => setTableOpen((v) => !v)}
         onAnswerPrompt={room.answerPrompt}

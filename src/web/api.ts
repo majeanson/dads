@@ -173,6 +173,44 @@ export async function handRoom(memberId: string): Promise<void> {
   if (!res.ok) throw new Error(`PUT /api/rooms/owner ${res.status}`);
 }
 
+/** A room this device is in. */
+export interface MyRoom {
+  id: string;
+  name: string;
+  slug: string;
+  /** What he is called in that one. */
+  displayName: string;
+  current: boolean;
+}
+
+/**
+ * Every room this browser belongs to, newest first.
+ *
+ * The device token is the credential, exactly as it is at the door: it is
+ * what says a browser is a man who already joined. The cookie is no use for
+ * this — it names one room, and the question is which others there are.
+ */
+export async function fetchMyRooms(): Promise<MyRoom[]> {
+  const res = await fetch('/api/rooms/mine', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceToken: readDeviceToken() }),
+  });
+  if (!res.ok) return [];
+  return ((await res.json()) as { rooms: MyRoom[] }).rooms;
+}
+
+/** Move this browser to another of his rooms. The caller reloads: the socket,
+ * the session and everything read from them are keyed to the group. */
+export async function switchRoom(groupId: string): Promise<boolean> {
+  const res = await fetch('/api/rooms/switch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ groupId, deviceToken: readDeviceToken() }),
+  });
+  return res.ok;
+}
+
 export async function leave(): Promise<void> {
   await fetch('/api/leave', { method: 'POST' });
 }
