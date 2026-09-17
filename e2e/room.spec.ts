@@ -299,6 +299,25 @@ test('a dad answers a line, and the quote rides above his', async ({ browser }) 
   // And the strip is gone once it went.
   await expect(sam.getByTestId('replying')).toHaveCount(0);
 
+  // Taking the original back takes the quote of it off the answer, on both
+  // screens and without a reload: a quote is a copy of his words, and "then
+  // it is gone" has to mean gone. The answer itself stays — they are Sam's
+  // words and nobody else's to take.
+  // Two rows hold those words now — his own line and the quote above Sam's
+  // answer — so the original is the one with no quote on it.
+  await marc
+    .getByTestId('line')
+    .filter({ hasText: 'who has the cards this week' })
+    .filter({ hasNot: marc.getByTestId('quote') })
+    .click({ button: 'right' });
+  await marc.getByTestId('line-retract').click();
+  await marc.getByTestId('line-retract').click();
+  for (const page of [sam, marc]) {
+    const answer = page.getByTestId('line').filter({ hasText: 'I do, still in the car' });
+    await expect(answer).toBeVisible();
+    await expect(answer.getByTestId('quote')).toHaveCount(0);
+  }
+
   await marc.context().close();
   await sam.context().close();
 });
@@ -333,6 +352,59 @@ test('a dad changes his own line, and the others read the new words', async ({ b
 
   await marc.context().close();
   await sam.context().close();
+});
+
+test('a change that never reached the room leaves him holding his words', async ({ browser }) => {
+  // The dead spot: the socket stays OPEN and swallows everything, which is
+  // what a tunnel does and what going offline does not. A chat line survives
+  // this because the outbox holds it until it comes back — and a change to a
+  // line has to survive it the same way, because the alternative is the app
+  // clearing a man's new words and leaving the old ones on the screen with
+  // nothing anywhere saying why.
+  const context = await browser.newContext();
+  let swallow = false;
+  await context.routeWebSocket('**/ws*', (ws) => {
+    const server = ws.connectToServer();
+    ws.onMessage((m) => {
+      if (!swallow) server.send(m);
+    });
+    server.onMessage((m) => ws.send(m));
+  });
+
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill('Marc Deadspot');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
+
+  await page.getByLabel('Say something').fill('bedtime at seven');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const his = page.getByTestId('line').filter({ hasText: 'bedtime at seven' });
+  await expect(his).toBeVisible();
+
+  await his.click({ button: 'right' });
+  await page.getByTestId('line-edit').click();
+  await page.getByLabel('Say something').fill('bedtime at eight');
+
+  swallow = true;
+  await page.getByRole('button', { name: 'Send' }).click();
+
+  // The room never answers, so after the grace he is told — and he still has
+  // what he typed, and the line still says what it always said.
+  await expect(page.getByText(/didn’t reach the room/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('editing')).toBeVisible();
+  await expect(page.getByLabel('Say something')).toHaveValue('bedtime at eight');
+  await expect(his).toBeVisible();
+
+  // And pressing it again once the signal is back is all it takes.
+  swallow = false;
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByTestId('line').filter({ hasText: 'bedtime at eight' })).toBeVisible();
+  await expect(page.getByTestId('editing')).toHaveCount(0);
+
+  await context.close();
 });
 
 test('a line that is not yours offers no way to take it back', async ({ browser }) => {

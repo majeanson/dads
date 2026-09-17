@@ -95,8 +95,16 @@ weakening `sessionSecret()`.
   seconds after the first try). Without it, every recovered line would post
   twice.
 - Three things stop the outbox growing for ever: 20 lines held, 3 tries each,
-  and an `error` frame drops the oldest — a body the room refuses would
-  otherwise be re-sent all evening.
+  and an `error` frame drops the line it NAMES — a body the room refuses
+  would otherwise be re-sent all evening.
+- **A refusal names the line it is about.** `error` carries the sender's
+  `cid` back when the refused frame had one, and the outbox drops that line
+  and no other. It used to drop the oldest one in flight, which was only ever
+  a guess dressed as a rule: everything a dad can send is refused with the
+  same handful of codes, so a refused EDIT — or a prompt answer with no
+  question behind it — quietly threw away a chat line that was perfectly good
+  and would have gone through on the next try. A refusal with no name on it
+  now leaves the outbox alone.
 - **A line can be taken back, and then it is gone.** `{ t: 'retract', id }` in,
   `{ t: 'gone', id }` out. Only your own and only what you TYPED — `chat` and
   `prompt`; the room's own lines are facts about the evening and nobody's to
@@ -152,11 +160,25 @@ weakening `sessionSecret()`.
   line WITHOUT a quote when the id is nothing: his words are the thing and
   the quote is the context. A quote goes nowhere on a tap, for the same
   reason a search result does.
+- **A quote survives an edit and does NOT survive a retraction.** The snapshot
+  exists so it can go on saying what he was answering; the one case where
+  surviving is wrong is a line taken BACK, because the words would be on every
+  screen again under somebody's answer, and "then it is gone" has to mean
+  gone. `unquote()` clears the stored quote in the tail and the archive,
+  matched on the id inside the JSON, and every open socket works it out from
+  the `gone` frame it already gets — no frame was added for this. The answer
+  keeps his own words and loses the context, which is what a retraction costs
+  everybody.
 - **Editing has retraction's authority and retraction's honesty.** His own,
   only `chat` and `prompt`, checked in the archive first and the tail too;
   never to nothing. Not optimistic: an `edited` frame goes to everyone, the
   editor included, and the composer's field keeps his words until the room
-  took them. `edited_at` is the one fact kept; the words before it are not.
+  took them. **"Took them" means the line came BACK changed**, never that
+  `ws.send` did not throw — that is the same dead-spot socket the outbox
+  exists for, and clearing the field on a send that went nowhere left a man
+  looking at the old words with his new ones gone. The edit waits
+  `ACK_GRACE_MS` for its own line; unanswered, he keeps what he typed, the
+  composer says so, and pressing Send again is the whole retry. `edited_at` is the one fact kept; the words before it are not.
   **A socket that resumed rather than reloaded is not told about an edit it
   missed** — the backfill is by seq, and an edit does not move a line's seq.
   A reload gets the tail, which has the new words. Rare enough to leave, and

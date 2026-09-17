@@ -51,9 +51,9 @@ async function forgetInTheRoom(base: string, secret: string): Promise<void> {
  * "anything recent": the last thing this should ever do is take a line one of
  * the actual dads wrote.
  *
- * Order matters. The messages, the answers and the agenda items reference the
- * members, so the members go last; the R2 blobs behind any uploads are left
- * to the media cap, which is the thing that owns them.
+ * Order matters. The messages, the answers, the marks and the agenda items
+ * reference the members, so the members go last; the R2 blobs behind any
+ * uploads are left to the media cap, which is the thing that owns them.
  */
 export default async function globalTeardown(): Promise<void> {
   // The room's own memory first, while the members are still there to be
@@ -75,6 +75,11 @@ export default async function globalTeardown(): Promise<void> {
     `DELETE FROM commitments WHERE member_id IN (${mine})`,
     `DELETE FROM push_subscriptions WHERE member_id IN (${mine})`,
     `DELETE FROM presence WHERE member_id IN (${mine})`,
+    // A mark this suite put on one of the real dads' lines. The foreign keys
+    // would cascade it when the member goes, but a sweep that leans on a
+    // PRAGMA being on is a sweep that reports itself clean while something
+    // stays in the room.
+    `DELETE FROM reactions WHERE member_id IN (${mine})`,
     `DELETE FROM messages WHERE member_id IN (${mine})`,
     // The lines the ROOM wrote about them — "… is in.", "…, for dad night: …"
     // — carry no member id, so the sweep above cannot see them. They are the

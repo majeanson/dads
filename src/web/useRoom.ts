@@ -115,6 +115,24 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
       tries: number;
     }[]
   >([]);
+  /**
+   * Edits the room has not answered yet, by line id.
+   *
+   * Changing a line is not optimistic, and a send that did not throw is not
+   * an answer: the socket a phone leaves behind in a dead spot stays OPEN and
+   * swallows everything, which is the whole reason a line has an outbox. So
+   * the man's new words stay in the field until his line comes back carrying
+   * them, and after ACK_GRACE_MS he is told they did not land rather than
+   * being left looking at a line that never changed.
+   */
+  const pendingEdits = useRef(new Map<string, (took: boolean) => void>());
+  const settleEdit = (id: string, took: boolean) => {
+    const waiting = pendingEdits.current.get(id);
+    if (waiting === undefined) return;
+    pendingEdits.current.delete(id);
+    waiting(took);
+  };
+
   /** Anything at all from the server, pong included. */
   const lastHeard = useRef(0);
   const closedByUs = useRef(false);
@@ -197,6 +215,22 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
       };
     };
 
+    /**
+     * Lines the room has lost, taken out of what this browser is holding —
+     * and out of the quotes on the lines that answered them.
+     *
+     * A quote is a snapshot, which is what makes it survive the original
+     * scrolling away or being changed. Taking a line BACK is the one case
+     * where surviving is wrong: "a line can be taken back, and then it is
+     * gone" has to mean gone, and a copy of it sitting under somebody's
+     * answer is the same words on the same screen. The answer keeps his own
+     * words and loses the context, which is what a retraction costs.
+     */
+    const without = (messages: RoomMessage[], lost: Set<string>): RoomMessage[] =>
+      messages
+        .filter((m) => !lost.has(m.id))
+        .map((m) => (m.reply && lost.has(m.reply.id) ? { ...m, reply: null } : m));
+
     const handle = (frame: ServerFrame) => {
       switch (frame.t) {
         case 'hello': {
@@ -213,14 +247,14 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
             members: frame.members ?? s.members,
             call: frame.call,
             messages: merge(
-              lost.size === 0 ? s.messages : s.messages.filter((m) => !lost.has(m.id)),
+              lost.size === 0 ? s.messages : without(s.messages, lost),
               frame.messages,
             ),
           }));
           return;
         }
         case 'gone':
-          setState((s) => ({ ...s, messages: s.messages.filter((m) => m.id !== frame.id) }));
+          setState((s) => ({ ...s, messages: without(s.messages, new Set([frame.id])) }));
           return;
         case 'reacted':
           setState((s) => ({
@@ -237,6 +271,9 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
               m.id === frame.id ? { ...m, body: frame.body, editedAt: frame.editedAt } : m,
             ),
           }));
+          // The line coming back changed is the only thing that means the room
+          // took it. Whoever is holding those words can let go of them here.
+          settleEdit(frame.id, true);
           return;
         case 'kept':
           // By media id, not by line: the pruner knows a picture by the id on
@@ -307,17 +344,25 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
           });
           return;
         }
-        case 'error':
+        case 'error': {
           console.warn('room:', frame.code);
           // A line the room will not take — empty, too long, a photo it cannot
-          // find. It will never come back with its id, so the oldest one still
-          // in flight is the one it is about, and holding it would mean
-          // re-sending it all evening.
-          if (frame.code !== 'bad_frame' && outbox.current.length > 0) {
-            outbox.current = outbox.current.slice(1);
-            setState((s) => ({ ...s, waiting: outbox.current.length }));
-          }
+          // find. It will never come back with its id, so holding it would
+          // mean re-sending it all evening.
+          //
+          // Only the line the room NAMES, though. Everything a dad can send is
+          // refused with the same handful of codes, so a refused edit — or a
+          // prompt answer with no question behind it — used to throw away
+          // whichever line happened to be oldest in the outbox: one that was
+          // perfectly good and would have gone through on the next try.
+          const about = frame.cid;
+          if (about === undefined) return;
+          const rest = outbox.current.filter((l) => l.cid !== about);
+          if (rest.length === outbox.current.length) return;
+          outbox.current = rest;
+          setState((s) => ({ ...s, waiting: outbox.current.length }));
           return;
+        }
       }
     };
 
@@ -431,15 +476,29 @@ export function useRoom(enabled: boolean, initialNight: DadNight | null, initial
   }, []);
 
   /**
-   * Change the words of a line you typed. Not optimistic, like taking one
-   * back: the old words stay on his screen until the room says otherwise.
-   * False when the socket is down, so the composer can keep the draft.
+   * Change the words of a line you typed.
+   *
+   * Not optimistic, like taking one back: the old words stay on his screen
+   * until the room says otherwise — and, for the same reason, the NEW words
+   * stay in the field until the room says it has them. It answers true only
+   * when the line came back changed; a socket that is open and going nowhere
+   * answers false after the same grace a held line gets, and he still has
+   * what he typed.
    */
   const edit = useCallback((id: string, body: string) => {
     const ws = socket.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return Promise.resolve(false);
+    // A second press on the same line replaces the first wait rather than
+    // stacking two: it is the same question asked again.
+    settleEdit(id, false);
     ws.send(JSON.stringify({ t: 'edit', id, body }));
-    return true;
+    return new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => settleEdit(id, false), ACK_GRACE_MS);
+      pendingEdits.current.set(id, (took) => {
+        clearTimeout(timer);
+        resolve(took);
+      });
+    });
   }, []);
 
   /**

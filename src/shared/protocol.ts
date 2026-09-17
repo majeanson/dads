@@ -220,7 +220,21 @@ export type ServerFrame =
   | { t: 'kept'; mediaId: string; on: boolean }
   | { t: 'night'; night: DadNight | null }
   | { t: 'rooms'; rooms: RoomsOpen }
-  | { t: 'error'; code: 'bad_frame' | 'too_long' | 'empty' | 'no_prompt' | 'no_media' };
+  /**
+   * A frame the room would not take.
+   *
+   * `cid` is the sender's own id for the line, echoed back when the refused
+   * frame carried one — and it is what makes this safe to act on. The outbox
+   * drops the line an error is ABOUT, and without a name on it the client had
+   * to guess the oldest one in flight: so a refused edit, or a prompt answer
+   * the room had no question for, quietly threw away a chat line that was
+   * still perfectly good and would have gone through on the next try.
+   */
+  | {
+      t: 'error';
+      code: 'bad_frame' | 'too_long' | 'empty' | 'no_prompt' | 'no_media';
+      cid?: string;
+    };
 
 export function parseClientFrame(raw: unknown): ClientFrame | null {
   if (typeof raw !== 'string') return null;

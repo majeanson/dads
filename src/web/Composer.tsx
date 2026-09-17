@@ -62,8 +62,8 @@ export function Composer({
   onClearReply?: () => void;
   /** The line he is changing: the field holds its words, Send means "change". */
   editing?: { id: string; body: string } | null;
-  /** False when the room could not be reached; the draft stays. */
-  onEdit?: (id: string, body: string) => boolean;
+  /** False when the room never took it; his words stay in the field. */
+  onEdit?: (id: string, body: string) => Promise<boolean>;
   onCancelEdit?: () => void;
 }) {
   const { t } = useT();
@@ -173,12 +173,24 @@ export function Composer({
     const body = draft.trim();
 
     // Changing a line: the same Send, a different verb. Not optimistic — the
-    // field clears only once the room took it, and stays if it could not.
+    // field clears only once the room has said it took it, and holds his words
+    // if it did not. "Took it" means the line came back changed, never that
+    // the send did not throw: a socket in a dead spot does not throw.
     if (editing) {
       if (!body || body === editing.body.trim()) return;
-      if (onEdit?.(editing.id, body)) {
-        onCancelEdit?.();
-        say.current?.focus();
+      setUploadError(null);
+      setSending(true);
+      try {
+        if (await onEdit?.(editing.id, body)) {
+          onCancelEdit?.();
+          say.current?.focus();
+        } else {
+          setUploadError(t('composer.edit_failed'));
+        }
+      } finally {
+        // In a finally for the same reason the upload's is: the room going
+        // quiet must not leave him holding a composer he cannot use.
+        setSending(false);
       }
       return;
     }

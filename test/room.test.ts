@@ -229,6 +229,32 @@ describe('RoomDO', () => {
     expect(marc.frames.filter((f) => f.t === 'msg' && f.message.kind === 'chat')).toHaveLength(0);
   });
 
+  it('names the line a refusal is about, and names nothing when there is none', async () => {
+    // The outbox drops the line an error is ABOUT. Every frame a dad can send
+    // is refused with the same handful of codes, so without a name on the
+    // refusal the client had to guess the oldest line still in flight — and a
+    // refused EDIT then threw away a perfectly good chat line that would have
+    // gone through on the next try.
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    await marc.next('hello');
+
+    marc.say('x'.repeat(2001), 'c-too-long');
+    const refused = await marc.next('error', (f) => f.code === 'too_long');
+    expect(refused.cid).toBe('c-too-long');
+
+    marc.say('a line worth keeping', 'c-good');
+    const good = await marc.next('msg', (f) => f.cid === 'c-good');
+
+    // An edit the room will not take is not about any line in the outbox.
+    marc.edit(good.message.id, 'y'.repeat(2001));
+    const editRefused = await marc.next(
+      'error',
+      (f) => f.code === 'too_long' && f.cid === undefined,
+    );
+    expect(editRefused.cid).toBeUndefined();
+  });
+
   it('relays typing to the others, not to the typist', async () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
@@ -331,7 +357,7 @@ describe('RoomDO', () => {
     expect((await stranger.next('hello')).roster.map((r) => r.name)).toEqual(['Stranger']);
   });
   describe('answering a line', () => {
-    it('carries a quote of what it answers, and the quote outlives the original', async () => {
+    it('carries a quote that outlives an edit and goes when the line is taken back', async () => {
       const marc = await enter(group, 'Marc');
       const sam = await enter(group, 'Sam');
       open.push(marc, sam);
@@ -352,15 +378,38 @@ describe('RoomDO', () => {
         .first<{ reply: string }>();
       expect(JSON.parse(row!.reply)).toMatchObject({ name: 'Marc' });
 
-      // Taking the original back does not take the quote off the answer: he
-      // was answering it, and that is what the quote says.
-      marc.retract(asked.message.id);
-      await sam.next('gone', (f) => f.id === asked.message.id);
+      // Changing the original does not change the quote. That is the whole
+      // point of a snapshot: it says what he was answering.
+      marc.edit(asked.message.id, 'anyone up for Friday');
+      await sam.next('edited', (f) => f.id === asked.message.id);
       const dave = await enter(group, 'Dave');
       open.push(dave);
-      const hello = await dave.next('hello');
-      const still = hello.messages.find((m) => m.id === answer.message.id);
-      expect(still?.reply?.body).toBe('anyone up for Thursday');
+      const stillThere = (await dave.next('hello')).messages.find(
+        (m) => m.id === answer.message.id,
+      );
+      expect(stillThere?.reply?.body).toBe('anyone up for Thursday');
+
+      // Taking it BACK does take the quote, and that is the one case where
+      // surviving would be wrong: the words would be on everyone's screen
+      // again, under somebody's answer. The answer keeps his own words.
+      marc.retract(asked.message.id);
+      await sam.next('gone', (f) => f.id === asked.message.id);
+      await until(async () => {
+        const after = await env.DB.prepare('SELECT reply FROM messages WHERE id = ?')
+          .bind(answer.message.id)
+          .first<{ reply: string | null }>();
+        return after?.reply === null;
+      });
+
+      // And the room's own tail agrees, so a reload does too.
+      const eddie = await enter(group, 'Eddie');
+      open.push(eddie);
+      const backfilled = (await eddie.next('hello')).messages.find(
+        (m) => m.id === answer.message.id,
+      );
+      expect(backfilled).toBeDefined();
+      expect(backfilled?.reply ?? null).toBeNull();
+      expect(backfilled?.body).toBe('count me in');
     });
 
     it('quotes only what a dad typed, cut down, and posts without a quote it cannot find', async () => {

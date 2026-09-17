@@ -481,9 +481,12 @@ export class RoomDO extends DurableObject<Env> {
     // An attachment is a message in its own right: a photo with no caption is
     // still something said.
     const mediaId = frame.t === 'chat' ? (frame.mediaId ?? null) : null;
-    if (!body && mediaId === null) return this.sendTo(ws, { t: 'error', code: 'empty' });
+    // Every refusal says which line it is about when the sender named one, so
+    // the outbox drops that line and not whichever was oldest.
+    const held = frame.t === 'chat' && frame.cid !== undefined ? { cid: frame.cid } : {};
+    if (!body && mediaId === null) return this.sendTo(ws, { t: 'error', code: 'empty', ...held });
     if ([...body].length > MAX_MESSAGE_LENGTH)
-      return this.sendTo(ws, { t: 'error', code: 'too_long' });
+      return this.sendTo(ws, { t: 'error', code: 'too_long', ...held });
 
     if (frame.t === 'prompt') {
       const groupId = this.groupId();
@@ -514,7 +517,7 @@ export class RoomDO extends DurableObject<Env> {
     const groupId = this.groupId();
     const found = mediaId !== null && groupId ? await mediaFor(this.env, groupId, mediaId) : null;
     if (mediaId !== null && (found === null || found.memberId !== who.memberId)) {
-      return this.sendTo(ws, { t: 'error', code: 'no_media' });
+      return this.sendTo(ws, { t: 'error', code: 'no_media', ...held });
     }
     // A phone re-sending what it was holding is not a second use of the
     // picture — it IS that line, arriving twice, and the cid below drops it
@@ -522,7 +525,7 @@ export class RoomDO extends DurableObject<Env> {
     // error frame drops the oldest line the outbox is holding.
     const resent = cid !== undefined && this.postedCids.has(cid);
     if (mediaId !== null && !resent && groupId && (await this.alreadyOnALine(groupId, mediaId))) {
-      return this.sendTo(ws, { t: 'error', code: 'no_media' });
+      return this.sendTo(ws, { t: 'error', code: 'no_media', ...held });
     }
     const media: Attachment | null =
       found === null
@@ -1120,11 +1123,45 @@ export class RoomDO extends DurableObject<Env> {
       });
     }
 
+    // The quotes of it go too.
+    //
+    // A reply carries a SNAPSHOT so it survives the original scrolling out of
+    // the backfill or being changed afterwards. Being taken back is the one
+    // case where surviving is wrong: the words are on everyone's screen
+    // again, under somebody's answer, and "then it is gone" has to mean gone.
+    // The answer keeps his own words and loses the context. Every open socket
+    // works this out from the `gone` frame itself; this is what makes a
+    // reload agree with what they are already looking at.
+    await this.unquote(id);
+
     const now = Date.now();
     this.ctx.storage.sql.exec('DELETE FROM retracted WHERE at < ?', now - RETRACTED_MEMORY_MS);
     this.ctx.storage.sql.exec('INSERT OR REPLACE INTO retracted (id, at) VALUES (?, ?)', id, now);
 
     this.broadcast({ t: 'gone', id });
+  }
+
+  /**
+   * Take a line out of the quotes that answer it.
+   *
+   * Matched on the id INSIDE the stored JSON rather than by holding a list of
+   * who quoted whom: a quote is rare, a retraction is rarer, and a second
+   * table to keep in step with both is a worse thing to own than one scan.
+   */
+  private async unquote(id: string): Promise<void> {
+    this.ctx.storage.sql.exec(
+      "UPDATE tail SET reply = NULL WHERE reply IS NOT NULL AND json_extract(reply, '$.id') = ?",
+      id,
+    );
+    const groupId = this.groupId();
+    if (groupId === undefined) return;
+    await this.env.DB.prepare(
+      `UPDATE messages SET reply = NULL
+        WHERE group_id = ? AND reply IS NOT NULL AND json_extract(reply, '$.id') = ?`,
+    )
+      .bind(groupId, id)
+      .run()
+      .catch((err: unknown) => console.error('retract: a quote of it survived', { id }, err));
   }
 
   /**

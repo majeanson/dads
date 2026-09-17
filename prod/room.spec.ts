@@ -37,6 +37,53 @@ test('two dads see each other, and what each other says', async ({ browser }) =>
   await sam.context().close();
 });
 
+test('a line is answered, changed and marked, against the real archive', async ({ browser }) => {
+  // The newest half of the conversation, end to end on the deployment: the
+  // reply columns from migration 0017 really are on the live database, the
+  // marks table from 0014 really takes a row, and the room resolves the quote
+  // out of its own tail rather than trusting the browser for it.
+  const marc = await comeIn(browser, 'answered');
+  const sam = await comeIn(browser, 'answerer');
+
+  const asked = note('who has the cards');
+  await marc.getByLabel('Say something').fill(asked);
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const his = sam.getByTestId('line').filter({ hasText: asked });
+  await expect(his).toBeVisible({ timeout: 15_000 });
+
+  // An answer carries a snapshot of what it answers, cut by the room.
+  await his.click({ button: 'right' });
+  await sam.getByTestId('line-reply').click();
+  const answer = note('I do, still in the car');
+  await sam.getByLabel('Say something').fill(answer);
+  await sam.getByRole('button', { name: 'Send' }).click();
+  const answered = marc.getByTestId('line').filter({ hasText: answer });
+  await expect(answered).toBeVisible({ timeout: 15_000 });
+  await expect(answered.getByTestId('quote')).toContainText(asked);
+
+  // A mark is one tap, and it reaches the other man.
+  await his.dblclick();
+  await expect(marc.getByTestId('line').filter({ hasText: asked }).getByTestId('mark')).toHaveText(
+    /1/,
+    { timeout: 15_000 },
+  );
+
+  // And a man may change his own words, which the room answers with the line
+  // itself: nothing here is optimistic.
+  const fixed = note('who has the cards, actually');
+  await marc.getByTestId('line').filter({ hasText: asked }).click({ button: 'right' });
+  await marc.getByTestId('line-edit').click();
+  await marc.getByLabel('Say something').fill(fixed);
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const changed = sam.getByTestId('line').filter({ hasText: fixed });
+  await expect(changed).toBeVisible({ timeout: 15_000 });
+  await expect(changed.getByTestId('edited')).toBeVisible();
+  await expect(marc.getByTestId('editing')).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
 test('a photo goes up, renders inline, and is nobody else’s to read', async ({ browser }) => {
   const marc = await comeIn(browser, 'photographer');
 
