@@ -175,4 +175,25 @@ export default function globalSetup(): void {
       'inherit',
     );
   }
+
+  // A few days of questions behind the fit group.
+  //
+  // "What was asked before" carries the count of them, and a row with a
+  // count on it is wider than the same row without one — which is why a
+  // group that had never been asked anything fit a 360px phone and a real
+  // one did not. A fixture with no history cannot see that.
+  const seeded = join(mkdtempSync(join(tmpdir(), 'dads-e2e-')), 'asked.sql');
+  writeFileSync(
+    seeded,
+    ['2026-09-01', '2026-09-02', '2026-09-03']
+      .map(
+        (day, i) =>
+          `INSERT OR IGNORE INTO prompt_days (group_id, day, prompt_id)
+             SELECT g.id, '${day}', p.id FROM groups g, prompts p
+              WHERE g.slug = '${E2E_FIT_GROUP.slug}' AND p.group_id IS NULL
+              ORDER BY p.id LIMIT 1 OFFSET ${i};`,
+      )
+      .join(' '),
+  );
+  wrangler('d1', 'execute', 'dads', '--local', '-y', '--file', seeded);
 }

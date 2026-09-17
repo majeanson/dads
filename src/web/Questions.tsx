@@ -76,7 +76,12 @@ export function Questions({
   return (
     <Sheet title={view === 'today' ? t('q.title') : t('q.history_title')} onClose={onClose}>
       {view === 'today' ? (
-        <div className="grid gap-5">
+        /* grid-cols-1, not a bare grid: an implicit `auto` column takes the
+           width of its widest child, and a button never wraps — so the row
+           below, with its count on it, made this whole column wider than the
+           sheet and carried the form above it off the right-hand edge.
+           minmax(0, 1fr) is what stops a child widening its own container. */
+        <div className="grid grid-cols-1 gap-5">
           <PromptCard messages={messages} onAnswer={onAnswer} canAnswer={canAnswer} />
           {/* No heading: the box says what it is. */}
           <section data-testid="prompt-add" className="grid gap-2">
@@ -95,10 +100,14 @@ export function Questions({
             onClick={() => setView('before')}
             data-testid="prompt-history"
           >
-            <History size={22} aria-hidden="true" className="text-muted" />
-            {t('q.history')}
+            <History size={22} aria-hidden="true" className="shrink-0 text-muted" />
+            {/* The words give way before the row does. A menu row does not
+                wrap, so on the narrowest phone in the longer language
+                something has to shrink, and it is these — never the count,
+                which is the reason anybody looks. */}
+            <span className="min-w-0 truncate">{t('q.history')}</span>
             {count > 0 ? (
-              <span className="ml-auto text-sm font-normal text-muted">
+              <span className="ml-auto shrink-0 text-sm font-normal text-muted">
                 {t(`q.history_count_${plural(lang, count)}`, { n: count })}
               </span>
             ) : null}

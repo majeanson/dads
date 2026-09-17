@@ -764,6 +764,15 @@ neither see nor scroll anything.
   off a 1280×800 laptop with half the screen empty either side.
 - **A row is never under 44px** (`2.75rem` is every row's floor), and the day
   and the hour never under 2rem. Below that the fit is the scroll's problem.
+- **A row with a count on it is wider than the same row without one.**
+  The questions' "what was asked before" fit a 360px phone in French until
+  the group had been asked anything, and then it did not: a button never
+  wraps, so the row made its grid wider than the sheet and took the form
+  above it off the right-hand edge. The grid is `grid-cols-1`
+  (`minmax(0, 1fr)`) so a child can never widen its own container, the row's
+  WORDS truncate before the count does — the count is the reason anybody
+  looks — and the e2e fixture has three days of questions behind it, because
+  a group that was never asked anything cannot show this.
 - **A sheet's chrome gives way first.** The title and its padding are clamped
   on dvh in `Sheet.tsx`; the content area still scrolls, because a list of
   everyone's week or every question before today can always be taller than a

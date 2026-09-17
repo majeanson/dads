@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { comeIn, named, note, talk } from './names';
 
 /**
@@ -48,7 +49,14 @@ test('a line is answered, changed and marked, against the real archive', async (
   const asked = note('who has the cards');
   await marc.getByLabel('Say something').fill(asked);
   await marc.getByRole('button', { name: 'Send' }).click();
-  const his = sam.getByTestId('line').filter({ hasText: asked });
+  // Once it has been answered, two rows hold these words: his own line and
+  // the quote above the answer. The original is the one with no quote on it.
+  const original = (page: Page) =>
+    page
+      .getByTestId('line')
+      .filter({ hasText: asked })
+      .filter({ hasNot: page.getByTestId('quote') });
+  const his = original(sam);
   await expect(his).toBeVisible({ timeout: 15_000 });
 
   // An answer carries a snapshot of what it answers, cut by the room.
@@ -63,15 +71,12 @@ test('a line is answered, changed and marked, against the real archive', async (
 
   // A mark is one tap, and it reaches the other man.
   await his.dblclick();
-  await expect(marc.getByTestId('line').filter({ hasText: asked }).getByTestId('mark')).toHaveText(
-    /1/,
-    { timeout: 15_000 },
-  );
+  await expect(original(marc).getByTestId('mark')).toHaveText(/1/, { timeout: 15_000 });
 
   // And a man may change his own words, which the room answers with the line
   // itself: nothing here is optimistic.
   const fixed = note('who has the cards, actually');
-  await marc.getByTestId('line').filter({ hasText: asked }).click({ button: 'right' });
+  await original(marc).click({ button: 'right' });
   await marc.getByTestId('line-edit').click();
   await marc.getByLabel('Say something').fill(fixed);
   await marc.getByRole('button', { name: 'Send' }).click();

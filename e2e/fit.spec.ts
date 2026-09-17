@@ -14,6 +14,9 @@ import { E2E_FIT_GROUP } from './global-setup';
  * case; the laptop is where home goes two-column and the sheets are panels.
  */
 const SMALL = { width: 390, height: 667 };
+/** The narrowest phone anybody still carries. 390 is the design target, but
+ * a row that fits 390 and not 360 is a row half of Android cannot read. */
+const NARROW = { width: 360, height: 740 };
 const LAPTOP = { width: 1280, height: 800 };
 /** A browser window on a laptop, not maximised: where the two columns first
  * ran past the page edge, because a bare 1fr cannot shrink below its rows. */
@@ -100,5 +103,40 @@ test('every sheet fits the small phone without scrolling', async ({ browser }) =
     await expect(page.getByRole('dialog')).toHaveCount(0);
   }
   expect(over).toEqual([]);
+  await context.close();
+});
+
+test('the questions fit a narrow phone in French, history and all', async ({ browser }) => {
+  // The row that says what was asked before carries the COUNT of it, and in
+  // French it is the longest row in the app: "Ce qui a été demandé avant" and
+  // a number beside it. A button never wraps, so a row too long for the
+  // screen does not wrap either — it makes its grid wider than the sheet, and
+  // takes the form above it off the right-hand edge with it. A group that has
+  // never been asked anything has no count and never shows this, which is why
+  // the fixture has three days behind it.
+  const context = await browser.newContext({ viewport: NARROW });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await page.getByLabel('Code').fill(E2E_FIT_GROUP.code);
+  await page.getByLabel('Ton nom').fill('Fit Étroit');
+  await page.getByRole('button', { name: 'Entre' }).click();
+  await expect(page.getByTestId('connection')).toBeVisible();
+  await page.getByTestId('home-go').click();
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page
+    .getByRole('navigation', { name: 'Rooms' })
+    .getByRole('button', { name: /^Les questions/ })
+    .click();
+  await page.getByTestId('prompt-body').waitFor();
+  await page.waitForTimeout(300);
+
+  // The count really is on the row: without it this test proves nothing.
+  await expect(page.getByTestId('prompt-history')).toContainText(/[0-9]/);
+  expect(await sideways(page, '[role="dialog"] > div:last-child')).toBe(0);
+  expect(await sideways(page, 'html')).toBe(0);
+  const row = await page.getByTestId('prompt-history').boundingBox();
+  expect(row!.x + row!.width).toBeLessThanOrEqual(NARROW.width);
+
   await context.close();
 });

@@ -117,16 +117,22 @@ test('the menu offers exactly what the group has switched on', async ({ browser 
     return ((await r.json()) as { group: { rooms: Record<string, boolean> } }).group.rooms;
   });
 
-  // In the conversation: what is about talking.
+  // In the conversation: everything. A man told mid-conversation that his
+  // week is waiting had to walk back out to home to fill it in, which is why
+  // this menu stopped being the talking rows alone.
   await marc.getByRole('button', { name: 'Menu' }).click();
   const chat = marc.getByRole('navigation', { name: 'Rooms' });
   await expect(chat.getByRole('button', { name: /^Questions/ })).toHaveCount(
     rooms.questions ? 1 : 0,
   );
+  await expect(chat.getByRole('button', { name: /^The week/ })).toHaveCount(rooms.week ? 1 : 0);
   await expect(chat.getByRole('button', { name: /the table$/ })).toHaveCount(rooms.table ? 1 : 0);
   await expect(chat.getByRole('button', { name: /^Find something/ })).toBeVisible();
-  await expect(chat.getByRole('button', { name: /^The week/ })).toHaveCount(0);
-  await expect(chat.getByRole('button', { name: 'Settings' })).toHaveCount(0);
+  await expect(chat.getByRole('button', { name: 'Invite a dad' })).toBeVisible();
+  await expect(chat.getByRole('button', { name: 'Settings' })).toBeVisible();
+  // Never a Dad night row, in either menu: home's card is the night and
+  // carries its own way in.
+  await expect(chat.getByRole('button', { name: /^Dad night/ })).toHaveCount(0);
   await marc.getByRole('button', { name: 'Close', exact: true }).click();
 
   // On home: what is about the group and the week.

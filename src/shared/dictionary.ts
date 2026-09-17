@@ -512,7 +512,7 @@ const FR: Record<Key, string> = {
   'q.add_too_long': 'C’est long pour une question — 240 caractères maximum.',
   'q.add_already': 'Celle-là est déjà dans la liste.',
   'q.add_unknown': 'Ça n’a pas marché. Réessaie.',
-  'q.history': 'Ce qui a été demandé avant',
+  'q.history': 'Ce qui a été demandé',
   'q.history_title': 'Demandées avant',
   'q.history_count_one': '1 posée',
   'q.history_count_other': '{n} posées',
