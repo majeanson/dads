@@ -137,6 +137,75 @@ describe('PUT /api/night', () => {
     expect(body.group.dadNight).toEqual(THURSDAY_NIGHT);
   });
 
+  it('moves an arranged evening to another date without making it weekly', async () => {
+    const cookie = cookieFrom(
+      await worker.fetch(postJoin({ code: group.code, displayName: 'Marc' })),
+    );
+    const put = (night: unknown) =>
+      worker.fetch('https://dads.test/api/night', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ night }),
+      });
+
+    // 2026-09-24 is a Thursday, 2026-09-26 a Saturday. The weekday sent is
+    // deliberately wrong both times: the server derives it from the date, so
+    // the two halves of "Thursday the 24th" can never disagree.
+    await put({ weekday: 0, time: '21:00', date: '2026-09-24' });
+    const moved = await put({ weekday: 0, time: '20:30', date: '2026-09-26' });
+    expect(moved.status).toBe(200);
+
+    const me = await worker.fetch('https://dads.test/api/me', { headers: { Cookie: cookie } });
+    const night = ((await me.json()) as { group: { dadNight: DadNight | null } }).group.dadNight;
+    // Still an arranged evening, on the new date, with the new time — not a
+    // standing Saturday, which is what editing it through the weekday
+    // dropdown used to turn it into.
+    expect(night?.date).toBe('2026-09-26');
+    expect(night?.time).toBe('20:30');
+    expect(night?.weekday).toBe(6);
+  });
+
+  it('calls an arranged evening off, and says which one', async () => {
+    // Its own socket, closed at the end: this describe has no shared pool.
+    // `enter` has already waited for the room to say hello.
+    const sam = await enter(group, 'Sam');
+    const cookie = cookieFrom(
+      await worker.fetch(postJoin({ code: group.code, displayName: 'Marc' })),
+    );
+    const put = (night: unknown) =>
+      worker.fetch('https://dads.test/api/night', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ night }),
+      });
+
+    const said = (kind: string) =>
+      sam.frames.find((f) => f.t === 'msg' && f.message.said?.k === kind);
+
+    await put({ weekday: 4, time: '21:00', date: '2026-09-24' });
+    await until(() => said('night_set') !== undefined);
+
+    expect((await put(null)).status).toBe(200);
+
+    // Not "cleared dad night": four men arranged their week around this, and
+    // the room says which evening is off and asks what follows from it.
+    await until(() => said('night_off') !== undefined);
+    const off = said('night_off');
+    expect(off?.t === 'msg' ? off.message.said : null).toMatchObject({
+      k: 'night_off',
+      date: '2026-09-24',
+    });
+
+    // And the group is unstuck: no evening to come means the calendar is the
+    // question again.
+    const me = await worker.fetch('https://dads.test/api/me', { headers: { Cookie: cookie } });
+    expect(
+      ((await me.json()) as { group: { dadNight: DadNight | null } }).group.dadNight,
+    ).toBeNull();
+
+    sam.close();
+  });
+
   it('rejects a night that could not happen', async () => {
     const cookie = cookieFrom(
       await worker.fetch(postJoin({ code: group.code, displayName: 'Marc' })),

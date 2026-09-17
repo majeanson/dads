@@ -249,6 +249,22 @@ weakening `sessionSecret()`.
   switches are no longer an example of this — since 2026-09-17 they are the
   room creator's. What a room IS and what a group DECIDES are different
   questions, and only the first one has an owner.)
+- **An arranged evening is edited AS a date, and can be called off.** The
+  weekday dropdown is the right control for a standing night and the wrong one
+  for one evening: it cannot say "the 28th", so saving from it turned
+  Thursday-the-28th into every-Thursday and the group lost the thing they had
+  agreed. The editor shows a date field when the night has a date, and the
+  server derives the weekday from it rather than believing two fields that can
+  disagree. **"Can't do that night" is the way out**, armed like taking a line
+  back because four other men arranged their week around it — and the sheet
+  becomes the calendar again in the same breath, because "when is the next
+  one" is the question that follows. Without it the group was stuck with a
+  date nobody could move until it had been and gone.
+- **Calling one off is not clearing the night.** `night_off` carries the date
+  and says which evening is not happening; `night_cleared` is a group that has
+  stopped having a standing night. The room tells them apart by reading the
+  stored night BEFORE the new one is applied — nothing else knows what was
+  there a moment ago.
 - **A one-off `.ics` gets no RRULE and its own UID.** An RRULE would put a
   standing Thursday in five calendars off the back of one date they agreed to,
   and a repeated UID asks a calendar to REWRITE the event already in it.

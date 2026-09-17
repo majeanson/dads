@@ -31,6 +31,27 @@ async function futureDay(page: Page): Promise<string> {
   return (await cell.getAttribute('data-day'))!;
 }
 
+/**
+ * Nothing on the books, whatever the last test left.
+ *
+ * This file is serial and shares one group, so a test that needs the calendar
+ * has to clear the night the test before it arranged. The two shapes come off
+ * in different ways, which is the feature rather than an inconvenience: an
+ * evening arranged for a date is CALLED OFF, and a standing night is cleared
+ * from the form that sets it.
+ */
+async function startFromNothing(page: Page): Promise<void> {
+  await night(page);
+  if (await page.getByTestId('night-call-off').isVisible()) {
+    await page.getByTestId('night-call-off').click();
+    await page.getByTestId('night-call-off').click();
+  } else if (await page.getByTestId('night-when').isVisible()) {
+    await page.getByTestId('night-standing').click();
+    await page.getByRole('button', { name: 'Clear' }).click();
+  }
+  await expect(page.getByTestId('poll')).toBeVisible({ timeout: 15_000 });
+}
+
 test('with nothing on the books, home asks when the next one is', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
   await home(marc);
@@ -119,7 +140,7 @@ test('a night can be made to happen once, and then it is the calendar again', as
   browser,
 }) => {
   const marc = await comeIn(browser, 'Marc Once');
-  await night(marc);
+  await startFromNothing(marc);
 
   // A standing night first, so there is something to turn off.
   await marc.getByTestId('night-standing').click();
@@ -191,6 +212,51 @@ test('there are three answers now, and the third is maybe', async ({ browser }) 
   await expect(
     marc.getByTestId('line').filter({ hasText: 'Marc Maybe might make it.' }),
   ).toHaveCount(0);
+
+  await marc.context().close();
+});
+
+test('a date that was locked in can be moved, and called off', async ({ browser }) => {
+  // The dead end this closes: an evening pinned to a date could be turned
+  // into a standing weekly night or wiped from a form about something else,
+  // and neither is what a man means by "I can't do Thursday any more". Until
+  // the date had been and gone, the group was stuck with it.
+  const marc = await comeIn(browser, 'Marc Mover');
+
+  await startFromNothing(marc);
+  const day = await futureDay(marc);
+  await marc.locator(`[data-testid="poll-day"][data-day="${day}"]`).click();
+  await marc.getByTestId('poll-time').fill('21:00');
+  await marc.getByTestId('poll-lock').first().click();
+  await expect(marc.getByTestId('night-when')).toContainText('21:00');
+
+  // MOVED: the editor offers the date itself, not a weekday dropdown that
+  // cannot say "the 28th" — and what comes back is still one evening.
+  await marc.getByTestId('night-standing').click();
+  const field = marc.getByTestId('night-date');
+  await expect(field).toHaveValue(day);
+  const moved = `${day.slice(0, 8)}${String(Number(day.slice(8)) === 28 ? 27 : 28).padStart(2, '0')}`;
+  await field.fill(moved);
+  await marc.getByRole('button', { name: 'Save' }).click();
+  await expect(marc.getByTestId('night-when')).toBeVisible();
+  // Still an arranged evening: the way out of one is still on the screen.
+  await expect(marc.getByTestId('night-call-off')).toBeVisible();
+
+  // CALLED OFF: armed once, because four other men arranged their week
+  // around it, and then the calendar is back in the same sheet.
+  await marc.getByTestId('night-call-off').click();
+  await marc.getByTestId('night-call-off').click();
+  await expect(marc.getByTestId('poll')).toBeVisible({ timeout: 15_000 });
+  await expect(marc.getByTestId('night-when')).toHaveCount(0);
+
+  // And the room says which evening is off, rather than "cleared dad night".
+  await marc.getByRole('button', { name: 'Close', exact: true }).click();
+  await talk(marc);
+  // By name: the helper that clears the books at the top of another test in
+  // this file calls an evening off too, so "called off" alone finds two.
+  await expect(marc.getByTestId('line').filter({ hasText: 'Marc Mover called off' })).toBeVisible({
+    timeout: 15_000,
+  });
 
   await marc.context().close();
 });

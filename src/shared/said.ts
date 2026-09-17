@@ -22,6 +22,15 @@ export type Said =
    * like "Marc set dad night to Thursdays". */
   | { k: 'night_set'; by: string; weekday: number; time: string; date?: string }
   | { k: 'night_cleared'; by: string }
+  /**
+   * An evening the group had arranged, called off.
+   *
+   * Its own kind rather than `night_cleared`, because they are not the same
+   * news: clearing a standing night means the group stops having one, and
+   * this means the thing four men arranged their Thursday around is not
+   * happening. It carries the date so the room can say which evening.
+   */
+  | { k: 'night_off'; by: string; date: string }
   /** The one-off has been and gone, so the group has no next night. Said by
    * the room itself, right after the summary, because the moment everybody is
    * still there is the moment the next one gets arranged. */
@@ -86,6 +95,11 @@ export function parseSaid(raw: unknown): Said | null {
     case 'night_cleared': {
       const by = str(said.by);
       return by ? { k: 'night_cleared', by } : null;
+    }
+    case 'night_off': {
+      const by = str(said.by);
+      const date = str(said.date);
+      return by && date ? { k: 'night_off', by, date } : null;
     }
     case 'night_open': {
       const items = num(said.items);
@@ -188,6 +202,8 @@ export function describeSaid(t: T, lang: Lang, said: Said, joined = false): stri
     }
     case 'night_cleared':
       return t('sys.night_cleared', { by: said.by });
+    case 'night_off':
+      return t('sys.night_off', { by: said.by, when: dayName(lang, said.date) });
     case 'poll_open':
       return t('sys.poll_open');
     case 'night_open':

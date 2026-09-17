@@ -1,4 +1,4 @@
-import { CalendarPlus, Check, Minus, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { CalendarPlus, CalendarX, Check, Minus, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   addNightItem,
@@ -14,6 +14,7 @@ import {
 import { useT } from './i18n';
 import { nightDetail, NightEditor } from './NightEditor';
 import { Button } from './ui/Button';
+import { cn } from './ui/cn';
 import { Switch } from './ui/Switch';
 import { FIELD } from './ui/field';
 import { Poll } from './Poll';
@@ -142,6 +143,14 @@ export function Night({
             onAdd={(body) => act(addNightItem(body))}
             onRemove={(id) => void act(removeNightItem(id))}
           />
+
+          {/* Only an ARRANGED evening can be called off. A standing night is
+              not cancelled, it is changed or cleared, and that is what the
+              editor below is for. */}
+          {/* Not through `act`: what comes back is the group's night, not the
+              night's state, and the room pushes it to every open phone — this
+              sheet included — the moment it lands. */}
+          {repeats(night) ? null : <CallOff busy={busy} onOff={() => saveNight(null)} />}
         </>
       )}
 
@@ -152,6 +161,65 @@ export function Night({
         onOpen={() => setStanding(true)}
         onDone={() => setStanding(false)}
       />
+    </div>
+  );
+}
+
+/**
+ * Calling off an evening the group had arranged.
+ *
+ * Without this the sheet was a dead end: an evening pinned to a date could be
+ * turned into a standing weekly night or wiped from a form labelled about
+ * something else, and neither of those is what a man means when he says he
+ * cannot do Thursday any more. The group was stuck with a date nobody could
+ * move until it had been and gone.
+ *
+ * ARMED, like taking a line back, and for the same reason: four other men
+ * arranged their week around this, so it should not go on one stray tap. The
+ * second press says it out loud in the room — which evening, and by whom —
+ * and the sheet becomes the calendar again in the same breath, because "when
+ * is the next one" is the question that follows and the answer is already on
+ * the screen.
+ */
+function CallOff({ busy, onOff }: { busy: boolean; onOff: () => Promise<void> }) {
+  const { t } = useT();
+  const [armed, setArmed] = useState(false);
+  const [going, setGoing] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function off() {
+    setGoing(true);
+    setFailed(false);
+    try {
+      await onOff();
+    } catch {
+      // The evening is still on, so say nothing false: he presses again.
+      setFailed(true);
+      setArmed(false);
+    } finally {
+      setGoing(false);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-1">
+      <Button
+        look={armed ? 'primary' : 'quiet'}
+        size="lg"
+        disabled={busy || going}
+        className={cn('max-w-full justify-self-start', armed ? '' : 'px-0')}
+        data-testid="night-call-off"
+        onClick={() => (armed ? void off() : setArmed(true))}
+      >
+        <CalendarX size={18} aria-hidden="true" className="shrink-0" />
+        <span className="min-w-0 truncate">{armed ? t('n.call_off_sure') : t('n.call_off')}</span>
+      </Button>
+      {armed ? <p className="m-0 text-sm text-muted">{t('n.call_off_hint')}</p> : null}
+      {failed ? (
+        <p className="error m-0 text-sm" role="alert">
+          {t('n.save_failed')}
+        </p>
+      ) : null}
     </div>
   );
 }

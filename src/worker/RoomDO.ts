@@ -225,9 +225,13 @@ export class RoomDO extends DurableObject<Env> {
         night: DadNight | null;
         byName: string;
       };
+      // Read BEFORE it is applied: calling off an evening the group had
+      // arranged and clearing a standing night are different news, and the
+      // only thing that tells them apart is what was there a moment ago.
+      const was = this.storedNight();
       this.applyNight(night);
       this.broadcast({ t: 'night', night });
-      await this.say(byName, nightChange(byName, night));
+      await this.say(byName, nightChange(byName, night, was));
       await this.rescheduleAlarm();
       return new Response(null, { status: 204 });
     }
@@ -1547,7 +1551,10 @@ export class RoomDO extends DurableObject<Env> {
   }
 }
 
-function nightChange(byName: string, night: DadNight | null): Said {
+function nightChange(byName: string, night: DadNight | null, was: DadNight | null): Said {
+  // An evening that was arranged for one date, and is now not happening: the
+  // room says which evening, and asks the question that follows from it.
+  if (!night && was?.date) return { k: 'night_off', by: byName, date: was.date };
   if (!night) return { k: 'night_cleared', by: byName };
   return {
     k: 'night_set',

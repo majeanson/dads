@@ -1,6 +1,6 @@
 import { Check, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { countdownParts, parseTime, phaseOf, type DadNight } from '../shared/dadNight';
+import { countdownParts, parseTime, phaseOf, weekdayOf, type DadNight } from '../shared/dadNight';
 import { setNight as saveNight } from './api';
 import { nightWhen, plural, useT, weekdayNames, type Lang, type T } from './i18n';
 import { Button } from './ui/Button';
@@ -93,6 +93,17 @@ export function NightEditor({ night, onDone }: { night: DadNight | null; onDone:
   const { t, lang } = useT();
   const [weekday, setWeekday] = useState(String(night?.weekday ?? 4));
   const [time, setTime] = useState(night?.time ?? '21:00');
+  /**
+   * A night with a date is edited AS a date.
+   *
+   * The weekday dropdown is the right control for a standing night and the
+   * wrong one for an arranged evening: it cannot say "the 25th", so saving
+   * from it turned Thursday-the-25th into every-Thursday and the group lost
+   * the one thing they had agreed. An evening that was arranged for a date
+   * stays an evening arranged for a date, and this moves it.
+   */
+  const [date, setDate] = useState(night?.date ?? '');
+  const arranged = date !== '';
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -106,8 +117,12 @@ export function NightEditor({ night, onDone }: { night: DadNight | null; onDone:
     setError(null);
     try {
       await saveNight({
-        weekday: Number(weekday),
+        // Ignored by the server when a date is sent — it derives the weekday
+        // from the date rather than believing two fields that can disagree —
+        // but the shape wants a number either way.
+        weekday: arranged ? (weekdayOf(date) ?? 0) : Number(weekday),
         time,
+        ...(arranged ? { date } : {}),
         // The group's zone is the group's, not whoever happens to be editing
         // from a hotel in another country — and when no night has ever been
         // set there is no group zone here to send, so send none and let the
@@ -139,22 +154,42 @@ export function NightEditor({ night, onDone }: { night: DadNight | null; onDone:
 
   return (
     <form className="flex flex-wrap items-center gap-2" onSubmit={submit}>
-      <label htmlFor="night-weekday" className="sr-only">
-        {t('n.day')}
-      </label>
-      <select
-        id="night-weekday"
-        value={weekday}
-        onChange={(e) => setWeekday(e.target.value)}
-        aria-label={t('n.day')}
-        className={cn(FIELD, 'h-13 w-auto py-0')}
-      >
-        {weekdayNames(lang).map((name, index) => (
-          <option key={name} value={index}>
-            {name}
-          </option>
-        ))}
-      </select>
+      {arranged ? (
+        <>
+          <label htmlFor="night-date" className="sr-only">
+            {t('n.date')}
+          </label>
+          <input
+            id="night-date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            aria-label={t('n.date')}
+            required
+            className={cn(FIELD, 'h-13 w-auto py-0')}
+            data-testid="night-date"
+          />
+        </>
+      ) : (
+        <>
+          <label htmlFor="night-weekday" className="sr-only">
+            {t('n.day')}
+          </label>
+          <select
+            id="night-weekday"
+            value={weekday}
+            onChange={(e) => setWeekday(e.target.value)}
+            aria-label={t('n.day')}
+            className={cn(FIELD, 'h-13 w-auto py-0')}
+          >
+            {weekdayNames(lang).map((name, index) => (
+              <option key={name} value={index}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
 
       <label htmlFor="night-time" className="sr-only">
         {t('n.time')}

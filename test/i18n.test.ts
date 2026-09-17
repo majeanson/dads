@@ -30,6 +30,8 @@ describe('the dictionary', () => {
     // in it to translate, and both sides fill it from translated parts.
     const SAME_IN_BOTH = [
       'Code',
+      // The label on the date field, and the same word on both sides of it.
+      'Date',
       'Menu',
       'Messages',
       '…',
