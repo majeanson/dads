@@ -1,14 +1,13 @@
 /**
  * Creates a group and prints its invite code.
  *
- * Group creation is deliberately not a public flow in v1: the product is "the
- * dads", a group whose members already know each other, and a create-a-group
- * button would invite exactly the strangers the invite code exists to keep out.
- * The data model is multi-group; the door is this script.
+ * This is no longer the only way a room exists — anybody at the door can open
+ * one — but it is still how the first group was made and it is still how a
+ * word is rotated from a laptop rather than from inside the app.
  *
  *   npm run group:create -- --slug the-dads --name "The Dads" --night thu:21:00
  *   npm run group:create -- --slug the-dads --name "The Dads" --remote
- *   npm run group:create -- --slug the-dads --rotate --code "daddy" --remote
+ *   npm run group:create -- --slug the-dads --rotate --code "<new code>" --remote
  *
  * Prints the plaintext code once. It is not recoverable afterwards — only its
  * PBKDF2 hash is stored — so changing it means --rotate.
@@ -96,9 +95,24 @@ const now = Date.now();
 
 const quote = (v: string) => `'${v.replace(/'/g, "''")}'`;
 const sql = rotate
-  ? `UPDATE groups
-        SET invite_code_hash = ${quote(hash)}, invite_code_salt = ${quote(salt)}
-      WHERE slug = ${quote(slug)};`
+  ? // Two things go with the hash, and leaving either behind makes the
+    // rotation a lie.
+    //
+    // The fingerprint is keyed with the Worker's secret, which this laptop
+    // does not have, so it cannot be recomputed here — it is set back to NULL
+    // and the room learns the new word on the first join, exactly as a room
+    // this script has just made does. Left pointing at the OLD word, the
+    // indexed lookup would miss and the NULL-only scan would skip the room:
+    // a door nobody can open, including the dads.
+    //
+    // And an invite carries its own secret, so it goes on working whatever
+    // the word is. A man changing the word is closing a door; keys left on
+    // the step are the same door, open.
+    `UPDATE groups
+        SET invite_code_hash = ${quote(hash)}, invite_code_salt = ${quote(salt)},
+            invite_code_lookup = NULL
+      WHERE slug = ${quote(slug)};
+DELETE FROM invites WHERE group_id = (SELECT id FROM groups WHERE slug = ${quote(slug)});`
   : `INSERT INTO groups
   (id, slug, name, invite_code_hash, invite_code_salt,
    dad_night_weekday, dad_night_time, dad_night_tz, jaffre_room_code, created_at)

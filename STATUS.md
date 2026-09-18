@@ -1,7 +1,7 @@
 # Where dads stands
 
-Live at **https://dads.marcportal.com**. Invite code for **The Dads**:
-`daddy` — one word, and case and spacing don't matter.
+Live at **https://dads.marcportal.com**. A room is opened at the door and its
+word is chosen there; nothing here knows it, and nothing here should.
 
 Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 [CLAUDE.md](CLAUDE.md) for the rules that hold it together.

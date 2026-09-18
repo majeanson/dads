@@ -23,8 +23,9 @@ npm run dev                # wrangler on :8787 — API, websockets, built assets
 npm run dev:web            # vite on :5173 with HMR, proxying to :8787
 ```
 
-There is no create-a-group button: the door is `group:create`. Dads land on
-the root, type the code and a name, and are remembered on that device.
+Dads land on the root, type the word and a name, and are remembered on that
+device. A room can be opened at that same door — the script above is how the
+first one was made, and how a word is rotated from outside the app.
 
 ## Checks
 

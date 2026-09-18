@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { comeIn, named, note, talk } from './names';
+import { CODE, comeIn, named, note, talk } from './names';
 
 /**
  * The room itself, against the real Durable Object, D1 and R2.
@@ -201,7 +201,7 @@ test('a line typed with no signal is not lost', async ({ browser }) => {
 
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(process.env.PROD_CODE ?? 'daddy');
+  await page.getByLabel('Code').fill(CODE);
   await page.getByLabel('Your name').fill(named('tunnel'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
