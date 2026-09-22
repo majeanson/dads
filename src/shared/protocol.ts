@@ -233,7 +233,7 @@ export type ServerFrame =
    * is the half that had to stay, or home would sit there showing who was
    * coming an hour ago.
    */
-  | { t: 'stir'; what: 'night' | 'todo' }
+  | { t: 'stir'; what: 'night' | 'todo' | 'table' }
   /**
    * Somebody marked the calendar that picks the next night.
    *

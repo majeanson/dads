@@ -417,6 +417,21 @@ the screen knew something and did not say it.
 - `groups.jaffre_room_code` is minted from the slug on first use then read
   back forever. Deriving it every time would mean a renamed group silently
   walks into an empty room.
+- **A new table is a new code** (2026-09-22). Jaffre has no reset: a
+  finished game stays on the felt, a dad who left keeps his seat and nobody
+  can take it, and the only way on is a rematch with four in their seats. A
+  room jaffre has never seen starts empty, so `POST /api/table/new` writes
+  `freshTableCode` — the slug's prefix and six random hex — over the stored
+  code and stirs every open screen (`stir` with `what: 'table'`). Each one
+  re-fetches rather than being handed the code, because the link carries his
+  OWN name. The old room empties and jaffre's reaper collects it; nothing
+  on jaffre's side changed. Any dad may press it, armed on the first press,
+  because the men at the table decide whether to start again and a game in
+  progress ends for all of them. The random half is also what stops a
+  stranger sitting down by guessing the slug.
+- **The name is cut to jaffre's twenty** (`tableName`) on the way in, and the
+  turn nudge compares on the cut name. A dads name may be 32, and a longer one
+  came back on a `turn` that matched nobody.
 - `event.origin !== JAFFRE_ORIGIN` is the whole security boundary on the way
   in — any page can postMessage at us, and a table event reaches the room and
   can push to a phone. The matching check on jaffre's side takes the target
@@ -429,6 +444,12 @@ the screen knew something and did not say it.
 - **The table stays mounted; the prompts and board do not.** Unmounting the
   iframe restarts the game; keeping the other two alive shows data that was
   true when the page loaded. The e2e caught that regression — keep it.
+- **But it is not mounted until it is first opened** (`tableEver` in
+  `Room`). Mounting it for every dad on arrival kept a socket to jaffre open
+  from every phone in the room all evening — nobody's game — and meant
+  jaffre's reaper never saw the room empty. The frame now relays only for the
+  dads who opened it, which is the men at the table and exactly who a `turn`
+  is about.
 - **A frame that loads and says nothing is the Safari case.** Safari
   partitions — and can block — storage in a third-party frame, and jaffre's
   identity is localStorage-only, so it can fail there as a blank panel rather
@@ -1082,8 +1103,9 @@ neither see nor scroll anything.
 - **Dad night appears on the header only inside 24 hours** (`nightSoon`), and
   in full in the menu (`nightItem`). The rest of the week the countdown is
   furniture, and home's card already says it in full.
-- **The table stays mounted whether or not it is on screen** — unmounting the
-  iframe restarts a game — and `data-table="open"` on `main.room` is what shows
+- **The table stays mounted whether or not it is on screen, once it has been
+  opened** — unmounting the iframe restarts a game — and `data-table="open"`
+  on `main.room` is what shows
   it. Above 64rem, open means half each and the room widens to 74rem; closed,
   the conversation keeps a 44rem measure, because a chat line 1200px wide puts
   the name at one end and the time at the other. Below 64rem it takes the

@@ -11,6 +11,7 @@ import {
   type RosterEntry,
   type ServerFrame,
 } from '../shared/protocol';
+import { tableName } from '../shared/jaffre';
 import { parseSaid, type Said } from '../shared/said';
 import { REPLY_QUOTE_LENGTH, type ReplyTo } from '../shared/protocol';
 
@@ -223,8 +224,10 @@ export class RoomDO extends DurableObject<Env> {
     // A screen that reads over HTTP should look again. Only the Worker can
     // reach this; see the `stir` frame in protocol.ts for why it exists.
     if (url.pathname === '/stir' && request.method === 'POST') {
-      const { what } = (await request.json()) as { what: 'night' | 'todo' };
-      if (what !== 'night' && what !== 'todo') return new Response('bad stir', { status: 400 });
+      const { what } = (await request.json()) as { what: 'night' | 'todo' | 'table' };
+      if (what !== 'night' && what !== 'todo' && what !== 'table') {
+        return new Response('bad stir', { status: 400 });
+      }
       this.broadcast({ t: 'stir', what });
       return new Response(null, { status: 204 });
     }
@@ -998,12 +1001,14 @@ export class RoomDO extends DurableObject<Env> {
     if (now - last < TURN_NUDGE_EVERY_MS) return;
     this.turnNudged.set(name, now);
     try {
+      // Compared as the table knows the name: jaffre keeps twenty
+      // characters, and a longer dads name would otherwise never match.
       const { results } = await this.env.DB.prepare(
-        'SELECT id FROM members WHERE group_id = ? AND display_name = ?',
+        'SELECT id, display_name FROM members WHERE group_id = ?',
       )
-        .bind(groupId, name)
-        .all<{ id: string }>();
-      for (const member of results) {
+        .bind(groupId)
+        .all<{ id: string; display_name: string }>();
+      for (const member of results.filter((m) => tableName(m.display_name) === name)) {
         await notifyMember(this.env, member.id, {
           title: 'dads',
           body: 'Your turn at the table.',

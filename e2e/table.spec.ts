@@ -98,17 +98,18 @@ test('what the table says stays at the table', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
   const sam = await comeIn(browser, 'Sam');
 
-  // The frame is mounted from the start whether or not it is on screen — that
-  // is what keeps a game alive across a closed table — so both browsers relay
-  // the stub's events without either of them opening anything.
+  // Both open the table, so both frames relay the stub's events.
   //
   // None of it becomes a line. On an evening of cards that was a sentence
   // every couple of minutes, in the room where the dads are trying to talk,
   // about a game that is on the screen beside them. The frame still carries
   // one thing: a turn left sitting nudges the phone of the dad it is about,
   // which is the test below.
-  await talk(sam);
-  await talk(marc);
+  await open(sam, 'Open the table');
+  await open(marc, 'Open the table');
+  await expect(marc.getByTestId('table').locator('iframe')).toBeVisible();
+  // The stub speaks again a second in; let it.
+  await marc.waitForTimeout(1500);
   await expect(sam.getByTestId('line')).toHaveCount(0);
   await expect(marc.getByTestId('line')).toHaveCount(0);
 
@@ -181,4 +182,31 @@ test('a turn left sitting is said beside the table, never in the room', async ({
   await expect(marc.getByTestId('line').filter({ hasText: /turn/ })).toHaveCount(0);
 
   await marc.context().close();
+});
+
+test('a new table clears it for everybody at once', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc');
+  const sam = await comeIn(browser, 'Sam');
+  await open(marc, 'Open the table');
+  await open(sam, 'Open the table');
+
+  const frameOf = (page: Page) => page.getByTestId('table').locator('iframe');
+  const before = await frameOf(marc).getAttribute('src');
+
+  // It asks first: a game in progress ends for everyone at the table.
+  const again = marc.getByTestId('table-new');
+  await again.click();
+  await expect(again).toHaveText(/for everyone/);
+  await expect(frameOf(marc)).toHaveAttribute('src', before!);
+  await again.click();
+
+  // Both frames move to the same fresh room, each still carrying its own name.
+  await expect(frameOf(marc)).toHaveAttribute('src', /#room\/e2e-table-[0-9a-f]{6}$/);
+  const moved = await frameOf(marc).getAttribute('src');
+  const code = moved!.split('#room/')[1];
+  await expect(frameOf(sam)).toHaveAttribute('src', new RegExp(`#room/${code}$`));
+  await expect(frameOf(sam)).toHaveAttribute('src', /name=Sam/);
+
+  await marc.context().close();
+  await sam.context().close();
 });

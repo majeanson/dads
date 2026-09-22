@@ -73,6 +73,17 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const [replyTo, setReplyTo] = useState<RoomMessage | null>(null);
   const [editing, setEditing] = useState<RoomMessage | null>(null);
   const [tableOpen, setTableOpen] = useState(false);
+  /**
+   * Whether the table has ever been opened on this load.
+   *
+   * The frame is mounted the first time it is asked for and never after taken
+   * down — unmounting restarts a game. It used to be mounted for every dad the
+   * moment he walked in, which kept a socket open to jaffre from every phone
+   * in the room all evening: nobody's game, and the reason jaffre's reaper
+   * never saw the room empty enough to collect.
+   */
+  const [tableEver, setTableEver] = useState(false);
+  if (tableOpen && !tableEver) setTableEver(true);
   const [todo, setTodo] = useState<Todo>({ prompt: false, board: false });
   /**
    * How many rooms this phone is in.
@@ -432,9 +443,16 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           />
         </div>
 
-        {/* Always mounted: unmounting the iframe restarts a game in progress. */}
+        {/* Mounted once asked for, then kept: unmounting the iframe restarts a
+            game in progress. */}
         <div className="col-table">
-          <TableColumn onEvent={room.relayTableEvent} onClose={() => setTableOpen(false)} />
+          {tableEver ? (
+            <TableColumn
+              onEvent={room.relayTableEvent}
+              onClose={() => setTableOpen(false)}
+              pulse={room.tablePulse}
+            />
+          ) : null}
         </div>
       </div>
 

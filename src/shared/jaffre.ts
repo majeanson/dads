@@ -35,6 +35,42 @@ export function isValidTableCode(code: string): boolean {
   return CODE_PATTERN.test(code);
 }
 
+/** How long the random half of a fresh table's code is. */
+const FRESH_SUFFIX = 6;
+
+/**
+ * A new table for the same group: the group's own prefix, so the code still
+ * says whose it is, and six random characters, so it is a room nobody has sat
+ * in — and one nobody can walk into by guessing the slug.
+ *
+ * Jaffre has no reset. A room it has never seen starts empty — no seats, no
+ * score, no finished game on the felt — so moving the group to a fresh code IS
+ * clearing the table, and the old room empties and is reaped on jaffre's side.
+ * `random` is the caller's, so this stays pure and testable.
+ */
+export function freshTableCode(groupSlug: string, random: string): string {
+  const prefix = deriveTableCode(groupSlug)
+    .slice(0, 32 - FRESH_SUFFIX - 1)
+    .replace(/-+$/, '');
+  const suffix = random
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, FRESH_SUFFIX);
+  return `${prefix}-${suffix}`;
+}
+
+/**
+ * The longest name jaffre keeps (its embed.ts cuts `?name=` to this). A dads
+ * name may be 32; handing jaffre the cut one ourselves means the name that
+ * comes back on a `turn` is one we can recognise.
+ */
+export const TABLE_NAME_MAX = 20;
+
+/** A dad's name as the table knows it. */
+export function tableName(displayName: string): string {
+  return displayName.slice(0, TABLE_NAME_MAX);
+}
+
 export interface TableLink {
   /** What the iframe loads. */
   embedUrl: string;
@@ -53,7 +89,7 @@ export interface TableLink {
  * where the player came from so it can offer the way back.
  */
 export function tableLink(code: string, name: string, origin = JAFFRE_ORIGIN): TableLink {
-  const embed = new URLSearchParams({ name, from: 'dads' });
+  const embed = new URLSearchParams({ name: tableName(name), from: 'dads' });
   return {
     embedUrl: `${origin}/?${embed}#room/${code}`,
     // The own-tab link carries `from` (so jaffre offers the way back) but NOT

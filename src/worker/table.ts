@@ -1,5 +1,25 @@
-import { deriveTableCode, isValidTableCode } from '../shared/jaffre';
+import { deriveTableCode, freshTableCode, isValidTableCode } from '../shared/jaffre';
 import type { Env } from './env';
+
+/**
+ * Move the group to a table nobody has sat at.
+ *
+ * The stored code is simply replaced: `tableCodeFor` reads it back from here
+ * on, and every open screen is told to fetch it again. Nothing on jaffre's
+ * side is touched — the old room empties and its own reaper collects it.
+ */
+export async function newTableFor(env: Env, group: { id: string; slug: string }): Promise<string> {
+  // Hex, not randomToken: base64url's `-` and `_` are filtered out of a code,
+  // and a suffix must never come up short.
+  const random = [...crypto.getRandomValues(new Uint8Array(4))]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  const code = freshTableCode(group.slug, random);
+  await env.DB.prepare('UPDATE groups SET jaffre_room_code = ? WHERE id = ?')
+    .bind(code, group.id)
+    .run();
+  return code;
+}
 
 /**
  * The group's table code.

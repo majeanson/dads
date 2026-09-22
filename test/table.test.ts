@@ -2,6 +2,7 @@ import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   deriveTableCode,
+  freshTableCode,
   isValidTableCode,
   JAFFRE_ORIGIN,
   parseTableEvent,
@@ -92,6 +93,18 @@ describe('table codes', () => {
       expect(isValidTableCode(deriveTableCode(slug))).toBe(true);
     }
   });
+
+  it('makes a fresh table that still says whose it is', () => {
+    expect(freshTableCode('the-dads', 'a1b2c3d4')).toBe('the-dads-a1b2c3');
+    // Long slugs give way so the random half always fits, and jaffre's rule
+    // still holds.
+    const long = freshTableCode('x'.repeat(50), 'ffffffff');
+    expect(long).toHaveLength(32);
+    expect(long.endsWith('-ffffff')).toBe(true);
+    for (const slug of ['---', 'The Dads!', 'a-'.repeat(20)]) {
+      expect(isValidTableCode(freshTableCode(slug, '0123abcd'))).toBe(true);
+    }
+  });
 });
 
 describe('the link into jaffre', () => {
@@ -103,6 +116,13 @@ describe('the link into jaffre', () => {
     // way back, but leaves his jaffre name alone.
     expect(shareUrl).toBe(`${JAFFRE_ORIGIN}/?from=dads#room/the-dads`);
     expect(shareUrl).not.toContain('name=');
+  });
+
+  it('hands jaffre the name cut the way jaffre would cut it', () => {
+    // Jaffre keeps twenty characters. Cutting it here means the name that
+    // comes back on a turn is one this side can find again.
+    const { embedUrl } = tableLink('the-dads', 'Marc-Antoine Villeneuve-Tremblay');
+    expect(new URL(embedUrl).searchParams.get('name')).toBe('Marc-Antoine Villene');
   });
 
   it('escapes a name that would otherwise break the URL', () => {
@@ -252,6 +272,63 @@ describe('GET /api/table', () => {
   it('gives each group its own table', async () => {
     const other = await seedGroup({ slug: 'other-dads' });
     expect(await tableCodeFor(env, other)).toBe('other-dads');
+    expect(await tableCodeFor(env, group)).toBe('the-dads');
+  });
+});
+
+describe('POST /api/table/new', () => {
+  let group: SeededGroup;
+  const open: Dad[] = [];
+  beforeEach(async () => {
+    await resetTables();
+    group = await seedGroup({ slug: 'the-dads' });
+  });
+  afterEach(async () => {
+    open.splice(0).forEach((d) => d.close());
+    await settle();
+  });
+
+  const post = (cookie?: string) =>
+    worker.fetch('https://dads.test/api/table/new', {
+      method: 'POST',
+      headers: cookie ? { Cookie: cookie } : {},
+    });
+
+  it('refuses a stranger', async () => {
+    expect((await post()).status).toBe(401);
+  });
+
+  it('moves the whole group to a clean table, and tells every open screen', async () => {
+    const marc = await enter(group, 'Marc');
+    const sam = await enter(group, 'Sam');
+    open.push(marc, sam);
+    expect(await tableCodeFor(env, group)).toBe('the-dads');
+
+    // Any dad, not only the one who owns the room's switches.
+    const res = await post(sam.cookie);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { code: string; embedUrl: string };
+    expect(body.code).toMatch(/^the-dads-[0-9a-f]{6}$/);
+    expect(body.embedUrl).toContain(`#room/${body.code}`);
+    expect(body.embedUrl).toContain('name=Sam');
+
+    // Stored, so a phone that opens the table afterwards sits at the new one.
+    expect(await tableCodeFor(env, group)).toBe(body.code);
+
+    // A nudge and not the code: each dad's link carries his own name.
+    await until(() => marc.frames.some((f) => f.t === 'stir' && f.what === 'table'));
+
+    // And twice is two different tables.
+    const again = (await (await post(marc.cookie)).json()) as { code: string };
+    expect(again.code).not.toBe(body.code);
+  });
+
+  it('has nothing to replace in a room with the table switched off', async () => {
+    await env.DB.prepare('UPDATE groups SET table_on = 0 WHERE id = ?').bind(group.id).run();
+    const cookie = cookieFrom(
+      await worker.fetch(postJoin({ code: group.code, displayName: 'Marc' })),
+    );
+    expect((await post(cookie)).status).toBe(404);
     expect(await tableCodeFor(env, group)).toBe('the-dads');
   });
 });

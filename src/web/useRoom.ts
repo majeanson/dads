@@ -41,6 +41,8 @@ export interface RoomState {
   /** The same nudge for the night's own screen, and for his marks. */
   nightPulse: number;
   todoPulse: number;
+  /** Somebody started a new table; the frame has to be pointed at it. */
+  tablePulse: number;
   /** Lines typed while the socket was down, waiting to go. */
   waiting: number;
 }
@@ -114,6 +116,7 @@ export function useRoom(
     pollPulse: 0,
     nightPulse: 0,
     todoPulse: 0,
+    tablePulse: 0,
     waiting: 0,
   });
 
@@ -340,7 +343,9 @@ export function useRoom(
           setState((s) =>
             frame.what === 'night'
               ? { ...s, nightPulse: s.nightPulse + 1 }
-              : { ...s, todoPulse: s.todoPulse + 1 },
+              : frame.what === 'table'
+                ? { ...s, tablePulse: s.tablePulse + 1 }
+                : { ...s, todoPulse: s.todoPulse + 1 },
           );
           return;
         case 'rooms':

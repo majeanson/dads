@@ -1,7 +1,7 @@
-import { ExternalLink, X } from 'lucide-react';
+import { ExternalLink, RotateCcw, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { JAFFRE_ORIGIN, parseTableEvent, type TableEvent } from '../shared/jaffre';
-import { fetchTable, type TableInfo } from './api';
+import { fetchTable, newTable, type TableInfo } from './api';
 import { useT } from './i18n';
 import { noteAfter, noteText, type Note } from '../shared/tableNote';
 import { Button } from './ui/Button';
@@ -20,13 +20,19 @@ const SILENCE_MS = 12_000;
  * anything over it, must not restart a game in progress — so the parent hides
  * it with CSS instead. Anything the table says arrives by postMessage and is
  * relayed into the room by `onEvent`.
+ *
+ * `pulse` moves when somebody started a new table: the group's code changed,
+ * and the frame is pointed at the new one. That is a navigation inside the
+ * frame, not a remount — the game it leaves is the one being cleared.
  */
 export function TableColumn({
   onEvent,
   onClose,
+  pulse,
 }: {
   onEvent: (event: TableEvent) => void;
   onClose: () => void;
+  pulse: number;
 }) {
   const { t } = useT();
   const [table, setTable] = useState<TableInfo | null | 'loading'>('loading');
@@ -43,18 +49,51 @@ export function TableColumn({
   const [silent, setSilent] = useState(false);
   const [note, setNote] = useState<Note | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  /** "New table" asks once, then does it: a game in progress ends for all. */
+  const [arming, setArming] = useState(false);
+  const [failed, setFailed] = useState(false);
   const frame = useRef<HTMLIFrameElement>(null);
   const heard = useRef(false);
+
+  /** A different table is a fresh wait: nothing it said yet, nothing noted. */
+  const pointed = useRef<string | null>(null);
+  const pointAt = useCallback((next: TableInfo) => {
+    if (pointed.current === next.embedUrl) return;
+    pointed.current = next.embedUrl;
+    heard.current = false;
+    setSilent(false);
+    setNote(null);
+    setTable(next);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     fetchTable()
-      .then((t) => !cancelled && setTable(t))
-      .catch(() => !cancelled && setTable(null));
+      .then((t) => !cancelled && pointAt(t))
+      .catch(() => !cancelled && setTable((was) => (was === 'loading' ? null : was)));
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [pulse, pointAt]);
+
+  // An armed button that nobody confirms goes back to sleep.
+  useEffect(() => {
+    if (!arming) return;
+    const timer = setTimeout(() => setArming(false), 4000);
+    return () => clearTimeout(timer);
+  }, [arming]);
+
+  const startAgain = useCallback(() => {
+    if (!arming) {
+      setFailed(false);
+      setArming(true);
+      return;
+    }
+    setArming(false);
+    newTable()
+      .then(pointAt)
+      .catch(() => setFailed(true));
+  }, [arming, pointAt]);
 
   useEffect(() => {
     function receive(event: MessageEvent) {
@@ -148,12 +187,29 @@ export function TableColumn({
             row of a game that wants every pixel. Kept for anything reading
             the page aloud, where the section still needs its name. */}
         <h2 className="max-[30rem]:sr-only">{t('t.title')}</h2>
-        {note === null ? null : (
+        {failed ? (
+          <span className="table-note error" role="status">
+            {t('t.new_failed')}
+          </span>
+        ) : note === null ? null : (
           <span className="table-note" role="status" data-testid="table-note">
             {noteText(t, note, now)}
           </span>
         )}
         <span className="table-head-actions">
+          <Button
+            look={arming ? 'danger' : 'quiet'}
+            size="sm"
+            onClick={startAgain}
+            data-testid="table-new"
+            title={t('t.new')}
+            className={arming ? undefined : 'max-[30rem]:w-8 max-[30rem]:px-0'}
+          >
+            <RotateCcw size={14} aria-hidden="true" />
+            <span className={arming ? undefined : 'max-[30rem]:sr-only'}>
+              {arming ? t('t.new_sure') : t('t.new')}
+            </span>
+          </Button>
           <a
             href={table.shareUrl}
             target="_blank"

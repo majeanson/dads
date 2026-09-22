@@ -488,6 +488,13 @@ export async function fetchTable(): Promise<TableInfo> {
   return (await res.json()) as TableInfo;
 }
 
+/** Move the group to a clean table. Everybody else hears it as a stir. */
+export async function newTable(): Promise<TableInfo> {
+  const res = await fetch('/api/table/new', { method: 'POST' });
+  if (!res.ok) throw new Error(`POST /api/table/new ${res.status}`);
+  return (await res.json()) as TableInfo;
+}
+
 export interface Todo {
   /** Today's question is unanswered by you. */
   prompt: boolean;

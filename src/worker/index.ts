@@ -18,7 +18,7 @@ import { postRoom } from './routes/create';
 import { listMine, switchRoom } from './routes/mine';
 import { putOwner, putRooms, putWord } from './routes/rooms';
 import { search } from './routes/search';
-import { getTable } from './routes/table';
+import { getTable, postNewTable } from './routes/table';
 import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
 
 export { RoomDO } from './RoomDO';
@@ -195,6 +195,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/table':
       return getTable(request, env, prod);
+
+    case 'POST /api/table/new':
+      return postNewTable(request, env, prod);
 
     case 'GET /api/prompt':
       return getTodaysPrompt(request, env, prod);
