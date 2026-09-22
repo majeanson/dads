@@ -11,6 +11,8 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 |                     |                                                                                                                                      |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | **Get in**          | Follow a link, or type the code, and a name. Remembered on that device forever.                                                      |
+| **Open a room**     | Anybody at the door can start one and choose its word. Whoever opens it owns its switches and its word, and can hand it on.          |
+| **Be in several**   | One phone, several rooms, and a sheet to move between them without typing a word again.                                              |
 | **See at a glance** | The app opens on home, which asks one question: are you coming on Thursday. The door into the talk and the menu's rows sit under it. |
 | **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers, marks, replies, edits and a way to take a line back.          |
 | **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.                                              |
@@ -20,8 +22,14 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 | **Keep it**         | Any dad can take a picture off the shelf so the next upload never reaches it.                                                        |
 | **Answer**          | A curated question every day, answered in front of the others. What was asked before is one row away.                                |
 | **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened. The weeks before are a tab.                                  |
-| **Play**            | Jaffre framed beside the conversation, name passed through, table events in the chat.                                                |
-| **Turn up**         | A standing dad night: countdown, who's coming, what to get into, a nudge, an .ics.                                                   |
+| **Play**            | Jaffre framed beside the conversation, name passed through, the table's state in its own panel head.                                 |
+| **Turn up**         | A standing dad night or one arranged evening: countdown, in / maybe / out, what to get into, a nudge, an .ics.                       |
+| **Pick a date**     | With no evening to come, a shared month calendar: everyone marks the days they can, anyone locks one in.                             |
+
+The conversation is only what the dads typed. The room used to narrate itself
+(RSVPs, check-ins, seats at the table, the night being set, a closing summary);
+since 2026-09-17 each of those lives on its own screen, and a `stir` frame tells
+open screens to re-read.
 
 ## The shape of it
 
@@ -106,11 +114,10 @@ secrets that are only set in production. It never opens the viewer, and a
 headless browser has nothing to say about whether a photograph of somebody's
 child looks right on a phone in a kitchen.
 
-What has NOT been through a phone yet is the day after that (2026-09-15):
-home cut down to the one question, the menu's rows on home itself, the
-header split into its two shapes, and every control at 44px with the one
-action on a sheet bigger still. Playwright checked it at 390px in both
-languages; a thumb in a kitchen has not.
+By 2026-09-22 everything since then has been played with on a phone as well:
+home cut down to one question, the rooms, the calendar. Nothing was broken.
+What came back was about the look: a few screens still need decluttering, and
+some need to be more interesting to look at.
 
 ## The last review
 
@@ -229,14 +236,26 @@ Changing the night cancels whatever was armed for the old one, which is right
 and is worth knowing: resetting the slot two minutes after it opened is what
 made the first summary never arrive.
 
+(Both of those were room lines, and the room writes no lines now. The alarms
+still fire on the same clock; the open reaches the phones that asked, and the
+summary is gone.)
+
+## Production, 2026-09-22
+
+One room, **Throwback daddies** (`throwback-daddies`), opened at the door on
+2026-09-17: two members, ten lines. The room this document calls `the-dads`
+above no longer exists — production was wiped and rebuilt before the repo went
+public. No room has been opened by anybody else.
+
 ## Notes
 
 - The code is one word, so the only thing behind it is the join throttle: ten
   wrong guesses per IP per ten minutes, each costing a 100k-iteration PBKDF2.
   Real friction for a casual guesser, not much against somebody determined who
-  knows the address. The invite links are the better way in. To rotate without
-  costing the group its history:
-  `npm run group:create -- --slug the-dads --rotate --code "<code>" --remote`
+  knows the address. The invite links are the better way in. The room's
+  creator changes the word from Settings, which also kills the invite links
+  that were out. From a laptop, without costing the group its history:
+  `npm run group:create -- --slug <slug> --rotate --code "<code>" --remote`
 - Every driven check against production joins as a new member, because a fresh
   browser is a fresh dad. Sweeping them up afterwards:
   `delete from members where id not in (select distinct member_id from messages)`

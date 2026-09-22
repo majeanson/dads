@@ -236,12 +236,11 @@ weakening `sessionSecret()`.
   picked once.
 - **Marking the calendar says nothing in the room.** Five dads marking a
   fortnight is sixty lines about one decision, which is how a conversation
-  becomes a calendar. Two moments are announced — the poll OPENING
-  (`poll_open`, said by the room right after the summary when a one-off ends)
-  and the date being locked in (`night_set` with a date, which reads as
-  "locked in" and not as "set dad night to Thursdays"). Everyone looking at
-  the calendar right now finds out through a `poll` frame, which is a nudge
-  to re-read and not the marks themselves.
+  becomes a calendar. Nothing about the poll is said at all now — not its
+  opening, not the date being locked in (`poll_open` and `night_set` survive
+  in `said.ts` only to render old lines; see **The conversation is what a dad
+  typed**). Everyone looking at the calendar right now finds out through a
+  `poll` frame, which is a nudge to re-read and not the marks themselves.
 - **Any dad locks it in, and no rule does it for him.** Same as the night:
   there is no admin over what a group decides together, and a rule that picked
   the leader at some hour would be deciding a tie, or a late vote, on behalf
@@ -260,11 +259,11 @@ weakening `sessionSecret()`.
   becomes the calendar again in the same breath, because "when is the next
   one" is the question that follows. Without it the group was stuck with a
   date nobody could move until it had been and gone.
-- **Calling one off is not clearing the night.** `night_off` carries the date
-  and says which evening is not happening; `night_cleared` is a group that has
-  stopped having a standing night. The room tells them apart by reading the
-  stored night BEFORE the new one is applied — nothing else knows what was
-  there a moment ago.
+- **Calling one off is not clearing the night.** One says which evening is
+  not happening; the other is a group that has stopped having a standing
+  night. They were two room lines (`night_off`, `night_cleared`) until the
+  room stopped writing lines; the difference lives on the card and the sheet
+  now.
 - **A one-off `.ics` gets no RRULE and its own UID.** An RRULE would put a
   standing Thursday in five calendars off the back of one date they agreed to,
   and a repeated UID asks a calendar to REWRITE the event already in it.
@@ -331,21 +330,16 @@ weakening `sessionSecret()`.
   new. The poll's time field carries no `aria-label` for the same family of
   reason: its visible label is its name, and a name that does not contain the
   words beside it is a control a voice user cannot ask for.
-- `night_start` posts "the table's open" and arms `night_end`; `night_end`
-  counts the window from the **D1 archive** and posts the summary, then arms
-  next week. A group with no night arms nothing — and a one-off that has just
-  happened is such a group, so it arms nothing and, after the summary, says
-  `poll_open`. That is the moment to ask: everybody is still in the room.
-- **The summary carries the week** (2026-09-16): how many things are being
-  tried this week and how many of last week's were kept, read from
-  `commitments` for the night's ISO week and the one before, in the group's
-  zone. It is the one line the whole group reads at once. Best-effort — a
-  failed read of the board must not cost the evening its summary — and the
-  numbers ride `meta` as optional fields, so a line said before this renders
-  as it always did. Zeros say nothing: "0 things being tried" is furniture.
-- Any dad can set the night — no admin role — and the change is announced in
-  the room by name. `PUT /api/night` writes D1 then tells the DO, which
-  re-arms, announces, and pushes a `night` frame to open sockets.
+- `night_start` pushes "the table's open" to the phones that asked — nothing
+  in the room — and arms `night_end`. **`night_end` does nothing now**:
+  `closeDadNight` has been empty since the room stopped writing lines, and the
+  closing summary and `poll_open` went with it. It is still armed, because it
+  holds the schedule inside the window, so the next firing arms next week's
+  start rather than tonight's again. A group with no night arms nothing — and
+  a one-off that has just happened is such a group; the card turns into the
+  calendar by itself, because `stillToCome` says so.
+- Any dad can set the night — no admin role. `PUT /api/night` writes D1 then
+  tells the DO, which re-arms and pushes a `night` frame to open sockets.
 - Setting a night mid-evening arms that evening's end, so it means something
   immediately instead of waiting a week.
 
@@ -424,11 +418,14 @@ the screen knew something and did not say it.
   back forever. Deriving it every time would mean a renamed group silently
   walks into an empty room.
 - `event.origin !== JAFFRE_ORIGIN` is the whole security boundary on the way
-  in — any page can postMessage at us, and a table event becomes a line in the
-  room. The matching check on jaffre's side takes the target origin from the
-  **referrer**, so a page cannot nominate someone else as the recipient.
-- Every framed dad relays the same jaffre event, so the DO drops a `table`
-  line identical to one posted in the last 20s.
+  in — any page can postMessage at us, and a table event reaches the room and
+  can push to a phone. The matching check on jaffre's side takes the target
+  origin from the **referrer**, so a page cannot nominate someone else as the
+  recipient.
+- Every framed dad relays the same jaffre event to the room. Since the room
+  stopped writing lines, the only one it acts on is `turn` (a push to the dad
+  it names); the rest are the panel's own `table-note`. `tableSaid` survives
+  for its tests only.
 - **The table stays mounted; the prompts and board do not.** Unmounting the
   iframe restarts the game; keeping the other two alive shows data that was
   true when the page loaded. The e2e caught that regression — keep it.
@@ -856,7 +853,7 @@ secret, custom domain bound by the route in wrangler.toml.
   out could be changed by nobody in the room — the only rotation was a script
   on a laptop with the repo on it — and a creator who drifted away froze the
   switches for the other four for ever. `PUT /api/rooms/word` and
-  `PUT /api/rooms/owner`, both creator-only, both announced by name.
+  `PUT /api/rooms/owner`, both creator-only, and neither says anything in the room.
 - **The app can never show the current word**, here or anywhere: it is kept as
   a PBKDF2 hash and nothing knows the plaintext, which is the same reason an
   invite link carries its own secret. The form only ever SETS a new one, and
@@ -1084,7 +1081,7 @@ neither see nor scroll anything.
   and it is deliberately about the caller and nobody else.
 - **Dad night appears on the header only inside 24 hours** (`nightSoon`), and
   in full in the menu (`nightItem`). The rest of the week the countdown is
-  furniture: the room already posts the open and the summary as lines.
+  furniture, and home's card already says it in full.
 - **The table stays mounted whether or not it is on screen** — unmounting the
   iframe restarts a game — and `data-table="open"` on `main.room` is what shows
   it. Above 64rem, open means half each and the room widens to 74rem; closed,
