@@ -71,7 +71,7 @@ export function LineMenu({
           className={[
             'z-50 w-max max-w-[var(--radix-popper-available-width)] rounded-lg',
             'border border-line bg-paper p-1 text-ink shadow-lg',
-            'data-[state=open]:animate-in data-[state=open]:fade-in',
+            'motion-pop origin-[var(--radix-popper-transform-origin)]',
           ].join(' ')}
           collisionPadding={12}
           data-testid="line-menu"

@@ -30,6 +30,9 @@ const PAIRS = [
   // The one filled danger surface in the app: a "take it back" row once it is
   // armed. `bg` is the label on it, the way `on-accent` is on the accent.
   ['bg', 'danger', 4.5, 'the label on an armed destructive row'],
+  // Home's answer control: "Can't" is filled in ink, not in the accent and
+  // not in red, and the page colour is its label.
+  ['bg', 'text', 4.5, 'the label on a chosen "can’t"'],
   ['border-strong', 'bg', 3.0, 'the border that makes a control findable'],
   ['border-strong', 'bg-soft', 3.0, 'that border on a panel'],
   ['accent', 'bg', 3.0, 'the focus ring'],

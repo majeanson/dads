@@ -13,7 +13,8 @@ import { TableColumn } from './TableColumn';
 import { Viewer } from './Viewer';
 import { plural, useT } from './i18n';
 import { Button } from './ui/Button';
-import { nightSoon } from './NightEditor';
+import { buzz } from './buzz';
+import { nightShort } from './NightEditor';
 import { isImage } from './media';
 import { toRows } from './messageGroups';
 import { useCall } from './useCall';
@@ -218,7 +219,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   // The conversation's menu holds the questions and nothing else that waits
   // on him: the week is on home, where its own row says so in words.
   const waiting = todo.prompt && room.rooms.questions;
-  const soon = nightSoon(t, lang, room.night, now);
+  const soon = nightShort(t, lang, room.night, now);
 
   /** A member id as a name, for the marks. The roster is five people long. */
   const nameOf = useCallback(
@@ -314,6 +315,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         view={view}
         connection={room.connection}
         here={room.roster.length}
+        roster={room.roster}
+        faceOf={faceOf}
         soon={soon}
         callState={call.state}
         // On home as well, now that home says two things and nothing else.
@@ -338,6 +341,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         answered={nightPulse}
         pollPulse={room.pollPulse}
         you={session.member.id}
+        faceOf={faceOf}
         unseen={seen.unseen}
         onGo={() => setView('talk')}
         onNight={() => setSheet('night')}
@@ -384,7 +388,10 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             newMark={newMark}
             faceOf={faceOf}
             nameOf={nameOf}
-            onReact={(id, emoji, on) => room.react(id, emoji, on, session.member.id)}
+            onReact={(id, emoji, on) => {
+              buzz();
+              room.react(id, emoji, on, session.member.id);
+            }}
             onRetract={room.retract}
             onReply={(message) => {
               setEditing(null);

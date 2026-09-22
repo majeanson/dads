@@ -56,12 +56,18 @@ export function Marks({
               // a mark that lands exactly on the floor is a mark one rounding
               // error away from failing it.
               'inline-flex h-8 cursor-pointer items-center gap-1 rounded-full border px-2.5',
-              'text-xs leading-none transition-colors duration-75',
+              'text-xs leading-none transition-[border-color,color,scale] duration-100 active:scale-90',
+              // A mark that appears pops; one already there stays put and only
+              // its count moves.
+              'motion-pop',
               mine ? 'border-accent text-ink' : 'border-line text-muted hover:border-edge',
             )}
           >
             <span aria-hidden="true">{r.emoji}</span>
-            <span className="tabular-nums">{r.by.length}</span>
+            {/* Keyed on the count, so the number ticks when a dad adds his. */}
+            <span key={r.by.length} className="motion-tick tabular-nums">
+              {r.by.length}
+            </span>
             <span className="sr-only">{t('line.marked')}</span>
           </button>
         );
@@ -96,8 +102,10 @@ export function MarkRow({
             data-testid={`react-${emoji}`}
             onClick={() => onReact(emoji, !on)}
             className={cn(
-              'grid h-10 min-w-9 flex-1 cursor-pointer place-items-center rounded-app',
-              'border text-lg transition-colors duration-75',
+              // 44px, a thumb: this row is what a tap on a line opens on a
+              // phone now, as well as the long-press menu.
+              'grid h-11 min-w-11 flex-1 cursor-pointer place-items-center rounded-app',
+              'border text-xl transition-[border-color,background-color,scale] duration-100 active:scale-90',
               on ? 'border-accent bg-panel' : 'border-transparent hover:border-edge',
             )}
           >
@@ -156,7 +164,7 @@ export function QuickMark({
           className={[
             'z-50 w-max max-w-[var(--radix-popper-available-width)] rounded-lg',
             'border border-line bg-paper p-1 text-ink shadow-lg',
-            'data-[state=open]:animate-in data-[state=open]:fade-in',
+            'motion-pop origin-[var(--radix-popper-transform-origin)]',
           ].join(' ')}
           data-testid="quick-marks"
         >

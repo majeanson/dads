@@ -16,10 +16,11 @@ const button = cva(
   [
     'inline-flex items-center justify-center gap-2 rounded-app font-medium',
     'cursor-pointer select-none whitespace-nowrap',
-    // A press should feel like one. 75ms is under the threshold where a
-    // transition reads as an animation rather than as the thing responding.
-    'transition-[background-color,border-color,color,box-shadow,transform] duration-75',
-    'active:translate-y-px',
+    // A press should feel like one: the control gives under the thumb and
+    // springs back. 100ms is under the threshold where it reads as an
+    // animation rather than as the thing responding.
+    'transition-[background-color,border-color,color,box-shadow,scale] duration-100',
+    'active:scale-[0.97]',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
     'disabled:pointer-events-none disabled:opacity-50',
   ],

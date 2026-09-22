@@ -1,11 +1,11 @@
-import type { RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { Attachment as MessageAttachment, RoomMessage } from '../shared/protocol';
 import { parts, shortLink } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
 import { Face } from './Face';
 import { useT } from './i18n';
-import { Marks, marksOf, QuickMark } from './Marks';
+import { MarkRow, Marks, marksOf, QuickMark } from './Marks';
 import type { Row } from './messageGroups';
 import { LineMenu } from './ui/LineMenu';
 
@@ -60,6 +60,34 @@ export function Lines({
 }) {
   const { t, lang } = useT();
 
+  /**
+   * The seq the list had when it first settled. Lines after it ARRIVED while
+   * he was here and ease in; the backfill does not, because five hundred
+   * lines rising at once on opening the app is noise, not an arrival.
+   */
+  const settled = useRef<number | null>(null);
+  const newest = rows.reduce((n, r) => (r.kind === 'message' ? Math.max(n, r.key) : n), 0);
+  useEffect(() => {
+    if (settled.current === null && (rows.length > 0 || empty)) settled.current = newest;
+  }, [rows.length, empty, newest]);
+  const arrived = (seq: number) => settled.current !== null && seq > settled.current;
+
+  /**
+   * On a phone, one tap on a line puts the five marks under it.
+   *
+   * The long press was the only way in, and a long press is a gesture nobody
+   * finds; the double tap gave a thumb and nothing else. A tap is what a thumb
+   * already does to a line, so it opens the row, and a second tap on a mark
+   * is the choice. Only where the pointer IS a thumb: on a laptop a click on a
+   * line is a man selecting text, and the quick button under the pointer is
+   * already there.
+   */
+  const [coarse] = useState(
+    () =>
+      typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true,
+  );
+  const [marking, setMarking] = useState<string | null>(null);
+
   return (
     <ol className="lines" aria-label={t('room.messages')} ref={lines} onScroll={onScroll}>
       {empty ? <li className="lines-empty quiet">{t('room.empty')}</li> : null}
@@ -93,13 +121,23 @@ export function Lines({
             onEdit={row.message.memberId === you ? () => onEdit(row.message) : undefined}
           >
             <li
-              className={`group line line-${row.message.kind}${row.showName ? '' : ' is-continued'}`}
+              className={`group line line-${row.message.kind}${row.showName ? '' : ' is-continued'}${arrived(row.key) ? ' motion-rise' : ''}`}
               data-testid="line"
-              // A double tap is a thumb, the way every other chat has taught
-              // it: the first mark goes on, and off again on the next. Not on
-              // a link, a photo or a control, each of which a double tap would
-              // also open twice.
+              data-marking={marking === row.message.id ? 'yes' : undefined}
+              onClick={(event) => {
+                if (!coarse) return;
+                if ((event.target as HTMLElement).closest('a, button, img, video, audio')) return;
+                // A man selecting words to copy is not asking for marks.
+                if ((window.getSelection()?.toString() ?? '') !== '') return;
+                setMarking((m) => (m === row.message.id ? null : row.message.id));
+              }}
+              // With a mouse, a double click on the words is a thumb, the way
+              // every other chat has taught it: on, and off again on the next.
+              // Not on a phone, where the single tap opens the row instead, and
+              // not on a link, a photo or a control, each of which a double
+              // tap would also open twice.
               onDoubleClick={(event) => {
+                if (coarse) return;
                 if ((event.target as HTMLElement).closest('a, button, img, video, audio')) return;
                 const on = !marksOf(row.message, you).includes('👍');
                 onReact(row.message.id, '👍', on);
@@ -163,6 +201,17 @@ export function Lines({
                   nameOf={nameOf}
                   onToggle={(emoji, on) => onReact(row.message.id, emoji, on)}
                 />
+                {marking === row.message.id ? (
+                  <span className="line-marks motion-rise" data-testid="tap-marks">
+                    <MarkRow
+                      mine={marksOf(row.message, you)}
+                      onReact={(emoji, on) => {
+                        onReact(row.message.id, emoji, on);
+                        setMarking(null);
+                      }}
+                    />
+                  </span>
+                ) : null}
               </span>
               <span className="when flex items-start gap-1">
                 <time>{clock(row.message.createdAt)}</time>

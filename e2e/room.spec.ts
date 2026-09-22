@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { devices, expect, test, type Browser, type Page } from '@playwright/test';
 import { talk } from './talk';
 import { E2E_ROOM_GROUP } from './global-setup';
 
@@ -485,6 +485,41 @@ test('a mouse gets a button for a mark, and a double tap is a thumb', async ({ b
 
   await marc.context().close();
   await sam.context().close();
+});
+
+test('on a phone, one tap on a line puts the marks under it', async ({ browser }) => {
+  // A thumb, not a mouse: the pointer is coarse, so a tap on the words opens
+  // the five and a tap on one of them is the choice. The long press is still
+  // there; this is the way in a man finds without being told.
+  const context = await browser.newContext({ ...devices['iPhone 13'] });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill('Tom Thumb');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
+
+  await page.getByLabel('Say something').fill('tapped not pressed');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const line = page.getByTestId('line').filter({ hasText: 'tapped not pressed' });
+  await expect(line).toBeVisible();
+
+  await line.locator('.body').tap();
+  const row = line.getByTestId('tap-marks');
+  await expect(row).toBeVisible();
+  await row.getByTestId('react-💪').tap();
+  // The choice closes the row and lands as a mark with a count.
+  await expect(row).toHaveCount(0);
+  await expect(line.getByTestId('mark').filter({ hasText: '💪' })).toContainText('1');
+
+  // A second tap on the words closes an open row without marking anything.
+  await line.locator('.body').tap();
+  await expect(line.getByTestId('tap-marks')).toBeVisible();
+  await line.locator('.body').tap();
+  await expect(line.getByTestId('tap-marks')).toHaveCount(0);
+
+  await context.close();
 });
 
 test('a laptop gets an emoji button, and it lands where the caret is', async ({ browser }) => {

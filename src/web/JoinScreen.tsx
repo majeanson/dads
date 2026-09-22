@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { join, type JoinFailure, type Session } from './api';
 import { plural, useT, type Key, type T } from './i18n';
+import { Logo } from './Logo';
 import { NewRoom } from './NewRoom';
 import { LangToggle } from './Toggles';
 import { Button } from './ui/Button';
@@ -70,16 +71,29 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5 py-10">
-      {/* The app's own face, at the door. It is the only decoration in the
-          whole product and it is here because a stranger who has been handed
-          a code should recognise where he has landed. */}
-      <img src="/icon.svg" alt="" width={64} height={64} className="mb-5 rounded-2xl shadow-sm" />
+    <main className="relative mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5 py-10">
+      {/* The one thing a stranger at the door can change, in the corner where
+          a language switch lives on every site he has ever used. The theme
+          follows his phone and needs no asking; the language does. */}
+      <div className="absolute top-[max(1rem,env(safe-area-inset-top))] right-5">
+        <LangToggle compact />
+      </div>
+
+      {/* The app's own face, at the door, putting its glasses on as he
+          arrives. A stranger who has been handed a code should recognise where
+          he has landed — and the first thing the app does should be a small
+          welcome rather than a form. */}
       {making ? (
-        <NewRoom onMade={onJoined} onBack={() => setMaking(false)} />
+        <>
+          <DoorMark />
+          <NewRoom onMade={onJoined} onBack={() => setMaking(false)} />
+        </>
       ) : (
         <>
-          <h1 className="display m-0 text-4xl">dads</h1>
+          <div className="mb-2 flex items-center gap-4">
+            <DoorMark />
+            <h1 className="display m-0 text-5xl">dads</h1>
+          </div>
           <p className="mt-2 mb-8 text-[1.0625rem] text-muted">
             {invite ? t('join.invited') : t('join.lede')}
           </p>
@@ -163,12 +177,15 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
           )}
         </>
       )}
-
-      {/* The one thing a stranger at the door can change. The theme follows
-          his phone and needs no asking; the language does. */}
-      <div className="mt-10">
-        <LangToggle />
-      </div>
     </main>
+  );
+}
+
+/** The mark on its square, as on the home screen icon, drawn live. */
+function DoorMark() {
+  return (
+    <span className="motion-pop mb-3 inline-grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-accent text-on-accent">
+      <Logo size={48} hole="var(--accent)" motion="on" />
+    </span>
   );
 }

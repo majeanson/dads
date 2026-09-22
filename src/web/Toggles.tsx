@@ -16,8 +16,37 @@ const LANGS: { id: Lang; label: string }[] = [
  * says English met an English door and could not say otherwise until he was
  * already inside.
  */
-export function LangToggle() {
+export function LangToggle({ compact = false }: { compact?: boolean }) {
   const { lang, setLang, t } = useT();
+  // At the door it is a small joined pair in the corner, out of the way of
+  // the one question the door asks. The words are the same, so a test and a
+  // screen reader still ask for "FR".
+  if (compact) {
+    return (
+      <div
+        className="inline-flex overflow-hidden rounded-app border border-edge"
+        role="group"
+        aria-label={t('menu.language')}
+      >
+        {LANGS.map((l) => (
+          <button
+            key={l.id}
+            type="button"
+            aria-pressed={lang === l.id}
+            onClick={() => setLang(l.id)}
+            className={
+              'h-9 min-w-11 cursor-pointer px-2.5 text-sm font-semibold transition-colors duration-100 ' +
+              (lang === l.id
+                ? 'bg-accent text-on-accent'
+                : 'bg-transparent text-muted hover:text-ink')
+            }
+          >
+            {l.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="flex gap-1.5" role="group" aria-label={t('menu.language')}>
       {LANGS.map((l) => (

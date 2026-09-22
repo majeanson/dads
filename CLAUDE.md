@@ -148,9 +148,17 @@ weakening `sessionSecret()`.
   the caret, offered only where there is a mouse — a phone's keyboard is its
   own picker and a fourth control on the row is three); a mark without the
   long press (a small button at the end of the line under a pointer, and a
-  double tap on the words is a thumb on any device); Reply on any line a dad
-  typed; Edit on his own. `MarkRow` in `Marks.tsx` is the one row of five,
-  shared by the long-press menu and the quick button.
+  double click on the words is a thumb where there is a mouse); Reply on any
+  line a dad typed; Edit on his own. `MarkRow` in `Marks.tsx` is the one row
+  of five, shared by the long-press menu, the quick button and the tap row.
+- **On a phone, one tap on a line opens the five under it** (2026-09-22).
+  The long press was the only way in and nobody finds a long press; the
+  double tap gave a thumb and nothing else. Where the pointer is coarse, a tap
+  on the words (not a link, a photo, a control, or while words are selected)
+  opens `tap-marks` under the line, 44px each, and a tap on one is the choice.
+  The double tap is retired on a phone — the first tap of it would open the
+  row — and stays as a double CLICK for a mouse, where a single click is a man
+  selecting text. A mark vibrates (`buzz.ts`) where Android lets it.
 - **A reply carries a SNAPSHOT, not a reference** (migration 0017,
   `messages.reply` and `tail.reply` as JSON `{id, name, body}`). The original
   may scroll out of the backfill, be taken back or be changed afterwards, and
@@ -281,6 +289,11 @@ weakening `sessionSecret()`.
   means: three answers cannot be a toggle, so they simply all stay and the one
   he gave is filled in. No icons on that row; three controls across a 390px
   card in French has room for the words or the glyphs, not both.
+  **Since 2026-09-22 they are ONE control** (`home-answers`): three segments
+  and a thumb that slides to the one he gave, so changing his mind is a thing
+  he watches happen. "Can't" is filled in ink, not red — not coming is not an
+  error — and `audit:contrast` checks that pair. Beside the names of who is
+  coming sit their faces (`FaceStack`); his pops in when he answers.
 - **Two consecutive RSVP lines from one dad are one change of mind**, and
   `supersedes` in `messageGroups.ts` drops the earlier — which predates
   "maybe" and is why an e2e cannot expect to find "might make it" after he has
@@ -599,6 +612,27 @@ the screen knew something and did not say it.
   where the words alone do the job. One system font stack, seven colours,
   hairline rules, and the browser's own defaults wherever they are already
   right. If a change adds decoration, it is going the wrong way.
+- **But it moves** (2026-09-22), which reverses "plain" for everything that
+  is not words. Played with on a phone it was right and dead: nothing answered
+  a press, a sheet appeared rather than arrived. The motion section at the
+  bottom of `tokens.css` is the whole of it — one spring, `motion-rise`,
+  `-fade`, `-pop`, `-tick`, `-sheet`, and the mark putting its glasses on
+  (`Logo motion="on"`, and `"live"` nodding while a night is on). A press
+  scales to 0.97. Short, always: a press answers inside 100ms, an arrival
+  inside 300. **All of it stops for `prefers-reduced-motion`**, and the a11y
+  suite runs that way on purpose — axe measuring contrast mid-fade reports
+  half-transparent colours nobody reads. Only lines that ARRIVE ease in; the
+  backfill does not, or opening the app is five hundred lines rising at once.
+  The `animate-in`/`fade-in` classes that were here before were never defined:
+  nothing animated at all until this.
+- **Home's menu is one grouped list** (2026-09-22): the list draws the border
+  and the hairlines, a row (`ROW` in `Menu.tsx`) carries no box of its own,
+  and its focus ring sits INSIDE the row because the list clips. The door and
+  the rows are one block (`home-actions`), so a tall phone has one gap — between
+  the night and the way in — instead of two. `ITEM` stays for the boxed rows
+  elsewhere (`MyRooms`, `Questions`).
+- **The door's language is a small pair in the corner** (`LangToggle compact`),
+  still named EN and FR.
 - Light and dark both ship, following the OS via `prefers-color-scheme` —
   see **Light and dark** above for the override a dad can ask for.
 - `npm run audit:contrast` checks every rendered pair **in both themes** and
@@ -1100,9 +1134,14 @@ neither see nor scroll anything.
   than a dot: a mark says "something", and something is what a man ignores. A mark for something somebody else did would be noise, and a
   number invites you to drive it to zero. `/api/todo` is what the marks read,
   and it is deliberately about the caller and nobody else.
-- **Dad night appears on the header only inside 24 hours** (`nightSoon`), and
-  in full in the menu (`nightItem`). The rest of the week the countdown is
-  furniture, and home's card already says it in full.
+- **The conversation's header is one row that never wraps** (2026-09-22):
+  back, the faces of who is here, the count, the night as `nightShort` ("Thu
+  21:00", a countdown inside 24 hours, "the table's open"), the call and the
+  menu. The night used to read "dad night Thursdays at 21:00" and folded onto
+  two lines under the count on every phone. An icon and an sr-only "Dad night"
+  say what it is. **The faces sit OUTSIDE the `connection` button**: initials
+  are text, and inside the button they would become part of the "2 here" every
+  spec asserts on.
 - **The table stays mounted whether or not it is on screen, once it has been
   opened** — unmounting the iframe restarts a game — and `data-table="open"`
   on `main.room` is what shows

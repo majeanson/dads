@@ -86,7 +86,7 @@ export function EmojiPicker({
           aria-label={t('composer.emoji')}
           className={[
             'z-50 grid grid-cols-8 gap-0.5 rounded-lg border border-line bg-paper p-1.5 shadow-lg',
-            'data-[state=open]:animate-in data-[state=open]:fade-in',
+            'motion-pop origin-[var(--radix-popper-transform-origin)]',
           ].join(' ')}
           data-testid="emoji-picker"
         >

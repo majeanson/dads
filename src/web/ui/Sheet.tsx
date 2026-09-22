@@ -29,10 +29,10 @@ export function Sheet({
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in" />
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] motion-fade" />
         <Dialog.Content
           className={[
-            'fixed z-50 flex flex-col bg-paper text-ink shadow-2xl',
+            'motion-sheet fixed z-50 flex flex-col bg-paper text-ink shadow-2xl',
             // Phone: the whole screen, with room for the notch and the home
             // indicator. Laptop: a panel, centred, never taller than the room.
             'inset-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]',

@@ -29,6 +29,15 @@ export const ITEM =
   'h-[clamp(2.75rem,6dvh,4rem)] gap-3.5 rounded-[var(--radius-control)] px-4 text-[1.125rem]';
 
 /**
+ * A row of the menu itself, which is one grouped list rather than a stack of
+ * boxes: the list draws the edge and the hairlines, and a row is only a place
+ * to press. Same height and type as `ITEM`, so a list elsewhere that still
+ * uses boxed rows reads as the same family.
+ */
+const ROW =
+  'h-[clamp(2.75rem,6dvh,4rem)] gap-3.5 rounded-none px-4 text-[1.125rem] text-ink hover:bg-paper hover:text-ink active:scale-100 active:bg-paper focus-visible:-outline-offset-3';
+
+/**
  * The rest of the app, as rows — and which rows depends on where he is.
  *
  * HOME is about the group and the week: the questions, the week, bringing
@@ -74,7 +83,7 @@ export function Menu({
   return (
     <nav className="menu" aria-label="Rooms">
       {rooms.questions ? (
-        <Button block className={ITEM} onClick={() => onOpen('prompts')}>
+        <Button block look="quiet" className={ROW} onClick={() => onOpen('prompts')}>
           <MessageCircleQuestion size={22} aria-hidden="true" className="shrink-0 text-muted" />
           <span className="min-w-0 truncate">{t('menu.questions')}</span>
           {todo.prompt ? (
@@ -89,7 +98,7 @@ export function Menu({
       ) : null}
 
       {rooms.week ? (
-        <Button block className={ITEM} onClick={() => onOpen('board')}>
+        <Button block look="quiet" className={ROW} onClick={() => onOpen('board')}>
           <CalendarCheck size={22} aria-hidden="true" className="shrink-0 text-muted" />
           <span className="min-w-0 truncate">{t('menu.week')}</span>
           {todo.board ? (
@@ -108,7 +117,8 @@ export function Menu({
       {!home && rooms.table ? (
         <Button
           block
-          className={ITEM}
+          look="quiet"
+          className={ROW}
           onClick={() => {
             onToggleTable();
             onOpen(null);
@@ -126,7 +136,7 @@ export function Menu({
           men talking for a year this is the only door to most of it. It is
           about the conversation, so it is offered from the conversation. */}
       {!home ? (
-        <Button block className={ITEM} onClick={() => onOpen('find')}>
+        <Button block look="quiet" className={ROW} onClick={() => onOpen('find')}>
           <Search size={22} aria-hidden="true" className="shrink-0 text-muted" />
           <span className="min-w-0 truncate">{t('menu.find')}</span>
         </Button>
@@ -135,7 +145,7 @@ export function Menu({
       {/* Second from the bottom, not first: the room is for the dads who are
           already in it. But it is here at all because everything else in this
           app is worth nothing until the other four are here. */}
-      <Button block className={ITEM} onClick={() => onOpen('invite')}>
+      <Button block look="quiet" className={ROW} onClick={() => onOpen('invite')}>
         <Send size={22} aria-hidden="true" className="shrink-0 text-muted" />
         <span className="min-w-0 truncate">{t('menu.invite')}</span>
       </Button>
@@ -147,7 +157,13 @@ export function Menu({
           inside cannot reach the door, and starting a room lives on the door.
           The count appears when there is something to count. */}
       {!home ? (
-        <Button block className={ITEM} onClick={() => onOpen('rooms')} data-testid="menu-rooms">
+        <Button
+          block
+          look="quiet"
+          className={ROW}
+          onClick={() => onOpen('rooms')}
+          data-testid="menu-rooms"
+        >
           <DoorOpen size={22} aria-hidden="true" className="shrink-0 text-muted" />
           <span className="min-w-0 truncate">{t('menu.rooms')}</span>
           {mine > 1 ? (
@@ -156,7 +172,7 @@ export function Menu({
         </Button>
       ) : null}
 
-      <Button block className={ITEM} onClick={() => onOpen('settings')}>
+      <Button block look="quiet" className={ROW} onClick={() => onOpen('settings')}>
         <SettingsIcon size={22} aria-hidden="true" className="shrink-0 text-muted" />
         <span className="min-w-0 truncate">{t('menu.settings')}</span>
       </Button>

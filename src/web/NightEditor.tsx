@@ -1,6 +1,14 @@
 import { Check, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { countdownParts, parseTime, phaseOf, weekdayOf, type DadNight } from '../shared/dadNight';
+import { dayNameShort } from '../shared/calendarMonth';
+import {
+  countdownParts,
+  parseTime,
+  phaseOf,
+  stillToCome,
+  weekdayOf,
+  type DadNight,
+} from '../shared/dadNight';
 import { setNight as saveNight } from './api';
 import { nightWhen, plural, useT, weekdayNames, type Lang, type T } from './i18n';
 import { Button } from './ui/Button';
@@ -39,24 +47,26 @@ export function nightAway(t: T, lang: Lang, night: DadNight, now: number): strin
 const AWAY_MS = 3 * 24 * 60 * 60 * 1000;
 
 /**
- * The standing appointment, in as few words as it can be said.
- *
- * Two readings of the same thing: `nightSoon` is what the room shows, and only
- * when it is nearly time — the rest of the week that line would be furniture.
- * `nightItem` is the menu's, where a dad has gone looking for it and the full
- * answer is what he wants.
+ * The header's reading of the night, in as few characters as it can be: "Thu 21:00", or
+ * "in 3 hours" once it is close, or "the table's open". The header puts an
+ * icon in front and "dad night" in the accessible name, so the words do not
+ * have to say what it is — they have to fit on one line of a phone beside a
+ * head-count and two buttons, in French. Null when there is no evening to come.
  */
-export function nightSoon(t: T, lang: Lang, night: DadNight | null, now: number): string | null {
-  if (night === null) return null;
+export function nightShort(t: T, lang: Lang, night: DadNight | null, now: number): string | null {
+  if (night === null || !stillToCome(night, now)) return null;
   const phase = phaseOf(night, now);
   if (phase?.kind === 'live') return t('n.soon_live');
-  // Close enough to be a countdown; otherwise the day and the time, because a
-  // standing appointment is there to answer "when is it again" without anybody
-  // having to go and look.
   if (phase?.kind === 'upcoming' && phase.startsIn <= SOON_MS) {
-    return t('n.soon', { countdown: countdownIn(t, lang, phase.startsIn) });
+    return countdownIn(t, lang, phase.startsIn);
   }
-  return t('n.header', { when: nightWhen(lang, night) });
+  // 2024-01-07 was a Sunday, and weekday 0 is Sunday.
+  const day = night.date
+    ? dayNameShort(lang, night.date)
+    : new Intl.DateTimeFormat(lang, { weekday: 'short', timeZone: 'UTC' }).format(
+        Date.UTC(2024, 0, 7 + night.weekday),
+      );
+  return `${day} ${night.time}`;
 }
 
 export function nightItem(t: T, lang: Lang, night: DadNight | null, now: number): string {

@@ -1,5 +1,7 @@
-import { ChevronLeft, Menu as MenuIcon } from 'lucide-react';
+import { CalendarClock, ChevronLeft, Menu as MenuIcon } from 'lucide-react';
+import type { RosterEntry } from '../shared/protocol';
 import { JoinCall } from './CallBar';
+import { FaceStack } from './Face';
 import type { CallState } from './useCall';
 import { useT } from './i18n';
 import { Button } from './ui/Button';
@@ -12,11 +14,13 @@ import { Button } from './ui/Button';
  * joined from the conversation — so there is nothing for the bar to hold a
  * button for.
  *
- * In the CONVERSATION it is one slim row: the way back, the head-count (and
- * the night, when it is close) as the only information, and the call and the
- * menu as plain icons. The group's name goes: he came in from a screen that
- * said it in the biggest type in the app, and every row the bar takes here is
- * a row of conversation it costs.
+ * In the CONVERSATION it is ONE row that never wraps (2026-09-22): the way
+ * back, the faces of who is here and the count, the night in as few
+ * characters as it can be said ("Thu 21:00"), and the call and the menu. It
+ * was two and sometimes three rows — "dad night Thursdays at / 21:00" folded
+ * under the count on every phone — and each of those rows was a row of
+ * conversation it cost. The group's name goes: he came in from a screen that
+ * said it in the biggest type in the app.
  *
  * Either way it must be structurally incapable of overflowing. The name and
  * the count give way (`min-width: 0` on the left, `shrink-0` on the actions),
@@ -28,6 +32,8 @@ export function RoomHeader({
   view,
   connection,
   here,
+  roster,
+  faceOf,
   soon,
   callState,
   waiting,
@@ -41,7 +47,10 @@ export function RoomHeader({
   view: 'home' | 'talk';
   connection: 'connecting' | 'open' | 'reconnecting';
   here: number;
-  /** The countdown, but only inside 24 hours. Null the rest of the week. */
+  /** Who is connected, for the faces beside the count. */
+  roster: RosterEntry[];
+  faceOf: (memberId: string) => number | undefined;
+  /** The night, short: "Thu 21:00", a countdown when close, null with none. */
   soon: string | null;
   callState: CallState;
   /** A question is waiting for him: the one thing in this menu that can. */
@@ -77,13 +86,35 @@ export function RoomHeader({
       <div className="min-w-0">
         {/* Still the page's one h1 in the conversation, for anything reading
             the structure aloud — just not on the screen. */}
-        <h1 className={slim ? 'sr-only' : 'display truncate text-xl text-muted'}>{groupName}</h1>
-        {/* The count is also the door to the roster and to who has been about.
-            A button, because it does something — but not a blue underlined
-            link, which is three times louder than a group of five men needs
-            its own head-count to be. */}
-        <p className="text-[1.0625rem] text-ink">
-          <button type="button" className="count-in" data-testid="connection" onClick={onWho}>
+        <h1 className={slim ? 'sr-only' : 'display truncate text-xl text-ink'}>{groupName}</h1>
+        <p className="flex min-w-0 items-center gap-2 text-[1.0625rem] text-ink">
+          {/* The faces are the count, drawn: the words beside them are the
+              control and the thing a test and a screen reader read. Outside the
+              button on purpose — initials inside it would be part of its name. */}
+          {connection === 'open' ? (
+            <span className="shrink-0 cursor-pointer" onClick={onWho} aria-hidden="true">
+              <FaceStack
+                people={roster.map((r) => ({
+                  memberId: r.memberId,
+                  name: r.name,
+                  version: faceOf(r.memberId),
+                }))}
+                size={slim ? 24 : 26}
+                max={4}
+                ring="var(--bg)"
+              />
+            </span>
+          ) : null}
+          {/* The count is also the door to the roster and to who has been
+              about. A button, because it does something — but not a blue
+              underlined link, which is three times louder than a group of five
+              men needs its own head-count to be. */}
+          <button
+            type="button"
+            className="count-in shrink-0"
+            data-testid="connection"
+            onClick={onWho}
+          >
             {connection === 'open'
               ? t('room.here', { n: here })
               : connection === 'connecting'
@@ -92,19 +123,19 @@ export function RoomHeader({
           </button>
           {/* Not on home, where the night is the first thing on the screen and
               four times the size. A header that repeats what is an inch below
-              it is the app saying something twice. */}
+              it is the app saying something twice. On the same line as the
+              count, and the part that gives way first. */}
           {soon === null || !slim ? null : (
-            <span className="max-[30rem]:block max-[30rem]:pt-0.5">
-              <span className="max-[30rem]:hidden"> · </span>
-              <button
-                type="button"
-                className="count-in max-[30rem]:block max-[30rem]:text-left"
-                data-testid="night-soon"
-                onClick={onNight}
-              >
-                {soon}
-              </button>
-            </span>
+            <button
+              type="button"
+              className="count-in min-w-0 gap-1.5 text-muted"
+              data-testid="night-soon"
+              onClick={onNight}
+            >
+              <CalendarClock size={16} aria-hidden="true" className="shrink-0" />
+              <span className="sr-only">{t('n.title')}: </span>
+              <span className="truncate">{soon}</span>
+            </button>
           )}
         </p>
       </div>

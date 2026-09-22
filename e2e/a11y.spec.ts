@@ -32,7 +32,10 @@ async function faults(page: Page, scene: string): Promise<string[]> {
 for (const theme of ['light', 'dark'] as const) {
   test(`every scene reads, in ${theme}`, async ({ browser }) => {
     test.setTimeout(90_000);
-    const context = await browser.newContext({ colorScheme: theme });
+    // Reduced motion, so every scene is read at rest. A line easing in or a
+    // sheet rising is half-transparent for a quarter of a second, and axe
+    // measuring contrast mid-fade reports colours nobody ever sits and reads.
+    const context = await browser.newContext({ colorScheme: theme, reducedMotion: 'reduce' });
     const page = await context.newPage();
     const found: string[] = [];
 

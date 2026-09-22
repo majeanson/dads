@@ -31,6 +31,15 @@
  * between them and that. Seven colours, hairline rules, and the browser's own
  * defaults wherever they are already right.
  *
+ * Plain in its WORDS, and alive in its hands (2026-09-22). A dad played with it
+ * on a phone and it was right and it was dead: nothing answered a press, a
+ * sheet appeared rather than arrived, and a mark landed without a sound. So
+ * there is motion now — a press that gives, a sheet that rises, a line that
+ * eases in, a mark that pops, the mark on the door putting its glasses on —
+ * all of it short, all of it on the one spring below, and all of it gone for
+ * anybody who has asked his phone for less motion. Still no gradient, no
+ * shadow on a surface, no uppercase label.
+ *
  * The palette is "Ink and Salt" (2026-09-11): near-monochrome, with the one
  * colour spent on what means something rather than on chrome. It replaced a
  * set whose accent was #0b57d0 — Google's blue, out of Material — and whose
@@ -489,6 +498,16 @@
     }
   }
 
+  /* The door and the rows, as ONE block. Three blocks spaced between each
+     other left two stretches of nothing on a tall phone; two blocks leave one,
+     between the night and the way in, which is the gap that means something. */
+  .home-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(0.5rem, 1.5dvh, 1rem);
+    align-content: start;
+  }
+
   /* Anything wider than a phone — a laptop, a tablet, a phone on its side —
      puts the card on the left and the door and the rows on the right. Three
      things stacked in one 34rem column left a 1280x800 laptop cutting the
@@ -511,7 +530,6 @@
       max-width: none;
     }
     .room[data-view='home'] .home-card {
-      grid-row: span 2;
       align-self: start;
     }
   }
@@ -580,9 +598,20 @@
     font-size: 1.0625rem;
   }
 
+  /* The faces and the names, on one row: the faces at a glance, the names for
+     sure. The faces give way to the words, never the other way round. */
+  .home-coming-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-top: 0.25rem;
+    min-width: 0;
+  }
+
   /* Who has said yes, at ink: it is the thing that actually decides turnout. */
   .home-coming {
     margin: 0.25rem 0 0;
+    min-width: 0;
     font-size: 1.0625rem;
     text-wrap: pretty;
   }
@@ -605,10 +634,47 @@
    * before the layout gives, which is the rule everywhere else in here.
    */
   .home-answers {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.375rem;
+    gap: 0;
     margin-top: 0.5rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-control);
+    background: var(--bg);
+  }
+
+  /* One control, one filled thumb that slides to the answer he gave. The
+     segments sit above it; it only ever moves, so changing his mind is a
+     thing he watches happen rather than three boxes swapping fills. */
+  .home-answers-thumb {
+    position: absolute;
+    top: 0.25rem;
+    bottom: 0.25rem;
+    left: 0.25rem;
+    width: calc((100% - 0.5rem) / 3);
+    border-radius: calc(var(--radius-control) - 0.25rem);
+    background: var(--accent);
+    opacity: 0;
+    transition:
+      transform 320ms var(--spring),
+      background-color 200ms ease,
+      opacity 150ms ease;
+  }
+  .home-answers[data-chosen='in'] .home-answers-thumb {
+    opacity: 1;
+  }
+  .home-answers[data-chosen='maybe'] .home-answers-thumb {
+    opacity: 1;
+    transform: translateX(100%);
+  }
+  /* "Can't" is not an accent: it is ink, the answer that means nothing is
+     wrong and he simply is not coming. Red would be the app scolding him. */
+  .home-answers[data-chosen='out'] .home-answers-thumb {
+    opacity: 1;
+    transform: translateX(200%);
+    background: var(--text);
   }
 
   /* What the week has collected, and nothing if it has collected nothing. */
@@ -693,18 +759,44 @@
    */
   /* A list a thumb picks from, so the rows are given room to be separate
      things rather than a stack. */
+  /* One grouped list rather than a stack of boxes: four bordered rows read as
+     four separate decisions, where a list with hairlines between its rows
+     reads as a list. The rows are the list's, so they carry no box of their
+     own (`ROW` in Menu.tsx). */
   .menu {
     display: grid;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-control);
+    background: var(--bg-soft);
     /* minmax(0, 1fr), not the implicit `auto`: an auto column takes the
        width of its widest child and a menu row never wraps, so one long row
        — a French label with a mark beside it on a 360px phone — made this
        whole nav wider than the sheet it sits in. A row gives way; the sheet
        does not. */
     grid-template-columns: minmax(0, 1fr);
-    gap: clamp(0.4rem, 1dvh, 0.75rem);
+  }
+
+  .menu > * + * {
+    border-top: 1px solid var(--border);
   }
 
   /* --- what was said --- */
+
+  /* The five marks a tap on a line opens, on a phone: under the words, the
+     full width of them, so every one is a thumb's worth. */
+  .line-marks {
+    display: block;
+    margin-top: 0.375rem;
+    padding: 0.125rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--bg-soft);
+  }
+
+  .line[data-marking='yes'] {
+    background: color-mix(in srgb, var(--bg-soft) 60%, transparent);
+  }
 
   .lines {
     margin: 0;
@@ -1349,5 +1441,122 @@
 
   .cal-day[data-mine='in'] .cal-count {
     color: inherit;
+  }
+}
+
+/* --- motion ----------------------------------------------------------------
+ *
+ * One spring and a handful of moves, named for what they do. Everything that
+ * animates in this app uses these, so "how does it move" is a decision made
+ * once. Short: a press answers inside 100ms, an arrival inside 300.
+ */
+:root {
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes dads-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+@keyframes dads-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+}
+
+@keyframes dads-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dads-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes dads-tick {
+  from {
+    transform: translateY(-0.4em);
+    opacity: 0;
+  }
+}
+
+/* The glasses come down onto the face. */
+@keyframes dads-glasses-on {
+  0% {
+    transform: translateY(-140%);
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+}
+
+/* The night is on: the glasses nod, now and then. */
+@keyframes dads-glasses-nod {
+  0%,
+  88%,
+  100% {
+    transform: translateY(0);
+  }
+  93% {
+    transform: translateY(8%);
+  }
+}
+
+@layer components {
+  .motion-rise {
+    animation: dads-rise 260ms var(--ease-out) both;
+  }
+  .motion-fade {
+    animation: dads-fade 200ms var(--ease-out) both;
+  }
+  .motion-pop {
+    animation: dads-pop 320ms var(--spring) both;
+  }
+  .motion-tick {
+    display: inline-block;
+    animation: dads-tick 220ms var(--ease-out) both;
+  }
+  /* Tailwind centres a panel with the `translate` property, which is not
+     `transform`, so this one rise composes with it at every width. */
+  .motion-sheet {
+    animation: dads-sheet 300ms var(--ease-out) both;
+  }
+
+  .logo-glasses {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .logo-anim .logo-glasses {
+    animation: dads-glasses-on 700ms var(--spring) 150ms both;
+  }
+  .logo-live .logo-glasses {
+    animation: dads-glasses-nod 4s ease-in-out infinite;
+  }
+}
+
+/* A dad who has asked his phone for less motion gets none — not a shorter
+   version of it. The app says exactly the same things standing still. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
   }
 }

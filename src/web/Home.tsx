@@ -8,6 +8,7 @@ import {
   type NightState,
   type PollState,
 } from './api';
+import { FaceStack } from './Face';
 import { plural, useT, weekdayNames } from './i18n';
 import { Logo } from './Logo';
 import { nightAway } from './NightEditor';
@@ -15,7 +16,7 @@ import { bestDays } from './Poll';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
 import { dayNameShort } from '../shared/calendarMonth';
-import { stillToCome, type DadNight } from '../shared/dadNight';
+import { currentWindow, stillToCome, type DadNight } from '../shared/dadNight';
 
 /**
  * Where the app opens, and it asks ONE question.
@@ -39,6 +40,7 @@ export function Home({
   answered,
   pollPulse,
   you,
+  faceOf,
   unseen,
   onGo,
   onNight,
@@ -60,6 +62,7 @@ export function Home({
    * line said in a chatty evening. */
   pollPulse: number;
   you: string;
+  faceOf: (memberId: string) => number | undefined;
   unseen: number;
   onGo: () => void;
   onNight: () => void;
@@ -140,6 +143,13 @@ export function Home({
   const items = state?.items.length ?? 0;
   const away = night === null ? null : nightAway(t, lang, night, now);
   const best = poll === null ? [] : bestDays(poll, you, 2);
+  /** The night is on right now, which is the one moment the mark nods. */
+  const live = night !== null && currentWindow(night, now) !== null;
+  const faces = [...coming, ...might].map((a) => ({
+    memberId: a.memberId,
+    name: a.name,
+    version: faceOf(a.memberId),
+  }));
 
   return (
     <div className="home" data-testid="home">
@@ -217,27 +227,32 @@ export function Home({
             )}
 
             {/* Names, not a count: a man wants to know whether HIS friend is
-                coming, which is the thing that actually decides it. */}
-            <p className="home-coming" data-testid="home-who-coming">
-              {state === null
-                ? // Not "nobody has said yet" — it has not been asked yet.
-                  '…'
-                : answers.length === 0
-                  ? t('n.nobody_yet')
-                  : [
-                      coming.length > 0
-                        ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
-                        : null,
-                      might.length > 0
-                        ? t('n.maybe_list', { names: might.map((a) => a.name).join(', ') })
-                        : null,
-                      not.length > 0
-                        ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-            </p>
+                coming, which is the thing that actually decides it. The faces
+                answer it at a glance and the names answer it for sure; his own
+                face pops into the stack the moment he says he is in. */}
+            <div className="home-coming-row">
+              <FaceStack people={faces} size={30} ring="var(--bg-soft)" tint="bg-paper" />
+              <p className="home-coming" data-testid="home-who-coming">
+                {state === null
+                  ? // Not "nobody has said yet" — it has not been asked yet.
+                    '…'
+                  : answers.length === 0
+                    ? t('n.nobody_yet')
+                    : [
+                        coming.length > 0
+                          ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
+                          : null,
+                        might.length > 0
+                          ? t('n.maybe_list', { names: might.map((a) => a.name).join(', ') })
+                          : null,
+                        not.length > 0
+                          ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+              </p>
+            </div>
 
             {/*
              * One question, three answers, all three on the screen from the
@@ -256,7 +271,16 @@ export function Home({
              * has room for the words or for the glyphs, and the words are the
              * ones that say anything.
              */}
-            <div className="home-answers">
+            <div
+              className="home-answers"
+              role="group"
+              aria-label={t('n.title')}
+              data-chosen={mine?.answer ?? 'none'}
+            >
+              {/* The one filled segment, sliding to whichever he chose. It is
+                  a picture of the answer, not the answer: each segment still
+                  carries aria-pressed, and the words stay where they are. */}
+              <span className="home-answers-thumb" aria-hidden="true" />
               <Answer
                 answer="in"
                 mine={mine?.answer ?? null}
@@ -308,32 +332,34 @@ export function Home({
           more filled bar read as one more answer. The mark on the left and the
           arrow on the right are what make it a way IN rather than a choice —
           the same shape as the rows under it, taller, and the only one filled. */}
-      <Button
-        look="primary"
-        className={cn(
-          'home-go h-[clamp(3rem,6.5dvh,4.5rem)] w-full justify-start gap-3.5 rounded-[var(--radius-card)] px-4 text-[1.125rem]',
-        )}
-        onClick={onGo}
-        data-testid="home-go"
-      >
-        <Logo size={32} hole="var(--accent)" className="shrink-0" />
-        <span>{t('home.go')}</span>
-        {unseen > 0 ? (
-          <span className="home-new ml-auto text-sm font-normal" data-testid="home-new">
-            {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
-          </span>
-        ) : null}
-        <ArrowRight
-          size={22}
-          aria-hidden="true"
-          className={cn('shrink-0', unseen > 0 ? '' : 'ml-auto')}
-        />
-      </Button>
+      <div className="home-actions">
+        <Button
+          look="primary"
+          className={cn(
+            'home-go h-[clamp(3rem,6.5dvh,4.5rem)] w-full justify-start gap-3.5 rounded-[var(--radius-card)] px-4 text-[1.125rem]',
+          )}
+          onClick={onGo}
+          data-testid="home-go"
+        >
+          <Logo size={32} hole="var(--accent)" motion={live ? 'live' : 'on'} className="shrink-0" />
+          <span>{t('home.go')}</span>
+          {unseen > 0 ? (
+            <span className="home-new ml-auto text-sm font-normal" data-testid="home-new">
+              {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
+            </span>
+          ) : null}
+          <ArrowRight
+            size={22}
+            aria-hidden="true"
+            className={cn('shrink-0', unseen > 0 ? '' : 'ml-auto')}
+          />
+        </Button>
 
-      {/* Everything else, in what used to be empty space below the door. The
+        {/* Everything else, in what used to be empty space below the door. The
           same rows the conversation keeps behind its Menu button, minus the
           table, which only makes sense beside a conversation. */}
-      {menu}
+        {menu}
+      </div>
     </div>
   );
 }
@@ -341,8 +367,9 @@ export function Home({
 /**
  * One of the three answers.
  *
- * The chosen one is filled and the other two are plain, so what he said is on
- * the screen without a word explaining it. The accessible name carries what
+ * Three segments of one control, and a filled thumb that slides under the
+ * one he chose — so what he said is on the screen without a word explaining
+ * it, and changing his mind is something he can watch happen. The accessible name carries what
  * pressing it would DO — "You're in. Press to say you might make it." is a
  * sentence a screen reader needs and a sighted man does not, because he can
  * see which one is filled.
@@ -366,9 +393,17 @@ function Answer({
 
   return (
     <Button
-      look={chosen ? (answer === 'out' ? 'danger' : 'primary') : 'plain'}
+      look="quiet"
       size="lg"
-      className="home-answer h-[clamp(2.75rem,6dvh,3.25rem)] px-2 text-base"
+      className={cn(
+        'home-answer relative h-[clamp(2.75rem,6dvh,3.25rem)] px-2 text-base font-semibold',
+        'rounded-[calc(var(--radius-control)-0.25rem)] transition-colors duration-200',
+        chosen
+          ? answer === 'out'
+            ? 'text-paper hover:text-paper'
+            : 'text-on-accent hover:text-on-accent'
+          : 'text-ink',
+      )}
       disabled={busy}
       aria-pressed={chosen}
       onClick={() => void onAnswer(answer)}

@@ -56,3 +56,74 @@ export function Face({
     />
   );
 }
+
+/**
+ * A few dads at once: faces overlapping, the newest arrival popping in.
+ *
+ * For "who is coming" and "who is here", where the words beside it still say
+ * who — a man wants to know whether HIS friend is coming, and a face is how
+ * that is answered at a glance while the names answer it for sure. So this is
+ * decorative too. Past `max` the rest are a count, not more faces: a stack of
+ * nine circles is a smudge.
+ *
+ * `ring` is the colour of whatever it sits on, so each face is cut out of the
+ * one behind it rather than drawn over it. `tint` is the fill behind a dad
+ * with no picture: the default is the panel colour, which on home's card IS
+ * the card, and the initials float there with no circle round them.
+ */
+export function FaceStack({
+  people,
+  size = 28,
+  max = 5,
+  ring,
+  tint,
+  className,
+}: {
+  people: { memberId: string; name: string; version: number | undefined }[];
+  size?: number;
+  max?: number;
+  ring: string;
+  tint?: string;
+  className?: string;
+}) {
+  if (people.length === 0) return null;
+  const shown = people.slice(0, max);
+  const rest = people.length - shown.length;
+  const overlap = Math.round(size * 0.3);
+
+  return (
+    <span aria-hidden="true" className={cn('inline-flex shrink-0 items-center', className)}>
+      {shown.map((p, i) => (
+        <span
+          key={p.memberId}
+          className="motion-pop inline-flex rounded-full"
+          style={{ marginLeft: i === 0 ? 0 : -overlap, boxShadow: `0 0 0 2px ${ring}` }}
+        >
+          <Face
+            memberId={p.memberId}
+            name={p.name}
+            version={p.version}
+            size={size}
+            className={tint}
+          />
+        </span>
+      ))}
+      {rest > 0 ? (
+        <span
+          className={cn(
+            'inline-grid place-items-center rounded-full bg-panel text-xs font-semibold text-muted',
+            tint,
+          )}
+          style={{
+            width: size,
+            height: size,
+            marginLeft: -overlap,
+            boxShadow: `0 0 0 2px ${ring}`,
+          }}
+        >
+          +{rest}
+        </span>
+      ) : null}
+    </span>
+  );
+}

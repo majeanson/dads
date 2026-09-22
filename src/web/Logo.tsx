@@ -10,14 +10,21 @@
  * would put a pale face on the pale-blue accent that dark mode uses.
  *
  * Decorative wherever it appears: the words beside it are the name.
+ *
+ * `motion` is the only liveliness the mark has: `on` puts the glasses on as
+ * it arrives (the door, home), and `live` has them nod now and then while a
+ * dad night is actually happening — the one moment worth the app looking
+ * awake. Both stop dead for a phone set to reduce motion.
  */
 export function Logo({
   size = 28,
   hole,
+  motion,
   className,
 }: {
   size?: number;
   hole: string;
+  motion?: 'on' | 'live';
   className?: string;
 }) {
   return (
@@ -27,10 +34,13 @@ export function Logo({
       height={size}
       aria-hidden="true"
       focusable="false"
-      className={className}
+      className={[
+        motion === 'on' ? 'logo-anim' : motion === 'live' ? 'logo-live' : '',
+        className ?? '',
+      ].join(' ')}
     >
       <circle cx="256" cy="256" r="216" fill="currentColor" />
-      <g fill={hole}>
+      <g fill={hole} className="logo-glasses">
         <rect x="80" y="196" width="352" height="34" rx="17" />
         <rect x="102" y="214" width="132" height="90" rx="38" />
         <rect x="278" y="214" width="132" height="90" rx="38" />
