@@ -1,6 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Pose } from '../Pose';
 import { useT } from '../i18n';
 import { Button } from './Button';
 
@@ -17,10 +19,13 @@ import { Button } from './Button';
  */
 export function Sheet({
   title,
+  pose,
   onClose,
   children,
 }: {
   title: string;
+  /** The prop the dad holds on this sheet's title, if it has one. */
+  pose?: LucideIcon;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -50,9 +55,12 @@ export function Sheet({
               667px phone the title at 30px with a row of padding each side
               was a fifth of the screen before a word of content. */}
           <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-5 py-[clamp(0.6rem,1.6dvh,1rem)]">
-            <Dialog.Title className="display m-0 text-[clamp(1.5rem,4.2dvh,1.875rem)]">
-              {title}
-            </Dialog.Title>
+            <span className="flex min-w-0 items-center gap-3">
+              {pose ? <Pose prop={pose} /> : null}
+              <Dialog.Title className="display m-0 truncate text-[clamp(1.5rem,4.2dvh,1.875rem)]">
+                {title}
+              </Dialog.Title>
+            </span>
             <Dialog.Close asChild>
               {/* The word is still there for anything reading the page aloud,
                   and for a test: an icon with no name is a button nobody can

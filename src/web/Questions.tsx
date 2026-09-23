@@ -1,4 +1,4 @@
-import { ArrowLeft, History } from 'lucide-react';
+import { ArrowLeft, History, MessageCircleQuestion } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchPrompts, type HistoryEntry, type PoolEntry } from './api';
 import { plural, useT } from './i18n';
@@ -74,7 +74,11 @@ export function Questions({
   }
 
   return (
-    <Sheet title={view === 'today' ? t('q.title') : t('q.history_title')} onClose={onClose}>
+    <Sheet
+      title={view === 'today' ? t('q.title') : t('q.history_title')}
+      pose={MessageCircleQuestion}
+      onClose={onClose}
+    >
       {view === 'today' ? (
         /* grid-cols-1, not a bare grid: an implicit `auto` column takes the
            width of its widest child, and a button never wraps — so the row

@@ -1,4 +1,6 @@
 import { faceUrl } from './api';
+import { dadVar } from './dadColour';
+import type { CSSProperties } from 'react';
 import { initials } from './initials';
 import { Glasses } from './Logo';
 import { cn } from './ui/cn';
@@ -29,7 +31,14 @@ export function Face({
   className?: string;
 }) {
   const src = faceUrl(memberId, version);
-  const box = { width: size, height: size } as const;
+  // His colour, as a ring inside the circle: an outline, so it shows on a
+  // photograph as well as on initials.
+  const box = {
+    width: size,
+    height: size,
+    outline: `${size >= 28 ? 2 : 1.5}px solid ${dadVar(memberId)}`,
+    outlineOffset: `-${size >= 28 ? 2 : 1.5}px`,
+  } as const;
 
   return src === null ? (
     <span
@@ -82,7 +91,14 @@ export function FaceStack({
   className,
 }: {
   /** `shades`: this dad is coming, and wears the app's glasses to say so. */
-  people: { memberId: string; name: string; version: number | undefined; shades?: boolean }[];
+  /** `arrived`: he has just come in, and his face says so, once. */
+  people: {
+    memberId: string;
+    name: string;
+    version: number | undefined;
+    shades?: boolean;
+    arrived?: boolean;
+  }[];
   size?: number;
   max?: number;
   ring: string;
@@ -101,8 +117,14 @@ export function FaceStack({
       {shown.map((p, i) => (
         <span
           key={p.memberId}
-          className="motion-pop relative inline-flex rounded-full"
-          style={{ marginLeft: i === 0 ? 0 : -overlap, boxShadow: `0 0 0 2px ${ring}` }}
+          className={cn('motion-pop relative inline-flex rounded-full', p.arrived && 'face-arrive')}
+          style={
+            {
+              marginLeft: i === 0 ? 0 : -overlap,
+              boxShadow: `0 0 0 2px ${ring}`,
+              '--ring': ring,
+            } as CSSProperties
+          }
         >
           <Face
             memberId={p.memberId}

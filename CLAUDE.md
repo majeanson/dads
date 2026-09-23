@@ -668,6 +668,23 @@ the screen knew something and did not say it.
     zoom (a view transition, `lens.ts`) was built and removed on request.
   - **A dad who is in wears them**: his face in home's stack has the glasses
     dropped on it. A maybe does not, yet.
+  - **Somebody arriving is a face, not a line** (2026-09-23): his face pops
+    into the header's stack with a ring going out from it (`face-arrive`).
+    The roster the screen finds on opening is the baseline, not news. The
+    timer that takes the ring off is NOT tied to the effect's cleanup — a
+    second dad arriving inside the moment re-runs it, and cancelling the
+    first timer would leave his ring on for good.
+  - **Pull home down to look again**: the mark appears in the space the
+    thumb opens with its glasses sliding down its nose (`Logo slide`), and
+    glints while home re-reads the night. Touch only, from the top.
+  - **Every dad has a colour** (`dadColour.ts`, a hash of his id, so it
+    never changes and nothing is stored): the ring on his face everywhere,
+    and his name in the conversation. Six, in all four palette blocks, held
+    to TEXT contrast in both themes because a name is text — the audit
+    checks all twelve pairs and the override blocks' drift.
+  - **The dad holds a prop on each sheet's title** (`Pose`): a mug for the
+    week, a calendar for the night, a question for the questions, and so on.
+    Decorative; the title is the name.
   - **A full table is four** (Jaffre's seats), and it is the one thing on
     home worth a moment: "Full table" in the accent on the SAME line as the
     countdown (home is measured to fit a 667px phone, so the news costs no

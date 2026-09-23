@@ -1,4 +1,5 @@
 import { CalendarClock, ChevronLeft, Menu as MenuIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { RosterEntry } from '../shared/protocol';
 import { JoinCall } from './CallBar';
 import { FaceStack } from './Face';
@@ -65,6 +66,30 @@ export function RoomHeader({
   const { t } = useT();
   const slim = view === 'talk';
 
+  /**
+   * Who has just come in, for a moment. Presence has a heartbeat without a
+   * line in the conversation: his face pops into the stack with a ring going
+   * out from it. The roster he found on arriving is not news, so the first
+   * one this screen sees is the baseline.
+   */
+  const known = useRef<Set<string> | null>(null);
+  const [arrived, setArrived] = useState<string[]>([]);
+  useEffect(() => {
+    const ids = roster.map((r) => r.memberId);
+    if (known.current === null) {
+      if (connection === 'open') known.current = new Set(ids);
+      return;
+    }
+    const fresh = ids.filter((id) => !known.current!.has(id));
+    known.current = new Set(ids);
+    if (fresh.length === 0) return;
+    setArrived((a) => [...a, ...fresh]);
+    // Not cleared with the effect: a second dad arriving inside the moment
+    // re-runs it, and cancelling the first one's timer would leave his ring
+    // on for good.
+    setTimeout(() => setArrived((a) => a.filter((id) => !fresh.includes(id))), 1600);
+  }, [roster, connection]);
+
   return (
     <header className={`room-head border-b border-line ${slim ? 'pb-2' : 'pb-2.5'}`}>
       {/* A real back button, first in the bar, the way every app on a phone
@@ -99,6 +124,7 @@ export function RoomHeader({
                   memberId: r.memberId,
                   name: r.name,
                   version: faceOf(r.memberId),
+                  arrived: arrived.includes(r.memberId),
                 }))}
                 size={slim ? 24 : 26}
                 max={4}

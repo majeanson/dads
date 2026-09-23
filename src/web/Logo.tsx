@@ -27,11 +27,14 @@ export function Logo({
   size = 28,
   hole,
   motion,
+  slide = 0,
   className,
 }: {
   size?: number;
   hole: string;
   motion?: 'on' | 'live' | 'glint';
+  /** 0 to 1: how far down the nose a finger has pulled the glasses. */
+  slide?: number;
   className?: string;
 }) {
   const clip = useId();
@@ -54,7 +57,11 @@ export function Logo({
       ].join(' ')}
     >
       <circle cx="256" cy="256" r="216" fill="currentColor" />
-      <g fill={hole} className="logo-glasses">
+      <g
+        fill={hole}
+        className="logo-glasses"
+        style={slide ? { transform: `translateY(${slide * 70}px)` } : undefined}
+      >
         <rect x="80" y="196" width="352" height="34" rx="17" />
         <rect x="102" y="214" width="132" height="90" rx="38" />
         <rect x="278" y="214" width="132" height="90" rx="38" />

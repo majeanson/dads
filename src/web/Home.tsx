@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from 'react';
 import {
   fetchNight,
   fetchPoll,
@@ -103,6 +103,36 @@ export function Home({
   const [now, setNow] = useState(() => Date.now());
   /** The full table's moment, playing right now. */
   const [cheer, setCheer] = useState(false);
+  /**
+   * Pull down to look again. Home reads the night over HTTP, and a phone
+   * woken from a pocket may be showing an hour-old answer; a thumb pulling
+   * down is how every phone asks for the newest. The mark's glasses slide
+   * down its nose as he pulls, and glint while it looks.
+   */
+  const [pull, setPull] = useState(0);
+  const [looking, setLooking] = useState(false);
+  const [again, setAgain] = useState(0);
+  const pullFrom = useRef<number | null>(null);
+  const PULL = 56;
+  function onTouchStart(e: TouchEvent<HTMLDivElement>) {
+    pullFrom.current = e.currentTarget.scrollTop <= 0 ? e.touches[0]!.clientY : null;
+  }
+  function onTouchMove(e: TouchEvent<HTMLDivElement>) {
+    if (pullFrom.current === null) return;
+    const dy = e.touches[0]!.clientY - pullFrom.current;
+    setPull(dy > 0 ? Math.min(dy * 0.5, PULL * 1.3) : 0);
+  }
+  function onTouchEnd() {
+    if (pull >= PULL && !looking) {
+      setLooking(true);
+      setAgain((n) => n + 1);
+      // Long enough to be seen to look, whatever the network does.
+      setTimeout(() => setLooking(false), 700);
+    }
+    pullFrom.current = null;
+    setPull(0);
+  }
+
   /** Bumped when the moment starts and never reset, so the faces remount
    * once to play the wave — and not again when the moment ends. */
   const [cheers, setCheers] = useState(0);
@@ -128,7 +158,7 @@ export function Home({
     return () => {
       cancelled = true;
     };
-  }, [night, answered]);
+  }, [night, answered, again]);
 
   // The calendar, and only while it is the question being asked. A group with
   // a night on the books has no poll and pays nothing for this.
@@ -143,7 +173,7 @@ export function Home({
     return () => {
       cancelled = true;
     };
-  }, [upcoming, night, pollPulse]);
+  }, [upcoming, night, pollPulse, again]);
 
   // The countdown is the one thing here that goes stale while he looks at it.
   useEffect(() => {
@@ -194,7 +224,28 @@ export function Home({
   }));
 
   return (
-    <div className="home" data-testid="home">
+    <div
+      className="home"
+      data-testid="home"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {pull > 0 || looking ? (
+        <div
+          className="home-pull"
+          aria-hidden="true"
+          style={{ height: looking ? PULL * 0.8 : pull }}
+        >
+          <Logo
+            size={34}
+            hole="var(--bg)"
+            motion={looking ? 'glint' : undefined}
+            slide={looking ? 0 : Math.min(pull / PULL, 1)}
+            className="text-muted"
+          />
+        </div>
+      ) : null}
       {/* Named for a screen reader, where the structure of a page is real, and
           not on the screen, where it would be a word above a line that already
           says what it is. */}

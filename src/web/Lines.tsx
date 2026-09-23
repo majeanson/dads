@@ -4,6 +4,7 @@ import { parts, shortLink } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
 import { Face } from './Face';
+import { dadVar } from './dadColour';
 import { useT } from './i18n';
 import { Logo } from './Logo';
 import { MarkRow, Marks, marksOf, QuickMark } from './Marks';
@@ -163,7 +164,16 @@ export function Lines({
                   size={32}
                 />
               ) : null}
-              <span className="who">{row.showName ? row.message.name : ''}</span>
+              <span
+                className="who"
+                style={
+                  row.showName && row.message.memberId !== null
+                    ? { color: dadVar(row.message.memberId) }
+                    : undefined
+                }
+              >
+                {row.showName ? row.message.name : ''}
+              </span>
               <span className="body">
                 {/* What he was answering, as it was: a name and a cut-down
                     line, above his own. It goes nowhere on a tap — the

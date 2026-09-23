@@ -33,6 +33,18 @@ const PAIRS = [
   // Home's answer control: "Can't" is filled in ink, not in the accent and
   // not in red, and the page colour is its label.
   ['bg', 'text', 4.5, 'the label on a chosen "can’t"'],
+  ['dad-1', 'bg', 4.5, "dad 1's name"],
+  ['dad-1', 'bg-soft', 4.5, "dad 1's name on a panel"],
+  ['dad-2', 'bg', 4.5, "dad 2's name"],
+  ['dad-2', 'bg-soft', 4.5, "dad 2's name on a panel"],
+  ['dad-3', 'bg', 4.5, "dad 3's name"],
+  ['dad-3', 'bg-soft', 4.5, "dad 3's name on a panel"],
+  ['dad-4', 'bg', 4.5, "dad 4's name"],
+  ['dad-4', 'bg-soft', 4.5, "dad 4's name on a panel"],
+  ['dad-5', 'bg', 4.5, "dad 5's name"],
+  ['dad-5', 'bg-soft', 4.5, "dad 5's name on a panel"],
+  ['dad-6', 'bg', 4.5, "dad 6's name"],
+  ['dad-6', 'bg-soft', 4.5, "dad 6's name on a panel"],
   ['border-strong', 'bg', 3.0, 'the border that makes a control findable'],
   ['border-strong', 'bg-soft', 3.0, 'that border on a panel'],
   ['accent', 'bg', 3.0, 'the focus ring'],
@@ -118,6 +130,12 @@ const COLOURS = [
   'accent',
   'on-accent',
   'danger',
+  'dad-1',
+  'dad-2',
+  'dad-3',
+  'dad-4',
+  'dad-5',
+  'dad-6',
 ];
 
 for (const name of ['light', 'dark']) {

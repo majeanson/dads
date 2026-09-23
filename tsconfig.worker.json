@@ -9,6 +9,7 @@
   },
   "include": [
     "src/web/messageGroups.ts",
+    "src/web/dadColour.ts",
     "src/web/favourites.ts",
     "src/web/fresh.ts",
     "src/web/initials.ts",

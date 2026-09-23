@@ -1,3 +1,4 @@
+import { CalendarHeart, Coffee, DoorOpen, Search, Send, Settings2, Users } from 'lucide-react';
 import type { RoomMessage, RoomsOpen, RosterEntry, CallMember } from '../shared/protocol';
 import type { DadNight } from '../shared/dadNight';
 import type { Todo } from './api';
@@ -115,7 +116,7 @@ export function Sheets({
 
   if (open === 'here') {
     return (
-      <Sheet title={t('here.title')} onClose={close}>
+      <Sheet title={t('here.title')} pose={Users} onClose={close}>
         <Here
           roster={roster.map((m) => ({
             memberId: m.memberId,
@@ -142,7 +143,7 @@ export function Sheets({
 
   if (open === 'board') {
     return (
-      <Sheet title={t('b.title')} onClose={close}>
+      <Sheet title={t('b.title')} pose={Coffee} onClose={close}>
         <Board onChanged={onTodoChanged} faceOf={(memberId) => faceOf(memberId)} />
       </Sheet>
     );
@@ -150,7 +151,7 @@ export function Sheets({
 
   if (open === 'night') {
     return (
-      <Sheet title={t('n.title')} onClose={close}>
+      <Sheet title={t('n.title')} pose={CalendarHeart} onClose={close}>
         <Night night={night} you={you} pollPulse={pollPulse} nightPulse={nightPulse} />
       </Sheet>
     );
@@ -158,7 +159,7 @@ export function Sheets({
 
   if (open === 'find') {
     return (
-      <Sheet title={t('find.title')} onClose={close}>
+      <Sheet title={t('find.title')} pose={Search} onClose={close}>
         <Find faceOf={(memberId) => faceOf(memberId)} />
       </Sheet>
     );
@@ -166,7 +167,7 @@ export function Sheets({
 
   if (open === 'rooms') {
     return (
-      <Sheet title={t('rooms.title')} onClose={close}>
+      <Sheet title={t('rooms.title')} pose={DoorOpen} onClose={close}>
         <MyRooms onClose={close} />
       </Sheet>
     );
@@ -174,14 +175,14 @@ export function Sheets({
 
   if (open === 'invite') {
     return (
-      <Sheet title={t('inv.title')} onClose={close}>
+      <Sheet title={t('inv.title')} pose={Send} onClose={close}>
         <Invite />
       </Sheet>
     );
   }
 
   return (
-    <Sheet title={t('set.title')} onClose={close}>
+    <Sheet title={t('set.title')} pose={Settings2} onClose={close}>
       <Settings
         rooms={rooms}
         // From the roster rather than the session: the session was written at
