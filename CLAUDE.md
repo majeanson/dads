@@ -625,6 +625,30 @@ the screen knew something and did not say it.
   backfill does not, or opening the app is five hundred lines rising at once.
   The `animate-in`/`fade-in` classes that were here before were never defined:
   nothing animated at all until this.
+- **The glasses are the app's symbol** (2026-09-23), and every move that is
+  more than a press is built on them. `Logo` has three motions (`on`: they
+  come down; `live`: they nod while a night is on; `glint`: a light across the
+  lenses while something is loading) and `Glasses` is the pair on its own.
+  - **The splash** (`Splash.tsx`) plays once per load over the room, which is
+    already connecting underneath: the face, the glasses coming down, then a
+    zoom into the left lens until it is the whole screen. The lenses are cut
+    through the ground with an SVG mask, so the app is what shows through
+    them, smoked until the zoom lifts the tint. `pointer-events: none` and
+    `aria-hidden`, so nothing waits on it — not a dad, not a test.
+  - **Going into the conversation is going through the lens** (`lens.ts`): a
+    view transition whose new picture is clipped to the left lens of the
+    door's mark and let out; the way back clips the old picture into the same
+    lens (remembered, because by then home is hidden and has no box). The
+    update runs inside `flushSync`, so the DOM is the new screen at once. No
+    view transitions (Firefox), no lens, or reduced motion: it simply changes.
+  - **A dad who is in wears them**: his face in home's stack has the glasses
+    dropped on it. A maybe does not, yet.
+  - **Typing is a pair bobbing** beside the names, with the sentence sr-only.
+  - **Waiting glints**: the header while the room opens or reconnects, and the
+    "…" of who is coming (the words stay "…", which a test pins).
+  - **An empty room is the face**, putting its glasses on above "nobody has
+    said anything yet".
+    All of it, splash included, is absent for `prefers-reduced-motion`.
 - **Home's menu is one grouped list** (2026-09-22): the list draws the border
   and the hairlines, a row (`ROW` in `Menu.tsx`) carries no box of its own,
   and its focus ring sits INSIDE the row because the list clips. The door and

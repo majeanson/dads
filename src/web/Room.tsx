@@ -14,6 +14,9 @@ import { Viewer } from './Viewer';
 import { plural, useT } from './i18n';
 import { Button } from './ui/Button';
 import { buzz } from './buzz';
+import { throughLens } from './lens';
+import { Glasses } from './Logo';
+import { Splash, wantsStill } from './Splash';
 import { nightShort } from './NightEditor';
 import { isImage } from './media';
 import { toRows } from './messageGroups';
@@ -68,6 +71,30 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
    * it, so switching costs nothing and a game in progress is untouched.
    */
   const [view, setView] = useState<'home' | 'talk'>('home');
+  /** The app opening through the glasses: once per load, never for a phone
+   * that asked for less motion. */
+  const [splash, setSplash] = useState(() => !wantsStill());
+  const endSplash = useCallback(() => setSplash(false), []);
+  /** Into the conversation through the lens of the door's mark, and back out
+   * of it into the same lens. */
+  const goTalk = useCallback(
+    () =>
+      throughLens(
+        () => setView('talk'),
+        'in',
+        document.querySelector('[data-testid="home-go"] svg'),
+      ),
+    [],
+  );
+  const goHome = useCallback(
+    () =>
+      throughLens(
+        () => setView('home'),
+        'out',
+        document.querySelector('[data-testid="home-go"] svg'),
+      ),
+    [],
+  );
   /** The photo he is looking at full-screen, by media id. */
   const [viewing, setViewing] = useState<string | null>(null);
   /** The line he is answering, or the one he is changing — never both. */
@@ -325,7 +352,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         // mark on home would leave a dad no sign at all that a question is
         // waiting for him.
         waiting={waiting}
-        onHome={() => setView('home')}
+        onHome={goHome}
         onWho={() => setSheet('here')}
         onNight={() => setSheet('night')}
         onMenu={() => setSheet('menu')}
@@ -343,7 +370,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         you={session.member.id}
         faceOf={faceOf}
         unseen={seen.unseen}
-        onGo={() => setView('talk')}
+        onGo={goTalk}
         onNight={() => setSheet('night')}
         // Only while home is the screen showing. Home stays mounted behind
         // the conversation, so without this the rows would sit in the tree
@@ -427,11 +454,22 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
 
           <p className="min-h-[1.2em] text-xs text-muted" aria-live="polite">
             {note ??
-              (room.waiting > 0
-                ? t(`room.waiting_${plural(lang, room.waiting)}`, { n: room.waiting })
-                : typingNames.length > 0
-                  ? t('room.typing', { names: typingNames.join(', ') })
-                  : ' ')}
+              (room.waiting > 0 ? (
+                t(`room.waiting_${plural(lang, room.waiting)}`, { n: room.waiting })
+              ) : typingNames.length > 0 ? (
+                // A pair of glasses bobbing beside the names: the
+                // symbol doing the work of "is typing…". The sentence is
+                // still there for anything reading it aloud.
+                <>
+                  <Glasses width={18} className="typing-glasses mr-1.5" />
+                  <span aria-hidden="true">{typingNames.join(', ')}</span>
+                  <span className="sr-only">
+                    {t('room.typing', { names: typingNames.join(', ') })}
+                  </span>
+                </>
+              ) : (
+                ' '
+              ))}
           </p>
 
           <Composer
@@ -498,6 +536,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         onMove={(next) => setViewing(shots[next]?.media.id ?? null)}
         onClose={() => setViewing(null)}
       />
+      {splash ? <Splash onDone={endSplash} /> : null}
     </main>
   );
 }

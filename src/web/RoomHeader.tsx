@@ -2,6 +2,7 @@ import { CalendarClock, ChevronLeft, Menu as MenuIcon } from 'lucide-react';
 import type { RosterEntry } from '../shared/protocol';
 import { JoinCall } from './CallBar';
 import { FaceStack } from './Face';
+import { Logo } from './Logo';
 import type { CallState } from './useCall';
 import { useT } from './i18n';
 import { Button } from './ui/Button';
@@ -104,7 +105,11 @@ export function RoomHeader({
                 ring="var(--bg)"
               />
             </span>
-          ) : null}
+          ) : (
+            // Opening or coming back: a light across the lenses until the
+            // room answers.
+            <Logo size={24} hole="var(--bg)" motion="glint" className="shrink-0 text-muted" />
+          )}
           {/* The count is also the door to the roster and to who has been
               about. A button, because it does something — but not a blue
               underlined link, which is three times louder than a group of five

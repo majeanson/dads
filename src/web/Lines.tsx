@@ -5,6 +5,7 @@ import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
 import { Face } from './Face';
 import { useT } from './i18n';
+import { Logo } from './Logo';
 import { MarkRow, Marks, marksOf, QuickMark } from './Marks';
 import type { Row } from './messageGroups';
 import { LineMenu } from './ui/LineMenu';
@@ -90,7 +91,14 @@ export function Lines({
 
   return (
     <ol className="lines" aria-label={t('room.messages')} ref={lines} onScroll={onScroll}>
-      {empty ? <li className="lines-empty quiet">{t('room.empty')}</li> : null}
+      {empty ? (
+        <li className="lines-empty quiet">
+          {/* Nobody has said anything: the face, putting its glasses on,
+              waiting with him. */}
+          <Logo size={72} hole="var(--bg)" motion="on" className="mx-auto mb-3 block text-line" />
+          {t('room.empty')}
+        </li>
+      ) : null}
       {rows.map((row) =>
         row.kind === 'day' ? (
           <li key={`day-${row.key}`} className="day" data-testid="day">

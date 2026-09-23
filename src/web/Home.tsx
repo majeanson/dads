@@ -145,10 +145,12 @@ export function Home({
   const best = poll === null ? [] : bestDays(poll, you, 2);
   /** The night is on right now, which is the one moment the mark nods. */
   const live = night !== null && currentWindow(night, now) !== null;
+  // The ones coming wear the glasses; the maybes do not, yet.
   const faces = [...coming, ...might].map((a) => ({
     memberId: a.memberId,
     name: a.name,
     version: faceOf(a.memberId),
+    shades: a.answer === 'in',
   }));
 
   return (
@@ -231,7 +233,18 @@ export function Home({
                 answer it at a glance and the names answer it for sure; his own
                 face pops into the stack the moment he says he is in. */}
             <div className="home-coming-row">
-              <FaceStack people={faces} size={30} ring="var(--bg-soft)" tint="bg-paper" />
+              {state === null ? (
+                // Not known yet: a light across the lenses rather than a
+                // claim. The words still say "…".
+                <Logo
+                  size={30}
+                  hole="var(--bg-soft)"
+                  motion="glint"
+                  className="shrink-0 text-muted"
+                />
+              ) : (
+                <FaceStack people={faces} size={30} ring="var(--bg-soft)" tint="bg-paper" />
+              )}
               <p className="home-coming" data-testid="home-who-coming">
                 {state === null
                   ? // Not "nobody has said yet" — it has not been asked yet.

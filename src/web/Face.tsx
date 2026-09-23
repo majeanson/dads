@@ -1,5 +1,6 @@
 import { faceUrl } from './api';
 import { initials } from './initials';
+import { Glasses } from './Logo';
 import { cn } from './ui/cn';
 
 /**
@@ -79,7 +80,8 @@ export function FaceStack({
   tint,
   className,
 }: {
-  people: { memberId: string; name: string; version: number | undefined }[];
+  /** `shades`: this dad is coming, and wears the app's glasses to say so. */
+  people: { memberId: string; name: string; version: number | undefined; shades?: boolean }[];
   size?: number;
   max?: number;
   ring: string;
@@ -96,7 +98,7 @@ export function FaceStack({
       {shown.map((p, i) => (
         <span
           key={p.memberId}
-          className="motion-pop inline-flex rounded-full"
+          className="motion-pop relative inline-flex rounded-full"
           style={{ marginLeft: i === 0 ? 0 : -overlap, boxShadow: `0 0 0 2px ${ring}` }}
         >
           <Face
@@ -106,6 +108,7 @@ export function FaceStack({
             size={size}
             className={tint}
           />
+          {p.shades ? <Glasses drop className="face-shades" /> : null}
         </span>
       ))}
       {rest > 0 ? (
