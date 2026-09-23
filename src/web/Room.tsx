@@ -14,9 +14,9 @@ import { Viewer } from './Viewer';
 import { plural, useT } from './i18n';
 import { Button } from './ui/Button';
 import { buzz } from './buzz';
-import { throughLens } from './lens';
+import { noteLens, throughLens } from './lens';
 import { Glasses } from './Logo';
-import { Splash, wantsStill } from './Splash';
+import { Splash, wantsStill, type Box } from './Splash';
 import { nightShort } from './NightEditor';
 import { isImage } from './media';
 import { toRows } from './messageGroups';
@@ -77,15 +77,19 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const endSplash = useCallback(() => setSplash(false), []);
   /** Into the conversation through the lens of the door's mark, and back out
    * of it into the same lens. */
-  const goTalk = useCallback(
-    () =>
-      throughLens(
-        () => setView('talk'),
-        'in',
-        document.querySelector('[data-testid="home-go"] svg'),
-      ),
-    [],
-  );
+  const [door, setDoor] = useState<Box | null>(null);
+  const endDoor = useCallback(() => setDoor(null), []);
+  const goTalk = useCallback(() => {
+    const mark = document.querySelector('[data-testid="home-go"] svg');
+    const box = mark?.getBoundingClientRect();
+    noteLens(mark);
+    setView('talk');
+    // The zoom into the glasses is drawn over the conversation, which is
+    // already there underneath — so nothing waits on it.
+    if (box && box.width > 0 && !wantsStill()) {
+      setDoor({ left: box.left, top: box.top, width: box.width, height: box.height });
+    }
+  }, []);
   const goHome = useCallback(
     () =>
       throughLens(
@@ -537,6 +541,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         onClose={() => setViewing(null)}
       />
       {splash ? <Splash onDone={endSplash} /> : null}
+      {door ? <Splash from={door} onDone={endDoor} /> : null}
     </main>
   );
 }

@@ -635,12 +635,23 @@ the screen knew something and did not say it.
     through the ground with an SVG mask, so the app is what shows through
     them, smoked until the zoom lifts the tint. `pointer-events: none` and
     `aria-hidden`, so nothing waits on it — not a dad, not a test.
-  - **Going into the conversation is going through the lens** (`lens.ts`): a
-    view transition whose new picture is clipped to the left lens of the
-    door's mark and let out; the way back clips the old picture into the same
-    lens (remembered, because by then home is hidden and has no box). The
-    update runs inside `flushSync`, so the DOM is the new screen at once. No
-    view transitions (Firefox), no lens, or reduced motion: it simply changes.
+    **Two rules it learned the hard way.** It is ONE screen-sized SVG in which
+    only the mark scales: scaling a whole SVG with a big ground in it past a
+    hundredfold zoom ran Chrome out of tile memory and crashed ten e2e specs.
+    And it is driven frame by frame from JS (attributes set in a rAF loop),
+    not CSS: Chrome does not reliably repaint an SVG MASK whose contents move
+    by CSS animation, and the see-through holes lagged the drawn glasses.
+  - **"Go and talk" is a zoom into the glasses** (2026-09-23): the same
+    splash, started exactly over the mark on the door's button (`Splash from`)
+    and already wearing its glasses; the page goes to the button's blue around
+    it and the camera flies into the left lens, with the conversation — already
+    switched to underneath — showing through it. DRAWN, not a view transition:
+    a snapshot of a 32px mark zoomed twenty times is a blur, which is what the
+    first version was. **The way back** is a view transition (`lens.ts`), home
+    scaling down from the lens while the chat is clipped into it, because it
+    needs both screens at once; its lens is remembered from the way in, since
+    by then home is hidden and has no box. No view transitions (Firefox), or
+    reduced motion: it simply changes.
   - **A dad who is in wears them**: his face in home's stack has the glasses
     dropped on it. A maybe does not, yet.
   - **Typing is a pair bobbing** beside the names, with the sentence sr-only.

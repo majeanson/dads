@@ -1576,18 +1576,6 @@
 }
 
 /* The splash: the face arrives, the glasses come down, then into the lens. */
-@keyframes dads-splash-zoom {
-  to {
-    transform: scale(70);
-  }
-}
-
-@keyframes dads-fade-out {
-  to {
-    opacity: 0;
-  }
-}
-
 @keyframes dads-splash-face {
   from {
     transform: scale(0.6);
@@ -1595,23 +1583,26 @@
   }
 }
 
-/* Going into the conversation: it opens out of the lens. Coming back: it
-   shrinks into it again. */
-@keyframes dads-lens-open {
+/* Coming back out of the conversation is the zoom into the glasses played
+   backwards: home scales down from the lens while the conversation is clipped
+   to the same lens, shrinking by the same factor. (Going IN is drawn live by
+   Splash.tsx, so it stays sharp.) The numbers are set by lens.ts for the lens
+   actually on screen. */
+@keyframes dads-lens-fly {
   from {
-    clip-path: inset(var(--lens-inset));
+    transform: scale(1);
   }
   to {
-    clip-path: inset(0 round 0);
+    transform: scale(var(--lens-zoom));
   }
 }
 
-@keyframes dads-lens-close {
+@keyframes dads-lens-grow {
   from {
-    clip-path: inset(0 round 0);
+    clip-path: inset(var(--lens-from));
   }
   to {
-    clip-path: inset(var(--lens-inset));
+    clip-path: inset(var(--lens-to));
   }
 }
 
@@ -1621,13 +1612,17 @@
   mix-blend-mode: normal;
 }
 
-html[data-lens='in']::view-transition-new(root) {
-  animation: dads-lens-open 560ms var(--ease-out) both;
+html[data-lens]::view-transition-old(root),
+html[data-lens]::view-transition-new(root) {
+  transform-origin: var(--lens-origin);
 }
 
+html[data-lens='out']::view-transition-new(root) {
+  animation: dads-lens-fly 520ms cubic-bezier(0.1, 0.65, 0.35, 1) reverse both;
+}
 html[data-lens='out']::view-transition-old(root) {
   z-index: 1;
-  animation: dads-lens-close 420ms cubic-bezier(0.55, 0, 1, 0.45) both;
+  animation: dads-lens-grow 520ms cubic-bezier(0.1, 0.65, 0.35, 1) reverse both;
 }
 
 @layer components {
@@ -1652,27 +1647,19 @@ html[data-lens='out']::view-transition-old(root) {
     pointer-events: none;
   }
 
-  .splash-mark {
-    width: min(48vw, 13rem);
-    height: auto;
-    animation: dads-splash-zoom 620ms cubic-bezier(0.7, 0, 0.84, 0) 950ms both;
-  }
-
   .splash-face {
     transform-box: fill-box;
     transform-origin: center;
     animation: dads-splash-face 380ms var(--spring) both;
   }
 
-  .splash-glasses {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: dads-glasses-on 650ms var(--spring) 200ms both;
+  /* From the door: the mark sits exactly over the button's, the page goes
+     to the button's blue around it, and the camera flies into the lens. */
+  .splash[data-door] .splash-face {
+    animation: none;
   }
-
-  .splash-tint {
-    opacity: 0.72;
-    animation: dads-fade-out 420ms ease-in 1000ms both;
+  .splash[data-door] .splash-ground {
+    animation: dads-fade 160ms ease-out both;
   }
 
   /* Shades on a face in "who's coming": a dad who is in has them on. */
