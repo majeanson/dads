@@ -21,8 +21,8 @@ import { Button } from './ui/Button';
  * characters as it can be said ("Thu 21:00"), and the call and the menu. It
  * was two and sometimes three rows — "dad night Thursdays at / 21:00" folded
  * under the count on every phone — and each of those rows was a row of
- * conversation it cost. The group's name goes: he came in from a screen that
- * said it in the biggest type in the app.
+ * conversation it cost. The group's name is the title of that row: which
+ * room he is talking in, with the faces beside it for who is here.
  *
  * Either way it must be structurally incapable of overflowing. The name and
  * the count give way (`min-width: 0` on the left, `shrink-0` on the actions),
@@ -109,67 +109,111 @@ export function RoomHeader({
         </Button>
       ) : null}
 
-      <div className="min-w-0">
-        {/* Still the page's one h1 in the conversation, for anything reading
-            the structure aloud — just not on the screen. */}
-        <h1 className={slim ? 'sr-only' : 'display truncate text-xl text-ink'}>{groupName}</h1>
-        <p className="flex min-w-0 items-center gap-2 text-[1.0625rem] text-ink">
-          {/* The faces are the count, drawn: the words beside them are the
+      {slim ? (
+        <>
+          {/* The room's name, where the count used to be (2026-09-23): he
+              should know which room he is talking in. The name has the row;
+              the faces (who is here) and the night go under it, small, so a
+              name like "Throwback daddies" is not cut on a 390px phone. */}
+          <div className="min-w-0 flex-1">
+            <h1 className="display truncate text-lg leading-tight text-ink">{groupName}</h1>
+            <div className="flex min-w-0 items-center gap-2.5">
+              {/* The faces ARE the head-count here. The control is laid over them,
+                  the full size of them and a thumb's margin more, and it is still
+                  called "2 here" — which is what a screen reader says and what
+                  the tests read. Not wrapped round them: a face's initials are
+                  text and would become part of its name. */}
+              <span className="relative shrink-0">
+                {connection === 'open' ? (
+                  <FaceStack
+                    people={roster.map((r) => ({
+                      memberId: r.memberId,
+                      name: r.name,
+                      version: faceOf(r.memberId),
+                      arrived: arrived.includes(r.memberId),
+                    }))}
+                    size={24}
+                    max={4}
+                    ring="var(--bg)"
+                  />
+                ) : (
+                  <Logo size={24} hole="var(--bg)" motion="glint" className="shrink-0 text-muted" />
+                )}
+                <button
+                  type="button"
+                  className="absolute -inset-2.5 cursor-pointer rounded-full"
+                  data-testid="connection"
+                  onClick={onWho}
+                >
+                  <span className="sr-only">
+                    {connection === 'open'
+                      ? t('room.here', { n: here })
+                      : connection === 'connecting'
+                        ? t('room.opening')
+                        : t('room.reconnecting')}
+                  </span>
+                </button>
+              </span>
+              {soon === null ? null : (
+                <button
+                  type="button"
+                  className="count-in min-h-7 min-w-0 gap-1 text-sm text-muted"
+                  data-testid="night-soon"
+                  onClick={onNight}
+                >
+                  <CalendarClock size={14} aria-hidden="true" className="shrink-0" />
+                  <span className="sr-only">{t('n.title')}: </span>
+                  <span className="truncate">{soon}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="min-w-0">
+          <h1 className="display truncate text-xl text-ink">{groupName}</h1>
+          <p className="flex min-w-0 items-center gap-2 text-[1.0625rem] text-ink">
+            {/* The faces are the count, drawn: the words beside them are the
               control and the thing a test and a screen reader read. Outside the
               button on purpose — initials inside it would be part of its name. */}
-          {connection === 'open' ? (
-            <span className="shrink-0 cursor-pointer" onClick={onWho} aria-hidden="true">
-              <FaceStack
-                people={roster.map((r) => ({
-                  memberId: r.memberId,
-                  name: r.name,
-                  version: faceOf(r.memberId),
-                  arrived: arrived.includes(r.memberId),
-                }))}
-                size={slim ? 24 : 26}
-                max={4}
-                ring="var(--bg)"
-              />
-            </span>
-          ) : (
-            // Opening or coming back: a light across the lenses until the
-            // room answers.
-            <Logo size={24} hole="var(--bg)" motion="glint" className="shrink-0 text-muted" />
-          )}
-          {/* The count is also the door to the roster and to who has been
+            {connection === 'open' ? (
+              <span className="shrink-0 cursor-pointer" onClick={onWho} aria-hidden="true">
+                <FaceStack
+                  people={roster.map((r) => ({
+                    memberId: r.memberId,
+                    name: r.name,
+                    version: faceOf(r.memberId),
+                    arrived: arrived.includes(r.memberId),
+                  }))}
+                  size={26}
+                  max={4}
+                  ring="var(--bg)"
+                />
+              </span>
+            ) : (
+              // Opening or coming back: a light across the lenses until the
+              // room answers.
+              <Logo size={24} hole="var(--bg)" motion="glint" className="shrink-0 text-muted" />
+            )}
+            {/* The count is also the door to the roster and to who has been
               about. A button, because it does something — but not a blue
               underlined link, which is three times louder than a group of five
               men needs its own head-count to be. */}
-          <button
-            type="button"
-            className="count-in shrink-0"
-            data-testid="connection"
-            onClick={onWho}
-          >
-            {connection === 'open'
-              ? t('room.here', { n: here })
-              : connection === 'connecting'
-                ? t('room.opening')
-                : t('room.reconnecting')}
-          </button>
-          {/* Not on home, where the night is the first thing on the screen and
-              four times the size. A header that repeats what is an inch below
-              it is the app saying something twice. On the same line as the
-              count, and the part that gives way first. */}
-          {soon === null || !slim ? null : (
             <button
               type="button"
-              className="count-in min-w-0 gap-1.5 text-muted"
-              data-testid="night-soon"
-              onClick={onNight}
+              className="count-in shrink-0"
+              data-testid="connection"
+              onClick={onWho}
             >
-              <CalendarClock size={16} aria-hidden="true" className="shrink-0" />
-              <span className="sr-only">{t('n.title')}: </span>
-              <span className="truncate">{soon}</span>
+              {connection === 'open'
+                ? t('room.here', { n: here })
+                : connection === 'connecting'
+                  ? t('room.opening')
+                  : t('room.reconnecting')}
             </button>
-          )}
-        </p>
-      </div>
+          </p>
+        </div>
+      )}
 
       {/* Only in the conversation. On home the menu is the screen and the
           call is a thing you join from beside the talk. */}

@@ -1207,14 +1207,17 @@ neither see nor scroll anything.
   than a dot: a mark says "something", and something is what a man ignores. A mark for something somebody else did would be noise, and a
   number invites you to drive it to zero. `/api/todo` is what the marks read,
   and it is deliberately about the caller and nobody else.
-- **The conversation's header is one row that never wraps** (2026-09-22):
-  back, the faces of who is here, the count, the night as `nightShort` ("Thu
-  21:00", a countdown inside 24 hours, "the table's open"), the call and the
-  menu. The night used to read "dad night Thursdays at 21:00" and folded onto
-  two lines under the count on every phone. An icon and an sr-only "Dad night"
-  say what it is. **The faces sit OUTSIDE the `connection` button**: initials
-  are text, and inside the button they would become part of the "2 here" every
-  spec asserts on.
+- **The conversation's header is the room's name** (2026-09-23), in the
+  display face, with the faces of who is here and the night (`nightShort`:
+  "Thu 21:00", a countdown inside 24 hours, "the table's open") small under
+  it; then the call and the menu. The name has the whole first line because
+  it is the thing that gets cut: "Throwback daddies" did not fit a 390px
+  phone beside the faces. The count's words are gone from the screen — the
+  faces are the count — but **`connection` is still a button called "2
+  here"**, laid over the faces (`absolute -inset-2.5`) rather than wrapped
+  round them, because a face's initials are text and inside the button they
+  would become part of the name every spec asserts on. On home the header is
+  unchanged: the name, then the faces and "2 here" in words.
 - **The table stays mounted whether or not it is on screen, once it has been
   opened** — unmounting the iframe restarts a game — and `data-table="open"`
   on `main.room` is what shows
