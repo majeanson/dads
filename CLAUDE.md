@@ -641,19 +641,22 @@ the screen knew something and did not say it.
     And it is driven frame by frame from JS (attributes set in a rAF loop),
     not CSS: Chrome does not reliably repaint an SVG MASK whose contents move
     by CSS animation, and the see-through holes lagged the drawn glasses.
-    **What made it feel genuine** (2026-09-23, after two tries that did
-    not). It moves the instant he taps — a pause before a zoom is the app
-    thinking about it. THE BUTTON HE TAPPED GROWS with the face, carrying its
-    blue out to the edges, while home dims into that blue behind it (280ms,
-    never one frame: a screen flipping to solid blue on a tap reads as a
-    glitch, and fading the blue in slowly left the face floating over the
-    app). The conversation takes home's place only once the blue covers it
-    (`onCovered`, 200ms), so it is only ever seen through the lens — switching
-    at the tap put a faint chat behind the growing button. The lenses have
-    FRAMES in the accent, because in dark mode the face and the chat are both
-    near-black and nothing said where the glass ended. The zoom is geometric
-    (`zoom ** eased(t)`), about 620ms, the quick tempo: a slower one was
-    tried and asked to be put back.
+    The lenses have FRAMES in the accent (in dark mode the face and the chat
+    are both near-black, and without a rim nothing says where the glass
+    ends), and the zoom is geometric (`zoom ** eased(t)`), ~620ms — a slower
+    tempo was tried and asked to be put back.
+  - **"Go and talk" plays the splash** (2026-09-23), with the conversation as
+    what is inside the lens. The screen underneath switches at 200ms
+    (`onCovered`), while the blue covers everything and before the lenses are
+    windows, so the chat is only ever seen through them. **Its own animations
+    were tried and taken out**: a zoom from the mark on the door's button,
+    then that button growing with the face. Neither felt right to the man
+    using it, the splash did, and one animation is less to keep true than
+    two. **The way back** is a view transition (`lens.ts`): home scaling down
+    from the lens while the chat is clipped into it, since it needs both
+    screens at once; its lens is remembered from the way in, because by then
+    home is hidden and has no box. Without view transitions (Firefox), or
+    with reduced motion, it simply changes.
   - **A dad who is in wears them**: his face in home's stack has the glasses
     dropped on it. A maybe does not, yet.
   - **Typing is a pair bobbing** beside the names, with the sentence sr-only.

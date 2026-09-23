@@ -16,7 +16,7 @@ import { Button } from './ui/Button';
 import { buzz } from './buzz';
 import { noteLens, throughLens } from './lens';
 import { Glasses } from './Logo';
-import { Splash, wantsStill, type Box } from './Splash';
+import { Splash, wantsStill } from './Splash';
 import { nightShort } from './NightEditor';
 import { isImage } from './media';
 import { toRows } from './messageGroups';
@@ -77,32 +77,16 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const endSplash = useCallback(() => setSplash(false), []);
   /** Into the conversation through the lens of the door's mark, and back out
    * of it into the same lens. */
-  const [door, setDoor] = useState<{ mark: Box; button: Box & { radius: number } } | null>(null);
-  const endDoor = useCallback(() => setDoor(null), []);
+  /** "Go and talk" plays the opening splash, with the conversation inside. */
+  const [entering, setEntering] = useState(false);
+  const endEntering = useCallback(() => setEntering(false), []);
   const toTalk = useCallback(() => setView('talk'), []);
   const goTalk = useCallback(() => {
-    const go = document.querySelector('[data-testid="home-go"]');
-    const mark = go?.querySelector('svg') ?? null;
-    const box = mark?.getBoundingClientRect();
-    const face = go?.getBoundingClientRect();
-    noteLens(mark);
-    // Home fades into the button's blue first, and the conversation takes
-    // its place once the blue covers it (Splash's onCovered) — so the chat is
-    // only ever seen through the lens, never faintly behind the button.
-    if (!(go && box && face && box.width > 0) || wantsStill()) {
-      setView('talk');
-      return;
-    }
-    setDoor({
-      mark: { left: box.left, top: box.top, width: box.width, height: box.height },
-      button: {
-        left: face.left,
-        top: face.top,
-        width: face.width,
-        height: face.height,
-        radius: parseFloat(getComputedStyle(go).borderTopLeftRadius) || 0,
-      },
-    });
+    noteLens(document.querySelector('[data-testid="home-go"] svg'));
+    // The conversation takes home's place under the blue (onCovered), so it
+    // is only ever seen through the lenses.
+    if (wantsStill()) setView('talk');
+    else setEntering(true);
   }, []);
   const goHome = useCallback(
     () =>
@@ -555,9 +539,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         onClose={() => setViewing(null)}
       />
       {splash ? <Splash onDone={endSplash} /> : null}
-      {door ? (
-        <Splash from={door.mark} button={door.button} onDone={endDoor} onCovered={toTalk} />
-      ) : null}
+      {entering ? <Splash onDone={endEntering} onCovered={toTalk} /> : null}
     </main>
   );
 }

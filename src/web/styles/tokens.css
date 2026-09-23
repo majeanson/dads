@@ -1653,16 +1653,6 @@ html[data-lens='out']::view-transition-old(root) {
     animation: dads-splash-face 380ms var(--spring) both;
   }
 
-  /* From the door: the mark sits exactly over the button's, the page goes
-     to the button's blue around it, and the camera flies into the lens. */
-  .splash[data-door] .splash-face {
-    animation: none;
-  }
-  /* No fade on the ground from the door: it is solid blue from the first
-     frame. A ground fading in left the face and glasses floating over a
-     half-see-through app for a moment, and in dark mode that was the whole
-     impression. Around the mark the button was already blue anyway. */
-
   /* Shades on a face in "who's coming": a dad who is in has them on. */
   .face-shades {
     position: absolute;
