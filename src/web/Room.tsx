@@ -14,7 +14,6 @@ import { Viewer } from './Viewer';
 import { plural, useT } from './i18n';
 import { Button } from './ui/Button';
 import { buzz } from './buzz';
-import { noteLens, throughLens } from './lens';
 import { Glasses } from './Logo';
 import { Splash, wantsStill } from './Splash';
 import { nightShort } from './NightEditor';
@@ -77,26 +76,20 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const endSplash = useCallback(() => setSplash(false), []);
   /** Into the conversation through the lens of the door's mark, and back out
    * of it into the same lens. */
-  /** "Go and talk" plays the opening splash, with the conversation inside. */
+  /** "Go and talk" plays the splash, quicker and through the other lens,
+   * with the conversation inside. */
   const [entering, setEntering] = useState(false);
   const endEntering = useCallback(() => setEntering(false), []);
   const toTalk = useCallback(() => setView('talk'), []);
   const goTalk = useCallback(() => {
-    noteLens(document.querySelector('[data-testid="home-go"] svg'));
     // The conversation takes home's place under the blue (onCovered), so it
     // is only ever seen through the lenses.
     if (wantsStill()) setView('talk');
     else setEntering(true);
   }, []);
-  const goHome = useCallback(
-    () =>
-      throughLens(
-        () => setView('home'),
-        'out',
-        document.querySelector('[data-testid="home-go"] svg'),
-      ),
-    [],
-  );
+  // Going back is just going back: the way in is the moment, the way out is
+  // a man leaving a room, and an animation there was one he had to sit through.
+  const goHome = useCallback(() => setView('home'), []);
   /** The photo he is looking at full-screen, by media id. */
   const [viewing, setViewing] = useState<string | null>(null);
   /** The line he is answering, or the one he is changing — never both. */
@@ -539,7 +532,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         onClose={() => setViewing(null)}
       />
       {splash ? <Splash onDone={endSplash} /> : null}
-      {entering ? <Splash onDone={endEntering} onCovered={toTalk} /> : null}
+      {entering ? <Splash way="talk" onDone={endEntering} onCovered={toTalk} /> : null}
     </main>
   );
 }

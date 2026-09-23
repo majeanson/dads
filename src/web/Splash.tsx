@@ -2,9 +2,42 @@ import { useEffect, useId, useRef } from 'react';
 
 /** Where the left lens sits in the mark's 512 square, as fractions of it. */
 export const LEFT_LENS = { x: 102 / 512, y: 214 / 512, w: 132 / 512, h: 90 / 512, r: 38 / 512 };
+/** And the right one: the conversation is through the other eye. */
+export const RIGHT_LENS = { ...LEFT_LENS, x: 278 / 512 };
+type Lens = typeof LEFT_LENS;
 
-/** How long the whole thing runs before it takes itself away. */
-const SPLASH_MS = 1650;
+/**
+ * The two ways in, as one film at two tempos through two eyes.
+ *
+ * OPENING the app is the full welcome — the face, the glasses coming down
+ * with time to see them, the zoom into the LEFT lens. GOING INTO the
+ * conversation is something a man does ten times an evening, so it is the
+ * same film quicker, through the RIGHT lens, and with CLEAR glass: the app
+ * opens mysterious behind smoked lenses, the talk opens bright. Related,
+ * never a replay.
+ *
+ * Times in ms from the start: when the glasses start down and for how long,
+ * when the zoom starts and for how long, when the smoked glass starts to lift
+ * and for how long, and when the whole thing takes itself away.
+ */
+const PACE = {
+  open: {
+    lens: LEFT_LENS,
+    smoked: true,
+    drop: [200, 650],
+    zoom: [950, 620],
+    lift: [1000, 420],
+    end: 1650,
+  },
+  talk: {
+    lens: RIGHT_LENS,
+    smoked: false,
+    drop: [60, 320],
+    zoom: [380, 420],
+    lift: [0, 1],
+    end: 850,
+  },
+} as const;
 
 /** A box on the screen, in viewport pixels. */
 interface Box {
@@ -18,11 +51,11 @@ interface Box {
  * How far to zoom a mark in `box` about its left lens for the lens to cover
  * the screen, with a little to spare.
  */
-function zoomToFill(box: Box): number {
-  const hw = (LEFT_LENS.w * box.width) / 2;
-  const hh = (LEFT_LENS.h * box.height) / 2;
-  const cx = box.left + (LEFT_LENS.x + LEFT_LENS.w / 2) * box.width;
-  const cy = box.top + (LEFT_LENS.y + LEFT_LENS.h / 2) * box.height;
+function zoomToFill(box: Box, lens: Lens): number {
+  const hw = (lens.w * box.width) / 2;
+  const hh = (lens.h * box.height) / 2;
+  const cx = box.left + (lens.x + lens.w / 2) * box.width;
+  const cy = box.top + (lens.y + lens.h / 2) * box.height;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   return Math.max(cx / hw, (vw - cx) / hw, cy / hh, (vh - cy) / hh) * 1.05;
@@ -59,12 +92,16 @@ const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 export function Splash({
   onDone,
   onCovered,
+  way = 'open',
 }: {
   onDone: () => void;
   /** The blue covers the screen and the lenses are not windows yet, so what
    * is underneath can change without anybody seeing it change. */
   onCovered?: () => void;
+  /** Opening the app, or going into the conversation. */
+  way?: keyof typeof PACE;
 }) {
+  const pace = PACE[way];
   const mask = useId();
   const zooms = useRef<(SVGGElement | null)[]>([]);
   const drops = useRef<(SVGGElement | null)[]>([]);
@@ -84,9 +121,9 @@ export function Splash({
     height: size,
   };
   const k = box.width / 512;
-  const cx = box.left + (LEFT_LENS.x + LEFT_LENS.w / 2) * box.width;
-  const cy = box.top + (LEFT_LENS.y + LEFT_LENS.h / 2) * box.height;
-  const zoom = zoomToFill(box);
+  const cx = box.left + (pace.lens.x + pace.lens.w / 2) * box.width;
+  const cy = box.top + (pace.lens.y + pace.lens.h / 2) * box.height;
+  const zoom = zoomToFill(box, pace.lens);
   const place = `translate(${box.left} ${box.top}) scale(${k})`;
 
   // Driven frame by frame rather than by CSS: the lenses are holes in a MASK,
@@ -94,8 +131,9 @@ export function Splash({
   // animation — the holes lagged the drawn glasses and the lenses doubled.
   // An attribute set every frame is repainted every frame.
   useEffect(() => {
-    const zoomAt = 950;
-    const zoomFor = 620;
+    const [dropAt, dropFor] = pace.drop;
+    const [zoomAt, zoomFor] = pace.zoom;
+    const [liftAt, liftFor] = pace.lift;
     const start = performance.now();
     let frame = 0;
     let covered = false;
@@ -112,19 +150,19 @@ export function Splash({
       const z = zoom ** easeInOut(clamp01((t - zoomAt) / zoomFor));
       const zt = `translate(${cx} ${cy}) scale(${z}) translate(${-cx} ${-cy})`;
       for (const g of zooms.current) g?.setAttribute('transform', zt);
-      // The glasses start coming down at 200ms and the lenses are windows only
-      // from then, so this is the last moment the screen underneath can
-      // change unseen: from here the conversation is only seen through them.
-      if (t >= 200) cover();
-      const d = clamp01((t - 200) / 650);
+      // The lenses are windows only once the glasses start coming down, so
+      // that is the last moment the screen underneath can change unseen:
+      // from here the conversation is only seen through them.
+      if (t >= dropAt) cover();
+      const d = clamp01((t - dropAt) / dropFor);
       const dy = -151 * (1 - easeOutBack(d));
       const op = String(clamp01(d / 0.45));
       for (const g of drops.current) {
         g?.setAttribute('transform', `translate(0 ${dy})`);
         g?.setAttribute('opacity', op);
       }
-      tint.current?.setAttribute('opacity', String(0.72 * (1 - clamp01((t - 1000) / 420))));
-      if (t < SPLASH_MS) frame = requestAnimationFrame(tick);
+      tint.current?.setAttribute('opacity', String(0.72 * (1 - clamp01((t - liftAt) / liftFor))));
+      if (t < pace.end) frame = requestAnimationFrame(tick);
       else onDone();
     };
     frame = requestAnimationFrame(tick);
@@ -133,7 +171,7 @@ export function Splash({
       // However it ends, whatever was waiting on the cover still happens.
       cover();
     };
-  }, [zoom, cx, cy, onDone, onCovered]);
+  }, [pace, zoom, cx, cy, onDone, onCovered]);
 
   const lenses = (
     <>
@@ -195,7 +233,12 @@ export function Splash({
         <g ref={zoomer(2)}>
           <g transform={place}>
             <g ref={dropper(2)}>
-              <g ref={tint} fill="var(--accent)" opacity="0.72">
+              <g
+                ref={tint}
+                fill="var(--accent)"
+                opacity="0.72"
+                display={pace.smoked ? undefined : 'none'}
+              >
                 {lenses}
               </g>
             </g>

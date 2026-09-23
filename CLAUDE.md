@@ -645,18 +645,18 @@ the screen knew something and did not say it.
     are both near-black, and without a rim nothing says where the glass
     ends), and the zoom is geometric (`zoom ** eased(t)`), ~620ms — a slower
     tempo was tried and asked to be put back.
-  - **"Go and talk" plays the splash** (2026-09-23), with the conversation as
-    what is inside the lens. The screen underneath switches at 200ms
-    (`onCovered`), while the blue covers everything and before the lenses are
-    windows, so the chat is only ever seen through them. **Its own animations
-    were tried and taken out**: a zoom from the mark on the door's button,
-    then that button growing with the face. Neither felt right to the man
-    using it, the splash did, and one animation is less to keep true than
-    two. **The way back** is a view transition (`lens.ts`): home scaling down
-    from the lens while the chat is clipped into it, since it needs both
-    screens at once; its lens is remembered from the way in, because by then
-    home is hidden and has no box. Without view transitions (Firefox), or
-    with reduced motion, it simply changes.
+  - **"Go and talk" plays the splash, as a variation** (2026-09-23): the same
+    film quicker (~850ms against 1650), through the RIGHT lens where opening
+    the app goes through the left, and with CLEAR glass where the opening
+    has smoked. `PACE` in `Splash.tsx` holds both — related, never a replay.
+    The screen underneath switches as the glasses start down (`onCovered`),
+    while the blue covers everything and before the lenses are windows, so
+    the chat is only ever seen through them. **Its own animations were tried
+    and taken out**: a zoom from the mark on the door's button, then that
+    button growing with the face. Neither felt right to the man using it.
+  - **Going back is just going back.** No animation: the way in is the
+    moment, and the way out was one more thing to sit through. The reverse
+    zoom (a view transition, `lens.ts`) was built and removed on request.
   - **A dad who is in wears them**: his face in home's stack has the glasses
     dropped on it. A maybe does not, yet.
   - **Typing is a pair bobbing** beside the names, with the sentence sr-only.
