@@ -78,6 +78,7 @@ export function FaceStack({
   max = 5,
   ring,
   tint,
+  wave = false,
   className,
 }: {
   /** `shades`: this dad is coming, and wears the app's glasses to say so. */
@@ -86,6 +87,8 @@ export function FaceStack({
   max?: number;
   ring: string;
   tint?: string;
+  /** The full table: every pair of shades comes down in turn. */
+  wave?: boolean;
   className?: string;
 }) {
   if (people.length === 0) return null;
@@ -108,7 +111,9 @@ export function FaceStack({
             size={size}
             className={tint}
           />
-          {p.shades ? <Glasses drop className="face-shades" /> : null}
+          {p.shades ? (
+            <Glasses drop delay={wave ? 150 + i * 110 : 0} className="face-shades" />
+          ) : null}
         </span>
       ))}
       {rest > 0 ? (

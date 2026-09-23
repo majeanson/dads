@@ -416,8 +416,11 @@ the screen knew something and did not say it.
 - Everything on the board is **group-visible by design**, including your own
   row, which renders in the list as well as in the editor. Nobody is left out —
   a board that only shows the dads who turned up is a board that flatters — but
-  the men with nothing down yet share ONE line ("Nothing yet: Sam, Dave")
-  rather than each getting a row of the same three words.
+  the men with nothing down yet share ONE line rather than each getting a row
+  of the same three words. **That line is their faces** (2026-09-23), a stack
+  that stops at five and says "+n", with every name sr-only. As a list of
+  names it grew a name per dad and ran past the bottom of a small phone —
+  which the fit suite caught on Linux, where every retry is one more dad.
 - `pending` scans back through the shown weeks, not just the one behind, so a
   fortnight away does not lose the question. A dad can only close his own
   commitment — the update is keyed on his member id.
@@ -665,6 +668,13 @@ the screen knew something and did not say it.
     zoom (a view transition, `lens.ts`) was built and removed on request.
   - **A dad who is in wears them**: his face in home's stack has the glasses
     dropped on it. A maybe does not, yet.
+  - **A full table is four** (Jaffre's seats), and it is the one thing on
+    home worth a moment: "Full table" in the accent on the SAME line as the
+    countdown (home is measured to fit a 667px phone, so the news costs no
+    height), and once per evening per phone (`dads.full.<occurrence>`) the
+    card swells, a ring goes out, and every face's shades come down in a
+    wave. The faces remount once to play it, on a counter that never resets
+    — resetting it replayed the wave a second time.
   - **Typing is a pair bobbing** beside the names, with the sentence sr-only.
   - **Waiting glints**: the header while the room opens or reconnects, and the
     "…" of who is coming (the words stay "…", which a test pins).

@@ -9,6 +9,7 @@ import {
   type BoardRow,
 } from './api';
 import { Check } from 'lucide-react';
+import { FaceStack } from './Face';
 import { useT, type Key, type T } from './i18n';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
@@ -37,7 +38,13 @@ function outcomeWord(t: T, outcome: 'pending' | 'done' | 'missed'): string {
  * who turned up is a board that flatters — but the men with nothing down yet
  * share one line rather than each getting a row that says nothing.
  */
-export function Board({ onChanged }: { onChanged?: () => void } = {}) {
+export function Board({
+  onChanged,
+  faceOf,
+}: {
+  onChanged?: () => void;
+  faceOf?: (memberId: string) => number | undefined;
+} = {}) {
   const { t, lang } = useT();
   const [data, setData] = useState<BoardData | null | 'loading'>('loading');
   const [tab, setTab] = useState<'now' | 'before'>('now');
@@ -91,7 +98,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
               able to read your week in the same words everyone else reads it. */}
           <section>
             <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('b.everyone')}</h2>
-            <WeekRows rows={thisWeek?.rows ?? []} you={data.you} />
+            <WeekRows faceOf={faceOf} rows={thisWeek?.rows ?? []} you={data.you} />
           </section>
         </TabPanel>
 
@@ -110,7 +117,7 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
                     {t('b.week_of', { date: weekDate(w.week, lang) })}
                     {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
                   </h2>
-                  <WeekRows rows={w.rows} you={data.you} />
+                  <WeekRows faceOf={faceOf} rows={w.rows} you={data.you} />
                 </section>
               );
             })
@@ -128,7 +135,17 @@ export function Board({ onChanged }: { onChanged?: () => void } = {}) {
  * that flatters — but a row each for five men with nothing to say is five rows
  * of the same three words. The names are the honesty; the rows were furniture.
  */
-function WeekRows({ rows, you, className }: { rows: BoardRow[]; you: string; className?: string }) {
+function WeekRows({
+  rows,
+  you,
+  faceOf,
+  className,
+}: {
+  rows: BoardRow[];
+  you: string;
+  faceOf?: (memberId: string) => number | undefined;
+  className?: string;
+}) {
   const { t } = useT();
   const said = rows.filter((r) => r.checkIn ?? r.commitment);
   const quiet = rows.filter((r) => !r.checkIn && !r.commitment);
@@ -138,13 +155,31 @@ function WeekRows({ rows, you, className }: { rows: BoardRow[]; you: string; cla
         <BoardEntry key={row.memberId} row={row} isYou={row.memberId === you} />
       ))}
       {quiet.length > 0 ? (
+        // Their faces, not a list of names: the line used to grow a name per
+        // dad and wrapped past the bottom of a small phone in a room of more
+        // than five. The stack stops at five and says "+n"; every name is
+        // still read out, which is also what a test reads.
         <li
-          className="border-b border-line py-3 text-[1.0625rem] text-muted"
+          className="flex items-center gap-3 border-b border-line py-3 text-[1.0625rem] text-muted"
           data-testid="board-waiting"
         >
-          {t('b.waiting', {
-            names: quiet.map((r) => r.name + (r.memberId === you ? t('here.you') : '')).join(', '),
-          })}
+          <FaceStack
+            people={quiet.map((r) => ({
+              memberId: r.memberId,
+              name: r.name,
+              version: faceOf?.(r.memberId),
+            }))}
+            size={28}
+            ring="var(--bg)"
+          />
+          <span aria-hidden="true">{t('b.waiting_short')}</span>
+          <span className="sr-only">
+            {t('b.waiting', {
+              names: quiet
+                .map((r) => r.name + (r.memberId === you ? t('here.you') : ''))
+                .join(', '),
+            })}
+          </span>
         </li>
       ) : null}
     </ul>

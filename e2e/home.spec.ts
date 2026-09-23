@@ -308,3 +308,35 @@ test('home never says nobody has answered before it has asked', async ({ browser
   await expect(told.getByTestId('home-who-coming')).not.toHaveText('…');
   await told.context().close();
 });
+
+test('a fourth dad in fills the table, and home says so', async ({ browser }) => {
+  // Four is a table of Jaffre. Seated by request rather than through the
+  // door: this is about what the watching dad's home does, not about joining.
+  const watcher = await comeIn(browser, 'Tablewatch');
+  await watcher.evaluate(() =>
+    fetch('/api/night', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ night: { weekday: 4, time: '21:00', tz: 'America/Montreal' } }),
+    }),
+  );
+  await expect(watcher.getByTestId('home-when')).toBeVisible();
+
+  const seated = [];
+  for (const name of ['Seat One', 'Seat Two', 'Seat Three', 'Seat Four']) {
+    const context = await browser.newContext();
+    const res = await context.request.post('/api/join', {
+      data: { code: E2E_HOME_GROUP.code, displayName: name },
+    });
+    expect(res.ok()).toBe(true);
+    expect((await context.request.put('/api/rsvp', { data: { answer: 'in' } })).ok()).toBe(true);
+    seated.push(context);
+  }
+
+  // Without a reload: the answers stir the screen, and the fourth fills it.
+  await expect(watcher.getByTestId('home-full')).toBeVisible({ timeout: 15_000 });
+  await expect(watcher.getByTestId('home-who-coming')).toContainText('Seat Four');
+
+  for (const context of seated) await context.close();
+  await watcher.context().close();
+});

@@ -143,7 +143,7 @@ export function Sheets({
   if (open === 'board') {
     return (
       <Sheet title={t('b.title')} onClose={close}>
-        <Board onChanged={onTodoChanged} />
+        <Board onChanged={onTodoChanged} faceOf={(memberId) => faceOf(memberId)} />
       </Sheet>
     );
   }

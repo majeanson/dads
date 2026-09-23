@@ -598,6 +598,30 @@
     font-size: 1.0625rem;
   }
 
+  /* A full table, in the accent: the one line on the card that is news. */
+  .home-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 1rem;
+    margin: 0;
+  }
+
+  .home-full {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--accent);
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+
+  /* The card's moment when a table fills: it swells a little and a ring in
+     the accent goes out from it, once. */
+  .home-card[data-cheer] {
+    animation: dads-cheer 900ms var(--spring) both;
+  }
+
   /* The faces and the names, on one row: the faces at a glance, the names for
      sure. The faces give way to the words, never the other way round. */
   .home-coming-row {
@@ -1491,6 +1515,21 @@
   from {
     transform: translateY(-0.4em);
     opacity: 0;
+  }
+}
+
+/* A full table: the card swells and a ring goes out from it. */
+@keyframes dads-cheer {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  35% {
+    transform: scale(1.025);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 1.25rem color-mix(in srgb, var(--accent) 0%, transparent);
   }
 }
 

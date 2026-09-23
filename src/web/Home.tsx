@@ -10,13 +10,35 @@ import {
 } from './api';
 import { FaceStack } from './Face';
 import { plural, useT, weekdayNames } from './i18n';
-import { Logo } from './Logo';
 import { nightAway } from './NightEditor';
 import { bestDays } from './Poll';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
+import { buzz } from './buzz';
+import { Glasses, Logo } from './Logo';
 import { dayNameShort } from '../shared/calendarMonth';
 import { currentWindow, stillToCome, type DadNight } from '../shared/dadNight';
+
+/**
+ * Four is a table of Jaffre, which is the number that turns a night of talk
+ * into a night of cards — and the most important thing that can happen on
+ * this screen. Everything below it looked exactly the same as three.
+ */
+const FULL_TABLE = 4;
+
+/** Celebrated once per evening per phone: the second look is news, not a
+ * party. Storage may refuse, and then it celebrates every time — the right
+ * way for that to fail. */
+function celebrateOnce(occurrence: number): boolean {
+  const key = `dads.full.${occurrence}`;
+  try {
+    if (localStorage.getItem(key)) return false;
+    localStorage.setItem(key, '1');
+  } catch {
+    // Remembering is a nicety.
+  }
+  return true;
+}
 
 /**
  * Where the app opens, and it asks ONE question.
@@ -79,6 +101,11 @@ export function Home({
   const [poll, setPoll] = useState<PollState | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  /** The full table's moment, playing right now. */
+  const [cheer, setCheer] = useState(false);
+  /** Bumped when the moment starts and never reset, so the faces remount
+   * once to play the wave — and not again when the moment ends. */
+  const [cheers, setCheers] = useState(0);
 
   /**
    * Is there an evening to come, or is the question when the next one is?
@@ -143,6 +170,19 @@ export function Home({
   const items = state?.items.length ?? 0;
   const away = night === null ? null : nightAway(t, lang, night, now);
   const best = poll === null ? [] : bestDays(poll, you, 2);
+  const full = coming.length >= FULL_TABLE;
+  const occurrence = state?.occurrence ?? null;
+  // The moment a table fills — whoever filled it, and whether he was looking
+  // when it happened or opens the app later. Once per evening per phone.
+  useEffect(() => {
+    if (!full || occurrence === null || !celebrateOnce(occurrence)) return;
+    setCheer(true);
+    setCheers((n) => n + 1);
+    buzz(20);
+    const done = setTimeout(() => setCheer(false), 1800);
+    return () => clearTimeout(done);
+  }, [full, occurrence]);
+
   /** The night is on right now, which is the one moment the mark nods. */
   const live = night !== null && currentWindow(night, now) !== null;
   // The ones coming wear the glasses; the maybes do not, yet.
@@ -158,7 +198,7 @@ export function Home({
       {/* Named for a screen reader, where the structure of a page is real, and
           not on the screen, where it would be a word above a line that already
           says what it is. */}
-      <section className="home-card">
+      <section className="home-card" data-cheer={cheer ? 'yes' : undefined}>
         <h2 className="sr-only">{t('n.title')}</h2>
 
         {!upcoming || night === null ? (
@@ -222,9 +262,22 @@ export function Home({
 
             {/* Only when it is close. "in 5 days" under "Thursday 21:00" is
                 the screen saying the same thing twice in a smaller voice. */}
-            {away === null ? null : (
-              <p className="home-away" data-testid="home-away">
-                {away}
+            {/* How far off it is, only when that is news — and a full table
+                on the same line, so the news costs the card no height: home
+                is measured to fit a 667px phone with ten pixels to spare. */}
+            {away === null && !full ? null : (
+              <p className="home-meta">
+                {away === null ? null : (
+                  <span className="home-away" data-testid="home-away">
+                    {away}
+                  </span>
+                )}
+                {full ? (
+                  <span className="home-full" data-testid="home-full">
+                    <Glasses width={24} drop={cheer} />
+                    {t('home.full_table')}
+                  </span>
+                ) : null}
               </p>
             )}
 
@@ -243,7 +296,16 @@ export function Home({
                   className="shrink-0 text-muted"
                 />
               ) : (
-                <FaceStack people={faces} size={30} ring="var(--bg-soft)" tint="bg-paper" />
+                <FaceStack
+                  // Remounted for the moment, so the shades come down again,
+                  // in turn, one face after another.
+                  key={cheers}
+                  people={faces}
+                  size={30}
+                  ring="var(--bg-soft)"
+                  tint="bg-paper"
+                  wave={cheer}
+                />
               )}
               <p className="home-coming" data-testid="home-who-coming">
                 {state === null
@@ -409,7 +471,7 @@ function Answer({
       look="quiet"
       size="lg"
       className={cn(
-        'home-answer relative h-[clamp(2.75rem,6dvh,3.25rem)] px-2 text-base font-semibold',
+        'home-answer relative h-[clamp(2.75rem,6dvh,3.25rem)] px-1 text-base font-medium',
         'rounded-[calc(var(--radius-control)-0.25rem)] transition-colors duration-200',
         chosen
           ? answer === 'out'

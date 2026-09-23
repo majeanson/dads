@@ -99,10 +99,13 @@ export function Logo({
 export function Glasses({
   width = 24,
   drop = false,
+  delay = 0,
   className,
 }: {
   width?: number;
   drop?: boolean;
+  /** Milliseconds before they come down, so a row can come down as a wave. */
+  delay?: number;
   className?: string;
 }) {
   return (
@@ -114,7 +117,11 @@ export function Glasses({
       focusable="false"
       className={[drop ? 'logo-anim' : '', className ?? ''].join(' ')}
     >
-      <g fill="currentColor" className="logo-glasses">
+      <g
+        fill="currentColor"
+        className="logo-glasses"
+        style={delay ? { animationDelay: `${delay}ms` } : undefined}
+      >
         <rect x="80" y="196" width="352" height="34" rx="17" />
         <rect x="102" y="214" width="132" height="90" rx="38" />
         <rect x="278" y="214" width="132" height="90" rx="38" />
