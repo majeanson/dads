@@ -13,7 +13,7 @@ import {
 } from '../shared/protocol';
 import { tableName } from '../shared/jaffre';
 import { parseSaid, type Said } from '../shared/said';
-import { REPLY_QUOTE_LENGTH, type ReplyTo } from '../shared/protocol';
+import { isGlasses, REPLY_QUOTE_LENGTH, type ReplyTo } from '../shared/protocol';
 
 /** A stored quote, or nothing: a row from before replies existed has none. */
 function parseReply(raw: string | null | undefined): ReplyTo | null {
@@ -305,10 +305,22 @@ export class RoomDO extends DurableObject<Env> {
       }
       this.broadcastRoster();
       // And who he is, which reaches his old lines as well as the roster —
-      // a face set tonight belongs beside what he said on Tuesday.
+      // a face set tonight belongs beside what he said on Tuesday. The pair
+      // he wears is read here rather than carried in: a change of name or
+      // face does not know it, and a frame without it would take his glasses
+      // off every screen.
+      const worn = await this.env.DB.prepare('SELECT glasses FROM members WHERE id = ?')
+        .bind(memberId)
+        .first<{ glasses: string | null }>()
+        .catch(() => null);
       this.broadcast({
         t: 'member',
-        member: { memberId, name, face: face ?? undefined },
+        member: {
+          memberId,
+          name,
+          face: face ?? undefined,
+          ...(isGlasses(worn?.glasses) ? { glasses: worn.glasses } : {}),
+        },
       });
 
       return Response.json({ ok: true });
@@ -362,12 +374,13 @@ export class RoomDO extends DurableObject<Env> {
     server.serializeAttachment({ memberId, name, face } satisfies SocketIdentity);
 
     const resuming = Number.isFinite(after) && after > 0;
+    const members = await this.membersOfGroup();
     const hello: ServerFrame = {
       t: 'hello',
       you: { memberId, name },
       roster: this.roster(),
       call: this.callRoster(),
-      members: await this.membersOfGroup(),
+      members,
       messages: await this.backfill(resuming ? after : null),
       // Only for a resume. A fresh load is backfilled from a tail the line is
       // already out of, so there is nothing on that screen to take back.
@@ -391,7 +404,18 @@ export class RoomDO extends DurableObject<Env> {
       // face was missing from his lines, and he could not be picked in a list
       // of the group's men. The frame is an upsert on every client, so
       // sending it on each genuine arrival costs a message and settles it.
-      this.broadcast({ t: 'member', member: { memberId, name, ...(face ? { face } : {}) } });
+      // His own row from the list just read for the hello, so the glasses he
+      // wears arrive with him.
+      const own = members.find((m) => m.memberId === memberId);
+      this.broadcast({
+        t: 'member',
+        member: {
+          memberId,
+          name,
+          ...(face ? { face } : {}),
+          ...(own?.glasses ? { glasses: own.glasses } : {}),
+        },
+      });
     }
 
     return new Response(null, { status: 101, webSocket: client });
@@ -1216,14 +1240,20 @@ export class RoomDO extends DurableObject<Env> {
     if (groupId === undefined) return [];
     try {
       const { results } = await this.env.DB.prepare(
-        'SELECT id, display_name, avatar_at FROM members WHERE group_id = ?',
+        'SELECT id, display_name, avatar_at, glasses FROM members WHERE group_id = ?',
       )
         .bind(groupId)
-        .all<{ id: string; display_name: string; avatar_at: number | null }>();
+        .all<{
+          id: string;
+          display_name: string;
+          avatar_at: number | null;
+          glasses: string | null;
+        }>();
       return results.map((r) => ({
         memberId: r.id,
         name: r.display_name,
         face: r.avatar_at ?? undefined,
+        ...(isGlasses(r.glasses) ? { glasses: r.glasses } : {}),
       }));
     } catch (err) {
       console.error('members failed', err);

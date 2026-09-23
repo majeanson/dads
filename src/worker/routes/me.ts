@@ -1,3 +1,4 @@
+import { isGlasses } from '../../shared/protocol';
 import type { Env } from '../env';
 import { currentSession, MAX_NAME_LENGTH } from './auth';
 
@@ -47,6 +48,37 @@ async function tellTheRoom(
   } catch (err) {
     console.error('me: the room did not hear about it', err);
   }
+}
+
+/**
+ * PUT /api/me/glasses — { glasses }
+ *
+ * Which pair he wears. One of the list or nothing; "shades" is stored as
+ * NULL, because it is what a dad who never chose already wears.
+ */
+export async function putGlasses(request: Request, env: Env, prod: boolean): Promise<Response> {
+  const session = await currentSession(request, env, prod);
+  if (!session) return new Response('no', { status: 401 });
+
+  let body: { glasses?: unknown };
+  try {
+    body = (await request.json()) as { glasses?: unknown };
+  } catch {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+  if (!isGlasses(body.glasses)) return Response.json({ error: 'bad_glasses' }, { status: 400 });
+
+  const stored = body.glasses === 'shades' ? null : body.glasses;
+  await env.DB.prepare('UPDATE members SET glasses = ? WHERE id = ?')
+    .bind(stored, session.member.id)
+    .run();
+
+  await tellTheRoom(env, session.group.id, {
+    memberId: session.member.id,
+    name: session.member.displayName,
+    face: session.member.avatarAt ?? null,
+  });
+  return Response.json({ ok: true, glasses: body.glasses });
 }
 
 /** PUT /api/me/name — { name } */

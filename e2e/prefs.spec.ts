@@ -228,3 +228,27 @@ test('a dad with no face still gets his initials', async ({ page }) => {
     'IN',
   );
 });
+
+test('a dad chooses his glasses, and they stay his', async ({ page }) => {
+  await comeIn(page, 'Ivo Frames');
+  await home(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+
+  // The app's shades until he chooses. One button beside his face opens the
+  // six.
+  await page.getByTestId('glasses-open').click();
+  const picker = page.getByTestId('glasses-picker');
+  await expect(picker.getByTestId('glasses-shades')).toHaveAttribute('aria-pressed', 'true');
+
+  // Not optimistic: the pair is his when the room has it, and every screen
+  // hears it the same way — including this one.
+  await picker.getByTestId('glasses-aviators').click();
+  await page.getByTestId('glasses-open').click();
+  await expect(picker.getByTestId('glasses-aviators')).toHaveAttribute('aria-pressed', 'true');
+
+  await page.reload();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByTestId('glasses-open').click();
+  await expect(page.getByTestId('glasses-aviators')).toHaveAttribute('aria-pressed', 'true');
+});

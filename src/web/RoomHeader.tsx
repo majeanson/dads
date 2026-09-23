@@ -1,6 +1,6 @@
 import { CalendarClock, ChevronLeft, Menu as MenuIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { RosterEntry } from '../shared/protocol';
+import type { GlassesKind, RosterEntry } from '../shared/protocol';
 import { JoinCall } from './CallBar';
 import { FaceStack } from './Face';
 import { Logo } from './Logo';
@@ -16,13 +16,10 @@ import { Button } from './ui/Button';
  * joined from the conversation — so there is nothing for the bar to hold a
  * button for.
  *
- * In the CONVERSATION it is ONE row that never wraps (2026-09-22): the way
- * back, the faces of who is here and the count, the night in as few
- * characters as it can be said ("Thu 21:00"), and the call and the menu. It
- * was two and sometimes three rows — "dad night Thursdays at / 21:00" folded
- * under the count on every phone — and each of those rows was a row of
- * conversation it cost. The group's name is the title of that row: which
- * room he is talking in, with the faces beside it for who is here.
+ * In the CONVERSATION it is the room's name (2026-09-23), with the faces of
+ * who is here — wearing their glasses, bobbing while they type — and the
+ * night ("Thu 21:00") small under it, then the call and the menu. The name
+ * has the whole first line because it is what gets cut on a phone.
  *
  * Either way it must be structurally incapable of overflowing. The name and
  * the count give way (`min-width: 0` on the left, `shrink-0` on the actions),
@@ -36,6 +33,8 @@ export function RoomHeader({
   here,
   roster,
   faceOf,
+  glassesOf,
+  typing,
   soon,
   callState,
   waiting,
@@ -52,6 +51,9 @@ export function RoomHeader({
   /** Who is connected, for the faces beside the count. */
   roster: RosterEntry[];
   faceOf: (memberId: string) => number | undefined;
+  glassesOf: (memberId: string) => GlassesKind | undefined;
+  /** Who is typing right now, other than him: their faces wear it. */
+  typing: string[];
   /** The night, short: "Thu 21:00", a countdown when close, null with none. */
   soon: string | null;
   callState: CallState;
@@ -131,6 +133,8 @@ export function RoomHeader({
                       name: r.name,
                       version: faceOf(r.memberId),
                       arrived: arrived.includes(r.memberId),
+                      glasses: glassesOf(r.memberId),
+                      typing: typing.includes(r.memberId),
                     }))}
                     size={24}
                     max={4}
@@ -184,6 +188,8 @@ export function RoomHeader({
                     name: r.name,
                     version: faceOf(r.memberId),
                     arrived: arrived.includes(r.memberId),
+                    glasses: glassesOf(r.memberId),
+                    typing: typing.includes(r.memberId),
                   }))}
                   size={26}
                   max={4}

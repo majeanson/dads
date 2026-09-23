@@ -152,9 +152,23 @@ export interface RoomsOpen {
   table: boolean;
 }
 
+/**
+ * The pairs a dad can wear. An allowlist, like the marks: it is drawn on
+ * everyone's screen, and there is no reason for it to be anything else.
+ * `shades` is the app's own, and what a dad who never chose wears.
+ */
+export const GLASSES = ['shades', 'aviators', 'round', 'square', '3d', 'goggles'] as const;
+export type GlassesKind = (typeof GLASSES)[number];
+
+export function isGlasses(value: unknown): value is GlassesKind {
+  return typeof value === 'string' && (GLASSES as readonly string[]).includes(value);
+}
+
 export interface RosterEntry {
   memberId: string;
   name: string;
+  /** The pair he wears, when he has chosen one. Absent is the app's shades. */
+  glasses?: GlassesKind;
   /**
    * When this dad last set his face, or absent if he has none.
    *

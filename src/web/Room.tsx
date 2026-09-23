@@ -257,6 +257,10 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
    * who is not here tonight still has his face beside it. Undefined for a dad
    * with no face, and `Face` falls back to his initials.
    */
+  const glassesOf = useCallback(
+    (memberId: string) => room.members.find((m) => m.memberId === memberId)?.glasses,
+    [room.members],
+  );
   const faceOf = useCallback(
     (memberId: string | null) =>
       memberId === null ? undefined : room.members.find((m) => m.memberId === memberId)?.face,
@@ -339,6 +343,8 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         here={room.roster.length}
         roster={room.roster}
         faceOf={faceOf}
+        glassesOf={glassesOf}
+        typing={[...room.typing.keys()].filter((id) => id !== session.member.id)}
         soon={soon}
         callState={call.state}
         // On home as well, now that home says two things and nothing else.
@@ -364,6 +370,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         pollPulse={room.pollPulse}
         you={session.member.id}
         faceOf={faceOf}
+        glassesOf={glassesOf}
         unseen={seen.unseen}
         onGo={goTalk}
         onNight={() => setSheet('night')}

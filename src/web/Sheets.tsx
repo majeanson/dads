@@ -191,6 +191,7 @@ export function Sheets({
           memberId: you,
           name: youName,
           face: roster.find((m) => m.memberId === you)?.face,
+          glasses: members.find((m) => m.memberId === you)?.glasses,
         }}
         // A room with no creator is everybody's, which is what it always was.
         members={members}

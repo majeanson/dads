@@ -1707,6 +1707,12 @@
     transition: height 180ms var(--ease-out);
   }
 
+  /* A face whose dad is typing: his glasses bob, so who is typing can be
+     seen without reading anything. */
+  .face-typing {
+    animation: dads-bob 900ms ease-in-out infinite;
+  }
+
   /* Shades on a face in "who's coming": a dad who is in has them on. */
   .face-shades {
     position: absolute;

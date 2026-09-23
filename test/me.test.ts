@@ -160,3 +160,72 @@ describe('a dad’s face', () => {
     expect(row?.avatar_at).toBeNull();
   });
 });
+
+describe('the glasses a dad wears', () => {
+  let group: SeededGroup;
+  beforeEach(async () => {
+    await resetTables();
+    group = await seedGroup();
+  });
+
+  const worn = async () =>
+    (
+      await env.DB.prepare('SELECT glasses FROM members WHERE group_id = ?')
+        .bind(group.id)
+        .first<{ glasses: string | null }>()
+    )?.glasses;
+
+  it('are one of the list, and the app’s own shades are stored as nothing', async () => {
+    const cookie = await comeIn(group, 'Marc');
+    expect(
+      (await worker.fetch(put('/api/me/glasses', cookie, { glasses: 'aviators' }))).status,
+    ).toBe(200);
+    expect(await worn()).toBe('aviators');
+
+    expect((await worker.fetch(put('/api/me/glasses', cookie, { glasses: 'shades' }))).status).toBe(
+      200,
+    );
+    expect(await worn()).toBeNull();
+  });
+
+  it('refuses a stranger, and anything off the list', async () => {
+    const cookie = await comeIn(group, 'Marc');
+    expect((await worker.fetch(put('/api/me/glasses', '', { glasses: 'round' }))).status).toBe(401);
+    for (const glasses of ['monocle', '<b>', 42, null]) {
+      expect((await worker.fetch(put('/api/me/glasses', cookie, { glasses }))).status).toBe(400);
+    }
+    expect(await worn()).toBeNull();
+  });
+
+  it('reach the room, and survive him changing his name', async () => {
+    const cookie = await comeIn(group, 'Marc');
+    await worker.fetch(put('/api/me/glasses', cookie, { glasses: 'round' }));
+
+    const res = await worker.fetch('https://dads.test/ws', {
+      headers: { Upgrade: 'websocket', Cookie: cookie },
+    });
+    const ws = res.webSocket!;
+    ws.accept();
+    const frames: { t: string; members?: { glasses?: string }[]; member?: { glasses?: string } }[] =
+      [];
+    ws.addEventListener('message', (e) => {
+      if (e.data !== 'pong') frames.push(JSON.parse(e.data as string));
+    });
+    const wait = async (ok: () => boolean) => {
+      for (let i = 0; i < 200 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
+      expect(ok()).toBe(true);
+    };
+
+    // Everyone in the room is told who wears what on arriving...
+    await wait(() => frames.some((f) => f.t === 'hello'));
+    const hello = frames.find((f) => f.t === 'hello')!;
+    expect(hello.members?.[0]?.glasses).toBe('round');
+
+    // ...and a change of name, which does not know about glasses, must not
+    // take them off anybody's screen.
+    await worker.fetch(put('/api/me/name', cookie, { name: 'Marc-antoine' }));
+    await wait(() => frames.some((f) => f.t === 'member'));
+    expect(frames.find((f) => f.t === 'member')!.member?.glasses).toBe('round');
+    ws.close(1000, 'bye');
+  });
+});

@@ -1,3 +1,4 @@
+import type { GlassesKind } from '../shared/protocol';
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { setRooms } from './api';
@@ -27,7 +28,7 @@ export function Settings({
 }: {
   rooms: RoomsOpen;
   /** Him, from the roster — which is where his face's version lives. */
-  you: { memberId: string; name: string; face?: number };
+  you: { memberId: string; name: string; face?: number; glasses?: GlassesKind };
   /** Whether the three switches are his: he opened the room, or the room has
    * no creator and they are everybody's, as they were before creators. */
   mine: boolean;
@@ -70,7 +71,7 @@ export function Settings({
           group's switches is the right way round. */}
       <section>
         <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('you.title')}</h2>
-        <You memberId={you.memberId} name={you.name} face={you.face} />
+        <You memberId={you.memberId} name={you.name} face={you.face} glasses={you.glasses} />
       </section>
 
       <section>

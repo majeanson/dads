@@ -668,6 +668,24 @@ the screen knew something and did not say it.
     zoom (a view transition, `lens.ts`) was built and removed on request.
   - **A dad who is in wears them**: his face in home's stack has the glasses
     dropped on it. A maybe does not, yet.
+  - **And they are HIS pair** (2026-09-23, migration 0020): shades, aviators,
+    round, square, 3D or ski goggles, chosen from one button beside "Add a face" in Settings that opens
+    the six (`GlassesPicker`) — a row of all six cost the sheet 91px and ran
+    it past the bottom of a small phone, which the fit suite measures. `GLASSES` in protocol.ts is the allowlist, checked in
+    `PUT /api/me/glasses`; the app's shades are stored as NULL, because they
+    are what a dad who never chose already wears. They ride `hello.members`
+    and the `member` frame — and the room READS them from D1 whenever it
+    sends a `member` frame, arrival included, because a change of name or
+    face does not know about glasses and a frame without them would take
+    them off every screen. Not optimistic, for the same reason as a keep.
+    The app's own mark always wears the shades: it is the brand, not a dad.
+  - **A dad typing wears his glasses bobbing** on his face in the header
+    (`face-typing`), so who is typing can be seen without reading.
+  - **What the splash DOES runs on timers, never on animation frames.** The
+    switch to the conversation used to fire inside the frame loop, and a
+    browser that is not painting (a background tab, a phone waking, a loaded
+    machine) runs no frames — "Va jaser" pressed and home still showing. A
+    flaky French e2e found it. Frames only draw.
   - **Somebody arriving is a face, not a line** (2026-09-23): his face pops
     into the header's stack with a ring going out from it (`face-arrive`).
     The roster the screen finds on opening is the baseline, not news. The

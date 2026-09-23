@@ -552,6 +552,16 @@ export async function setMyName(name: string): Promise<void> {
   if (!res.ok) throw new Error(`PUT /api/me/name ${res.status}`);
 }
 
+/** Which pair of glasses he wears. The room tells every phone. */
+export async function setMyGlasses(glasses: string): Promise<void> {
+  const res = await fetch('/api/me/glasses', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ glasses }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/me/glasses ${res.status}`);
+}
+
 /** His face. Square, shrunk in the browser, replacing whatever was there. */
 export async function setMyFace(blob: Blob): Promise<void> {
   const res = await fetch('/api/me/face', {

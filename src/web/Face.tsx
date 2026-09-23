@@ -1,6 +1,7 @@
 import { faceUrl } from './api';
 import { dadVar } from './dadColour';
 import type { CSSProperties } from 'react';
+import type { GlassesKind } from '../shared/protocol';
 import { initials } from './initials';
 import { Glasses } from './Logo';
 import { cn } from './ui/cn';
@@ -98,6 +99,10 @@ export function FaceStack({
     version: number | undefined;
     shades?: boolean;
     arrived?: boolean;
+    /** Which pair he wears, when he has chosen. */
+    glasses?: GlassesKind;
+    /** He is typing right now: his glasses bob on his face. */
+    typing?: boolean;
   }[];
   size?: number;
   max?: number;
@@ -133,8 +138,15 @@ export function FaceStack({
             size={size}
             className={tint}
           />
-          {p.shades ? (
-            <Glasses drop delay={wave ? 150 + i * 110 : 0} className="face-shades" />
+          {p.typing ? (
+            <Glasses kind={p.glasses} className="face-shades face-typing" />
+          ) : p.shades ? (
+            <Glasses
+              kind={p.glasses}
+              drop
+              delay={wave ? 150 + i * 110 : 0}
+              className="face-shades"
+            />
           ) : null}
         </span>
       ))}

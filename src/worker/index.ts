@@ -8,7 +8,7 @@ import { getIce } from './routes/ice';
 import { createInvite } from './routes/invite';
 import { getTodo } from './routes/todo';
 import { getMedia, keepMediaRoute, listMedia, uploadMedia } from './routes/media';
-import { deleteFace, getFace, putFace, putName } from './routes/me';
+import { deleteFace, getFace, putFace, putGlasses, putName } from './routes/me';
 import { setNight } from './routes/night';
 import { getPoll, pickDay, putVote } from './routes/poll';
 import { getPresence } from './routes/presence';
@@ -84,6 +84,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'PUT /api/me/name':
       return putName(request, env, prod);
+
+    case 'PUT /api/me/glasses':
+      return putGlasses(request, env, prod);
 
     case 'PUT /api/me/face':
       return putFace(request, env, prod);

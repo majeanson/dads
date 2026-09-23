@@ -150,10 +150,6 @@ export function Splash({
       const z = zoom ** easeInOut(clamp01((t - zoomAt) / zoomFor));
       const zt = `translate(${cx} ${cy}) scale(${z}) translate(${-cx} ${-cy})`;
       for (const g of zooms.current) g?.setAttribute('transform', zt);
-      // The lenses are windows only once the glasses start coming down, so
-      // that is the last moment the screen underneath can change unseen:
-      // from here the conversation is only seen through them.
-      if (t >= dropAt) cover();
       const d = clamp01((t - dropAt) / dropFor);
       const dy = -151 * (1 - easeOutBack(d));
       const op = String(clamp01(d / 0.45));
@@ -163,11 +159,22 @@ export function Splash({
       }
       tint.current?.setAttribute('opacity', String(0.72 * (1 - clamp01((t - liftAt) / liftFor))));
       if (t < pace.end) frame = requestAnimationFrame(tick);
-      else onDone();
     };
     frame = requestAnimationFrame(tick);
+    // What the splash DOES runs on timers, never on frames. A browser that is
+    // not painting — a tab in the background, a phone waking up, a loaded
+    // test machine — does not run animation frames, and a switch to the
+    // conversation that waited on one never happened: "Va jaser" pressed,
+    // home still showing. The frames only draw.
+    //
+    // The lenses are windows only once the glasses start coming down, so that
+    // is the last moment the screen underneath can change unseen.
+    const covering = setTimeout(cover, dropAt);
+    const ending = setTimeout(onDone, pace.end);
     return () => {
       cancelAnimationFrame(frame);
+      clearTimeout(covering);
+      clearTimeout(ending);
       // However it ends, whatever was waiting on the cover still happens.
       cover();
     };

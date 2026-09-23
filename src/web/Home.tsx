@@ -18,6 +18,7 @@ import { buzz } from './buzz';
 import { Glasses, Logo } from './Logo';
 import { dayNameShort } from '../shared/calendarMonth';
 import { currentWindow, stillToCome, type DadNight } from '../shared/dadNight';
+import type { GlassesKind } from '../shared/protocol';
 
 /**
  * Four is a table of Jaffre, which is the number that turns a night of talk
@@ -63,6 +64,7 @@ export function Home({
   pollPulse,
   you,
   faceOf,
+  glassesOf,
   unseen,
   onGo,
   onNight,
@@ -85,6 +87,7 @@ export function Home({
   pollPulse: number;
   you: string;
   faceOf: (memberId: string) => number | undefined;
+  glassesOf: (memberId: string) => GlassesKind | undefined;
   unseen: number;
   onGo: () => void;
   onNight: () => void;
@@ -221,6 +224,7 @@ export function Home({
     name: a.name,
     version: faceOf(a.memberId),
     shades: a.answer === 'in',
+    glasses: glassesOf(a.memberId),
   }));
 
   return (

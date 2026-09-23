@@ -1,3 +1,5 @@
+import type { GlassesKind } from '../shared/protocol';
+import { GlassesPicker } from './GlassesPicker';
 import { Check, Trash2, UserRound } from 'lucide-react';
 import { useRef, useState, type FormEvent } from 'react';
 import { clearMyFace, setMyFace, setMyName } from './api';
@@ -22,11 +24,14 @@ export function You({
   memberId,
   name,
   face,
+  glasses,
 }: {
   memberId: string;
   name: string;
   /** The version of his face from the roster, or undefined for none. */
   face: number | undefined;
+  /** The pair he wears, from the room's members. */
+  glasses?: GlassesKind;
 }) {
   const { t } = useT();
   const [draft, setDraft] = useState(name);
@@ -176,6 +181,8 @@ export function You({
           {/* Quiet, not danger: taking off a picture you can put back in ten
               seconds is not the same act as taking back something you said,
               and two red buttons in one app teaches nobody anything. */}
+          <GlassesPicker worn={glasses} />
+
           {hasFace ? (
             <Button look="quiet" disabled={busy} onClick={() => void remove()}>
               <Trash2 size={18} aria-hidden="true" />
