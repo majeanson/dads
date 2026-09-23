@@ -4,9 +4,9 @@ import { useEffect, useId, useRef } from 'react';
 export const LEFT_LENS = { x: 102 / 512, y: 214 / 512, w: 132 / 512, h: 90 / 512, r: 38 / 512 };
 
 /** How long the whole thing runs before it takes itself away. */
-const SPLASH_MS = 2300;
+const SPLASH_MS = 1650;
 /** The same zoom from the door's mark, which starts already wearing them. */
-const DOOR_MS = 1500;
+const DOOR_MS = 680;
 
 /** A box on the screen, in viewport pixels. */
 export interface Box {
@@ -58,8 +58,23 @@ function easeOutBack(t: number): number {
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 
-export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
+export function Splash({
+  onDone,
+  onCovered,
+  from,
+  button,
+}: {
+  onDone: () => void;
+  /** The blue has covered the screen: whatever is underneath can change now
+   * without anybody seeing it change. */
+  onCovered?: () => void;
+  from?: Box;
+  /** The door's button, which grows with the mark and carries its blue out
+   * to the edges — the thing he tapped is the thing that opens. */
+  button?: Box & { radius: number };
+}) {
   const mask = useId();
+  const ground = useRef<SVGRectElement | null>(null);
   const zooms = useRef<(SVGGElement | null)[]>([]);
   const drops = useRef<(SVGGElement | null)[]>([]);
   const tint = useRef<SVGGElement | null>(null);
@@ -89,11 +104,18 @@ export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
   // An attribute set every frame is repainted every frame.
   useEffect(() => {
     const door = from !== undefined;
-    // A beat to see the face, then a flight long enough to watch.
-    const zoomAt = door ? 280 : 1100;
-    const zoomFor = door ? 1150 : 1100;
+    // From the door it moves the instant he taps: a pause before a zoom is
+    // the app thinking about it. The splash has its face to put on first.
+    const zoomAt = door ? 0 : 950;
+    const zoomFor = door ? 620 : 620;
     const start = performance.now();
     let frame = 0;
+    let covered = false;
+    const cover = () => {
+      if (covered) return;
+      covered = true;
+      onCovered?.();
+    };
     const tick = (now: number) => {
       const t = now - start;
       // Geometric, not linear: each frame grows by the same FACTOR, which is
@@ -102,6 +124,13 @@ export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
       const z = zoom ** easeInOut(clamp01((t - zoomAt) / zoomFor));
       const zt = `translate(${cx} ${cy}) scale(${z}) translate(${-cx} ${-cy})`;
       for (const g of zooms.current) g?.setAttribute('transform', zt);
+      // Home goes to the button's blue behind the growing button, quickly
+      // but not in one frame: a screen that flips to solid blue on a tap
+      // reads as a glitch, not as flying into something.
+      if (door) ground.current?.setAttribute('opacity', String(1 - (1 - clamp01(t / 280)) ** 3));
+      // Home is behind the blue by now, so the conversation takes its place
+      // unseen — and from here on it is only ever seen through the lens.
+      if (t >= 200) cover();
       if (!door) {
         const d = clamp01((t - 200) / 650);
         const dy = -151 * (1 - easeOutBack(d));
@@ -110,14 +139,18 @@ export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
           g?.setAttribute('transform', `translate(0 ${dy})`);
           g?.setAttribute('opacity', op);
         }
-        tint.current?.setAttribute('opacity', String(0.72 * (1 - clamp01((t - 1300) / 700))));
+        tint.current?.setAttribute('opacity', String(0.72 * (1 - clamp01((t - 1000) / 420))));
       }
       if (t < (door ? DOOR_MS : SPLASH_MS)) frame = requestAnimationFrame(tick);
       else onDone();
     };
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [from, zoom, cx, cy, onDone]);
+    return () => {
+      cancelAnimationFrame(frame);
+      // However it ends, whatever was waiting on the cover still happens.
+      cover();
+    };
+  }, [from, zoom, cx, cy, onDone, onCovered]);
 
   const lenses = (
     <>
@@ -153,8 +186,18 @@ export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
           </mask>
         </defs>
         <g mask={`url(#${mask})`}>
-          <rect width={vw} height={vh} fill="var(--accent)" className="splash-ground" />
+          <rect ref={ground} width={vw} height={vh} fill="var(--accent)" opacity={from ? 0 : 1} />
           <g ref={zoomer(1)}>
+            {button ? (
+              <rect
+                x={button.left}
+                y={button.top}
+                width={button.width}
+                height={button.height}
+                rx={button.radius}
+                fill="var(--accent)"
+              />
+            ) : null}
             <g transform={place}>
               <circle className="splash-face" cx="256" cy="256" r="216" fill="var(--on-accent)" />
               <g ref={dropper(1)} fill="var(--accent)">
@@ -164,7 +207,7 @@ export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
                     glass ended — the flight landed on a black screen instead
                     of going through a lens. Half the stroke falls in the hole
                     and is masked away; the half on the face is the frame. */}
-                <g fill="none" stroke="var(--accent)" strokeWidth="16">
+                <g fill="none" stroke="var(--accent)" strokeWidth="12">
                   <rect x="102" y="214" width="132" height="90" rx="38" />
                   <rect x="278" y="214" width="132" height="90" rx="38" />
                 </g>

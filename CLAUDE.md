@@ -641,25 +641,19 @@ the screen knew something and did not say it.
     And it is driven frame by frame from JS (attributes set in a rAF loop),
     not CSS: Chrome does not reliably repaint an SVG MASK whose contents move
     by CSS animation, and the see-through holes lagged the drawn glasses.
-    **And three things a dad in dark mode saw** (2026-09-23). The ground is
-    solid blue from the first frame — fading it in left the face floating
-    over a half-see-through app. The lenses have FRAMES (a stroke in the
-    accent), because in dark mode the face and the chat are both near-black
-    and without a rim nothing said where the glass ended. And it is slow on
-    purpose: a beat on the face, then a flight of about a second that grows
-    geometrically (`zoom ** eased(t)`), so every frame gets closer by the same
-    factor instead of crawling and then rushing the end.
-  - **"Go and talk" is a zoom into the glasses** (2026-09-23): the same
-    splash, started exactly over the mark on the door's button (`Splash from`)
-    and already wearing its glasses; the page goes to the button's blue around
-    it and the camera flies into the left lens, with the conversation — already
-    switched to underneath — showing through it. DRAWN, not a view transition:
-    a snapshot of a 32px mark zoomed twenty times is a blur, which is what the
-    first version was. **The way back** is a view transition (`lens.ts`), home
-    scaling down from the lens while the chat is clipped into it, because it
-    needs both screens at once; its lens is remembered from the way in, since
-    by then home is hidden and has no box. No view transitions (Firefox), or
-    reduced motion: it simply changes.
+    **What made it feel genuine** (2026-09-23, after two tries that did
+    not). It moves the instant he taps — a pause before a zoom is the app
+    thinking about it. THE BUTTON HE TAPPED GROWS with the face, carrying its
+    blue out to the edges, while home dims into that blue behind it (280ms,
+    never one frame: a screen flipping to solid blue on a tap reads as a
+    glitch, and fading the blue in slowly left the face floating over the
+    app). The conversation takes home's place only once the blue covers it
+    (`onCovered`, 200ms), so it is only ever seen through the lens — switching
+    at the tap put a faint chat behind the growing button. The lenses have
+    FRAMES in the accent, because in dark mode the face and the chat are both
+    near-black and nothing said where the glass ended. The zoom is geometric
+    (`zoom ** eased(t)`), about 620ms, the quick tempo: a slower one was
+    tried and asked to be put back.
   - **A dad who is in wears them**: his face in home's stack has the glasses
     dropped on it. A maybe does not, yet.
   - **Typing is a pair bobbing** beside the names, with the sentence sr-only.
