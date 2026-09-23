@@ -569,7 +569,7 @@ describe('RoomDO', () => {
       expect(off.reactions).toEqual([]);
     });
 
-    it('refuses anything that is not one of the five', async () => {
+    it('takes any mark on the list, and refuses anything off it', async () => {
       const marc = await enter(group, 'Marc');
       open.push(marc);
       marc.say('a line');
@@ -581,6 +581,12 @@ describe('RoomDO', () => {
       marc.react(posted.message.id, '🦄', true);
       await new Promise((r) => setTimeout(r, 80));
       expect(marc.frames.some((f) => f.t === 'reacted')).toBe(false);
+
+      // Past the six a row shows, the "+" offers the rest of the list, and the
+      // room takes those too.
+      marc.react(posted.message.id, '🔥', true);
+      const fire = await marc.next('reacted', (f) => f.id === posted.message.id);
+      expect(fire.reactions).toEqual([{ emoji: '🔥', by: [expect.any(String)] }]);
     });
 
     it('comes back with the line on a fresh backfill', async () => {

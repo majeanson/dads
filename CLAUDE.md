@@ -121,10 +121,16 @@ weakening `sessionSecret()`.
 - **Taking it back is not optimistic.** The line stays on his own screen until
   the room says it is gone. For this one feature, a local vanish that failed on
   the wire would be the worst possible lie.
-- **A mark is one tap, and there is no picker.** Five fixed emoji in
-  `REACTIONS` (protocol.ts), allowlisted in `parseClientFrame` before the
-  string ever reaches a column — this ends up on everyone's screen and there
-  is no reason for it to be free text. Rows live in D1 (migration 0014), never
+- **A mark is one tap, from six that learn, and "+" has the rest**
+  (2026-09-23, which widens the old "five fixed, no picker"). The allowlist
+  is `MARKS` (protocol.ts) — the composer's thirty-two — checked in
+  `parseClientFrame` before the string ever reaches a column: this ends up on
+  everyone's screen and there is no reason for it to be free text. The row
+  shows SIX: the defaults (`REACTIONS`, now with 😎) until he uses others,
+  then `favourites.ts` lets what he uses most and lately push a default out
+  FROM THE END, counts fading by half a week. Per device, like the theme —
+  it is about his hands. The defaults keep their order, because a row that
+  reshuffled on every tap is a row a thumb never learns. Rows live in D1 (migration 0014), never
   in the tail, and are hydrated on backfill beside the attachments. The
   primary key is the whole row, so pressing the same one twice takes it off.
   `message_id` cascades, so a line taken back takes its marks with it — the

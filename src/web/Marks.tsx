@@ -1,7 +1,8 @@
 import * as Popover from '@radix-ui/react-popover';
-import { SmilePlus } from 'lucide-react';
+import { Plus, SmilePlus } from 'lucide-react';
 import { useState } from 'react';
-import { REACTIONS, type Reaction, type RoomMessage } from '../shared/protocol';
+import { MARKS, type Reaction, type RoomMessage } from '../shared/protocol';
+import { noteMark, readTally, sixFor } from './favourites';
 import { useT } from './i18n';
 import { cn } from './ui/cn';
 
@@ -77,9 +78,11 @@ export function Marks({
 }
 
 /**
- * The five, in a row. Shared by the long-press menu and the quick button,
- * so there is one place that decides what a mark looks like. The ones
- * already his are outlined; they wrap rather than shrink when squeezed.
+ * Six marks in a row, and a "+" for the rest. Shared by the long-press menu,
+ * the quick button and the tap row, so there is one place that decides what
+ * a mark looks like. The six are learnt (`favourites.ts`): the defaults at
+ * first, then whatever this dad actually uses. The ones already his are
+ * outlined; they wrap rather than shrink when squeezed.
  */
 export function MarkRow({
   mine,
@@ -89,30 +92,58 @@ export function MarkRow({
   onReact: (emoji: string, on: boolean) => void;
 }) {
   const { t } = useT();
+  const [more, setMore] = useState(false);
+  const six = sixFor(readTally(), Date.now());
+  const pick = (emoji: string, on: boolean) => {
+    if (on) noteMark(emoji);
+    onReact(emoji, on);
+  };
+  const mark = (emoji: string) => {
+    const on = mine.includes(emoji);
+    return (
+      <button
+        key={emoji}
+        type="button"
+        aria-pressed={on}
+        aria-label={emoji}
+        data-testid={`react-${emoji}`}
+        onClick={() => pick(emoji, !on)}
+        className={cn(
+          // 44px, a thumb: this row is what a tap on a line opens on a
+          // phone now, as well as the long-press menu.
+          'grid h-11 min-w-11 flex-1 cursor-pointer place-items-center rounded-app',
+          'border text-xl transition-[border-color,background-color,scale] duration-100 active:scale-90',
+          on ? 'border-accent bg-panel' : 'border-transparent hover:border-edge',
+        )}
+      >
+        {emoji}
+      </button>
+    );
+  };
   return (
-    <div className="flex flex-wrap gap-0.5" role="group" aria-label={t('line.react')}>
-      {REACTIONS.map((emoji) => {
-        const on = mine.includes(emoji);
-        return (
-          <button
-            key={emoji}
-            type="button"
-            aria-pressed={on}
-            aria-label={emoji}
-            data-testid={`react-${emoji}`}
-            onClick={() => onReact(emoji, !on)}
-            className={cn(
-              // 44px, a thumb: this row is what a tap on a line opens on a
-              // phone now, as well as the long-press menu.
-              'grid h-11 min-w-11 flex-1 cursor-pointer place-items-center rounded-app',
-              'border text-xl transition-[border-color,background-color,scale] duration-100 active:scale-90',
-              on ? 'border-accent bg-panel' : 'border-transparent hover:border-edge',
-            )}
-          >
-            {emoji}
-          </button>
-        );
-      })}
+    <div role="group" aria-label={t('line.react')}>
+      <div className="flex flex-wrap gap-0.5">
+        {six.map(mark)}
+        <button
+          type="button"
+          aria-expanded={more}
+          aria-label={t('line.more_marks')}
+          data-testid="react-more"
+          onClick={() => setMore((v) => !v)}
+          className={cn(
+            'grid h-11 min-w-11 flex-1 cursor-pointer place-items-center rounded-app border text-muted',
+            'transition-[border-color,scale] duration-100 active:scale-90',
+            more ? 'border-accent' : 'border-transparent hover:border-edge',
+          )}
+        >
+          <Plus size={20} aria-hidden="true" />
+        </button>
+      </div>
+      {more ? (
+        <div className="motion-rise mt-1 grid grid-cols-8 gap-0.5" data-testid="react-all">
+          {(MARKS as readonly string[]).filter((e) => !six.includes(e)).map(mark)}
+        </div>
+      ) : null}
     </div>
   );
 }

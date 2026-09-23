@@ -519,6 +519,17 @@ test('on a phone, one tap on a line puts the marks under it', async ({ browser }
   await line.locator('.body').tap();
   await expect(line.getByTestId('tap-marks')).toHaveCount(0);
 
+  // Past the six, "+" offers the rest — and what he uses joins the six, so
+  // next time it is one tap away.
+  await line.locator('.body').tap();
+  await expect(line.getByTestId('tap-marks').getByTestId('react-🔥')).toHaveCount(0);
+  await line.getByTestId('react-more').tap();
+  await line.getByTestId('react-all').getByTestId('react-🔥').tap();
+  await expect(line.getByTestId('mark').filter({ hasText: '🔥' })).toContainText('1');
+  await line.locator('.body').tap();
+  await expect(line.getByTestId('tap-marks').getByTestId('react-🔥')).toBeVisible();
+  await expect(line.getByTestId('react-all')).toHaveCount(0);
+
   await context.close();
 });
 

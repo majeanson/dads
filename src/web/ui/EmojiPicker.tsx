@@ -1,6 +1,7 @@
 import * as Popover from '@radix-ui/react-popover';
 import { SmilePlus } from 'lucide-react';
 import { useState } from 'react';
+import { MARKS } from '../../shared/protocol';
 import { useT } from '../i18n';
 import { Button } from './Button';
 
@@ -11,40 +12,7 @@ import { Button } from './Button';
  * only offered where there is a mouse; on a phone the keyboard's own emoji
  * key is the picker and a second one would be a fourth control on the row.
  */
-export const EMOJI = [
-  '👍',
-  '❤️',
-  '😂',
-  '💪',
-  '🙏',
-  '😊',
-  '😅',
-  '😉',
-  '😍',
-  '😎',
-  '🤣',
-  '😭',
-  '😤',
-  '🙄',
-  '😴',
-  '🤔',
-  '👀',
-  '🔥',
-  '🎉',
-  '👌',
-  '✌️',
-  '🤝',
-  '👏',
-  '🍺',
-  '☕',
-  '🍕',
-  '🏒',
-  '⚽',
-  '🎮',
-  '🃏',
-  '⏰',
-  '👶',
-] as const;
+export const EMOJI = MARKS;
 
 export function EmojiPicker({
   onPick,

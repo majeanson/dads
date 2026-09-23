@@ -40,10 +40,52 @@ export interface Attachment {
  * five men actually say to each other — yes, warmth, that's funny, hang in
  * there, thank you.
  */
-export const REACTIONS = ['👍', '❤️', '😂', '💪', '🙏'] as const;
+/**
+ * Every mark there is: the composer's thirty-two, which start with the ones
+ * a man reaches for most. Still an allowlist — a mark ends up on everyone's
+ * screen and there is no reason for it to be free text — only a longer one
+ * (2026-09-23): the row under a line shows six, and "+" opens the rest.
+ */
+export const MARKS = [
+  '👍',
+  '❤️',
+  '😂',
+  '💪',
+  '🙏',
+  '😊',
+  '😅',
+  '😉',
+  '😍',
+  '😎',
+  '🤣',
+  '😭',
+  '😤',
+  '🙄',
+  '😴',
+  '🤔',
+  '👀',
+  '🔥',
+  '🎉',
+  '👌',
+  '✌️',
+  '🤝',
+  '👏',
+  '🍺',
+  '☕',
+  '🍕',
+  '🏒',
+  '⚽',
+  '🎮',
+  '🃏',
+  '⏰',
+  '👶',
+] as const;
+
+/** The six a phone shows before it has learnt anything about its dad. */
+export const REACTIONS = ['👍', '❤️', '😂', '💪', '🙏', '😎'] as const;
 
 export function isReaction(emoji: string): boolean {
-  return (REACTIONS as readonly string[]).includes(emoji);
+  return (MARKS as readonly string[]).includes(emoji);
 }
 
 /** One mark on one line, and who put it there. */
@@ -313,7 +355,7 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
     const { id, emoji, on } = value as { id?: unknown; emoji?: unknown; on?: unknown };
     // The mark is an allowlist and not free text: this ends up in a column
     // and on everyone's screen, and there is no reason for it to be anything
-    // but one of five known things.
+    // but one of the known marks.
     if (typeof id !== 'string' || id === '' || id.length > 64) return null;
     if (typeof emoji !== 'string' || !isReaction(emoji)) return null;
     return { t: 'react', id, emoji, on: on === true };
