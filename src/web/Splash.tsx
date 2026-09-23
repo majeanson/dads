@@ -4,9 +4,9 @@ import { useEffect, useId, useRef } from 'react';
 export const LEFT_LENS = { x: 102 / 512, y: 214 / 512, w: 132 / 512, h: 90 / 512, r: 38 / 512 };
 
 /** How long the whole thing runs before it takes itself away. */
-const SPLASH_MS = 1650;
+const SPLASH_MS = 2300;
 /** The same zoom from the door's mark, which starts already wearing them. */
-const DOOR_MS = 760;
+const DOOR_MS = 1500;
 
 /** A box on the screen, in viewport pixels. */
 export interface Box {
@@ -54,7 +54,8 @@ function easeOutBack(t: number): number {
   const c = 1.4;
   return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
 }
-const easeIn = (t: number) => t * t * t;
+/** Slow out, slow in: the flight starts gently and lands gently. */
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 
 export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
@@ -88,13 +89,17 @@ export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
   // An attribute set every frame is repainted every frame.
   useEffect(() => {
     const door = from !== undefined;
-    const zoomAt = door ? 120 : 950;
-    const zoomFor = door ? 600 : 620;
+    // A beat to see the face, then a flight long enough to watch.
+    const zoomAt = door ? 280 : 1100;
+    const zoomFor = door ? 1150 : 1100;
     const start = performance.now();
     let frame = 0;
     const tick = (now: number) => {
       const t = now - start;
-      const z = 1 + (zoom - 1) * easeIn(clamp01((t - zoomAt) / zoomFor));
+      // Geometric, not linear: each frame grows by the same FACTOR, which is
+      // what a steady flight towards something looks like. Linear scale
+      // crawls at the start and rushes the last frames.
+      const z = zoom ** easeInOut(clamp01((t - zoomAt) / zoomFor));
       const zt = `translate(${cx} ${cy}) scale(${z}) translate(${-cx} ${-cy})`;
       for (const g of zooms.current) g?.setAttribute('transform', zt);
       if (!door) {
@@ -105,7 +110,7 @@ export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
           g?.setAttribute('transform', `translate(0 ${dy})`);
           g?.setAttribute('opacity', op);
         }
-        tint.current?.setAttribute('opacity', String(0.72 * (1 - clamp01((t - 1000) / 420))));
+        tint.current?.setAttribute('opacity', String(0.72 * (1 - clamp01((t - 1300) / 700))));
       }
       if (t < (door ? DOOR_MS : SPLASH_MS)) frame = requestAnimationFrame(tick);
       else onDone();
@@ -154,6 +159,15 @@ export function Splash({ onDone, from }: { onDone: () => void; from?: Box }) {
               <circle className="splash-face" cx="256" cy="256" r="216" fill="var(--on-accent)" />
               <g ref={dropper(1)} fill="var(--accent)">
                 <rect x="80" y="196" width="352" height="34" rx="17" />
+                {/* The frames. In dark mode the face and the conversation are
+                    both near-black, and without a rim nothing said where the
+                    glass ended — the flight landed on a black screen instead
+                    of going through a lens. Half the stroke falls in the hole
+                    and is masked away; the half on the face is the frame. */}
+                <g fill="none" stroke="var(--accent)" strokeWidth="16">
+                  <rect x="102" y="214" width="132" height="90" rx="38" />
+                  <rect x="278" y="214" width="132" height="90" rx="38" />
+                </g>
               </g>
               <path
                 d="M196 350 q60 48 120 0"

@@ -641,6 +641,14 @@ the screen knew something and did not say it.
     And it is driven frame by frame from JS (attributes set in a rAF loop),
     not CSS: Chrome does not reliably repaint an SVG MASK whose contents move
     by CSS animation, and the see-through holes lagged the drawn glasses.
+    **And three things a dad in dark mode saw** (2026-09-23). The ground is
+    solid blue from the first frame — fading it in left the face floating
+    over a half-see-through app. The lenses have FRAMES (a stroke in the
+    accent), because in dark mode the face and the chat are both near-black
+    and without a rim nothing said where the glass ended. And it is slow on
+    purpose: a beat on the face, then a flight of about a second that grows
+    geometrically (`zoom ** eased(t)`), so every frame gets closer by the same
+    factor instead of crawling and then rushing the end.
   - **"Go and talk" is a zoom into the glasses** (2026-09-23): the same
     splash, started exactly over the mark on the door's button (`Splash from`)
     and already wearing its glasses; the page goes to the button's blue around
