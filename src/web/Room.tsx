@@ -405,16 +405,16 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               onReply={(message) => {
                 setEditing(null);
                 setReplyTo(message);
-                // After the menu has closed: Radix hands focus back to the line on
-                // its way out, and that must not land on top of this.
-                setTimeout(() => composer.current?.focus(), 0);
+                // The menu has already closed: LineMenu runs this in place of
+                // handing focus back to the line, so the field keeps it.
+                composer.current?.focus();
               }}
               onEdit={(message) => {
                 setReplyTo(null);
                 setEditing(message);
-                // After the menu has closed: Radix hands focus back to the line on
-                // its way out, and that must not land on top of this.
-                setTimeout(() => composer.current?.focus(), 0);
+                // The menu has already closed: LineMenu runs this in place of
+                // handing focus back to the line, so the field keeps it.
+                composer.current?.focus();
               }}
               onKeep={(media) => keep(media.id, !media.kept)}
               onOpenPhoto={setViewing}

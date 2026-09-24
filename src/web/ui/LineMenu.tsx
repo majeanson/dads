@@ -1,6 +1,6 @@
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { Copy, Pencil, Pin, PinOff, Reply, Trash2 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useT } from '../i18n';
 import { MarkRow } from '../Marks';
 import { cn } from './cn';
@@ -75,6 +75,16 @@ export function LineMenu({
 }) {
   const { t } = useT();
   const [armed, setArmed] = useState(false);
+  /**
+   * Reply and Edit send him to the composer, and the composer takes the
+   * focus — so they run once the menu has FINISHED closing, in place of Radix
+   * handing focus back to the line. They used to run on select and focus the
+   * field a tick later, which raced the menu twice: a tick too early and the
+   * menu's focus trap pulled the caret back, and the menu's own return, after
+   * its exit, landed on the line. On a busy machine the caret ended on the
+   * line for good. `onCloseAutoFocus` is the one moment neither can follow.
+   */
+  const after = useRef<(() => void) | null>(null);
 
   return (
     <ContextMenu.Root
@@ -101,6 +111,13 @@ export function LineMenu({
             'motion-pop origin-[var(--radix-popper-transform-origin)]',
           ].join(' ')}
           collisionPadding={12}
+          onCloseAutoFocus={(event) => {
+            const run = after.current;
+            if (run === null) return;
+            after.current = null;
+            event.preventDefault();
+            run();
+          }}
           data-testid="line-menu"
         >
           {/* The marks first, because it is the one anybody presses. They
@@ -110,13 +127,25 @@ export function LineMenu({
 
           <ContextMenu.Separator className="my-1 h-px bg-line" />
 
-          <ContextMenu.Item className={ITEM} data-testid="line-reply" onSelect={onReply}>
+          <ContextMenu.Item
+            className={ITEM}
+            data-testid="line-reply"
+            onSelect={() => {
+              after.current = onReply;
+            }}
+          >
             <Reply size={15} aria-hidden="true" className="text-muted" />
             {t('line.reply')}
           </ContextMenu.Item>
 
           {onEdit === undefined || body === '' ? null : (
-            <ContextMenu.Item className={ITEM} data-testid="line-edit" onSelect={onEdit}>
+            <ContextMenu.Item
+              className={ITEM}
+              data-testid="line-edit"
+              onSelect={() => {
+                after.current = onEdit;
+              }}
+            >
               <Pencil size={15} aria-hidden="true" className="text-muted" />
               {t('line.edit')}
             </ContextMenu.Item>
