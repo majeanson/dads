@@ -9,7 +9,7 @@ import { useT } from './i18n';
 import { Logo } from './Logo';
 import { MarkRow, Marks, marksOf, QuickMark } from './Marks';
 import type { Row } from './messageGroups';
-import { LineMenu } from './ui/LineMenu';
+import { LineMenu, menuOpen, notATap } from './ui/LineMenu';
 
 function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -89,6 +89,8 @@ export function Lines({
       typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true,
   );
   const [marking, setMarking] = useState<string | null>(null);
+  /** The press in progress: when it began, and whether a menu was open. */
+  const press = useRef({ at: 0, whileOpen: false });
 
   return (
     <ol className="lines" aria-label={t('room.messages')} ref={lines} onScroll={onScroll}>
@@ -133,6 +135,17 @@ export function Lines({
               className={`group line line-${row.message.kind}${row.showName ? '' : ' is-continued'}${arrived(row.key) ? ' motion-rise' : ''}`}
               data-testid="line"
               data-marking={marking === row.message.id ? 'yes' : undefined}
+              // The finger lifting at the end of a long press is a click to
+              // the browser. Caught on the way DOWN, before the photo's button,
+              // the link or the marks below ever hear it.
+              onPointerDownCapture={() => {
+                press.current = { at: Date.now(), whileOpen: menuOpen() };
+              }}
+              onClickCapture={(event) => {
+                if (!notATap(press.current)) return;
+                event.preventDefault();
+                event.stopPropagation();
+              }}
               onClick={(event) => {
                 if (!coarse) return;
                 if ((event.target as HTMLElement).closest('a, button, img, video, audio')) return;

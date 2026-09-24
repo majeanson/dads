@@ -1,4 +1,5 @@
-import { devices, expect, test, type Browser, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { devices, expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 import { talk } from './talk';
 import { E2E_ROOM_GROUP } from './global-setup';
 
@@ -529,6 +530,130 @@ test('on a phone, one tap on a line puts the marks under it', async ({ browser }
   await line.locator('.body').tap();
   await expect(line.getByTestId('tap-marks').getByTestId('react-🔥')).toBeVisible();
   await expect(line.getByTestId('react-all')).toHaveCount(0);
+
+  await context.close();
+});
+
+test('on a phone, a long press on any line is the menu and a tap is its one thing', async ({
+  browser,
+}) => {
+  // A real touch screen, pressed with real touch events: a long press is a
+  // finger held down, a tap is a finger that lifts at once. On every kind of
+  // line the long press must open the menu and NOTHING else — no text
+  // selected under it, no photo opened under it, no link followed — and the
+  // tap must do the one thing that kind of line does.
+  const context = await browser.newContext({
+    ...devices['iPhone 13'],
+    permissions: ['clipboard-read', 'clipboard-write'],
+  });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill('Pat Press');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
+
+  const field = page.getByLabel('Say something');
+  const send = async (
+    caption: string,
+    file?: { name: string; mimeType: string; buffer: Buffer },
+  ) => {
+    if (file) await page.setInputFiles('#attach', file);
+    await field.fill(caption);
+    await page.getByRole('button', { name: 'Send' }).click();
+    // A link shows shortened, so the line is found by the words before it.
+    const words = caption.split(' http')[0]!;
+    await expect(page.getByTestId('line').filter({ hasText: words })).toBeVisible();
+  };
+  await send('press words only');
+  await send('press a link https://example.com/far');
+  await send('press a photo', {
+    name: 'photo.png',
+    mimeType: 'image/png',
+    buffer: readFileSync('public/icon-192.png'),
+  });
+  await send('press a clip', {
+    name: 'clip.mp4',
+    mimeType: 'video/mp4',
+    buffer: Buffer.alloc(2048),
+  });
+  await send('press a voice note', {
+    name: 'note.webm',
+    mimeType: 'audio/webm',
+    buffer: Buffer.alloc(2048),
+  });
+
+  const cdp = await context.newCDPSession(page);
+  const press = async (target: Locator, holdMs: number) => {
+    await target.scrollIntoViewIfNeeded();
+    const box = (await target.boundingBox())!;
+    const point = { x: box.x + box.width / 2, y: box.y + Math.min(box.height / 2, 20) };
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+    await page.waitForTimeout(holdMs);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  const longPress = (target: Locator) => press(target, 900);
+  const menuShows = async () => {
+    await expect(page.getByTestId('line-menu')).toBeVisible();
+    // No words half-selected under the menu, no loupe, no handles.
+    expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
+  };
+  const closeMenu = async () => {
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('line-menu')).toHaveCount(0);
+  };
+  const line = (text: string) => page.getByTestId('line').filter({ hasText: text });
+
+  // The words: the menu, and not the marks the lift would otherwise open.
+  await longPress(line('press words only').locator('.body'));
+  await menuShows();
+  await page.waitForTimeout(200);
+  await expect(page.getByTestId('tap-marks')).toHaveCount(0);
+  // Copying is in the menu, since the phone no longer selects.
+  await page.getByTestId('line-copy').tap();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('press words only');
+  await expect(page.getByTestId('line-menu')).toHaveCount(0);
+  // And a tap on the words is the marks.
+  await line('press words only').locator('.body').tap();
+  await expect(line('press words only').getByTestId('tap-marks')).toBeVisible();
+  await line('press words only').locator('.body').tap();
+  await expect(page.getByTestId('tap-marks')).toHaveCount(0);
+
+  // A link: the menu, and nowhere else.
+  const pages = context.pages().length;
+  await longPress(line('press a link').locator('a'));
+  await menuShows();
+  await page.waitForTimeout(300);
+  expect(context.pages().length).toBe(pages);
+  await closeMenu();
+
+  // A photograph: the menu, and not the viewer under it. A tap is the viewer.
+  const photo = line('press a photo').getByTestId('photo');
+  await longPress(photo);
+  await menuShows();
+  await page.waitForTimeout(300);
+  await expect(page.getByTestId('viewer')).toHaveCount(0);
+  await closeMenu();
+  await photo.tap();
+  await expect(page.getByTestId('viewer')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('viewer')).toHaveCount(0);
+
+  // A clip and a voice note: the menu, from the player itself.
+  await longPress(line('press a clip').locator('video'));
+  await menuShows();
+  await closeMenu();
+  await longPress(line('press a voice note').getByTestId('voice-note'));
+  await menuShows();
+  await closeMenu();
+  // And a tap on its play button plays it — it opens neither the menu nor
+  // the marks. (The app's own player: the browser's kept every touch to
+  // itself, so a long press on a voice note never reached the line.)
+  await line('press a voice note').getByRole('button', { name: 'Play the voice note' }).tap();
+  await page.waitForTimeout(300);
+  await expect(page.getByTestId('line-menu')).toHaveCount(0);
+  await expect(page.getByTestId('tap-marks')).toHaveCount(0);
 
   await context.close();
 });

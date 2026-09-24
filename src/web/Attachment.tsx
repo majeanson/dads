@@ -2,6 +2,7 @@ import { Paperclip, Pin } from 'lucide-react';
 import type { Attachment as MessageAttachment } from '../shared/protocol';
 import { useT } from './i18n';
 import { isAudio, isImage, isVideo, mediaUrl } from './media';
+import { VoiceNote } from './VoiceNote';
 
 /**
  * The mark on something nothing will throw away.
@@ -71,18 +72,11 @@ export function Attachment({
   }
 
   if (isAudio(media.contentType)) {
-    // The browser's own player: a scrubber, a clock and a play button that
-    // work the way every other one on the phone does. Nothing to build, and
-    // nothing a dad has to learn.
+    // Ours, not the browser's: its player kept every touch to itself, so a
+    // long press on a voice note never reached the line's menu.
     return (
       <span className="block">
-        <audio
-          className="mt-1.5 block w-full max-w-80"
-          src={href}
-          controls
-          preload="metadata"
-          data-testid="voice-note"
-        />
+        <VoiceNote src={href} />
         {media.kept ? <Kept over={false} /> : null}
       </span>
     );
@@ -118,6 +112,7 @@ export function Attachment({
           height={media.height ?? undefined}
           loading="lazy"
           decoding="async"
+          draggable={false}
           className="block h-auto max-h-64 w-auto max-w-80 rounded-lg border border-line"
         />
         {media.kept ? <Kept over /> : null}
@@ -144,6 +139,7 @@ export function Attachment({
           height={media.height ?? undefined}
           loading="lazy"
           decoding="async"
+          draggable={false}
           // Capped at a hand's height as well as a width: a tall photo off a
           // phone was a whole screen of one thing, and the line after it
           // was a scroll away. Tap for the real one.

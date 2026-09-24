@@ -5,6 +5,27 @@ import { useT } from '../i18n';
 import { MarkRow } from '../Marks';
 import { cn } from './cn';
 
+/**
+ * When a line's menu last opened, and whether one is open now.
+ *
+ * A long press on a phone ends with the finger lifting, and the browser calls
+ * that lift a click: on a photograph it opened the viewer UNDER the menu, on a
+ * link it followed it, on the words it opened the marks. So a line swallows
+ * the click of a press DURING which a menu opened, or that began while one
+ * was open (`notATap`). Not "a click soon after": that is a guess about time,
+ * and a quick real tap after closing the menu fell inside it.
+ */
+let openedAt = 0;
+let isOpen = false;
+
+export function notATap(press: { at: number; whileOpen: boolean }): boolean {
+  return press.whileOpen || openedAt >= press.at;
+}
+
+export function menuOpen(): boolean {
+  return isOpen;
+}
+
 const ITEM = [
   'flex cursor-pointer items-center gap-2.5 rounded-app px-2.5 py-2 text-[0.9375rem]',
   'outline-none select-none',
@@ -56,7 +77,13 @@ export function LineMenu({
   const [armed, setArmed] = useState(false);
 
   return (
-    <ContextMenu.Root onOpenChange={(open) => !open && setArmed(false)}>
+    <ContextMenu.Root
+      onOpenChange={(open) => {
+        isOpen = open;
+        if (open) openedAt = Date.now();
+        else setArmed(false);
+      }}
+    >
       <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Content
@@ -98,6 +125,7 @@ export function LineMenu({
           {body === '' ? null : (
             <ContextMenu.Item
               className={ITEM}
+              data-testid="line-copy"
               onSelect={() => {
                 // Best effort: an insecure origin or a browser that refuses
                 // the clipboard is not worth an error a dad cannot act on.

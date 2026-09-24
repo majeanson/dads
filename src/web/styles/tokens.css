@@ -850,6 +850,25 @@
     background: color-mix(in srgb, var(--bg-soft) 60%, transparent);
   }
 
+  /* On a touch screen a long press on a line is the app's menu, and only the
+     menu. Left to itself the phone ALSO starts selecting the words — the
+     magnifying loupe, the blue handles, a "Copy | Look up" bubble — and on a
+     photo or a clip it offers to save or share it, all on top of the menu.
+     Copying the words is in the menu. A mouse keeps its selection: dragging
+     across a line is how a laptop copies, and it cannot be confused with a
+     long press. */
+  @media (pointer: coarse) {
+    .lines {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .lines img,
+    .lines video {
+      -webkit-user-drag: none;
+    }
+  }
+
   .lines {
     margin: 0;
     padding: 0;

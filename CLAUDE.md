@@ -202,6 +202,20 @@ weakening `sessionSecret()`.
   strip above the field saying which, Escape or the X clears it, and the
   focus call is deferred a tick because Radix hands focus back to the line
   when its menu closes and would land on top of it.
+- **On a phone, a long press is the menu and nothing else; a tap is the
+  line's one thing** (2026-09-23). Three things fought the menu and are gone:
+  the phone's own text selection (the loupe, the handles, a "Copy | Look up"
+  bubble) and its "save image" callout — `.lines` is `user-select: none` and
+  `-webkit-touch-callout: none` under `pointer: coarse`, and copying the words
+  is the menu's Copy; a mouse keeps its selection. The finger LIFTING at the
+  end of a long press is a click to the browser, which opened the photo,
+  followed the link or opened the marks under the menu: the line swallows the
+  click of a press during which a menu opened, or that began while one was
+  open (`notATap`) — never "a click soon after", which also ate a quick real
+  tap. And **a voice note is the app's own player** (`VoiceNote`): the
+  browser's kept every touch to itself, so a long press on a voice note never
+  reached the line. `room.spec.ts` long-presses and taps text, a link, a
+  photo, a clip and a voice note with real touch events.
 - **`LineMenu` is a Radix context menu** — right-click on a laptop and a long
   press on a phone from one primitive, keyboard route included. It wraps only
   chat and prompt lines. The destructive item ARMS on the first select
