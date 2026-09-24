@@ -148,7 +148,7 @@ weakening `sessionSecret()`.
   of a 430px phone there is about 200px — and a fixed 240px put the fifth mark
   off the screen where nobody could reach it. Capped by the variable Radix
   publishes for exactly this, and the marks wrap rather than shrink. Pinned by
-  an e2e that presses the far edge of a line and checks all five.
+  an e2e that presses the far edge of a line and checks all six and the "+".
 - **The ordinary chat things** (2026-09-16), each the plain version and no
   more: an emoji button in the composer (thirty-two, no search, inserted at
   the caret, offered only where there is a mouse — a phone's keyboard is its
@@ -156,8 +156,9 @@ weakening `sessionSecret()`.
   long press (a small button at the end of the line under a pointer, and a
   double click on the words is a thumb where there is a mouse); Reply on any
   line a dad typed; Edit on his own. `MarkRow` in `Marks.tsx` is the one row
-  of five, shared by the long-press menu, the quick button and the tap row.
-- **On a phone, one tap on a line opens the five under it** (2026-09-22).
+  of six and a "+", shared by the long-press menu, the quick button and the
+  tap row.
+- **On a phone, one tap on a line opens the six under it** (2026-09-22).
   The long press was the only way in and nobody finds a long press; the
   double tap gave a thumb and nothing else. Where the pointer is coarse, a tap
   on the words (not a link, a photo, a control, or while words are selected)

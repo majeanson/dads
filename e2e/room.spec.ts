@@ -682,6 +682,8 @@ test('every mark is reachable wherever on the line he presses', async ({ browser
   // edge of a phone leaves it about two hundred pixels — and a fixed width
   // put the fifth mark off the screen where nobody could reach it. It is
   // capped by Radix's own available-width now, and wraps rather than clips.
+  // The row is six and a "+" since marks learned, and those two are the END
+  // of it — the ones an edge would push off first.
   const context = await browser.newContext({ viewport: { width: 430, height: 900 } });
   const page = await context.newPage();
   await page.goto('/');
@@ -700,11 +702,11 @@ test('every mark is reachable wherever on the line he presses', async ({ browser
   await page.mouse.click(box.x + box.width - 6, box.y + 10, { button: 'right' });
   await expect(page.getByTestId('line-menu')).toBeVisible();
 
-  for (const emoji of ['👍', '❤️', '😂', '💪', '🙏']) {
-    const mark = await page.getByTestId(`react-${emoji}`).boundingBox();
-    expect(mark, `${emoji} is not on the screen at all`).not.toBeNull();
-    expect(mark!.x, `${emoji} is off the left`).toBeGreaterThanOrEqual(0);
-    expect(mark!.x + mark!.width, `${emoji} is off the right`).toBeLessThanOrEqual(430);
+  for (const id of ['👍', '❤️', '😂', '💪', '🙏', '😎', 'more']) {
+    const mark = await page.getByTestId(`react-${id}`).boundingBox();
+    expect(mark, `${id} is not on the screen at all`).not.toBeNull();
+    expect(mark!.x, `${id} is off the left`).toBeGreaterThanOrEqual(0);
+    expect(mark!.x + mark!.width, `${id} is off the right`).toBeLessThanOrEqual(430);
   }
 
   await context.close();
