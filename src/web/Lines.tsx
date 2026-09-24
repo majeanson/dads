@@ -52,6 +52,7 @@ export function Lines({
   onRetract,
   onReply,
   onEdit,
+  onAway,
   onKeep,
   onOpenPhoto,
   onScroll,
@@ -70,6 +71,8 @@ export function Lines({
   onRetract: (id: string) => void;
   onReply: (message: RoomMessage) => void;
   onEdit: (message: RoomMessage) => void;
+  /** The composer takes the focus once the line menu has closed. */
+  onAway: () => void;
   onKeep: (media: MessageAttachment) => void;
   onOpenPhoto: (mediaId: string) => void;
   onScroll: () => void;
@@ -144,6 +147,7 @@ export function Lines({
             onRetract={row.message.memberId === you ? () => onRetract(row.message.id) : undefined}
             onReply={() => onReply(row.message)}
             onEdit={row.message.memberId === you ? () => onEdit(row.message) : undefined}
+            onAway={onAway}
           >
             <li
               className={`group line line-${row.message.kind}${row.showName ? '' : ' is-continued'}${arrived(row.key) ? ' motion-rise' : ''}`}

@@ -209,12 +209,14 @@ weakening `sessionSecret()`.
 - **Reply and Edit are the composer's state, held in `Room`**, never both at
   once: the line menu sets one and clears the other, the composer shows a
   strip above the field saying which, and Escape or the X clears it.
-  **They run once the menu has closed** (`onCloseAutoFocus` in `LineMenu`,
-  2026-09-24), in place of Radix handing focus back to the line. They used
-  to run on select and focus the field a tick later — a race with the menu's
-  focus trap on one side and its hand-back after the exit animation on the
-  other, and on a loaded machine the caret ended on the line for good (a
-  flaky reply e2e). No timer: nothing is left to race.
+  **The state is set on select; the focus moves once the menu has closed**
+  (`onAway`, from `onCloseAutoFocus` in `LineMenu`, 2026-09-24), in place
+  of Radix handing focus back to the line. The focus used to follow a tick
+  after select — a race with the menu's focus trap on one side and its
+  hand-back after the exit animation on the other, and on a loaded machine
+  the caret ended on the line for good (a flaky reply e2e). Deferring the
+  whole action with the focus was tried and is wrong: words typed before the
+  menu had gone landed in a composer that did not yet know it was editing.
 - **On a phone, a long press is the menu and nothing else; a tap is the
   line's one thing** (2026-09-23). Three things fought the menu and are gone:
   the phone's own text selection (the loupe, the handles, a "Copy | Look up"

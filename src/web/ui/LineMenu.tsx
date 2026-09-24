@@ -54,6 +54,7 @@ export function LineMenu({
   onReact,
   onReply,
   onEdit,
+  onAway,
   children,
 }: {
   body: string;
@@ -71,20 +72,25 @@ export function LineMenu({
   onReply: () => void;
   /** Change the words. His own only, like taking it back. */
   onEdit?: () => void;
+  /** Where the focus goes once Reply or Edit has sent him away: the composer. */
+  onAway?: () => void;
   children: ReactNode;
 }) {
   const { t } = useT();
   const [armed, setArmed] = useState(false);
   /**
-   * Reply and Edit send him to the composer, and the composer takes the
-   * focus — so they run once the menu has FINISHED closing, in place of Radix
-   * handing focus back to the line. They used to run on select and focus the
-   * field a tick later, which raced the menu twice: a tick too early and the
-   * menu's focus trap pulled the caret back, and the menu's own return, after
-   * its exit, landed on the line. On a busy machine the caret ended on the
-   * line for good. `onCloseAutoFocus` is the one moment neither can follow.
+   * Reply and Edit send him to the composer. What they DO happens on select,
+   * so the composer is already replying or editing by the time his thumb gets
+   * there; where the FOCUS goes waits until the menu has finished closing,
+   * in place of Radix handing it back to the line. It used to be a tick after
+   * select, which raced the menu twice — its focus trap if the tick came
+   * early, its hand-back after the exit animation if it came late — and on a
+   * busy machine the caret ended on the line for good. `onCloseAutoFocus` is
+   * the one moment neither can follow. (Deferring the action with the focus
+   * was tried: then words typed before the menu had gone landed in a composer
+   * that did not yet know it was editing.)
    */
-  const after = useRef<(() => void) | null>(null);
+  const away = useRef(false);
 
   return (
     <ContextMenu.Root
@@ -112,11 +118,10 @@ export function LineMenu({
           ].join(' ')}
           collisionPadding={12}
           onCloseAutoFocus={(event) => {
-            const run = after.current;
-            if (run === null) return;
-            after.current = null;
+            if (!away.current) return;
+            away.current = false;
             event.preventDefault();
-            run();
+            onAway?.();
           }}
           data-testid="line-menu"
         >
@@ -131,7 +136,8 @@ export function LineMenu({
             className={ITEM}
             data-testid="line-reply"
             onSelect={() => {
-              after.current = onReply;
+              away.current = true;
+              onReply();
             }}
           >
             <Reply size={15} aria-hidden="true" className="text-muted" />
@@ -143,7 +149,8 @@ export function LineMenu({
               className={ITEM}
               data-testid="line-edit"
               onSelect={() => {
-                after.current = onEdit;
+                away.current = true;
+                onEdit();
               }}
             >
               <Pencil size={15} aria-hidden="true" className="text-muted" />

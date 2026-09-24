@@ -405,17 +405,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
               onReply={(message) => {
                 setEditing(null);
                 setReplyTo(message);
-                // The menu has already closed: LineMenu runs this in place of
-                // handing focus back to the line, so the field keeps it.
-                composer.current?.focus();
               }}
               onEdit={(message) => {
                 setReplyTo(null);
                 setEditing(message);
-                // The menu has already closed: LineMenu runs this in place of
-                // handing focus back to the line, so the field keeps it.
-                composer.current?.focus();
               }}
+              // Once the menu has closed, in place of it handing focus back to
+              // the line (`away` in LineMenu).
+              onAway={() => composer.current?.focus()}
               onKeep={(media) => keep(media.id, !media.kept)}
               onOpenPhoto={setViewing}
               onScroll={seen.onScroll}
