@@ -15,18 +15,34 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'on-first-retry',
-    // Fake devices, granted up front: the call is a real WebRTC mesh and there
-    // is no microphone on CI. Chrome generates a tone and a moving pattern.
-    permissions: ['microphone', 'camera'],
-    launchOptions: {
-      args: [
-        '--use-fake-ui-for-media-stream',
-        '--use-fake-device-for-media-stream',
-        '--autoplay-policy=no-user-gesture-required',
-      ],
-    },
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      testIgnore: /safari.spec.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        // Fake devices, granted up front: the call is a real WebRTC mesh and
+        // there is no microphone on CI. Chrome generates a tone and a moving
+        // pattern. Chrome's own flags, so they live on Chrome's project.
+        permissions: ['microphone', 'camera'],
+        launchOptions: {
+          args: [
+            '--use-fake-ui-for-media-stream',
+            '--use-fake-device-for-media-stream',
+            '--autoplay-policy=no-user-gesture-required',
+          ],
+        },
+      },
+    },
+    {
+      // The dads on iPhones. Only the phone-shaped spec, in a room of its own,
+      // so nothing it does lands in a Chromium spec's roster.
+      name: 'webkit-iphone',
+      testMatch: /safari.spec.ts/,
+      use: { ...devices['iPhone 13'] },
+    },
+  ],
   webServer: {
     // The whole stack, the way it ships: built client served by the Worker,
     // with a local D1. Testing the Vite dev server instead would prove nothing

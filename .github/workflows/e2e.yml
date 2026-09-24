@@ -35,7 +35,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       # Nothing here touches Cloudflare: wrangler dev serves the built worker
       # against a local D1 and a local Durable Object, and global-setup
       # migrates that database itself.

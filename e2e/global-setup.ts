@@ -86,6 +86,11 @@ export const E2E_POLL_GROUP = {
   name: 'The E2E Poll',
   code: 'juniper anvil kestrel loam',
 };
+export const E2E_SAFARI_GROUP = {
+  slug: 'e2e-safari',
+  name: 'The E2E Safari',
+  code: 'harbor quill thistle moss',
+};
 const GROUPS = [
   E2E_CALL_GROUP,
   E2E_GROUP,
@@ -103,6 +108,7 @@ const GROUPS = [
   E2E_FIND_GROUP,
   E2E_FIT_GROUP,
   E2E_POLL_GROUP,
+  E2E_SAFARI_GROUP,
 ];
 
 /**

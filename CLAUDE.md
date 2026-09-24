@@ -720,6 +720,13 @@ the screen knew something and did not say it.
     browser that is not painting (a background tab, a phone waking, a loaded
     machine) runs no frames — "Va jaser" pressed and home still showing. A
     flaky French e2e found it. Frames only draw.
+  - **Every press is its own film** (2026-09-24). `entering` is a COUNT and
+    the splash is keyed on it. As a flag, a second "go and talk" inside the
+    first film's ~850ms — in, back out, in again — set `true` over `true`,
+    React ignored it, and the button did nothing. That was the rest of the
+    French flake: its test goes in, out, through Settings and in again in
+    under a second, and CI is fast enough to land inside the film every
+    time. A CI trace (`on-first-retry`) is what showed the second press.
   - **Somebody arriving is a face, not a line** (2026-09-23): his face pops
     into the header's stack with a ring going out from it (`face-arrive`).
     The roster the screen finds on opening is the baseline, not news. The
@@ -1733,6 +1740,15 @@ people use.
   is the worst way for a test to be wrong. Numbered lines are zero-padded so
   no line is a prefix of another, and the same care is owed to any needle
   ending in a digit.
+- **Two browsers: Chromium for everything, WebKit for the iPhone** (2026-09-24).
+  `webkit-iphone` runs only `e2e/safari.spec.ts`, on an iPhone 13 profile, in
+  a room of its own (`E2E_SAFARI_GROUP`), so nothing it does lands in a
+  Chromium spec's roster; `chromium` ignores that file. The Chrome fake-media
+  flags and the mic/camera grant live on the Chromium project — WebKit takes
+  neither. The long press there is dispatched pointer events (the half Radix
+  listens for), because WebKit has no CDP touch; what iOS itself does — the
+  loupe, the callout, the keyboard — no desktop WebKit can prove, and a phone
+  still has to. Run one with `--project=webkit-iphone`.
 - **A fixed `settle()` before an assertion is a race, and a loaded machine
   loses it.** The suite is green run alone and on CI, and drops one or two
   tests in a different file every time when something else is running — a
