@@ -75,18 +75,22 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
    * that asked for less motion. */
   const [splash, setSplash] = useState(() => !wantsStill());
   const endSplash = useCallback(() => setSplash(false), []);
-  /** Into the conversation through the lens of the door's mark, and back out
-   * of it into the same lens. */
-  /** "Go and talk" plays the splash, quicker and through the other lens,
-   * with the conversation inside. */
-  const [entering, setEntering] = useState(false);
-  const endEntering = useCallback(() => setEntering(false), []);
+  /**
+   * "Go and talk" plays the splash, quicker and through the other lens, with
+   * the conversation inside. A COUNT of presses rather than a flag, and the
+   * splash is keyed on it: every press is its own film, and its own switch.
+   * As a flag, a second press inside the first film's ~850ms — in, back out,
+   * in again — set `true` over `true`, which React ignores: no splash, no
+   * switch, a dead button on home. The French e2e found it, faster on CI.
+   */
+  const [entering, setEntering] = useState(0);
+  const endEntering = useCallback(() => setEntering(0), []);
   const toTalk = useCallback(() => setView('talk'), []);
   const goTalk = useCallback(() => {
     // The conversation takes home's place under the blue (onCovered), so it
     // is only ever seen through the lenses.
     if (wantsStill()) setView('talk');
-    else setEntering(true);
+    else setEntering((n) => n + 1);
   }, []);
   // Going back is just going back: the way in is the moment, the way out is
   // a man leaving a room, and an animation there was one he had to sit through.
@@ -515,7 +519,9 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           onClose={() => setViewing(null)}
         />
         {splash ? <Splash onDone={endSplash} /> : null}
-        {entering ? <Splash way="talk" onDone={endEntering} onCovered={toTalk} /> : null}
+        {entering > 0 ? (
+          <Splash key={entering} way="talk" onDone={endEntering} onCovered={toTalk} />
+        ) : null}
       </main>
     </MembersProvider>
   );

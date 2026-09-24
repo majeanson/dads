@@ -163,6 +163,23 @@ test('what he has already read is not announced again on the next open', async (
   await sam.context().close();
 });
 
+test('in, straight back out, and in again: the door still works', async ({ browser }) => {
+  // The splash into the conversation runs most of a second. A second press
+  // inside it used to do nothing at all — a dead button on home — because the
+  // film was a flag, and setting it true over true is no change. Fast on
+  // purpose: the second press has to land inside the first film.
+  const page = await comeIn(browser, 'Quick Door');
+  const room = page.locator('main.room');
+  await expect(room).toHaveAttribute('data-view', 'home');
+  await page.getByTestId('home-go').click();
+  await expect(room).toHaveAttribute('data-view', 'talk');
+  await page.getByTestId('go-home').click();
+  await expect(room).toHaveAttribute('data-view', 'home');
+  await page.getByTestId('home-go').click();
+  await expect(room).toHaveAttribute('data-view', 'talk');
+  await page.context().close();
+});
+
 test('the way back is its own control, first in the header', async ({ browser }) => {
   const marc = await comeIn(browser, 'Ned');
   const sam = await comeIn(browser, 'Otto');
