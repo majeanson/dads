@@ -219,14 +219,15 @@ test('a dad changes the name he goes by, and the roster follows', async ({ brows
   await sam.close();
 });
 
-test('a dad with no face still gets his initials', async ({ page }) => {
+test('a dad with no photo is his colour, his glasses and a smile', async ({ page }) => {
   await comeIn(page, 'Ivan Nash');
   await page.getByTestId('connection').click();
-  // Never an empty grey circle: the whole point is telling five men apart,
-  // and a blank is worse at that than two letters.
-  await expect(page.getByTestId('roster-entry').filter({ hasText: 'Ivan Nash' })).toContainText(
-    'IN',
-  );
+  // Never an empty grey circle, and no letters: the glasses sat across them.
+  // A face with nothing written on it — the name is beside it.
+  const entry = page.getByTestId('roster-entry').filter({ hasText: 'Ivan Nash' });
+  await expect(entry.locator('.face-smile')).toHaveCount(1);
+  await expect(entry.locator('.face-shades')).toHaveAttribute('data-glasses', 'shades');
+  await expect(entry).not.toContainText('IN');
 });
 
 test('a dad chooses his glasses, and they stay his', async ({ page }) => {

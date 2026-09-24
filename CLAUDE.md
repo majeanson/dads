@@ -1258,8 +1258,10 @@ neither see nor scroll anything.
   phone beside the faces. The count's words are gone from the screen — the
   faces are the count — but **`connection` is still a button called "2
   here"**, laid over the faces (`absolute -inset-2.5`) rather than wrapped
-  round them, because a face's initials are text and inside the button they
-  would become part of the name every spec asserts on. On home the header is
+  round them, because a face used to carry initials, which are text, and
+  inside the button they would have become part of the name every spec
+  asserts on. Faces carry no text now; the layering stays, because it costs
+  nothing and nothing in a face should ever be read as the button's name. On home the header is
   unchanged: the name, then the faces and "2 here" in words.
 - **The table stays mounted whether or not it is on screen, once it has been
   opened** — unmounting the iframe restarts a game — and `data-table="open"`
@@ -1353,9 +1355,15 @@ neither see nor scroll anything.
   Tuesday by a man who is not here tonight still wants his face beside it. One
   source of truth, so a face set this evening reaches every line he ever
   wrote, and a `member` frame keeps it current without a reload.
-- **A dad with no face gets his initials, never an empty circle.** The whole
-  job is telling five men apart and a blank is worse at that than two letters.
-  Split on whitespace, so "Marc-antoine" is M and not MA.
+- **A dad with no photo is his colour, his glasses and a smile — never an
+  empty circle, and no letters** (2026-09-24, reversing "his initials").
+  Once every face wore glasses they sat across the letters; a colour with a
+  pair and a smile on it reads as a face. The fill is his colour mixed 40%
+  into `--bg`, so the ink glasses and smile read in both themes, and the ring
+  is the colour at full strength. Telling men apart is the colour, the pair
+  and the name beside the face — there is no name ON a face. Two dads can
+  share one of the six colours and the default shades, and then the name is
+  what settles it; that was accepted when this was chosen.
 - **The roster answers the question; the log is behind one more tap.** "In
   and out" is a disclosure button, collapsed by default. Tests that want a
   row from it click `comings` first.
@@ -1750,7 +1758,7 @@ people use.
   that silently resets the system time to now.
 - **Pure logic lives outside the component that renders it**, so the worker
   pool can import it without a DOM. `src/shared/tableNote.ts`,
-  `src/web/messageGroups.ts`, `src/web/initials.ts`, `src/web/fresh.ts` and
+  `src/web/messageGroups.ts`, `src/web/fresh.ts` and
   `src/web/seen.ts` are all there for that reason, and each one is listed in
   `tsconfig.worker.json`. A helper reached for a browser global (`seen.ts` and
   `localStorage`) is the one that will not go — take the global as a

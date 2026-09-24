@@ -123,8 +123,8 @@ export function RoomHeader({
               {/* The faces ARE the head-count here. The control is laid over them,
                   the full size of them and a thumb's margin more, and it is still
                   called "2 here" — which is what a screen reader says and what
-                  the tests read. Not wrapped round them: a face's initials are
-                  text and would become part of its name. */}
+                  the tests read. Not wrapped round them: anything in a face that
+                  is text would become part of its name. */}
               <span className="relative shrink-0">
                 {connection === 'open' ? (
                   <FaceStack
@@ -179,7 +179,7 @@ export function RoomHeader({
           <p className="flex min-w-0 items-center gap-2 text-[1.0625rem] text-ink">
             {/* The faces are the count, drawn: the words beside them are the
               control and the thing a test and a screen reader read. Outside the
-              button on purpose — initials inside it would be part of its name. */}
+              button on purpose — anything in a face that is text would join its name. */}
             {connection === 'open' ? (
               <span className="shrink-0 cursor-pointer" onClick={onWho} aria-hidden="true">
                 <FaceStack

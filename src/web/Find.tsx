@@ -144,7 +144,6 @@ export function Find({
                   {r.memberId === null ? null : (
                     <Face
                       memberId={r.memberId}
-                      name={r.name}
                       version={faceOf(r.memberId)}
                       glasses={glassesOf(r.memberId)}
                       size={28}

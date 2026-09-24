@@ -255,7 +255,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
    *
    * From `members` rather than the roster: a line said on Tuesday by a man
    * who is not here tonight still has his face beside it. Undefined for a dad
-   * with no face, and `Face` falls back to his initials.
+   * with no face, and `Face` falls back to his colour.
    */
   const glassesOf = useCallback(
     (memberId: string) => room.members.find((m) => m.memberId === memberId)?.glasses,

@@ -12,7 +12,6 @@
     "src/web/dadColour.ts",
     "src/web/favourites.ts",
     "src/web/fresh.ts",
-    "src/web/initials.ts",
     "src/web/seen.ts",
     "src/shared/**/*.ts",
     "src/worker/**/*.ts",

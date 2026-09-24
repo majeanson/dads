@@ -2,17 +2,19 @@ import { faceUrl } from './api';
 import { dadVar } from './dadColour';
 import type { CSSProperties } from 'react';
 import type { GlassesKind } from '../shared/protocol';
-import { initials } from './initials';
 import { Glasses } from './Logo';
 import { cn } from './ui/cn';
 
 /**
  * A dad, at a glance.
  *
- * His picture when he has set one, and his initials when he has not — never
- * an empty grey circle, because the whole point is telling five men apart and
- * a blank is worse at that than two letters. The letters come from the name,
- * so a dad who never sets a face still gets something that is his.
+ * His picture when he has set one. When he has not, his COLOUR with his
+ * glasses and a smile on it (2026-09-24) — never an empty grey circle, and no
+ * longer his initials: the glasses sat across the letters, and a face made of
+ * a colour, a pair and a smile reads as a face where two letters under a pair
+ * of glasses read as a mistake. Telling five men apart is the colour, the
+ * pair and the name beside it; two dads can share a colour, and the name is
+ * what settles it.
  *
  * He wears his glasses on it, always (2026-09-24): the pair he chose in
  * Settings, the app's shades if he never did. They are part of his face now,
@@ -23,33 +25,29 @@ import { cn } from './ui/cn';
  *
  * Decorative by default: wherever this appears the name is already beside it,
  * and a screen reader announcing "Marc, photo of Marc, Marc" is worse than
- * silence. `className` places the face; `tint` is the fill behind initials.
+ * silence. `className` places the face.
  */
 export function Face({
   memberId,
-  name,
   version,
   glasses,
   wear = 'still',
   delay = 0,
   size = 28,
-  tint,
   className,
 }: {
   memberId: string;
-  name: string;
   version: number | undefined;
   glasses: GlassesKind | undefined;
   wear?: 'still' | 'drop' | 'bob';
   /** Milliseconds before a `drop`, so a row can come down as a wave. */
   delay?: number;
   size?: number;
-  tint?: string;
   className?: string;
 }) {
   const src = faceUrl(memberId, version);
   // His colour, as a ring inside the circle: an outline, so it shows on a
-  // photograph as well as on initials.
+  // photograph as well as on his colour.
   const box = {
     width: size,
     height: size,
@@ -64,15 +62,18 @@ export function Face({
       className={cn('relative inline-block shrink-0', className)}
     >
       {src === null ? (
+        // His colour, softened so the glasses and the smile on it stay dark
+        // enough to read in both themes; the ring keeps it at full strength.
         <span
-          style={{ ...box, fontSize: Math.round(size * 0.4) }}
-          className={cn(
-            'inline-grid place-items-center rounded-full',
-            'bg-panel font-semibold text-muted uppercase',
-            tint,
-          )}
+          style={{
+            ...box,
+            background: `color-mix(in oklab, ${dadVar(memberId)} 40%, var(--bg))`,
+          }}
+          className="block rounded-full"
         >
-          {initials(name)}
+          <svg viewBox="0 0 20 20" className="face-smile" aria-hidden="true" focusable="false">
+            <path d="M6.5 13.2 Q10 16.2 13.5 13.2" />
+          </svg>
         </span>
       ) : (
         <img
@@ -106,9 +107,8 @@ export function Face({
  * nine circles is a smudge.
  *
  * `ring` is the colour of whatever it sits on, so each face is cut out of the
- * one behind it rather than drawn over it. `tint` is the fill behind a dad
- * with no picture: the default is the panel colour, which on home's card IS
- * the card, and the initials float there with no circle round them.
+ * one behind it rather than drawn over it. `tint` is the fill behind the
+ * "+n" past `max`.
  */
 export function FaceStack({
   people,
@@ -161,13 +161,11 @@ export function FaceStack({
         >
           <Face
             memberId={p.memberId}
-            name={p.name}
             version={p.version}
             glasses={p.glasses}
             wear={p.typing ? 'bob' : p.shades ? 'drop' : 'still'}
             delay={p.shades && wave ? 150 + i * 110 : 0}
             size={size}
-            tint={tint}
           />
         </span>
       ))}

@@ -1232,7 +1232,7 @@ export class RoomDO extends DurableObject<Env> {
    * this evening reaches every line he ever wrote.
    *
    * Five rows, once per connection. Empty on the failure path rather than
-   * fatal: faces missing is a room that falls back to initials, and that is
+   * fatal: faces missing is a room that falls back to colours, and that is
    * not worth refusing a dad the door.
    */
   private async membersOfGroup(): Promise<RosterEntry[]> {

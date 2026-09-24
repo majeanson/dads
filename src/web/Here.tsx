@@ -88,16 +88,10 @@ export function Here({
                 data-on-call={c ? 'yes' : undefined}
                 className="inline-flex items-center gap-2.5 rounded-full border border-line bg-paper py-1.5 pr-4 pl-1.5 text-base"
               >
-                {/* His face, or his initials. The dot went with it: a list
+                {/* His face, or his colour and his glasses. The dot went with it: a list
                     titled "Who's here" did not need a mark on every row
                     saying each of them was here. */}
-                <Face
-                  memberId={m.memberId}
-                  name={m.name}
-                  version={m.face}
-                  glasses={m.glasses}
-                  size={32}
-                />
+                <Face memberId={m.memberId} version={m.face} glasses={m.glasses} size={32} />
                 {m.name}
                 {m.you ? t('here.you') : ''}
                 {c ? (

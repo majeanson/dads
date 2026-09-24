@@ -111,7 +111,7 @@ export function You({
           settings screen on a phone. */}
       <form onSubmit={(e) => void rename(e)} className="flex items-center gap-3">
         {preview === null ? (
-          <Face memberId={memberId} name={name} version={face} glasses={glasses} size={56} />
+          <Face memberId={memberId} version={face} glasses={glasses} size={56} />
         ) : (
           <img
             src={preview}

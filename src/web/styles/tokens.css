@@ -1742,6 +1742,18 @@
     color: var(--text);
     filter: drop-shadow(0 0 1px var(--bg));
   }
+
+  /* The smile under them, on a dad with no photograph: with the glasses it is
+     what makes his colour a face rather than a dot. */
+  .face-smile {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: var(--text);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+  }
 }
 
 /* A dad who has asked his phone for less motion gets none — not a shorter

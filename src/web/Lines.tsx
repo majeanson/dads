@@ -190,7 +190,6 @@ export function Lines({
                 <Face
                   className="face"
                   memberId={row.message.memberId}
-                  name={row.message.name}
                   version={faceOf(row.message.memberId)}
                   glasses={glassesOf(row.message.memberId)}
                   size={32}
