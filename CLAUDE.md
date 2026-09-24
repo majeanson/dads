@@ -1355,6 +1355,13 @@ neither see nor scroll anything.
   Tuesday by a man who is not here tonight still wants his face beside it. One
   source of truth, so a face set this evening reaches every line he ever
   wrote, and a `member` frame keeps it current without a reload.
+- **`Face` looks a dad up itself** (`members.tsx`, 2026-09-24). Room puts
+  `members` in a context and `Face` takes only a member id — no `faceOf`,
+  no `glassesOf`, no version or pair handed down. Those two were threaded
+  through seven components that only passed them on, and the one place a
+  face was drawn outside them (a photo just chosen in Settings) was the one
+  that went stale. A new screen that draws a face gets it right by default.
+  A picture not yet in the room is the `photo` prop, and nothing else is.
 - **A dad with no photo is his colour, his glasses and a smile — never an
   empty circle, and no letters** (2026-09-24, reversing "his initials").
   Once every face wore glasses they sat across the letters; a colour with a

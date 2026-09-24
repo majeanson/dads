@@ -15,6 +15,7 @@ import { plural, useT } from './i18n';
 import { Button } from './ui/Button';
 import { buzz } from './buzz';
 import { Glasses } from './Logo';
+import { MembersProvider } from './members';
 import { Splash, wantsStill } from './Splash';
 import { nightShort } from './NightEditor';
 import { isImage } from './media';
@@ -251,23 +252,6 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   );
 
   /**
-   * The version of a dad's face, for the conversation.
-   *
-   * From `members` rather than the roster: a line said on Tuesday by a man
-   * who is not here tonight still has his face beside it. Undefined for a dad
-   * with no face, and `Face` falls back to his colour.
-   */
-  const glassesOf = useCallback(
-    (memberId: string) => room.members.find((m) => m.memberId === memberId)?.glasses,
-    [room.members],
-  );
-  const faceOf = useCallback(
-    (memberId: string | null) =>
-      memberId === null ? undefined : room.members.find((m) => m.memberId === memberId)?.face,
-    [room.members],
-  );
-
-  /**
    * Every photograph in the conversation, oldest first.
    *
    * From what is already on the screen rather than from a fetch: these are
@@ -321,227 +305,221 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   }, [view, since, hasNew, unpin]);
 
   return (
-    <main
-      className="room"
-      data-view={view}
-      data-table={tableOpen ? 'open' : 'closed'}
-      onDragOver={(e) => e.preventDefault()}
-      // A photo the dad already has in his hand: dragged onto the room. The
-      // picker still exists for a phone; this is for the laptop, where
-      // hunting through a file dialog for something already on the screen is
-      // the long way round. Pasting is the composer's own, because that is
-      // where the caret is.
-      onDrop={(e) => {
-        e.preventDefault();
-        composer.current?.offer(e.dataTransfer.files[0]);
-      }}
-    >
-      <RoomHeader
-        groupName={session.group.name}
-        view={view}
-        connection={room.connection}
-        here={room.roster.length}
-        roster={room.roster}
-        faceOf={faceOf}
-        glassesOf={glassesOf}
-        typing={[...room.typing.keys()].filter((id) => id !== session.member.id)}
-        soon={soon}
-        callState={call.state}
-        // On home as well, now that home says two things and nothing else.
-        // It was hidden there while home listed the very items it stands for,
-        // an inch below it; with those behind the Menu button, hiding the
-        // mark on home would leave a dad no sign at all that a question is
-        // waiting for him.
-        waiting={waiting}
-        onHome={goHome}
-        onWho={() => setSheet('here')}
-        onNight={() => setSheet('night')}
-        onMenu={() => setSheet('menu')}
-        onJoinCall={() => void call.join()}
-      />
+    <MembersProvider members={room.members}>
+      <main
+        className="room"
+        data-view={view}
+        data-table={tableOpen ? 'open' : 'closed'}
+        onDragOver={(e) => e.preventDefault()}
+        // A photo the dad already has in his hand: dragged onto the room. The
+        // picker still exists for a phone; this is for the laptop, where
+        // hunting through a file dialog for something already on the screen is
+        // the long way round. Pasting is the composer's own, because that is
+        // where the caret is.
+        onDrop={(e) => {
+          e.preventDefault();
+          composer.current?.offer(e.dataTransfer.files[0]);
+        }}
+      >
+        <RoomHeader
+          groupName={session.group.name}
+          view={view}
+          connection={room.connection}
+          here={room.roster.length}
+          roster={room.roster}
+          typing={[...room.typing.keys()].filter((id) => id !== session.member.id)}
+          soon={soon}
+          callState={call.state}
+          // On home as well, now that home says two things and nothing else.
+          // It was hidden there while home listed the very items it stands for,
+          // an inch below it; with those behind the Menu button, hiding the
+          // mark on home would leave a dad no sign at all that a question is
+          // waiting for him.
+          waiting={waiting}
+          onHome={goHome}
+          onWho={() => setSheet('here')}
+          onNight={() => setSheet('night')}
+          onMenu={() => setSheet('menu')}
+          onJoinCall={() => void call.join()}
+        />
 
-      {/* Home sits BESIDE the stage rather than in place of it, and the stage
+        {/* Home sits BESIDE the stage rather than in place of it, and the stage
           is hidden with CSS: taking it out of the tree would unmount the
           table's iframe and restart a game in progress, which is the same
           reason the table has never been unmounted either. */}
-      <Home
-        night={room.night}
-        answered={nightPulse}
-        pollPulse={room.pollPulse}
-        you={session.member.id}
-        faceOf={faceOf}
-        glassesOf={glassesOf}
-        unseen={seen.unseen}
-        onGo={goTalk}
-        onNight={() => setSheet('night')}
-        // Only while home is the screen showing. Home stays mounted behind
-        // the conversation, so without this the rows would sit in the tree
-        // twice whenever the menu sheet was open — one hidden, one shown —
-        // and anything looking for "the dad-night row" would find both.
-        menu={
-          view === 'home' ? (
-            <Menu
-              view="home"
-              rooms={room.rooms}
-              todo={todo}
-              tableOpen={tableOpen}
-              mine={mine}
-              onToggleTable={() => setTableOpen((v) => !v)}
-              onOpen={setSheet}
+        <Home
+          night={room.night}
+          answered={nightPulse}
+          pollPulse={room.pollPulse}
+          you={session.member.id}
+          unseen={seen.unseen}
+          onGo={goTalk}
+          onNight={() => setSheet('night')}
+          // Only while home is the screen showing. Home stays mounted behind
+          // the conversation, so without this the rows would sit in the tree
+          // twice whenever the menu sheet was open — one hidden, one shown —
+          // and anything looking for "the dad-night row" would find both.
+          menu={
+            view === 'home' ? (
+              <Menu
+                view="home"
+                rooms={room.rooms}
+                todo={todo}
+                tableOpen={tableOpen}
+                mine={mine}
+                onToggleTable={() => setTableOpen((v) => !v)}
+                onOpen={setSheet}
+              />
+            ) : null
+          }
+        />
+
+        <div className="stage">
+          <div className="col-talk">
+            <CallBar
+              state={call.state}
+              peers={call.peers}
+              muted={call.muted}
+              camera={call.camera}
+              speakingYou={call.speakingYou}
+              localStream={call.localStream.current}
+              onLeave={call.leave}
+              onToggleMute={call.toggleMute}
+              onToggleCamera={() => void call.toggleCamera()}
+              onWho={() => setSheet('here')}
             />
-          ) : null
-        }
-      />
 
-      <div className="stage">
-        <div className="col-talk">
-          <CallBar
-            state={call.state}
-            peers={call.peers}
-            muted={call.muted}
-            camera={call.camera}
-            speakingYou={call.speakingYou}
-            localStream={call.localStream.current}
-            onLeave={call.leave}
-            onToggleMute={call.toggleMute}
-            onToggleCamera={() => void call.toggleCamera()}
-            onWho={() => setSheet('here')}
-          />
+            <Lines
+              rows={rows}
+              empty={room.messages.length === 0}
+              you={session.member.id}
+              lines={lines}
+              bottom={bottom}
+              newMark={newMark}
+              nameOf={nameOf}
+              onReact={(id, emoji, on) => {
+                buzz();
+                room.react(id, emoji, on, session.member.id);
+              }}
+              onRetract={room.retract}
+              onReply={(message) => {
+                setEditing(null);
+                setReplyTo(message);
+                // After the menu has closed: Radix hands focus back to the line on
+                // its way out, and that must not land on top of this.
+                setTimeout(() => composer.current?.focus(), 0);
+              }}
+              onEdit={(message) => {
+                setReplyTo(null);
+                setEditing(message);
+                // After the menu has closed: Radix hands focus back to the line on
+                // its way out, and that must not land on top of this.
+                setTimeout(() => composer.current?.focus(), 0);
+              }}
+              onKeep={(media) => keep(media.id, !media.kept)}
+              onOpenPhoto={setViewing}
+              onScroll={seen.onScroll}
+            />
 
-          <Lines
-            rows={rows}
-            empty={room.messages.length === 0}
-            you={session.member.id}
-            lines={lines}
-            bottom={bottom}
-            newMark={newMark}
-            faceOf={faceOf}
-            glassesOf={glassesOf}
-            nameOf={nameOf}
-            onReact={(id, emoji, on) => {
-              buzz();
-              room.react(id, emoji, on, session.member.id);
-            }}
-            onRetract={room.retract}
-            onReply={(message) => {
-              setEditing(null);
-              setReplyTo(message);
-              // After the menu has closed: Radix hands focus back to the line on
-              // its way out, and that must not land on top of this.
-              setTimeout(() => composer.current?.focus(), 0);
-            }}
-            onEdit={(message) => {
-              setReplyTo(null);
-              setEditing(message);
-              // After the menu has closed: Radix hands focus back to the line on
-              // its way out, and that must not land on top of this.
-              setTimeout(() => composer.current?.focus(), 0);
-            }}
-            onKeep={(media) => keep(media.id, !media.kept)}
-            onOpenPhoto={setViewing}
-            onScroll={seen.onScroll}
-          />
+            {!seen.pinned && seen.unseen > 0 ? (
+              <Button
+                look="primary"
+                size="sm"
+                className="mx-auto rounded-full"
+                onClick={seen.toBottom}
+                data-testid="to-bottom"
+              >
+                <ArrowDown size={14} aria-hidden="true" />
+                {t(`room.unseen_${plural(lang, seen.unseen)}`, { n: seen.unseen })}
+              </Button>
+            ) : null}
 
-          {!seen.pinned && seen.unseen > 0 ? (
-            <Button
-              look="primary"
-              size="sm"
-              className="mx-auto rounded-full"
-              onClick={seen.toBottom}
-              data-testid="to-bottom"
-            >
-              <ArrowDown size={14} aria-hidden="true" />
-              {t(`room.unseen_${plural(lang, seen.unseen)}`, { n: seen.unseen })}
-            </Button>
-          ) : null}
+            <p className="min-h-[1.2em] text-xs text-muted" aria-live="polite">
+              {note ??
+                (room.waiting > 0 ? (
+                  t(`room.waiting_${plural(lang, room.waiting)}`, { n: room.waiting })
+                ) : typingNames.length > 0 ? (
+                  // A pair of glasses bobbing beside the names: the
+                  // symbol doing the work of "is typing…". The sentence is
+                  // still there for anything reading it aloud.
+                  <>
+                    <Glasses width={18} className="typing-glasses mr-1.5" />
+                    <span aria-hidden="true">{typingNames.join(', ')}</span>
+                    <span className="sr-only">
+                      {t('room.typing', { names: typingNames.join(', ') })}
+                    </span>
+                  </>
+                ) : (
+                  ' '
+                ))}
+            </p>
 
-          <p className="min-h-[1.2em] text-xs text-muted" aria-live="polite">
-            {note ??
-              (room.waiting > 0 ? (
-                t(`room.waiting_${plural(lang, room.waiting)}`, { n: room.waiting })
-              ) : typingNames.length > 0 ? (
-                // A pair of glasses bobbing beside the names: the
-                // symbol doing the work of "is typing…". The sentence is
-                // still there for anything reading it aloud.
-                <>
-                  <Glasses width={18} className="typing-glasses mr-1.5" />
-                  <span aria-hidden="true">{typingNames.join(', ')}</span>
-                  <span className="sr-only">
-                    {t('room.typing', { names: typingNames.join(', ') })}
-                  </span>
-                </>
-              ) : (
-                ' '
-              ))}
-          </p>
+            <Composer
+              ref={composer}
+              busy={composing}
+              onSend={(body, mediaId) => {
+                room.send(body, mediaId, replyTo?.id);
+                setReplyTo(null);
+              }}
+              onTyping={room.sendTyping}
+              replyTo={replyTo === null ? null : { name: replyTo.name, body: replyTo.body }}
+              onClearReply={() => setReplyTo(null)}
+              editing={editing === null ? null : { id: editing.id, body: editing.body }}
+              onEdit={room.edit}
+              onCancelEdit={() => setEditing(null)}
+            />
+          </div>
 
-          <Composer
-            ref={composer}
-            busy={composing}
-            onSend={(body, mediaId) => {
-              room.send(body, mediaId, replyTo?.id);
-              setReplyTo(null);
-            }}
-            onTyping={room.sendTyping}
-            replyTo={replyTo === null ? null : { name: replyTo.name, body: replyTo.body }}
-            onClearReply={() => setReplyTo(null)}
-            editing={editing === null ? null : { id: editing.id, body: editing.body }}
-            onEdit={room.edit}
-            onCancelEdit={() => setEditing(null)}
-          />
-        </div>
-
-        {/* Mounted once asked for, then kept: unmounting the iframe restarts a
+          {/* Mounted once asked for, then kept: unmounting the iframe restarts a
             game in progress. */}
-        <div className="col-table">
-          {tableEver ? (
-            <TableColumn
-              onEvent={room.relayTableEvent}
-              onClose={() => setTableOpen(false)}
-              pulse={room.tablePulse}
-            />
-          ) : null}
+          <div className="col-table">
+            {tableEver ? (
+              <TableColumn
+                onEvent={room.relayTableEvent}
+                onClose={() => setTableOpen(false)}
+                pulse={room.tablePulse}
+              />
+            ) : null}
+          </div>
         </div>
-      </div>
 
-      <Sheets
-        open={sheet}
-        onOpen={setSheet}
-        view={view}
-        you={session.member.id}
-        youName={room.you?.name ?? session.member.displayName}
-        messages={room.messages}
-        roster={room.roster}
-        call={room.call}
-        night={room.night}
-        pollPulse={room.pollPulse}
-        nightPulse={nightPulse}
-        rooms={room.rooms}
-        members={room.members}
-        createdBy={room.createdBy}
-        // From `members` and not the roster: the man who opened the room is
-        // very often not the one sitting in it tonight.
-        ownerName={room.members.find((m) => m.memberId === session.group.createdBy)?.name ?? ''}
-        todo={todo}
-        tableOpen={tableOpen}
-        mine={mine}
-        faceOf={faceOf}
-        glassesOf={glassesOf}
-        onToggleTable={() => setTableOpen((v) => !v)}
-        onAnswerPrompt={room.answerPrompt}
-        canAnswer={room.connection === 'open'}
-        onTodoChanged={refreshTodo}
-        onSignOut={onSignOut}
-      />
+        <Sheets
+          open={sheet}
+          onOpen={setSheet}
+          view={view}
+          you={session.member.id}
+          youName={room.you?.name ?? session.member.displayName}
+          messages={room.messages}
+          roster={room.roster}
+          call={room.call}
+          night={room.night}
+          pollPulse={room.pollPulse}
+          nightPulse={nightPulse}
+          rooms={room.rooms}
+          members={room.members}
+          createdBy={room.createdBy}
+          // From `members` and not the roster: the man who opened the room is
+          // very often not the one sitting in it tonight.
+          ownerName={room.members.find((m) => m.memberId === session.group.createdBy)?.name ?? ''}
+          todo={todo}
+          tableOpen={tableOpen}
+          mine={mine}
+          onToggleTable={() => setTableOpen((v) => !v)}
+          onAnswerPrompt={room.answerPrompt}
+          canAnswer={room.connection === 'open'}
+          onTodoChanged={refreshTodo}
+          onSignOut={onSignOut}
+        />
 
-      <Viewer
-        shots={shots}
-        at={viewingAt}
-        onMove={(next) => setViewing(shots[next]?.media.id ?? null)}
-        onClose={() => setViewing(null)}
-      />
-      {splash ? <Splash onDone={endSplash} /> : null}
-      {entering ? <Splash way="talk" onDone={endEntering} onCovered={toTalk} /> : null}
-    </main>
+        <Viewer
+          shots={shots}
+          at={viewingAt}
+          onMove={(next) => setViewing(shots[next]?.media.id ?? null)}
+          onClose={() => setViewing(null)}
+        />
+        {splash ? <Splash onDone={endSplash} /> : null}
+        {entering ? <Splash way="talk" onDone={endEntering} onCovered={toTalk} /> : null}
+      </main>
+    </MembersProvider>
   );
 }

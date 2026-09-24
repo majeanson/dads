@@ -1,8 +1,8 @@
 import { faceUrl } from './api';
 import { dadVar } from './dadColour';
 import type { CSSProperties } from 'react';
-import type { GlassesKind } from '../shared/protocol';
 import { Glasses } from './Logo';
+import { useMember } from './members';
 import { cn } from './ui/cn';
 
 /**
@@ -26,30 +26,31 @@ import { cn } from './ui/cn';
  * Decorative by default: wherever this appears the name is already beside it,
  * and a screen reader announcing "Marc, photo of Marc, Marc" is worse than
  * silence. `className` places the face.
+ *
+ * His picture and his pair come from `members` (`useMember`), never from the
+ * caller: one list, so no screen can draw a face out of date.
  */
 export function Face({
   memberId,
-  version,
   photo,
-  glasses,
   wear = 'still',
   delay = 0,
   size = 28,
   className,
 }: {
   memberId: string;
-  version: number | undefined;
   /** A picture he has only just chosen, shown before the room has it — so
    * the glasses are on it from the first moment, not after a reopen. */
   photo?: string | null;
-  glasses: GlassesKind | undefined;
   wear?: 'still' | 'drop' | 'bob';
   /** Milliseconds before a `drop`, so a row can come down as a wave. */
   delay?: number;
   size?: number;
   className?: string;
 }) {
-  const src = photo ?? faceUrl(memberId, version);
+  const dad = useMember(memberId);
+  const glasses = dad?.glasses;
+  const src = photo ?? faceUrl(memberId, dad?.face);
   // His colour, as a ring inside the circle: an outline, so it shows on a
   // photograph as well as on his colour.
   const box = {
@@ -127,12 +128,8 @@ export function FaceStack({
   /** `arrived`: he has just come in, and his face says so, once. */
   people: {
     memberId: string;
-    name: string;
-    version: number | undefined;
     shades?: boolean;
     arrived?: boolean;
-    /** Which pair he wears, when he has chosen. */
-    glasses?: GlassesKind;
     /** He is typing right now: his glasses bob on his face. */
     typing?: boolean;
   }[];
@@ -165,8 +162,6 @@ export function FaceStack({
         >
           <Face
             memberId={p.memberId}
-            version={p.version}
-            glasses={p.glasses}
             wear={p.typing ? 'bob' : p.shades ? 'drop' : 'still'}
             delay={p.shades && wave ? 150 + i * 110 : 0}
             size={size}

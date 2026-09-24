@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, LogIn, LogOut, MicOff, Phone } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { CallMember, GlassesKind } from '../shared/protocol';
+import type { CallMember } from '../shared/protocol';
 import { fetchPresence, type PresenceEvent } from './api';
 import { Face } from './Face';
 import { useT } from './i18n';
@@ -42,8 +42,6 @@ export function Here({
     memberId: string;
     name: string;
     you: boolean;
-    face?: number;
-    glasses?: GlassesKind;
   }[];
   call: CallMember[];
 }) {
@@ -91,7 +89,7 @@ export function Here({
                 {/* His face, or his colour and his glasses. The dot went with it: a list
                     titled "Who's here" did not need a mark on every row
                     saying each of them was here. */}
-                <Face memberId={m.memberId} version={m.face} glasses={m.glasses} size={32} />
+                <Face memberId={m.memberId} size={32} />
                 {m.name}
                 {m.you ? t('here.you') : ''}
                 {c ? (

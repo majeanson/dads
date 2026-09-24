@@ -112,7 +112,7 @@ export function You({
       <form onSubmit={(e) => void rename(e)} className="flex items-center gap-3">
         {/* The picture he just chose goes through `Face` like any other, so
             his glasses and his ring are on it the moment it appears. */}
-        <Face memberId={memberId} version={face} photo={preview} glasses={glasses} size={56} />
+        <Face memberId={memberId} photo={preview} size={56} />
 
         <label htmlFor="myname" className="sr-only">
           {t('you.name')}

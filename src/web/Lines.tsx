@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { Attachment as MessageAttachment, GlassesKind, RoomMessage } from '../shared/protocol';
+import type { Attachment as MessageAttachment, RoomMessage } from '../shared/protocol';
 import { parts, shortLink } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
@@ -47,8 +47,6 @@ export function Lines({
   lines,
   bottom,
   newMark,
-  faceOf,
-  glassesOf,
   nameOf,
   onReact,
   onRetract,
@@ -67,8 +65,6 @@ export function Lines({
   bottom: RefObject<HTMLLIElement | null>;
   /** The "new since you were here" divider, so the list can land on it. */
   newMark: RefObject<HTMLLIElement | null>;
-  faceOf: (memberId: string | null) => number | undefined;
-  glassesOf: (memberId: string) => GlassesKind | undefined;
   nameOf: (memberId: string) => string;
   onReact: (id: string, emoji: string, on: boolean) => void;
   onRetract: (id: string) => void;
@@ -187,13 +183,7 @@ export function Lines({
                   the app repeating who is talking between every sentence,
                   which is what dropping the name fixed. */}
               {row.showName && row.message.memberId !== null ? (
-                <Face
-                  className="face"
-                  memberId={row.message.memberId}
-                  version={faceOf(row.message.memberId)}
-                  glasses={glassesOf(row.message.memberId)}
-                  size={32}
-                />
+                <Face className="face" memberId={row.message.memberId} size={32} />
               ) : null}
               <span
                 className="who"

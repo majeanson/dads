@@ -1,6 +1,6 @@
 import { CalendarClock, ChevronLeft, Menu as MenuIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { GlassesKind, RosterEntry } from '../shared/protocol';
+import type { RosterEntry } from '../shared/protocol';
 import { JoinCall } from './CallBar';
 import { FaceStack } from './Face';
 import { Logo } from './Logo';
@@ -32,8 +32,6 @@ export function RoomHeader({
   connection,
   here,
   roster,
-  faceOf,
-  glassesOf,
   typing,
   soon,
   callState,
@@ -50,8 +48,6 @@ export function RoomHeader({
   here: number;
   /** Who is connected, for the faces beside the count. */
   roster: RosterEntry[];
-  faceOf: (memberId: string) => number | undefined;
-  glassesOf: (memberId: string) => GlassesKind | undefined;
   /** Who is typing right now, other than him: their faces wear it. */
   typing: string[];
   /** The night, short: "Thu 21:00", a countdown when close, null with none. */
@@ -130,10 +126,7 @@ export function RoomHeader({
                   <FaceStack
                     people={roster.map((r) => ({
                       memberId: r.memberId,
-                      name: r.name,
-                      version: faceOf(r.memberId),
                       arrived: arrived.includes(r.memberId),
-                      glasses: glassesOf(r.memberId),
                       typing: typing.includes(r.memberId),
                     }))}
                     size={24}
@@ -185,10 +178,7 @@ export function RoomHeader({
                 <FaceStack
                   people={roster.map((r) => ({
                     memberId: r.memberId,
-                    name: r.name,
-                    version: faceOf(r.memberId),
                     arrived: arrived.includes(r.memberId),
-                    glasses: glassesOf(r.memberId),
                     typing: typing.includes(r.memberId),
                   }))}
                   size={26}

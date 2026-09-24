@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { weekDate } from '../shared/week';
-import type { GlassesKind } from '../shared/protocol';
 import {
   fetchBoard,
   saveCheckIn,
@@ -41,12 +40,8 @@ function outcomeWord(t: T, outcome: 'pending' | 'done' | 'missed'): string {
  */
 export function Board({
   onChanged,
-  faceOf,
-  glassesOf,
 }: {
   onChanged?: () => void;
-  faceOf?: (memberId: string) => number | undefined;
-  glassesOf?: (memberId: string) => GlassesKind | undefined;
 } = {}) {
   const { t, lang } = useT();
   const [data, setData] = useState<BoardData | null | 'loading'>('loading');
@@ -101,12 +96,7 @@ export function Board({
               able to read your week in the same words everyone else reads it. */}
           <section>
             <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('b.everyone')}</h2>
-            <WeekRows
-              faceOf={faceOf}
-              glassesOf={glassesOf}
-              rows={thisWeek?.rows ?? []}
-              you={data.you}
-            />
+            <WeekRows rows={thisWeek?.rows ?? []} you={data.you} />
           </section>
         </TabPanel>
 
@@ -125,7 +115,7 @@ export function Board({
                     {t('b.week_of', { date: weekDate(w.week, lang) })}
                     {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
                   </h2>
-                  <WeekRows faceOf={faceOf} glassesOf={glassesOf} rows={w.rows} you={data.you} />
+                  <WeekRows rows={w.rows} you={data.you} />
                 </section>
               );
             })
@@ -143,19 +133,7 @@ export function Board({
  * that flatters — but a row each for five men with nothing to say is five rows
  * of the same three words. The names are the honesty; the rows were furniture.
  */
-function WeekRows({
-  rows,
-  you,
-  faceOf,
-  glassesOf,
-  className,
-}: {
-  rows: BoardRow[];
-  you: string;
-  faceOf?: (memberId: string) => number | undefined;
-  glassesOf?: (memberId: string) => GlassesKind | undefined;
-  className?: string;
-}) {
+function WeekRows({ rows, you, className }: { rows: BoardRow[]; you: string; className?: string }) {
   const { t } = useT();
   const said = rows.filter((r) => r.checkIn ?? r.commitment);
   const quiet = rows.filter((r) => !r.checkIn && !r.commitment);
@@ -176,9 +154,6 @@ function WeekRows({
           <FaceStack
             people={quiet.map((r) => ({
               memberId: r.memberId,
-              name: r.name,
-              version: faceOf?.(r.memberId),
-              glasses: glassesOf?.(r.memberId),
             }))}
             size={28}
             ring="var(--bg)"
