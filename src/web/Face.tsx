@@ -30,6 +30,7 @@ import { cn } from './ui/cn';
 export function Face({
   memberId,
   version,
+  photo,
   glasses,
   wear = 'still',
   delay = 0,
@@ -38,6 +39,9 @@ export function Face({
 }: {
   memberId: string;
   version: number | undefined;
+  /** A picture he has only just chosen, shown before the room has it — so
+   * the glasses are on it from the first moment, not after a reopen. */
+  photo?: string | null;
   glasses: GlassesKind | undefined;
   wear?: 'still' | 'drop' | 'bob';
   /** Milliseconds before a `drop`, so a row can come down as a wave. */
@@ -45,7 +49,7 @@ export function Face({
   size?: number;
   className?: string;
 }) {
-  const src = faceUrl(memberId, version);
+  const src = photo ?? faceUrl(memberId, version);
   // His colour, as a ring inside the circle: an outline, so it shows on a
   // photograph as well as on his colour.
   const box = {

@@ -110,18 +110,10 @@ export function You({
           who he is, and stacked with a label each they were a third of the
           settings screen on a phone. */}
       <form onSubmit={(e) => void rename(e)} className="flex items-center gap-3">
-        {preview === null ? (
-          <Face memberId={memberId} version={face} glasses={glasses} size={56} />
-        ) : (
-          <img
-            src={preview}
-            alt=""
-            aria-hidden="true"
-            width={56}
-            height={56}
-            className="inline-block h-14 w-14 shrink-0 rounded-full object-cover"
-          />
-        )}
+        {/* The picture he just chose goes through `Face` like any other, so
+            his glasses and his ring are on it the moment it appears. */}
+        <Face memberId={memberId} version={face} photo={preview} glasses={glasses} size={56} />
+
         <label htmlFor="myname" className="sr-only">
           {t('you.name')}
         </label>

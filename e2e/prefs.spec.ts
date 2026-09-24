@@ -230,6 +230,26 @@ test('a dad with no photo is his colour, his glasses and a smile', async ({ page
   await expect(entry).not.toContainText('IN');
 });
 
+test('a photo he has just added wears his glasses, and a new pair lands on it', async ({
+  page,
+}) => {
+  // Without closing Settings: the picture he just chose was a bare preview,
+  // and the glasses only appeared on it after the sheet was reopened.
+  await comeIn(page, 'Ugo Snap');
+  await home(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const face = page.getByTestId('you');
+
+  await page.setInputFiles('#face', 'public/icon-192.png');
+  await expect(face.locator('img')).toBeVisible();
+  await expect(face.locator('.face-shades')).toHaveAttribute('data-glasses', 'shades');
+
+  await page.getByTestId('glasses-open').click();
+  await page.getByTestId('glasses-picker').getByTestId('glasses-round').click();
+  await expect(face.locator('img')).toBeVisible();
+  await expect(face.locator('.face-shades')).toHaveAttribute('data-glasses', 'round');
+});
+
 test('a dad chooses his glasses, and they stay his', async ({ page }) => {
   await comeIn(page, 'Ivo Frames');
   await home(page);
