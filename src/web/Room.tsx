@@ -416,6 +416,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
             bottom={bottom}
             newMark={newMark}
             faceOf={faceOf}
+            glassesOf={glassesOf}
             nameOf={nameOf}
             onReact={(id, emoji, on) => {
               buzz();
@@ -525,6 +526,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         tableOpen={tableOpen}
         mine={mine}
         faceOf={faceOf}
+        glassesOf={glassesOf}
         onToggleTable={() => setTableOpen((v) => !v)}
         onAnswerPrompt={room.answerPrompt}
         canAnswer={room.connection === 'open'}

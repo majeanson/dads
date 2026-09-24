@@ -190,10 +190,10 @@ function Pair({ kind }: { kind: GlassesKind }) {
 /**
  * The glasses alone — the app's symbol, worn by whoever it is about.
  *
- * On a face in "who's coming", a dad who is in has them on — HIS pair, the
- * one he chose in Settings (`kind`), the app's shades if he never did.
- * Beside a name while he types, they bob. `drop` has them come down as they
- * appear. Decorative: the words nearby always say the same thing.
+ * On every face (`Face`) — HIS pair, the one he chose in Settings (`kind`),
+ * the app's shades if he never did. Beside a name while he types, they bob.
+ * `drop` has them come down as they appear. Decorative: the words nearby
+ * always say the same thing.
  */
 export function Glasses({
   width = 24,
@@ -216,6 +216,7 @@ export function Glasses({
       height={Math.round((width * 108) / 352)}
       aria-hidden="true"
       focusable="false"
+      data-glasses={kind}
       className={[drop ? 'logo-anim' : '', className ?? ''].join(' ')}
     >
       <g

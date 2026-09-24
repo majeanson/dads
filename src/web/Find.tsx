@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
-import { MIN_SEARCH, type Found } from '../shared/protocol';
+import { MIN_SEARCH, type Found, type GlassesKind } from '../shared/protocol';
 import { highlight } from '../shared/highlight';
 import { findLines } from './api';
 import { Attachment } from './Attachment';
@@ -48,7 +48,13 @@ type State =
  * the conversation to a line from March would mean fetching ten thousand lines
  * to arrive at the top of them.
  */
-export function Find({ faceOf }: { faceOf: (memberId: string) => number | undefined }) {
+export function Find({
+  faceOf,
+  glassesOf,
+}: {
+  faceOf: (memberId: string) => number | undefined;
+  glassesOf: (memberId: string) => GlassesKind | undefined;
+}) {
   const { t, lang } = useT();
   const locale = lang === 'fr' ? 'fr-CA' : 'en-CA';
   const [q, setQ] = useState('');
@@ -140,6 +146,7 @@ export function Find({ faceOf }: { faceOf: (memberId: string) => number | undefi
                       memberId={r.memberId}
                       name={r.name}
                       version={faceOf(r.memberId)}
+                      glasses={glassesOf(r.memberId)}
                       size={28}
                     />
                   )}

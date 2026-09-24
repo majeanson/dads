@@ -1,5 +1,11 @@
 import { CalendarHeart, Coffee, DoorOpen, Search, Send, Settings2, Users } from 'lucide-react';
-import type { RoomMessage, RoomsOpen, RosterEntry, CallMember } from '../shared/protocol';
+import type {
+  CallMember,
+  GlassesKind,
+  RoomMessage,
+  RoomsOpen,
+  RosterEntry,
+} from '../shared/protocol';
 import type { DadNight } from '../shared/dadNight';
 import type { Todo } from './api';
 import { Board } from './Board';
@@ -48,6 +54,7 @@ export function Sheets({
   tableOpen,
   mine,
   faceOf,
+  glassesOf,
   onToggleTable,
   onAnswerPrompt,
   canAnswer,
@@ -87,6 +94,7 @@ export function Sheets({
   /** How many rooms this phone is in. */
   mine: number;
   faceOf: (memberId: string | null) => number | undefined;
+  glassesOf: (memberId: string) => GlassesKind | undefined;
   onToggleTable: () => void;
   onAnswerPrompt: (body: string) => boolean;
   canAnswer: boolean;
@@ -122,6 +130,7 @@ export function Sheets({
             memberId: m.memberId,
             name: m.name,
             face: m.face,
+            glasses: glassesOf(m.memberId),
             you: m.memberId === you,
           }))}
           call={call}
@@ -144,7 +153,11 @@ export function Sheets({
   if (open === 'board') {
     return (
       <Sheet title={t('b.title')} pose={Coffee} onClose={close}>
-        <Board onChanged={onTodoChanged} faceOf={(memberId) => faceOf(memberId)} />
+        <Board
+          onChanged={onTodoChanged}
+          faceOf={(memberId) => faceOf(memberId)}
+          glassesOf={glassesOf}
+        />
       </Sheet>
     );
   }
@@ -160,7 +173,7 @@ export function Sheets({
   if (open === 'find') {
     return (
       <Sheet title={t('find.title')} pose={Search} onClose={close}>
-        <Find faceOf={(memberId) => faceOf(memberId)} />
+        <Find faceOf={(memberId) => faceOf(memberId)} glassesOf={glassesOf} />
       </Sheet>
     );
   }

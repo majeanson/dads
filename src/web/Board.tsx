@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { weekDate } from '../shared/week';
+import type { GlassesKind } from '../shared/protocol';
 import {
   fetchBoard,
   saveCheckIn,
@@ -41,9 +42,11 @@ function outcomeWord(t: T, outcome: 'pending' | 'done' | 'missed'): string {
 export function Board({
   onChanged,
   faceOf,
+  glassesOf,
 }: {
   onChanged?: () => void;
   faceOf?: (memberId: string) => number | undefined;
+  glassesOf?: (memberId: string) => GlassesKind | undefined;
 } = {}) {
   const { t, lang } = useT();
   const [data, setData] = useState<BoardData | null | 'loading'>('loading');
@@ -98,7 +101,12 @@ export function Board({
               able to read your week in the same words everyone else reads it. */}
           <section>
             <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('b.everyone')}</h2>
-            <WeekRows faceOf={faceOf} rows={thisWeek?.rows ?? []} you={data.you} />
+            <WeekRows
+              faceOf={faceOf}
+              glassesOf={glassesOf}
+              rows={thisWeek?.rows ?? []}
+              you={data.you}
+            />
           </section>
         </TabPanel>
 
@@ -117,7 +125,7 @@ export function Board({
                     {t('b.week_of', { date: weekDate(w.week, lang) })}
                     {promised > 0 ? ` · ${t('b.kept_count', { kept, total: promised })}` : ''}
                   </h2>
-                  <WeekRows faceOf={faceOf} rows={w.rows} you={data.you} />
+                  <WeekRows faceOf={faceOf} glassesOf={glassesOf} rows={w.rows} you={data.you} />
                 </section>
               );
             })
@@ -139,11 +147,13 @@ function WeekRows({
   rows,
   you,
   faceOf,
+  glassesOf,
   className,
 }: {
   rows: BoardRow[];
   you: string;
   faceOf?: (memberId: string) => number | undefined;
+  glassesOf?: (memberId: string) => GlassesKind | undefined;
   className?: string;
 }) {
   const { t } = useT();
@@ -168,6 +178,7 @@ function WeekRows({
               memberId: r.memberId,
               name: r.name,
               version: faceOf?.(r.memberId),
+              glasses: glassesOf?.(r.memberId),
             }))}
             size={28}
             ring="var(--bg)"

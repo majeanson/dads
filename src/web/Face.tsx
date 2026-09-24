@@ -14,21 +14,37 @@ import { cn } from './ui/cn';
  * a blank is worse at that than two letters. The letters come from the name,
  * so a dad who never sets a face still gets something that is his.
  *
+ * He wears his glasses on it, always (2026-09-24): the pair he chose in
+ * Settings, the app's shades if he never did. They are part of his face now,
+ * not a sign of anything — choosing a pair that showed only while he was
+ * "in" or typing looked like choosing had done nothing. `wear` is only how
+ * they MOVE: `drop` comes down (the night's "in", the full table's wave),
+ * `bob` is him typing.
+ *
  * Decorative by default: wherever this appears the name is already beside it,
  * and a screen reader announcing "Marc, photo of Marc, Marc" is worse than
- * silence.
+ * silence. `className` places the face; `tint` is the fill behind initials.
  */
 export function Face({
   memberId,
   name,
   version,
+  glasses,
+  wear = 'still',
+  delay = 0,
   size = 28,
+  tint,
   className,
 }: {
   memberId: string;
   name: string;
   version: number | undefined;
+  glasses: GlassesKind | undefined;
+  wear?: 'still' | 'drop' | 'bob';
+  /** Milliseconds before a `drop`, so a row can come down as a wave. */
+  delay?: number;
   size?: number;
+  tint?: string;
   className?: string;
 }) {
   const src = faceUrl(memberId, version);
@@ -41,30 +57,42 @@ export function Face({
     outlineOffset: `-${size >= 28 ? 2 : 1.5}px`,
   } as const;
 
-  return src === null ? (
+  return (
     <span
       aria-hidden="true"
-      style={{ ...box, fontSize: Math.round(size * 0.4) }}
-      className={cn(
-        'inline-grid shrink-0 place-items-center rounded-full',
-        'bg-panel font-semibold text-muted uppercase',
-        className,
-      )}
+      style={{ width: size, height: size }}
+      className={cn('relative inline-block shrink-0', className)}
     >
-      {initials(name)}
+      {src === null ? (
+        <span
+          style={{ ...box, fontSize: Math.round(size * 0.4) }}
+          className={cn(
+            'inline-grid place-items-center rounded-full',
+            'bg-panel font-semibold text-muted uppercase',
+            tint,
+          )}
+        >
+          {initials(name)}
+        </span>
+      ) : (
+        <img
+          src={src}
+          alt=""
+          width={size}
+          height={size}
+          loading="lazy"
+          decoding="async"
+          style={box}
+          className="block rounded-full object-cover"
+        />
+      )}
+      <Glasses
+        kind={glasses}
+        drop={wear === 'drop'}
+        delay={delay}
+        className={cn('face-shades', wear === 'bob' && 'face-typing')}
+      />
     </span>
-  ) : (
-    <img
-      src={src}
-      alt=""
-      aria-hidden="true"
-      width={size}
-      height={size}
-      loading="lazy"
-      decoding="async"
-      style={box}
-      className={cn('inline-block shrink-0 rounded-full object-cover', className)}
-    />
   );
 }
 
@@ -91,7 +119,7 @@ export function FaceStack({
   wave = false,
   className,
 }: {
-  /** `shades`: this dad is coming, and wears the app's glasses to say so. */
+  /** `shades`: this dad is coming, and his glasses come DOWN to say so. */
   /** `arrived`: he has just come in, and his face says so, once. */
   people: {
     memberId: string;
@@ -135,19 +163,12 @@ export function FaceStack({
             memberId={p.memberId}
             name={p.name}
             version={p.version}
+            glasses={p.glasses}
+            wear={p.typing ? 'bob' : p.shades ? 'drop' : 'still'}
+            delay={p.shades && wave ? 150 + i * 110 : 0}
             size={size}
-            className={tint}
+            tint={tint}
           />
-          {p.typing ? (
-            <Glasses kind={p.glasses} className="face-shades face-typing" />
-          ) : p.shades ? (
-            <Glasses
-              kind={p.glasses}
-              drop
-              delay={wave ? 150 + i * 110 : 0}
-              className="face-shades"
-            />
-          ) : null}
         </span>
       ))}
       {rest > 0 ? (

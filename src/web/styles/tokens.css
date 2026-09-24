@@ -1732,7 +1732,7 @@
     animation: dads-bob 900ms ease-in-out infinite;
   }
 
-  /* Shades on a face in "who's coming": a dad who is in has them on. */
+  /* His glasses, on his face wherever it appears (`Face`). */
   .face-shades {
     position: absolute;
     left: 8%;

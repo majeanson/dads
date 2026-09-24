@@ -242,13 +242,29 @@ test('a dad chooses his glasses, and they stay his', async ({ page }) => {
 
   // Not optimistic: the pair is his when the room has it, and every screen
   // hears it the same way — including this one.
+  // His face has the shades on before he chooses anything: they are part of
+  // every face, not a sign he is coming.
+  const worn = page.getByTestId('you').locator('.face-shades');
+  await expect(worn).toHaveAttribute('data-glasses', 'shades');
+
   await picker.getByTestId('glasses-aviators').click();
   await page.getByTestId('glasses-open').click();
   await expect(picker.getByTestId('glasses-aviators')).toHaveAttribute('aria-pressed', 'true');
+  // And the pair he chose is ON him — choosing that changed nothing on his
+  // face read as choosing that did nothing.
+  await expect(worn).toHaveAttribute('data-glasses', 'aviators');
 
   await page.reload();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByTestId('glasses-open').click();
   await expect(page.getByTestId('glasses-aviators')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+
+  // Beside what he says, too.
+  await talk(page);
+  await page.getByLabel('Say something').fill('new frames tonight');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const line = page.getByTestId('line').filter({ hasText: 'new frames tonight' });
+  await expect(line.locator('.face-shades')).toHaveAttribute('data-glasses', 'aviators');
 });

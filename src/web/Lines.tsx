@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { Attachment as MessageAttachment, RoomMessage } from '../shared/protocol';
+import type { Attachment as MessageAttachment, GlassesKind, RoomMessage } from '../shared/protocol';
 import { parts, shortLink } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
@@ -13,6 +13,22 @@ import { LineMenu, menuOpen, notATap } from './ui/LineMenu';
 
 function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+/**
+ * The marks a tap opens under a line keep themselves on the screen. Tapping
+ * the LAST line — the one a man at the bottom is most likely to answer —
+ * opened the row below the fold, and "+" grew it further down still. So the
+ * list scrolls just enough to show all of it, when it opens and whenever it
+ * grows; `nearest` does nothing when it is already in view.
+ */
+function inView(el: HTMLElement | null) {
+  if (!el) return;
+  const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const show = () => el.scrollIntoView({ block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+  const watch = new ResizeObserver(show);
+  watch.observe(el);
+  return () => watch.disconnect();
 }
 
 /**
@@ -32,6 +48,7 @@ export function Lines({
   bottom,
   newMark,
   faceOf,
+  glassesOf,
   nameOf,
   onReact,
   onRetract,
@@ -51,6 +68,7 @@ export function Lines({
   /** The "new since you were here" divider, so the list can land on it. */
   newMark: RefObject<HTMLLIElement | null>;
   faceOf: (memberId: string | null) => number | undefined;
+  glassesOf: (memberId: string) => GlassesKind | undefined;
   nameOf: (memberId: string) => string;
   onReact: (id: string, emoji: string, on: boolean) => void;
   onRetract: (id: string) => void;
@@ -174,6 +192,7 @@ export function Lines({
                   memberId={row.message.memberId}
                   name={row.message.name}
                   version={faceOf(row.message.memberId)}
+                  glasses={glassesOf(row.message.memberId)}
                   size={32}
                 />
               ) : null}
@@ -233,7 +252,7 @@ export function Lines({
                   onToggle={(emoji, on) => onReact(row.message.id, emoji, on)}
                 />
                 {marking === row.message.id ? (
-                  <span className="line-marks motion-rise" data-testid="tap-marks">
+                  <span ref={inView} className="line-marks motion-rise" data-testid="tap-marks">
                     <MarkRow
                       mine={marksOf(row.message, you)}
                       onReact={(emoji, on) => {

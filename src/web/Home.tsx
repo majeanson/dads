@@ -218,7 +218,7 @@ export function Home({
 
   /** The night is on right now, which is the one moment the mark nods. */
   const live = night !== null && currentWindow(night, now) !== null;
-  // The ones coming wear the glasses; the maybes do not, yet.
+  // Everybody wears his glasses; the ones coming have them come DOWN.
   const faces = [...coming, ...might].map((a) => ({
     memberId: a.memberId,
     name: a.name,

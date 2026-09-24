@@ -490,7 +490,7 @@ test('a mouse gets a button for a mark, and a double tap is a thumb', async ({ b
 
 test('on a phone, one tap on a line puts the marks under it', async ({ browser }) => {
   // A thumb, not a mouse: the pointer is coarse, so a tap on the words opens
-  // the five and a tap on one of them is the choice. The long press is still
+  // the six and a tap on one of them is the choice. The long press is still
   // there; this is the way in a man finds without being told.
   const context = await browser.newContext({ ...devices['iPhone 13'] });
   const page = await context.newPage();
@@ -530,6 +530,53 @@ test('on a phone, one tap on a line puts the marks under it', async ({ browser }
   await line.locator('.body').tap();
   await expect(line.getByTestId('tap-marks').getByTestId('react-🔥')).toBeVisible();
   await expect(line.getByTestId('react-all')).toHaveCount(0);
+
+  await context.close();
+});
+
+test('on a phone, the marks under the last line scroll into sight', async ({ browser }) => {
+  // The last line is the one a man at the bottom answers, and its row opened
+  // below the fold — "+" took it further down still. `toBeVisible` does not
+  // care about the viewport and a tap scrolls by itself, so this measures the
+  // row against the list the way his eyes would.
+  const context = await browser.newContext({ ...devices['iPhone 13'] });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill('Lars Last');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
+
+  // A conversation long enough to scroll, so the last line sits on the fold.
+  for (let i = 1; i <= 14; i++) {
+    const words = `filler line ${String(i).padStart(2, '0')} of a long evening`;
+    await page.getByLabel('Say something').fill(words);
+    await page.getByRole('button', { name: 'Send' }).click();
+    await expect(page.getByTestId('line').filter({ hasText: words })).toBeVisible();
+  }
+
+  await page.getByLabel('Say something').fill('the very last line');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const line = page.getByTestId('line').filter({ hasText: 'the very last line' });
+  await expect(line).toBeVisible();
+  // The keyboard is not part of the question.
+  await page.getByLabel('Say something').blur();
+
+  const below = (testId: string) =>
+    page.evaluate((id) => {
+      const list = document.querySelector('ol.lines')!.getBoundingClientRect();
+      const el = [...document.querySelectorAll(`[data-testid="${id}"]`)].at(-1)!;
+      return Math.round(el.getBoundingClientRect().bottom - list.bottom);
+    }, testId);
+
+  await line.locator('.body').tap();
+  await expect(line.getByTestId('tap-marks')).toBeVisible();
+  await expect.poll(() => below('tap-marks')).toBeLessThanOrEqual(0);
+
+  await line.getByTestId('react-more').tap();
+  await expect(line.getByTestId('react-all')).toBeVisible();
+  await expect.poll(() => below('react-all')).toBeLessThanOrEqual(0);
 
   await context.close();
 });
@@ -698,8 +745,10 @@ test('every mark is reachable wherever on the line he presses', async ({ browser
   const line = page.getByTestId('line').filter({ hasText: 'pressed at the edge' });
   await expect(line).toBeVisible();
 
+  // Pressed relative to the line, so Playwright waits for it to hold still:
+  // a long list is still settling at the bottom when the line first shows.
   const box = (await line.boundingBox())!;
-  await page.mouse.click(box.x + box.width - 6, box.y + 10, { button: 'right' });
+  await line.click({ button: 'right', position: { x: box.width - 6, y: 10 } });
   await expect(page.getByTestId('line-menu')).toBeVisible();
 
   for (const id of ['👍', '❤️', '😂', '💪', '🙏', '😎', 'more']) {

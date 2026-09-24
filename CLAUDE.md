@@ -166,6 +166,11 @@ weakening `sessionSecret()`.
   The double tap is retired on a phone — the first tap of it would open the
   row — and stays as a double CLICK for a mouse, where a single click is a man
   selecting text. A mark vibrates (`buzz.ts`) where Android lets it.
+  **The row scrolls itself into sight** (2026-09-24, `inView` in `Lines`):
+  the last line is the one a man at the bottom answers, and its row opened
+  under the fold, "+" further still. It keeps itself on screen when it opens
+  and whenever it grows. The e2e fills the list first — with a short list
+  the row was 4px under and the rise animation hid it.
 - **A reply carries a SNAPSHOT, not a reference** (migration 0017,
   `messages.reply` and `tail.reply` as JSON `{id, name, body}`). The original
   may scroll out of the backfill, be taken back or be changed afterwards, and
@@ -681,8 +686,13 @@ the screen knew something and did not say it.
   - **Going back is just going back.** No animation: the way in is the
     moment, and the way out was one more thing to sit through. The reverse
     zoom (a view transition, `lens.ts`) was built and removed on request.
-  - **A dad who is in wears them**: his face in home's stack has the glasses
-    dropped on it. A maybe does not, yet.
+  - **Every face wears his glasses, everywhere** (2026-09-24): `Face` draws
+    them itself — home, the header, the conversation, the roster, the week,
+    Find and Settings. They used to appear only while he was in or typing,
+    and a man who chose aviators and saw nothing change thought choosing had
+    done nothing. What was a SIGN is now a MOTION on top: a dad who is in has
+    them come down (`wear="drop"`), a dad typing has them bob. The svg
+    carries `data-glasses` so an e2e can ask which pair is on.
   - **And they are HIS pair** (2026-09-23, migration 0020): shades, aviators,
     round, square, 3D or ski goggles, chosen from one button beside "Add a face" in Settings that opens
     the six (`GlassesPicker`) — a row of all six cost the sheet 91px and ran
