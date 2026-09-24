@@ -385,6 +385,9 @@ export class RoomDO extends DurableObject<Env> {
       // Only for a resume. A fresh load is backfilled from a tail the line is
       // already out of, so there is nothing on that screen to take back.
       gone: resuming ? this.retractedSince() : [],
+      // The same for a line changed rather than taken back. Lines after
+      // `after` are in the backfill with their new words already.
+      edited: resuming ? this.editedSince(after) : [],
     };
     server.send(JSON.stringify(hello));
 
@@ -1259,6 +1262,24 @@ export class RoomDO extends DurableObject<Env> {
       console.error('members failed', err);
       return [];
     }
+  }
+
+  /**
+   * Lines at or before `after` whose words changed in the last day, for a
+   * socket resuming where it left off. From the tail, which holds the current
+   * words; a line edited after it left the tail is one nobody resuming holds.
+   * The same day as `retracted`, and for the same reason: a resume only ever
+   * happens after a gap of seconds or minutes, not days.
+   */
+  private editedSince(after: number): { id: string; body: string; editedAt: number }[] {
+    return this.ctx.storage.sql
+      .exec<{ id: string; body: string; edited_at: number }>(
+        'SELECT id, body, edited_at FROM tail WHERE seq <= ? AND edited_at >= ?',
+        after,
+        Date.now() - RETRACTED_MEMORY_MS,
+      )
+      .toArray()
+      .map((r) => ({ id: r.id, body: r.body, editedAt: r.edited_at }));
   }
 
   /** Everything taken back recently, for a socket resuming where it left off. */

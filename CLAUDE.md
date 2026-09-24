@@ -199,15 +199,22 @@ weakening `sessionSecret()`.
   looking at the old words with his new ones gone. The edit waits
   `ACK_GRACE_MS` for its own line; unanswered, he keeps what he typed, the
   composer says so, and pressing Send again is the whole retry. `edited_at` is the one fact kept; the words before it are not.
-  **A socket that resumed rather than reloaded is not told about an edit it
-  missed** — the backfill is by seq, and an edit does not move a line's seq.
-  A reload gets the tail, which has the new words. Rare enough to leave, and
-  written down here so it is not a mystery.
+  **A socket that resumes is told about the edits it missed** (2026-09-24,
+  `hello.edited`, beside `hello.gone`). The backfill is by seq and an edit
+  does not move a line's seq, so a phone that resumed after a dead spot —
+  far more common than a reload — kept showing the old words. The room reads
+  the tail's current words for lines at or before `after` edited in the last
+  day, the same window as `retracted`, with no table of its own. A reload
+  needs none of it: the tail has the new words.
 - **Reply and Edit are the composer's state, held in `Room`**, never both at
   once: the line menu sets one and clears the other, the composer shows a
-  strip above the field saying which, Escape or the X clears it, and the
-  focus call is deferred a tick because Radix hands focus back to the line
-  when its menu closes and would land on top of it.
+  strip above the field saying which, and Escape or the X clears it.
+  **They run once the menu has closed** (`onCloseAutoFocus` in `LineMenu`,
+  2026-09-24), in place of Radix handing focus back to the line. They used
+  to run on select and focus the field a tick later — a race with the menu's
+  focus trap on one side and its hand-back after the exit animation on the
+  other, and on a loaded machine the caret ended on the line for good (a
+  flaky reply e2e). No timer: nothing is left to race.
 - **On a phone, a long press is the menu and nothing else; a tap is the
   line's one thing** (2026-09-23). Three things fought the menu and are gone:
   the phone's own text selection (the loupe, the handles, a "Copy | Look up"

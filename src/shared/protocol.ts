@@ -245,6 +245,13 @@ export type ServerFrame =
        * everyone else has lost them. Empty on a fresh load.
        */
       gone: string[];
+      /**
+       * Lines CHANGED while this socket was away, at or before its `after` —
+       * the backfill is by seq and an edit does not move one, so a resume
+       * would otherwise keep showing the old words. Empty on a fresh load,
+       * whose backfill already has the new ones.
+       */
+      edited: { id: string; body: string; editedAt: number }[];
     }
   | { t: 'roster'; roster: RosterEntry[] }
   /** One dad's name or face changed. Distinct from `roster`, which is about

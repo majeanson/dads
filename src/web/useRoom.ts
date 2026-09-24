@@ -267,6 +267,9 @@ export function useRoom(
           // A socket that resumed rather than reloaded is still holding lines
           // the room has lost. `gone` is how it finds out.
           const lost = new Set(frame.gone ?? []);
+          // And lines whose words changed, which a backfill by seq never
+          // mentions because an edit does not move a line's seq.
+          const changed = new Map((frame.edited ?? []).map((e) => [e.id, e]));
           setState((s) => ({
             ...s,
             connection: 'open',
@@ -275,7 +278,10 @@ export function useRoom(
             members: frame.members ?? s.members,
             call: frame.call,
             messages: merge(
-              lost.size === 0 ? s.messages : without(s.messages, lost),
+              (lost.size === 0 ? s.messages : without(s.messages, lost)).map((m) => {
+                const e = changed.get(m.id);
+                return e ? { ...m, body: e.body, editedAt: e.editedAt } : m;
+              }),
               frame.messages,
             ),
           }));

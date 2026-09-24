@@ -549,6 +549,36 @@ describe('RoomDO', () => {
       // would have needed nothing, because the tail no longer has it.
       expect(hello.gone).toContain(posted.message.id);
     });
+
+    it('tells a socket that resumed about a line changed while it was away', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      marc.say('see you at eight');
+      const posted = await marc.next('msg', (f) => f.message.body === 'see you at eight');
+
+      const sam = await enter(group, 'Sam');
+      await sam.next('hello');
+      const at = posted.message.seq;
+      sam.close();
+      await new Promise((r) => setTimeout(r, 30));
+
+      marc.edit(posted.message.id, 'see you at nine');
+      await marc.next('edited', (f) => f.id === posted.message.id);
+
+      // Backfill is by seq and an edit does not move a line's seq, so the
+      // resume would never mention it. `edited` on the hello is how it does.
+      const back = await enter(group, 'Sam', sam.cookie, at);
+      open.push(back);
+      const hello = await back.next('hello');
+      expect(hello.edited).toEqual([
+        { id: posted.message.id, body: 'see you at nine', editedAt: expect.any(Number) },
+      ]);
+
+      // A fresh load gets the new words in the backfill and needs none of it.
+      const fresh = await enter(group, 'Sam', sam.cookie);
+      open.push(fresh);
+      expect((await fresh.next('hello')).edited).toEqual([]);
+    });
   });
   describe('marks on a line', () => {
     it('is one tap, shared with everyone, and pressing it again takes it off', async () => {
