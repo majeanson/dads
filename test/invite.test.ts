@@ -77,6 +77,29 @@ describe('an invite link', () => {
     expect(results).toHaveLength(1);
   });
 
+  it('remembers the language it was sent in, and nothing that is not one', async () => {
+    const { cookie } = await inviteLink();
+    const send = (lang: unknown) =>
+      worker.fetch(
+        new Request('https://dads.test/api/invite', {
+          method: 'POST',
+          headers: { cookie, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lang }),
+        }),
+      );
+    const langs = async () =>
+      (
+        await env.DB.prepare('SELECT lang FROM invites ORDER BY created_at').all<{
+          lang: string | null;
+        }>()
+      ).results.map((r) => r.lang);
+
+    expect((await send('fr')).status).toBe(200);
+    expect((await send('klingon')).status).toBe(200);
+    // The one minted with no body at all, then French, then no language.
+    expect(await langs()).toEqual([null, 'fr', null]);
+  });
+
   it('cannot be minted by somebody who is not in the room', async () => {
     const res = await worker.fetch(new Request('https://dads.test/api/invite', { method: 'POST' }));
     expect(res.status).toBe(401);

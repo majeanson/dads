@@ -54,3 +54,40 @@ test('a dad sends a link, and the man who follows it never sees the code', async
   await first.close();
   await second.close();
 });
+
+test('a link sent in French unfurls in French, and opens a French door', async ({ browser }) => {
+  // The preview speaks the sender's language, not both — and his friend,
+  // on a phone that has never chosen and is set to English, lands on the
+  // door in the same language the link was sent in.
+  const first = await browser.newContext({ locale: 'fr-CA' });
+  const luc = await first.newPage();
+  await luc.goto('/');
+  await luc.getByRole('button', { name: 'FR', exact: true }).click();
+  await luc.getByLabel('Code').fill(E2E_INVITE_GROUP.code);
+  await luc.getByLabel('Ton nom').fill('Luc Invite');
+  await luc.getByRole('button', { name: 'Entre' }).click();
+  await expect(luc.getByTestId('connection')).toBeVisible();
+  await home(luc);
+  await luc.getByRole('button', { name: /Invite un chum/ }).click();
+  const link = await luc.getByTestId('invite-link').inputValue();
+
+  const unfurled = await (await first.request.get(link)).text();
+  expect(unfurled).toContain('T’es invité.');
+  expect(unfurled).not.toContain('invited');
+  expect(unfurled).toContain('/og-fr.png');
+  expect(unfurled).toMatch(/<html[^>]* lang="fr"/);
+
+  const second = await browser.newContext({ locale: 'en-US' });
+  const guy = await second.newPage();
+  await guy.goto(link);
+  await expect(guy.getByLabel('Ton nom')).toBeVisible();
+  // And it stays his language once he is in, reload and all.
+  await guy.getByLabel('Ton nom').fill('Guy Invite');
+  await guy.getByRole('button', { name: 'Entre' }).click();
+  await expect(guy.getByTestId('connection')).toBeVisible();
+  await guy.reload();
+  await expect(guy.getByTestId('home-go')).toContainText('Va jaser');
+
+  await first.close();
+  await second.close();
+});

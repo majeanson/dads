@@ -83,6 +83,15 @@ weakening `sessionSecret()`.
   is in the URL, and it sets the two `_headers` headers itself — the assets
   binding does not add them to a response the Worker hands back. The share
   sheet sends a line with the link (`inv.share_text`).
+  **An invite speaks the language it was sent in** (migration 0023,
+  `invites.lang`): the sheet mints with his language, and again if he
+  switches with it open. The preview is then in that language only, with
+  `og-fr.png` for French, and the page is marked `data-invite-lang` so a
+  friend on a phone that never chose lands on the door in the sender's
+  language — and keeps it, because `preferredLang` saves it the moment it is
+  used; the hint is on that one page and the next load would otherwise go
+  back to the phone. Links minted before 0023 carry NULL and keep the
+  bilingual line. A saved choice on the device always wins.
 
 ## The room (M2)
 

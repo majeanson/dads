@@ -13,13 +13,29 @@ export {
 
 const STORAGE = 'dads.lang';
 
-/** What the browser is set to, unless this device has already chosen. */
+/**
+ * What this device chose; failing that, the language of the invite he
+ * followed (the Worker marks the page with the sender's); failing that, what
+ * the browser is set to. A friend sent a French link lands on a French door
+ * whatever his phone says, and the toggle is still in the corner.
+ */
 export function preferredLang(): Lang {
   try {
     const saved = localStorage.getItem(STORAGE);
     if (saved === 'en' || saved === 'fr') return saved;
   } catch {
     // A browser that refuses storage still gets a language.
+  }
+  const invited = document.documentElement.dataset.inviteLang;
+  if (invited === 'en' || invited === 'fr') {
+    // Kept, as if he had pressed it: the hint is on this one page, and the
+    // next load of the app would otherwise go back to the phone's language.
+    try {
+      localStorage.setItem(STORAGE, invited);
+    } catch {
+      // Not remembered; this load still speaks it.
+    }
+    return invited;
   }
   const wanted = navigator.languages ?? [navigator.language];
   return wanted.some((l) => l?.toLowerCase().startsWith('fr')) ? 'fr' : 'en';

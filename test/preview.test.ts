@@ -20,6 +20,22 @@ describe('the preview an invite link unfurls to', () => {
     expect(html).toContain('<meta property="og:image" content="https://dads.test/og.png" />');
   });
 
+  it('speaks only the language it was sent in', () => {
+    const fr = previewTags(url, room, 'fr').html;
+    expect(fr).toContain('T’es invité. Soirée de gars : les jeudis à 21:00.');
+    expect(fr).toContain('/og-fr.png');
+    expect(fr).not.toContain('invited');
+
+    const en = previewTags(url, room, 'en').html;
+    expect(en).toContain('You’re invited. Dad night: Thursdays at 21:00.');
+    expect(en).toContain('/og.png');
+    expect(en).not.toContain('jeudis');
+
+    // With no night to come, the plain line in its own language.
+    const plain = previewTags(url, { ...room, dad_night_weekday: null }, 'fr').html;
+    expect(plain).toContain('T’es invité. Rentre dire allô.');
+  });
+
   it('says nothing about a night that has been and gone', () => {
     const { html } = previewTags(url, { ...room, dad_night_date: '2020-01-02' });
     expect(html).not.toContain('Dad night:');

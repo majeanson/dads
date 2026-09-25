@@ -27,6 +27,11 @@ export async function createInvite(
   const session = await currentSession(request, env, isProduction);
   if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 });
 
+  // The sender's language, if he said: the link's preview speaks it. Anything
+  // but the two this app has is no language at all.
+  const body = (await request.json().catch(() => ({}))) as { lang?: unknown };
+  const lang = body.lang === 'en' || body.lang === 'fr' ? body.lang : null;
+
   const now = Date.now();
   const token = randomToken();
   const hash = await hashInviteToken(sessionSecret(env, isProduction), token);
@@ -37,10 +42,10 @@ export async function createInvite(
     .run();
 
   await env.DB.prepare(
-    `INSERT INTO invites (id, group_id, token_hash, created_by, created_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO invites (id, group_id, token_hash, created_by, created_at, expires_at, lang)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   )
-    .bind(newId('inv'), session.group.id, hash, session.member.id, now, now + INVITE_TTL_MS)
+    .bind(newId('inv'), session.group.id, hash, session.member.id, now, now + INVITE_TTL_MS, lang)
     .run();
 
   return Response.json({ token, expiresAt: now + INVITE_TTL_MS });
@@ -58,12 +63,26 @@ export async function groupIdForInvite(
   isProduction: boolean,
   now = Date.now(),
 ): Promise<string | null> {
+  return (await inviteFor(env, token, isProduction, now))?.groupId ?? null;
+}
+
+/** A live invite: the group it opens, and the language it was sent in. */
+export async function inviteFor(
+  env: Env,
+  token: string,
+  isProduction: boolean,
+  now = Date.now(),
+): Promise<{ groupId: string; lang: 'en' | 'fr' | null } | null> {
   if (!/^[A-Za-z0-9_-]{32,}$/.test(token)) return null;
   const hash = await hashInviteToken(sessionSecret(env, isProduction), token);
   const row = await env.DB.prepare(
-    'SELECT group_id FROM invites WHERE token_hash = ? AND expires_at > ?',
+    'SELECT group_id, lang FROM invites WHERE token_hash = ? AND expires_at > ?',
   )
     .bind(hash, now)
-    .first<{ group_id: string }>();
-  return row?.group_id ?? null;
+    .first<{ group_id: string; lang: string | null }>();
+  if (row === null) return null;
+  return {
+    groupId: row.group_id,
+    lang: row.lang === 'en' || row.lang === 'fr' ? row.lang : null,
+  };
 }

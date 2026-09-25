@@ -17,7 +17,7 @@ import { FIELD } from './ui/field';
  * nothing sitting in this app waiting to be read off a shoulder.
  */
 export function Invite() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [link, setLink] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -27,15 +27,17 @@ export function Invite() {
   const copiedFor = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(copiedFor.current), []);
 
+  // In his language, and minted again if he changes it with the sheet open:
+  // the link's preview speaks the language it was made in.
   useEffect(() => {
     let cancelled = false;
-    createInvite()
+    createInvite(lang)
       .then((i) => !cancelled && setLink(i.url))
       .catch(() => !cancelled && setFailed(true));
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lang]);
 
   async function copy() {
     if (link === null) return;

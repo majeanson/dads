@@ -1,8 +1,8 @@
 import { stillToCome } from '../../shared/dadNight';
-import { nightWhen } from '../../shared/dictionary';
+import { nightWhen, translator, type Lang } from '../../shared/dictionary';
 import type { Env } from '../env';
 import { nightFrom } from './auth';
-import { groupIdForInvite } from './invite';
+import { inviteFor } from './invite';
 
 /**
  * GET /i/<token> — the app's own page, with a link preview on it.
@@ -32,7 +32,9 @@ export async function invitePage(
   isProduction: boolean,
 ): Promise<Response> {
   const token = url.pathname.slice('/i/'.length);
-  const groupId = await groupIdForInvite(env, token, isProduction).catch(() => null);
+  const invite = await inviteFor(env, token, isProduction).catch(() => null);
+  const groupId = invite?.groupId ?? null;
+  const lang = invite?.lang ?? null;
   const group =
     groupId === null
       ? null
@@ -52,7 +54,7 @@ export async function invitePage(
   const shell = await env.ASSETS.fetch(
     new Request(new URL('/', url), { headers: request.headers }),
   );
-  const tags = previewTags(url, group);
+  const tags = previewTags(url, group, lang);
 
   // The shell carries the site's own preview, and a crawler reads the FIRST
   // og:title it meets — so those come out before these go in, or every
@@ -66,6 +68,15 @@ export async function invitePage(
     .on('meta[property^="og:"]', drop)
     .on('meta[name="twitter:card"]', drop)
     .on('meta[name="description"]', drop)
+    // The page speaks the invite's language too: a friend on a phone that has
+    // never chosen one lands on the door in the sender's (`preferredLang`).
+    .on('html', {
+      element(el) {
+        if (lang === null) return;
+        el.setAttribute('lang', lang);
+        el.setAttribute('data-invite-lang', lang);
+      },
+    })
     .on('title', {
       element(el) {
         el.setInnerContent(tags.title);
@@ -100,9 +111,12 @@ export function previewTags(
     dad_night_date: string | null;
     dad_night_tz: string;
   } | null,
+  /** The language it was sent in; null for a link minted before invites
+   * carried one, which says it in both. */
+  lang: Lang | null = null,
   now = Date.now(),
 ): { title: string; html: string } {
-  const image = `${url.origin}/og.png`;
+  const image = `${url.origin}/${lang === 'fr' ? 'og-fr.png' : 'og.png'}`;
   if (group === null) {
     return {
       title: 'dads',
@@ -114,19 +128,18 @@ export function previewTags(
     };
   }
   const night = nightFrom(group);
-  const when =
-    night !== null && stillToCome(night, now)
-      ? `${nightWhen('en', night)} · ${nightWhen('fr', night)}`
-      : null;
+  const coming = night !== null && stillToCome(night, now) ? night : null;
+  const description =
+    lang === null
+      ? coming
+        ? `You’re invited. Dad night: ${nightWhen('en', coming)} · ${nightWhen('fr', coming)}.`
+        : 'You’re invited. Come in and say hi. · T’es invité.'
+      : coming
+        ? translator(lang)('inv.preview_night', { when: nightWhen(lang, coming) })
+        : translator(lang)('inv.preview_plain');
   return {
     title: `${group.name} — dads`,
-    html: tagsFor({
-      title: group.name,
-      description: when
-        ? `You’re invited. Dad night: ${when}.`
-        : 'You’re invited. Come in and say hi. · T’es invité.',
-      image,
-    }),
+    html: tagsFor({ title: group.name, description, image }),
   };
 }
 

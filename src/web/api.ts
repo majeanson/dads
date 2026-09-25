@@ -132,8 +132,13 @@ export async function createRoom(
  * comes back once and is never stored here: the link IS the secret, and the
  * place for it is his messages app, not our localStorage.
  */
-export async function createInvite(): Promise<{ url: string; expiresAt: number }> {
-  const res = await fetch('/api/invite', { method: 'POST' });
+export async function createInvite(lang: 'en' | 'fr'): Promise<{ url: string; expiresAt: number }> {
+  // His language goes with it: the link's preview speaks it.
+  const res = await fetch('/api/invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lang }),
+  });
   if (!res.ok) throw new Error(`POST /api/invite ${res.status}`);
   const body = (await res.json()) as { token: string; expiresAt: number };
   return { url: `${location.origin}/i/${body.token}`, expiresAt: body.expiresAt };
