@@ -112,7 +112,9 @@ export type TableEvent =
   | { v: 1; t: 'seated'; name: string }
   | { v: 1; t: 'left'; name: string }
   | { v: 1; t: 'game-started' }
-  | { v: 1; t: 'game-over'; summary: string }
+  /** `winners`: the human names on the winning team (jaffre 2026-09-24).
+   * Optional — an older jaffre sends only the summary, and crowns nobody. */
+  | { v: 1; t: 'game-over'; summary: string; winners?: string[] }
   // The quiet seats (2026-09-11). Still v: 1 — adding a kind breaks nobody,
   // because an unknown kind has always been dropped.
   /** A sitting player has let his turn go; the bot plays it in `seconds`. */
@@ -164,7 +166,19 @@ export function parseTableEvent(data: unknown): TableEvent | null {
     }
     case 'game-over': {
       const summary = text(frame.summary);
-      return summary ? { v: 1, t: 'game-over', summary } : null;
+      if (!summary) return null;
+      // Four seats, so four names at most; anything that is not a name is
+      // dropped rather than refusing the whole event.
+      const raw = (frame as { winners?: unknown }).winners;
+      if (!Array.isArray(raw)) return { v: 1, t: 'game-over', summary };
+      // Bounded before it is read, so a long list costs nothing; then the
+      // names, and four of those.
+      const winners = raw
+        .slice(0, 16)
+        .map(text)
+        .filter((n): n is string => n !== null)
+        .slice(0, 4);
+      return { v: 1, t: 'game-over', summary, winners };
     }
     case 'turn':
     case 'away': {

@@ -81,6 +81,8 @@
   --dad-4: #8a5a00;
   --dad-5: #1d5f8a;
   --dad-6: #a02d6b;
+  /* A champion's glasses: whoever won the last game at the table. */
+  --gold: #9c6d00;
 
   --radius: 4px;
   /* The one place the app is not square: home's card and the two controls on
@@ -112,6 +114,8 @@
     --dad-4: #f0c46a;
     --dad-5: #8cc8f0;
     --dad-6: #f59ac8;
+    /* A champion's glasses: whoever won the last game at the table. */
+    --gold: #f2c14e;
   }
 }
 
@@ -135,6 +139,8 @@
   --dad-4: #8a5a00;
   --dad-5: #1d5f8a;
   --dad-6: #a02d6b;
+  /* A champion's glasses: whoever won the last game at the table. */
+  --gold: #9c6d00;
 
   color-scheme: light;
 }
@@ -155,6 +161,8 @@
   --dad-4: #f0c46a;
   --dad-5: #8cc8f0;
   --dad-6: #f59ac8;
+  /* A champion's glasses: whoever won the last game at the table. */
+  --gold: #f2c14e;
 
   color-scheme: dark;
 }
@@ -1741,6 +1749,12 @@
     height: auto;
     color: var(--text);
     /* The halo is drawn inside the svg (`Glasses halo`), not filtered on. */
+  }
+
+  /* He won the last game at the table: his pair is gold, whichever pair it
+     is, until the next game ends (`useCrowned`). The halo still rims it. */
+  .face-champion {
+    color: var(--gold);
   }
 
   /* A dad with no photograph: his colour (`--dad`, set by `Face`), mixed into

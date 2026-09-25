@@ -367,3 +367,44 @@ test('a dad chooses his glasses, and they stay his', async ({ page }) => {
   const line = page.getByTestId('line').filter({ hasText: 'new frames tonight' });
   await expect(line.locator('.face-shades')).toHaveAttribute('data-glasses', 'aviators');
 });
+
+test('whoever won the last game wears gold, and the roster says so', async ({ page }) => {
+  // The frame the table relays when a game ends, sent the way a framed dad's
+  // browser sends it — over the room's socket — because a real jaffre cannot
+  // be framed here. The bridge itself is jaffre's embed test and dads' parse.
+  await comeIn(page, 'Zed Winner');
+  await talk(page);
+  await page.getByLabel('Say something').fill('good game all');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const line = page.getByTestId('line').filter({ hasText: 'good game all' });
+  await expect(line.locator('.face-shades')).not.toHaveClass(/face-champion/);
+
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        const ws = new WebSocket(`${location.origin.replace(/^http/, 'ws')}/ws`);
+        ws.onmessage = (e) => {
+          if (typeof e.data === 'string' && e.data.includes('"t":"hello"')) {
+            ws.send(
+              JSON.stringify({
+                t: 'table',
+                event: { v: 1, t: 'game-over', summary: '41–37, Sun win', winners: ['Zed Winner'] },
+              }),
+            );
+            setTimeout(() => {
+              ws.close();
+              resolve();
+            }, 300);
+          }
+        };
+      }),
+  );
+
+  // Gold, on every face of his: beside what he said, and in the header.
+  await expect(line.locator('.face-shades')).toHaveClass(/face-champion/);
+  // A screen reader cannot see a gold pair; the roster tells it.
+  await page.getByTestId('connection').click();
+  await expect(page.getByTestId('roster-entry').filter({ hasText: 'Zed Winner' })).toContainText(
+    'who won the last game',
+  );
+});

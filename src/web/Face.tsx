@@ -3,7 +3,7 @@ import { dadVar } from './dadColour';
 import type { CSSProperties } from 'react';
 import type { GlassesFit, GlassesKind } from '../shared/protocol';
 import { Glasses } from './Logo';
-import { useMember } from './members';
+import { useCrowned, useMember } from './members';
 import { cn } from './ui/cn';
 
 /**
@@ -63,6 +63,8 @@ export function Face({
   className?: string;
 }) {
   const dad = useMember(memberId);
+  // He won the last game at the table: his pair is gold, whichever pair it is.
+  const crowned = useCrowned(memberId);
   const glasses = tryOn ?? dad?.glasses;
   const src = photo === false ? null : (photo ?? faceUrl(memberId, dad?.face));
   // Where the pair sits: only over a photograph (a face with none is drawn to
@@ -130,7 +132,7 @@ export function Face({
         delay={delay}
         halo
         style={placed}
-        className={cn('face-shades', wear === 'bob' && 'face-typing')}
+        className={cn('face-shades', wear === 'bob' && 'face-typing', crowned && 'face-champion')}
       />
     </span>
   );

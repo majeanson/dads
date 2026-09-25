@@ -48,6 +48,10 @@ const PAIRS = [
   ['border-strong', 'bg', 3.0, 'the border that makes a control findable'],
   ['border-strong', 'bg-soft', 3.0, 'that border on a panel'],
   ['accent', 'bg', 3.0, 'the focus ring'],
+  // A champion's glasses: graphics, not words, and rimmed by a halo — but a
+  // gold that vanished into the page would be a crown nobody could see.
+  ['gold', 'bg', 3.0, "a champion's glasses"],
+  ['gold', 'bg-soft', 3.0, "a champion's glasses on a panel"],
 ];
 
 /** Reported but not gating: decorative, and load-bearing for nobody. */
@@ -193,6 +197,7 @@ const COLOURS = [
   'dad-4',
   'dad-5',
   'dad-6',
+  'gold',
 ];
 
 for (const name of ['light', 'dark']) {

@@ -205,6 +205,25 @@ export function parseFit(value: unknown): GlassesFit | null {
   };
 }
 
+/**
+ * Who won the last game at the table, and when. Their glasses go gold on
+ * every face of theirs until the next game ends, or for CHAMPION_FOR_MS.
+ */
+export interface Champions {
+  ids: string[];
+  at: number;
+}
+
+/** A week: a crown from last Thursday's game, not last month's. */
+export const CHAMPION_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Whether a dad is wearing the crown right now. */
+export function isChampion(champions: Champions | null, memberId: string, now: number): boolean {
+  return (
+    champions !== null && now - champions.at < CHAMPION_FOR_MS && champions.ids.includes(memberId)
+  );
+}
+
 export interface RosterEntry {
   memberId: string;
   name: string;
@@ -304,7 +323,11 @@ export type ServerFrame =
       changed: LineState[];
       /** Pictures kept, let go, or pruned off the shelf (`kept: null`). */
       media: { mediaId: string; kept: boolean | null }[];
+      /** Who won the last game at the table, or null. */
+      champions: Champions | null;
     }
+  /** A game ended: who won it, which replaces whoever won the one before. */
+  | { t: 'champions'; champions: Champions | null }
   | { t: 'roster'; roster: RosterEntry[] }
   /** One dad's name or face changed. Distinct from `roster`, which is about
    * who is connected: this is about who he is, present or not. */

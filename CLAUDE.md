@@ -542,6 +542,21 @@ the screen knew something and did not say it.
   jaffre was handed on the way in, at most once every three minutes. A line
   in the room saying a man's turn has sat for twenty seconds, every hand,
   would be furniture.
+- **Whoever won the last game wears gold** (2026-09-24, migration 0022,
+  `groups.champions`). jaffre's `game-over` grew `winners` — the HUMAN
+  names on the winning team, bots left out (jaffre `c48042b`, `winnerNames`
+  in its embed.ts) — still `v: 1`, optional, so an older jaffre crowns
+  nobody and changes nothing. The room joins the names the way a turn
+  nudge does (`tableName`), stores `{ids, at}`, sends a `champions` frame
+  and puts it on the hello; `Face` paints that dad's pair in `--gold`,
+  whichever pair it is, until the next game ends — which replaces the
+  crown, or takes it off when no human won — or for a week
+  (`CHAMPION_FOR_MS`). Every framed dad relays the same game-over, so the
+  same crown inside a minute is dropped. The roster says it in words, sr-only,
+  because to a screen reader a face is decoration. The frame is trusted like
+  the turn nudge: a dad could crown himself by hand, and among five friends
+  that is a joke, not a threat. `--gold` is a token in all four blocks and
+  audited against the page at 3:1.
 - **`.table-frame` is a flex column, not grid rows.** With rows, the "isn't
   answering" notice took the stretchy row and the game got the leftover one
   — two thirds blank and the table squashed, on exactly the browsers that

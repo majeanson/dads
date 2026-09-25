@@ -147,6 +147,33 @@ describe('the bridge vocabulary', () => {
     });
   });
 
+  it('takes the winners of a game, four at most, and only names', () => {
+    expect(
+      parseTableEvent({ v: 1, t: 'game-over', summary: '41-37', winners: ['Marc', 'Sam'] }),
+    ).toEqual({ v: 1, t: 'game-over', summary: '41-37', winners: ['Marc', 'Sam'] });
+    // Anything that is not a name is dropped, not the whole event.
+    expect(
+      parseTableEvent({
+        v: 1,
+        t: 'game-over',
+        summary: '41-37',
+        winners: ['Marc', 42, '', '  ', null, 'Sam', 'Luc', 'Guy', 'Extra'],
+      }),
+    ).toEqual({
+      v: 1,
+      t: 'game-over',
+      summary: '41-37',
+      // The junk goes, and then four names: the fifth is the one cut.
+      winners: ['Marc', 'Sam', 'Luc', 'Guy'],
+    });
+    // Not a list at all: an older jaffre, or noise — the summary stands alone.
+    expect(parseTableEvent({ v: 1, t: 'game-over', summary: '41-37', winners: 'Marc' })).toEqual({
+      v: 1,
+      t: 'game-over',
+      summary: '41-37',
+    });
+  });
+
   it('drops anything else, including a wrong version', () => {
     for (const bad of [
       null,
@@ -344,6 +371,53 @@ describe('table events reaching the room', () => {
   afterEach(async () => {
     open.splice(0).forEach((d) => d.close());
     await settle();
+  });
+
+  it('crowns whoever won, once per game, until the next game ends', async () => {
+    const marc = await enter(group, 'Marc');
+    const sam = await enter(group, 'Sam');
+    open.push(marc, sam);
+    const ids = new Map(
+      (sam.frames.find((f) => f.t === 'hello') as Extract<ServerFrame, { t: 'hello' }>).members.map(
+        (m) => [m.name, m.memberId],
+      ),
+    );
+    const crowns = () =>
+      sam.frames.filter((f): f is Extract<ServerFrame, { t: 'champions' }> => f.t === 'champions');
+
+    // Every framed dad relays the same game-over: one crown.
+    marc.table({ v: 1, t: 'game-over', summary: '41-37', winners: ['Marc', 'Guest'] });
+    sam.table({ v: 1, t: 'game-over', summary: '41-37', winners: ['Marc', 'Guest'] });
+    await until(() => crowns().length === 1);
+    await sentinel(sam);
+    expect(crowns()).toHaveLength(1);
+    // A guest at the table is nobody here; the dad is crowned.
+    expect(crowns()[0]!.champions).toEqual({ ids: [ids.get('Marc')], at: expect.any(Number) });
+
+    // A phone that opens now is told on its hello.
+    const luc = await enter(group, 'Luc');
+    open.push(luc);
+    const hello = luc.frames.find((f) => f.t === 'hello') as Extract<ServerFrame, { t: 'hello' }>;
+    expect(hello.champions?.ids).toEqual([ids.get('Marc')]);
+
+    // An older jaffre, with no winners: nothing changes.
+    marc.table({ v: 1, t: 'game-over', summary: '12-41' });
+    await sentinel(sam);
+    expect(crowns()).toHaveLength(1);
+
+    // The next game ends: its winners replace the last ones...
+    marc.table({ v: 1, t: 'game-over', summary: '12-41', winners: ['Sam'] });
+    await until(() => crowns().length === 2);
+    expect(crowns()[1]!.champions?.ids).toEqual([ids.get('Sam')]);
+
+    // ...and a game no human won takes the crown off.
+    marc.table({ v: 1, t: 'game-over', summary: '20-41', winners: [] });
+    await until(() => crowns().length === 3);
+    expect(crowns()[2]!.champions).toBeNull();
+    const row = await env.DB.prepare('SELECT champions FROM groups WHERE id = ?')
+      .bind(group.id)
+      .first<{ champions: string | null }>();
+    expect(row?.champions).toBeNull();
   });
 
   it('says nothing in the room, whatever the table does', async () => {

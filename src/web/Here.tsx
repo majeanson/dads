@@ -1,9 +1,10 @@
 import { ChevronDown, ChevronRight, LogIn, LogOut, MicOff, Phone } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { CallMember } from '../shared/protocol';
+import { isChampion, type CallMember } from '../shared/protocol';
 import { fetchPresence, type PresenceEvent } from './api';
 import { Face } from './Face';
 import { useT } from './i18n';
+import { useChampions } from './members';
 
 /** Long enough to be free, short enough that a leave lands while you look. */
 const REFRESH_MS = 5_000;
@@ -50,6 +51,8 @@ export function Here({
   const [events, setEvents] = useState<PresenceEvent[] | null | 'loading'>('loading');
   const [showLog, setShowLog] = useState(false);
   const onCall = new Map(call.map((m) => [m.memberId, m]));
+  const champions = useChampions();
+  const crowned = (memberId: string) => isChampion(champions, memberId, Date.now());
 
   // Read again while it is open, because this is the one view whose whole
   // subject is people arriving and going. A dad leaves the room the moment his
@@ -92,6 +95,9 @@ export function Here({
                 <Face memberId={m.memberId} size={32} />
                 {m.name}
                 {m.you ? t('here.you') : ''}
+                {/* The gold pair says it on the face; this says it to a
+                    screen reader, for whom the face is decoration. */}
+                {crowned(m.memberId) ? <span className="sr-only">{t('here.champion')}</span> : null}
                 {c ? (
                   <span className="inline-flex items-center gap-1 text-muted">
                     {c.muted ? (

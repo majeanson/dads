@@ -5,6 +5,7 @@ import {
   type Attachment,
   parseClientFrame,
   type CallMember,
+  type Champions,
   type LineState,
   type RoomMessage,
   type RoomsOpen,
@@ -104,6 +105,9 @@ const CID_MEMORY_MS = 5 * 60_000;
  */
 const CHANGE_MEMORY_MS = 30 * 24 * 60 * 60 * 1000;
 const CHANGE_MEMORY_ROWS = 5000;
+
+/** Every framed dad relays the same game-over; one crown per game. */
+const CROWN_REPEAT_MS = 60_000;
 
 /** What changed: a line's words or marks, a line taken back, or a picture. */
 type ChangeKind = 'line' | 'gone' | 'media';
@@ -435,6 +439,7 @@ export class RoomDO extends DurableObject<Env> {
       gone: replay?.gone ?? [],
       changed: replay?.changed ?? [],
       media: replay?.media ?? [],
+      champions: await this.champions(),
     };
     server.send(JSON.stringify(hello));
 
@@ -529,6 +534,11 @@ export class RoomDO extends DurableObject<Env> {
       // sat for twenty seconds, so his phone hears about it. What the table
       // is doing is on the table, which is on the screen beside this.
       if (frame.event.t === 'turn') await this.nudgeTurn(frame.event.name);
+      // And one more (2026-09-24): a game that ends names who won it, and
+      // they wear gold glasses until the next one does.
+      if (frame.event.t === 'game-over' && frame.event.winners !== undefined) {
+        await this.crown(frame.event.winners);
+      }
       return;
     }
 
@@ -1058,6 +1068,72 @@ export class RoomDO extends DurableObject<Env> {
    * eviction forgetting it costs one extra nudge, and a table keeps its own
    * timers anyway. */
   private turnNudged = new Map<string, number>();
+
+  /** Who won the last game, from D1; null for a group nobody has won in. */
+  private async champions(): Promise<Champions | null> {
+    const groupId = this.groupId();
+    if (groupId === undefined) return null;
+    const row = await this.env.DB.prepare('SELECT champions FROM groups WHERE id = ?')
+      .bind(groupId)
+      .first<{ champions: string | null }>()
+      .catch(() => null);
+    if (!row?.champions) return null;
+    try {
+      const v = JSON.parse(row.champions) as Partial<Champions>;
+      return Array.isArray(v.ids) && typeof v.at === 'number'
+        ? { ids: v.ids.filter((id): id is string => typeof id === 'string'), at: v.at }
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Crown whoever won the game that just ended.
+   *
+   * Every framed dad relays the same game-over a few hundred milliseconds
+   * apart, so a crown for the same men inside a minute is the same game and
+   * is dropped. Names are joined the way a turn nudge joins them — as the
+   * table knows them, twenty characters — and a winner who is not a dad here
+   * (a guest at the table) crowns nobody. A game no human won still ends the
+   * last crown: "until the next game ends" is the whole rule.
+   *
+   * Trusts the frame like the turn nudge does: any dad's socket can send one,
+   * and a man who crowns himself by hand has earned it, among five friends.
+   */
+  private async crown(winners: string[]): Promise<void> {
+    const groupId = this.groupId();
+    if (groupId === undefined) return;
+    try {
+      const { results } = await this.env.DB.prepare(
+        'SELECT id, display_name FROM members WHERE group_id = ?',
+      )
+        .bind(groupId)
+        .all<{ id: string; display_name: string }>();
+      const names = new Set(winners);
+      const ids = results
+        .filter((m) => names.has(tableName(m.display_name)))
+        .map((m) => m.id)
+        .sort();
+      const now = Date.now();
+      const last = await this.champions();
+      if (
+        last !== null &&
+        now - last.at < CROWN_REPEAT_MS &&
+        last.ids.length === ids.length &&
+        last.ids.every((id, i) => id === ids[i])
+      ) {
+        return;
+      }
+      const champions: Champions | null = ids.length === 0 ? null : { ids, at: now };
+      await this.env.DB.prepare('UPDATE groups SET champions = ? WHERE id = ?')
+        .bind(champions === null ? null : JSON.stringify(champions), groupId)
+        .run();
+      this.broadcast({ t: 'champions', champions });
+    } catch (err) {
+      console.error('crown failed', { winners }, err);
+    }
+  }
 
   /**
    * Tell the man whose turn it is, on his phone, once.

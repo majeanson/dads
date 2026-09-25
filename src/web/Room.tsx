@@ -309,7 +309,7 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   }, [view, since, hasNew, unpin]);
 
   return (
-    <MembersProvider members={room.members}>
+    <MembersProvider members={room.members} champions={room.champions}>
       <main
         className="room"
         data-view={view}

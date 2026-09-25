@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DadNight } from '../shared/dadNight';
 import type { CallMember, RoomsOpen } from '../shared/protocol';
 import type { TableEvent } from '../shared/jaffre';
-import type { RoomMessage, RosterEntry, ServerFrame } from '../shared/protocol';
+import type { Champions, RoomMessage, RosterEntry, ServerFrame } from '../shared/protocol';
 
 export type Connection = 'connecting' | 'open' | 'reconnecting';
 
@@ -14,6 +14,8 @@ export interface RoomState {
    * roster is who is connected, and a line said on Tuesday by a man who is
    * not here tonight still wants his face beside it. */
   members: RosterEntry[];
+  /** Who won the last game at the table: their glasses are gold. */
+  champions: Champions | null;
   messages: RoomMessage[];
   /** memberId → name, of dads typing in the last few seconds. */
   typing: Map<string, string>;
@@ -107,6 +109,7 @@ export function useRoom(
     you: null,
     roster: [],
     members: [],
+    champions: null,
     messages: [],
     typing: new Map(),
     call: [],
@@ -332,6 +335,7 @@ export function useRoom(
             you: frame.you,
             roster: frame.roster,
             members: frame.members ?? s.members,
+            champions: frame.champions ?? null,
             call: frame.call,
             messages: replay === null ? frame.messages : merge(replay(s.messages), frame.messages),
           }));
@@ -389,6 +393,9 @@ export function useRoom(
           return;
         case 'owner':
           setState((s) => ({ ...s, createdBy: frame.createdBy }));
+          return;
+        case 'champions':
+          setState((s) => ({ ...s, champions: frame.champions }));
           return;
         case 'member':
           // Upsert rather than replace: this is one dad changing, and the

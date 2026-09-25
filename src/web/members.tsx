@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import type { RosterEntry } from '../shared/protocol';
+import { isChampion, type Champions, type RosterEntry } from '../shared/protocol';
 
 /**
  * Everyone in the group, for any face that needs to know what he looks like.
@@ -15,16 +15,35 @@ import type { RosterEntry } from '../shared/protocol';
  * tonight still has his face beside it.
  */
 const Members = createContext<ReadonlyMap<string, RosterEntry>>(new Map());
+/** Who won the last game at the table. Beside the members, for the same
+ * reason: any face anywhere may belong to one of them. */
+const Crowned = createContext<Champions | null>(null);
 
 export function MembersProvider({
   members,
+  champions = null,
   children,
 }: {
   members: RosterEntry[];
+  champions?: Champions | null;
   children: ReactNode;
 }) {
   const byId = useMemo(() => new Map(members.map((m) => [m.memberId, m])), [members]);
-  return <Members.Provider value={byId}>{children}</Members.Provider>;
+  return (
+    <Members.Provider value={byId}>
+      <Crowned.Provider value={champions}>{children}</Crowned.Provider>
+    </Members.Provider>
+  );
+}
+
+/** Who won the last game at the table, for a list that asks about several. */
+export function useChampions(): Champions | null {
+  return useContext(Crowned);
+}
+
+/** Whether this dad won the last game — and it was within the week. */
+export function useCrowned(memberId: string): boolean {
+  return isChampion(useContext(Crowned), memberId, Date.now());
 }
 
 /** One dad, or undefined for an id the room has not told us about. */
