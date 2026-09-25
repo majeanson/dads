@@ -71,7 +71,9 @@ weakening `sessionSecret()`.
   script, so the SPA shell said "dads" and nothing else at the one moment a
   friend decides whether to tap. `/i/*` is `run_worker_first` now:
   `routes/preview.ts` fetches the same `index.html` from the assets binding
-  and adds Open Graph tags with the room's name, its night if one is still to
+  and swaps the shell's own preview tags (a crawler reads the FIRST
+  og:title, and the live check found "dads" ahead of the room's name) for
+  Open Graph tags with the room's name, its night if one is still to
   come (in both languages) and `public/og.png` — the icon script renders it
   from `icon.svg`'s own shapes. It gives away what the link already does, and
   nothing more: no member's name, no line. An expired or invented token gets

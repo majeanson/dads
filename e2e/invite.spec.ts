@@ -20,11 +20,15 @@ test('a dad sends a link, and the man who follows it never sees the code', async
   // name has to be in the HTML the link itself serves — and a link that
   // opens nothing gets the plain preview, so a guess learns nothing.
   const unfurled = await (await first.request.get(link)).text();
+  // Exactly one title: a crawler takes the first, and the shell's own "dads"
+  // used to sit ahead of the room's name.
+  expect(unfurled.match(/property="og:title"/g)).toHaveLength(1);
   expect(unfurled).toContain(`<meta property="og:title" content="${E2E_INVITE_GROUP.name}" />`);
   expect(unfurled).toContain('/og.png');
   expect(unfurled).toContain('<div id="root">');
   const made = new URL(link);
   const nothing = await (await first.request.get(`${made.origin}/i/${'x'.repeat(43)}`)).text();
+  expect(nothing.match(/property="og:title"/g)).toHaveLength(1);
   expect(nothing).toContain('<meta property="og:title" content="dads" />');
   expect(nothing).not.toContain(E2E_INVITE_GROUP.name);
 

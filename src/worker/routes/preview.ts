@@ -54,7 +54,18 @@ export async function invitePage(
   );
   const tags = previewTags(url, group);
 
+  // The shell carries the site's own preview, and a crawler reads the FIRST
+  // og:title it meets — so those come out before these go in, or every
+  // invite unfurled as plain "dads" with the room's name hidden behind it.
+  const drop = {
+    element(el: Element) {
+      el.remove();
+    },
+  };
   const page = new HTMLRewriter()
+    .on('meta[property^="og:"]', drop)
+    .on('meta[name="twitter:card"]', drop)
+    .on('meta[name="description"]', drop)
     .on('title', {
       element(el) {
         el.setInnerContent(tags.title);
