@@ -150,27 +150,22 @@ test('the menu offers exactly what the group has switched on', async ({ browser 
   await expect(chat.getByRole('button', { name: /^The week/ })).toHaveCount(rooms.week ? 1 : 0);
   await expect(chat.getByRole('button', { name: /the table$/ })).toHaveCount(rooms.table ? 1 : 0);
   await expect(chat.getByRole('button', { name: /^Find something/ })).toBeVisible();
-  await expect(chat.getByRole('button', { name: 'Invite a dad' })).toBeVisible();
   await expect(chat.getByRole('button', { name: 'Settings' })).toBeVisible();
-  // Never a Dad night row, in either menu: home's card is the night and
-  // carries its own way in.
+  // Never a Dad night row: home's card is the night and carries its own way
+  // in. And no invite row: bringing somebody in lives inside Settings.
   await expect(chat.getByRole('button', { name: /^Dad night/ })).toHaveCount(0);
+  await expect(chat.getByRole('button', { name: 'Invite a dad' })).toHaveCount(0);
   await marc.getByRole('button', { name: 'Close', exact: true }).click();
 
-  // On home: what is about the group and the week.
+  // On home: the night and the door, and Settings in the corner — no rows.
   await home(marc);
-  const nav = marc.getByRole('navigation', { name: 'Rooms' });
-  await expect(nav.getByRole('button', { name: /^Questions/ })).toHaveCount(
-    rooms.questions ? 1 : 0,
-  );
-  await expect(nav.getByRole('button', { name: /^The week/ })).toHaveCount(rooms.week ? 1 : 0);
-  await expect(nav.getByRole('button', { name: /the table$/ })).toHaveCount(0);
+  await expect(marc.getByRole('navigation', { name: 'Rooms' })).toHaveCount(0);
 
-  // These three are never behind a switch: the night, the way to bring
-  // somebody in, and the way to change anything.
+  // These three are never behind a switch: the night, the way to change
+  // anything, and inside that, the way to bring somebody in.
   await expect(marc.getByTestId('dad-night')).toBeVisible();
-  await expect(nav.getByRole('button', { name: 'Invite a dad' })).toBeVisible();
-  await expect(nav.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await marc.getByTestId('home-settings').click();
+  await expect(marc.getByTestId('settings-invite')).toBeVisible();
 
   await marc.context().close();
 });

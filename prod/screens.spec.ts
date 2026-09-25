@@ -158,29 +158,38 @@ for (const size of WIDTHS) {
         },
       ]);
     }
+    if (rooms.week) {
+      chat.push([
+        'the week',
+        async () => {
+          await menu();
+          await page.getByRole('button', { name: /^La semaine/ }).click();
+          await page.getByTestId('board').waitFor();
+        },
+      ]);
+    }
     for (const [scene, open] of chat) {
       await open();
       faults.push(...(await faultsIn(page, scene)));
       await close(page);
     }
 
-    // Home's: the night from its card, and the rows under the door.
+    // Home's: the night from its card, and Settings from its corner, with
+    // the invite inside it.
     await page.getByTestId('go-home').click();
     await page.waitForTimeout(600);
     const rows: [string, () => Promise<void>][] = [
       ['dad night', () => page.getByTestId('dad-night').click()],
-      ['the invite', () => page.getByRole('button', { name: /Invite un chum/ }).click()],
-      ['settings', () => page.getByRole('button', { name: 'Réglages' }).click()],
-    ];
-    if (rooms.week) {
-      rows.push([
-        'the week',
+      ['settings', () => page.getByTestId('home-settings').click()],
+      [
+        'the invite',
         async () => {
-          await page.getByRole('button', { name: /^La semaine/ }).click();
-          await page.getByTestId('board').waitFor();
+          await page.getByTestId('home-settings').click();
+          await page.getByTestId('settings-invite').click();
+          await page.getByTestId('invite').waitFor();
         },
-      ]);
-    }
+      ],
+    ];
     for (const [scene, open] of rows) {
       await open();
       faults.push(...(await faultsIn(page, scene)));

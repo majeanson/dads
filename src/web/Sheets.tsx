@@ -110,7 +110,6 @@ export type { SheetName } from './Menu';
 export function Sheets({
   open,
   onOpen,
-  view,
   you,
   youName,
   messages,
@@ -144,8 +143,6 @@ export function Sheets({
   createdBy?: string | null;
   /** That man's name, for the line above the switches. */
   ownerName?: string;
-  /** Which screen the menu was opened from. */
-  view: 'home' | 'talk';
   /** The reader's own member id. */
   you: string;
   youName: string;
@@ -179,7 +176,6 @@ export function Sheets({
     return (
       <Sheet title={t('menu.title')} onClose={close}>
         <Menu
-          view={view}
           rooms={rooms}
           todo={todo}
           tableOpen={tableOpen}
@@ -290,6 +286,7 @@ export function Sheets({
           members={members}
           mine={createdBy == null || createdBy === you}
           ownerName={createdBy == null ? '' : (ownerName ?? '')}
+          onInvite={() => onOpen('invite')}
           onSignOut={onSignOut}
         />
       </Body>

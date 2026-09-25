@@ -120,25 +120,22 @@ for (const theme of ['light', 'dark'] as const) {
     found.push(...(await faults(page, 'the weeks before')));
     await close();
 
-    // And what home holds: the night, from its card, and the rows under the
-    // door.
+    // And what home holds: the night, from its card, and Settings from its
+    // corner — with the invite inside it.
     await page.getByTestId('go-home').click();
     await page.getByTestId('dad-night').click();
     await settled();
     found.push(...(await faults(page, 'dad night')));
     await close();
 
-    const rows: [string, RegExp][] = [
-      ['the week', /^The week/],
-      ['settings', /^Settings/],
-      ['the invite', /^Invite a dad/],
-    ];
-    for (const [scene, name] of rows) {
-      await page.getByRole('navigation', { name: 'Rooms' }).getByRole('button', { name }).click();
-      await settled();
-      found.push(...(await faults(page, scene)));
-      await close();
-    }
+    await page.getByTestId('home-settings').click();
+    await settled();
+    found.push(...(await faults(page, 'settings')));
+    await page.getByTestId('settings-invite').click();
+    await expect(page.getByTestId('invite')).toBeVisible();
+    await settled();
+    found.push(...(await faults(page, 'the invite')));
+    await close();
 
     // A line's own menu: marks, reply, edit, copy, take it back.
     await page.getByTestId('home-go').click();
@@ -190,10 +187,7 @@ for (const theme of ['light', 'dark'] as const) {
 
     // The glasses: the six, and fitting them over a photo. Popovers the rest
     // of this walk never opens.
-    await page
-      .getByRole('navigation', { name: 'Rooms' })
-      .getByRole('button', { name: /^Settings/ })
-      .click();
+    await page.getByTestId('home-settings').click();
     await settled();
     await page.setInputFiles('#face', 'public/icon-192.png');
     await page.getByTestId('glasses-open').click();

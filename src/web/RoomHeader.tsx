@@ -1,4 +1,9 @@
-import { CalendarClock, ChevronLeft, Menu as MenuIcon } from 'lucide-react';
+import {
+  CalendarClock,
+  ChevronLeft,
+  Menu as MenuIcon,
+  Settings as SettingsIcon,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RosterEntry } from '../shared/protocol';
 import { JoinCall } from './CallBar';
@@ -11,10 +16,10 @@ import { Button } from './ui/Button';
 /**
  * The app bar, in two shapes.
  *
- * On HOME it is the group's name and the head-count and nothing else. The
- * menu is on home itself, under the night and the door, and the call is
- * joined from the conversation — so there is nothing for the bar to hold a
- * button for.
+ * On HOME it is the group's name and the head-count, and Settings in the
+ * corner (2026-09-25) — the one thing a dad sets from home, and the way to
+ * bring somebody in. Everything else is behind the conversation's Menu, and
+ * the call is joined from there too.
  *
  * In the CONVERSATION it is the room's name (2026-09-23), with the faces of
  * who is here — wearing their glasses, bobbing while they type — and the
@@ -40,6 +45,7 @@ export function RoomHeader({
   onWho,
   onNight,
   onMenu,
+  onSettings,
   onJoinCall,
 }: {
   groupName: string;
@@ -59,6 +65,7 @@ export function RoomHeader({
   onWho: () => void;
   onNight: () => void;
   onMenu: () => void;
+  onSettings: () => void;
   onJoinCall: () => void;
 }) {
   const { t } = useT();
@@ -211,8 +218,25 @@ export function RoomHeader({
         </div>
       )}
 
-      {/* Only in the conversation. On home the menu is the screen and the
-          call is a thing you join from beside the talk. */}
+      {/* Home's one control up here: Settings, in the corner where every app
+          on a phone keeps it. */}
+      {slim ? null : (
+        <span className="head-actions">
+          <Button
+            size="icon"
+            look="quiet"
+            onClick={onSettings}
+            aria-label={t('menu.settings')}
+            className="rounded-full!"
+            data-testid="home-settings"
+          >
+            <SettingsIcon size={22} aria-hidden="true" />
+            <span className="sr-only">{t('menu.settings')}</span>
+          </Button>
+        </span>
+      )}
+
+      {/* The call and the menu, in the conversation. */}
       {slim ? (
         <span className="head-actions">
           <JoinCall state={callState} onJoin={onJoinCall} />

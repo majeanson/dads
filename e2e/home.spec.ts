@@ -8,8 +8,8 @@ import { night, talk } from './talk';
  * Two things, and deliberately only two: the night — what this is and when it
  * is — and the conversation, which is what it is for, with who is about
  * underneath the way in because that is what decides whether to go in now.
- * Everything else is rows under the door on home, and behind the Menu
- * button once he is in.
+ * Settings is the corner's icon on home, and everything else is behind the
+ * Menu button once he is in.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -284,25 +284,27 @@ test('he walks in on the divider, not at the top of the week', async ({ browser 
   await sam.context().close();
 });
 
-test('home carries the menu, and what is waiting is said on the row', async ({ browser }) => {
+test('home is the night and the door, with Settings in its corner', async ({ browser }) => {
   const marc = await comeIn(browser, 'Barnaby');
 
-  // The night, the door, and then the rest of the app as rows in what used
-  // to be empty space — with no Menu button, because there is nothing left
-  // for one to hide.
+  // The night and the door, and nothing else on the screen: no rows, no
+  // Menu button. Settings is the corner's one icon, and the invite is in it.
   await expect(marc.getByTestId('home-when')).toBeVisible();
   await expect(marc.getByTestId('home-go')).toBeVisible();
-  await expect(marc.getByRole('navigation', { name: 'Rooms' })).toBeVisible();
+  await expect(marc.getByRole('navigation', { name: 'Rooms' })).toHaveCount(0);
   await expect(marc.getByRole('button', { name: 'Menu' })).toHaveCount(0);
+  await marc.getByTestId('home-settings').click();
+  await expect(marc.getByTestId('settings')).toBeVisible();
+  await marc.getByTestId('settings-invite').click();
+  await expect(marc.getByTestId('invite')).toBeVisible();
+  await marc.getByRole('button', { name: 'Close', exact: true }).click();
 
-  // A fresh dad has a week to fill in and a question to answer, and home says
-  // so in words on the row it belongs to rather than as a dot.
-  await expect(marc.getByTestId(/^mark-(board|prompts)$/).first()).toBeVisible();
-
-  // In the conversation the rows are behind the Menu button, so the mark is
-  // on the button — hiding it there would leave him no sign at all.
+  // In the conversation the rows are behind the Menu button, so what is
+  // waiting for him is a mark on the button, and said in words on the row.
   await marc.getByTestId('home-go').click();
   await expect(marc.getByTestId('mark-menu')).toBeVisible();
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await expect(marc.getByTestId(/^mark-(board|prompts)$/).first()).toBeVisible();
 
   await marc.context().close();
 });

@@ -30,16 +30,26 @@ export async function talk(page: Page): Promise<void> {
 /**
  * To the menu, from wherever he is.
  *
- * On home the rooms are on the screen itself, under the door, so there is
- * nothing to open. In the conversation they are behind the Menu button.
- * Either way the `Rooms` navigation is there afterwards, which is what a
- * caller should scope its next click to.
+ * The rows live only behind the conversation's Menu button (2026-09-25:
+ * home holds the night, the way in and Settings in its corner), so this
+ * steps in first. The `Rooms` navigation is there afterwards, which is what
+ * a caller should scope its next click to.
  */
 export async function menu(page: Page): Promise<void> {
-  const room = page.locator('main.room');
-  await expect(room).toBeVisible();
-  if ((await room.getAttribute('data-view')) === 'home') return;
+  await talk(page);
   await page.getByRole('button', { name: 'Menu' }).click();
+}
+
+/** Settings, from home's corner. */
+export async function settings(page: Page): Promise<void> {
+  await home(page);
+  await page.getByTestId('home-settings').click();
+}
+
+/** The invite, which lives inside Settings. */
+export async function invite(page: Page): Promise<void> {
+  await settings(page);
+  await page.getByTestId('settings-invite').click();
 }
 
 /** Back to home, from wherever he is. Idempotent, like `talk`. */

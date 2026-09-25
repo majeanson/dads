@@ -91,7 +91,8 @@ test('a link opens the door, and a dead one is just a wrong code', async ({ brow
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
   await home(page);
-  await page.getByRole('button', { name: 'Invite a dad' }).click();
+  await page.getByTestId('home-settings').click();
+  await page.getByTestId('settings-invite').click();
   const link = await page.getByTestId('invite-link').inputValue();
   expect(link).toMatch(/^https:\/\/.+\/i\/[A-Za-z0-9_-]{32,}$/);
 

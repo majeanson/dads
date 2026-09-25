@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { E2E_FIT_GROUP } from './global-setup';
+import { home, menu } from './talk';
 
 // One group, one night: the last test here clears it to reach the calendar,
 // and every other test in the file sets one.
@@ -111,11 +112,42 @@ test('every sheet fits the small phone without scrolling', async ({ browser }) =
   const content = '[role="dialog"] > div:last-child';
 
   const scenes: [string, () => Promise<void>][] = [
-    ['the questions', () => rooms.getByRole('button', { name: /^Questions/ }).click()],
-    ['the week', () => rooms.getByRole('button', { name: /^The week/ }).click()],
-    ['settings', () => rooms.getByRole('button', { name: /^Settings/ }).click()],
-    ['the invite', () => rooms.getByRole('button', { name: /^Invite a dad/ }).click()],
-    ['dad night', () => page.getByTestId('dad-night').click()],
+    [
+      'the questions',
+      async () => {
+        await menu(page);
+        await rooms.getByRole('button', { name: /^Questions/ }).click();
+      },
+    ],
+    [
+      'the week',
+      async () => {
+        await menu(page);
+        await rooms.getByRole('button', { name: /^The week/ }).click();
+      },
+    ],
+    [
+      'settings',
+      async () => {
+        await home(page);
+        await page.getByTestId('home-settings').click();
+      },
+    ],
+    [
+      'the invite',
+      async () => {
+        await home(page);
+        await page.getByTestId('home-settings').click();
+        await page.getByTestId('settings-invite').click();
+      },
+    ],
+    [
+      'dad night',
+      async () => {
+        await home(page);
+        await page.getByTestId('dad-night').click();
+      },
+    ],
   ];
   const over: string[] = [];
   for (const [scene, open] of scenes) {
@@ -315,10 +347,7 @@ test('the creator’s settings fit the small phone', async ({ browser }) => {
   await page.getByTestId('open-room').click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
 
-  await page
-    .getByRole('navigation', { name: 'Rooms' })
-    .getByRole('button', { name: /^Settings/ })
-    .click();
+  await page.getByTestId('home-settings').click();
   await expect(page.getByRole('dialog')).toBeVisible();
   // It really is the creator's sheet: the row that holds the two forms.
   await expect(page.getByTestId('room-owning')).toBeVisible();

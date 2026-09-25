@@ -537,8 +537,8 @@
     }
   }
 
-  /* The door and the rows, as ONE block. Three blocks spaced between each
-     other left two stretches of nothing on a tall phone; two blocks leave one,
+  /* The door, on its own under the card (2026-09-25: the rows went behind
+     the conversation's Menu). Two blocks leave one gap on a tall phone,
      between the night and the way in, which is the gap that means something. */
   .home-actions {
     display: grid;
@@ -865,21 +865,21 @@
   .home-go::after {
     content: '';
     position: absolute;
-    left: 1rem;
-    bottom: -0.5rem;
-    width: 1.1rem;
-    height: 0.55rem;
+    left: 1.25rem;
+    bottom: -0.7rem;
+    width: 1.5rem;
+    height: 0.75rem;
     background: var(--accent);
     clip-path: polygon(0 0, 100% 0, 0 100%);
     pointer-events: none;
   }
   .home-go-face {
     position: absolute;
-    left: 0.5rem;
-    bottom: 0.3rem;
+    left: 0.625rem;
+    bottom: 0.4rem;
     display: grid;
-    width: clamp(3.25rem, 9dvh, 4.5rem);
-    height: clamp(3.25rem, 9dvh, 4.5rem);
+    width: clamp(4.75rem, 13dvh, 6.75rem);
+    height: clamp(4.75rem, 13dvh, 6.75rem);
     place-items: center;
     border-radius: 50%;
     background: var(--accent);
@@ -898,7 +898,7 @@
   }
 
   .home-new {
-    font-size: 0.9375rem;
+    font-size: 1.0625rem;
     font-variant-numeric: tabular-nums;
     opacity: 0.85;
   }

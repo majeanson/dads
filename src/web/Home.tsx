@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from 'react';
+import { useEffect, useRef, useState, type TouchEvent } from 'react';
 import {
   fetchNight,
   fetchPoll,
@@ -66,7 +66,6 @@ export function Home({
   unseen,
   onGo,
   onNight,
-  menu,
 }: {
   night: DadNight | null;
   /**
@@ -87,13 +86,6 @@ export function Home({
   unseen: number;
   onGo: () => void;
   onNight: () => void;
-  /**
-   * The rest of the app, as rows under the door.
-   *
-   * A slot rather than the menu's props: home knows what the night is and
-   * where the door goes, and nothing about what is behind the other rooms.
-   */
-  menu: ReactNode;
 }) {
   const { t, lang } = useT();
   const [state, setState] = useState<NightState | null>(null);
@@ -427,8 +419,11 @@ export function Home({
           It carries the app's own mark, which nothing else on the screen does:
           the card's answers are filled the same way, and a door that was one
           more filled bar read as one more answer. The mark on the left and the
-          arrow on the right are what make it a way IN rather than a choice —
-          the same shape as the rows under it, taller, and the only one filled. */}
+          arrow on the right are what make it a way IN rather than a choice.
+
+          Since 2026-09-25 it is the only thing under the card: the rows that
+          sat below it went behind the conversation's Menu and Settings went
+          to the header's corner. So it is big — a door, not a row. */}
       <div className="home-actions">
         {/* A speech bubble, because that is what the door is for: the face
             big on the left, sitting up out of the top edge, the words in
@@ -437,32 +432,27 @@ export function Home({
         <Button
           look="primary"
           className={cn(
-            'home-go h-[clamp(3rem,6.5dvh,4.5rem)] w-full justify-start gap-3 mb-1.5 rounded-[1.75rem]! rounded-bl-[0.375rem]! pr-4 pl-[clamp(4.25rem,11dvh,5.5rem)]',
-            'text-[clamp(1.25rem,3dvh,1.5rem)]',
+            'home-go h-[clamp(4.5rem,11dvh,6.5rem)] w-full justify-start gap-3 mb-3 rounded-[2.25rem]! rounded-bl-[0.5rem]! pr-6 pl-[clamp(6rem,15dvh,8rem)]',
+            'text-[clamp(1.625rem,4.25dvh,2.25rem)]',
           )}
           onClick={onGo}
           data-testid="home-go"
         >
           <span className="home-go-face" aria-hidden="true">
-            <Logo size={64} hole="var(--accent)" motion={live ? 'live' : 'on'} />
+            <Logo size={96} hole="var(--accent)" motion={live ? 'live' : 'on'} />
           </span>
           <span className="display min-w-0 truncate">{t('home.go')}</span>
           {unseen > 0 ? (
-            <span className="home-new ml-auto text-sm font-normal" data-testid="home-new">
+            <span className="home-new ml-auto font-normal" data-testid="home-new">
               {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
             </span>
           ) : null}
           <ArrowRight
-            size={22}
+            size={30}
             aria-hidden="true"
             className={cn('shrink-0', unseen > 0 ? '' : 'ml-auto')}
           />
         </Button>
-
-        {/* Everything else, in what used to be empty space below the door. The
-          same rows the conversation keeps behind its Menu button, minus the
-          table, which only makes sense beside a conversation. */}
-        {menu}
       </div>
     </div>
   );

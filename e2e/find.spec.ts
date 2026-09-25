@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { E2E_FIND_GROUP } from './global-setup';
-import { menu, talk } from './talk';
+import { menu, night, talk } from './talk';
 
 /**
  * Finding a line again.
@@ -94,8 +94,7 @@ test('setting the night leaves nothing in the conversation to find', async ({ br
   // writes none: setting a night is a thing home and the night sheet SHOW,
   // and a line about it was the app narrating its own state back at itself.
   const marc = await comeIn(browser, 'Marc Furniture');
-  await menu(marc);
-  await marc.getByTestId('dad-night').click();
+  await night(marc);
   await marc.getByTestId('night-standing').click();
   await marc.getByLabel('Day', { exact: true }).selectOption('4');
   await marc.getByLabel('Time', { exact: true }).fill('21:00');

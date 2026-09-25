@@ -143,7 +143,7 @@ test('the day’s question is asked in the language it is read in', async ({ pag
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'FR', exact: true }).click();
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
-  // The questions are on home too — the day's thing to do.
+  await menu(page);
   await page
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: /^Les questions/ })

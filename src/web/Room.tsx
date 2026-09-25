@@ -6,7 +6,6 @@ import { CallBar } from './CallBar';
 import { Composer, type ComposerHandle } from './Composer';
 import { Home } from './Home';
 import { Lines } from './Lines';
-import { Menu } from './Menu';
 import { RoomHeader } from './RoomHeader';
 import { preloadSheets, Sheets, type SheetName } from './Sheets';
 import { TableColumn } from './TableColumn';
@@ -342,16 +341,14 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           typing={[...room.typing.keys()].filter((id) => id !== session.member.id)}
           soon={soon}
           callState={call.state}
-          // On home as well, now that home says two things and nothing else.
-          // It was hidden there while home listed the very items it stands for,
-          // an inch below it; with those behind the Menu button, hiding the
-          // mark on home would leave a dad no sign at all that a question is
-          // waiting for him.
+          // On the conversation's Menu button, which is where the questions
+          // live now that home holds only the night and the way in.
           waiting={waiting}
           onHome={goHome}
           onWho={() => setSheet('here')}
           onNight={() => setSheet('night')}
           onMenu={() => setSheet('menu')}
+          onSettings={() => setSheet('settings')}
           onJoinCall={() => void call.join()}
         />
 
@@ -367,23 +364,6 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
           unseen={seen.unseen}
           onGo={goTalk}
           onNight={() => setSheet('night')}
-          // Only while home is the screen showing. Home stays mounted behind
-          // the conversation, so without this the rows would sit in the tree
-          // twice whenever the menu sheet was open — one hidden, one shown —
-          // and anything looking for "the dad-night row" would find both.
-          menu={
-            view === 'home' ? (
-              <Menu
-                view="home"
-                rooms={room.rooms}
-                todo={todo}
-                tableOpen={tableOpen}
-                mine={mine}
-                onToggleTable={() => setTableOpen((v) => !v)}
-                onOpen={setSheet}
-              />
-            ) : null
-          }
         />
 
         <div className="stage">
@@ -495,7 +475,6 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
         <Sheets
           open={sheet}
           onOpen={setSheet}
-          view={view}
           you={session.member.id}
           youName={room.you?.name ?? session.member.displayName}
           messages={room.messages}
