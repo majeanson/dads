@@ -67,6 +67,20 @@ weakening `sessionSecret()`.
   `{ invite }` skips the code field entirely and fails into the same message a
   wrong code gets. The token is stripped from the address bar before the join
   screen paints: it is a credential, not a route.
+- **An invite link unfurls** (2026-09-25). A chat app's crawler runs no
+  script, so the SPA shell said "dads" and nothing else at the one moment a
+  friend decides whether to tap. `/i/*` is `run_worker_first` now:
+  `routes/preview.ts` fetches the same `index.html` from the assets binding
+  and adds Open Graph tags with the room's name, its night if one is still to
+  come (in both languages) and `public/og.png` — the icon script renders it
+  from `icon.svg`'s own shapes. It gives away what the link already does, and
+  nothing more: no member's name, no line. An expired or invented token gets
+  the plain preview, so a guess learns nothing. The name is whatever the
+  opener typed and lands in an attribute: `escape()` and a test for a name
+  that tries to be markup. `no-store` and `no-referrer`, because the token
+  is in the URL, and it sets the two `_headers` headers itself — the assets
+  binding does not add them to a response the Worker hands back. The share
+  sheet sends a line with the link (`inv.share_text`).
 
 ## The room (M2)
 
@@ -578,7 +592,10 @@ the screen knew something and did not say it.
   whichever pair it is, until the next game ends — which replaces the
   crown, or takes it off when no human won — or for a week
   (`CHAMPION_FOR_MS`). Every framed dad relays the same game-over, so the
-  same crown inside a minute is dropped. The roster says it in words, sr-only,
+  same crown inside a minute is dropped — claimed in memory BEFORE the first
+  await (`crownClaim`, 2026-09-25), because the check against the stored
+  crown sat behind two D1 round trips and the next relay slipped in between
+  and crowned again. The roster says it in words, sr-only,
   because to a screen reader a face is decoration. The frame is trusted like
   the turn nudge: a dad could crown himself by hand, and among five friends
   that is a joke, not a threat. `--gold` is a token in all four blocks and
@@ -802,6 +819,9 @@ the screen knew something and did not say it.
     French flake: its test goes in, out, through Settings and in again in
     under a second, and CI is fast enough to land inside the film every
     time. A CI trace (`on-first-retry`) is what showed the second press.
+    `home.spec` now holds the clock still (`page.clock`) and asserts the
+    splash is still up when the second press lands: racing it by speed
+    passed on a slow runner whether the bug was there or not.
   - **Somebody arriving is a face, not a line** (2026-09-23): his face pops
     into the header's stack with a ring going out from it (`face-arrive`).
     The roster the screen finds on opening is the baseline, not news. The
@@ -1220,6 +1240,12 @@ these are the parts:
   to read a draft.
 - **`Sheets`** — everything behind the Menu button, which is the app's own
   model of itself. Each still mounts on open, so it reads fresh data.
+  **Their code loads apart from the page** (2026-09-25, `React.lazy`), and
+  `Room` fetches all of it in the background once home has painted
+  (`preloadSheets`): home needs none of it, and a page loaded before a
+  deploy already holds its sheets rather than asking for files the deploy
+  removed. A failed fetch stays inside the sheet with a Reload button
+  (`Failed`), because an error past React's root blanks the whole app.
 - **`useSeen`** — what he has read and where the list is: the mark, the count,
   the follow-down, the tab title, the visibility rules. One hook because it is
   one question asked three ways, all answered from the one mark.
@@ -1700,7 +1726,8 @@ icons` rasterises the favicon, the 192/512 and the apple-touch-icon from it
   than a blank square in a browser window, and `robots.txt` plus a `noindex`
   meta keep a private room out of the index.
 - **Security headers live in `public/_headers`, not in the Worker.**
-  `run_worker_first` covers only `/api` and `/ws`, so for every other path the
+  `run_worker_first` covers only `/api`, `/ws` and `/i` (which sets its own),
+  so for every other path the
   assets binding answers before the Worker runs at all: a wrapper around
   `env.ASSETS.fetch` never fires. Pinned by an e2e.
 - `theme-color` is the real `--bg`, light and dark, and `theme.ts` keeps a

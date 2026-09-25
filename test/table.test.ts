@@ -419,9 +419,13 @@ describe('table events reaching the room', () => {
     await until(() => crowns().length === 2);
     expect(crowns()[1]!.champions?.ids).toEqual([ids.get('Sam')]);
 
-    // ...and a game no human won takes the crown off.
+    // ...and a game no human won takes the crown off — once, however many
+    // dads relay it. It used to go out once per relay.
     marc.table({ v: 1, t: 'game-over', summary: '20-41', winners: [] });
+    sam.table({ v: 1, t: 'game-over', summary: '20-41', winners: [] });
     await until(() => crowns().length === 3);
+    await sentinel(sam);
+    expect(crowns()).toHaveLength(3);
     expect(crowns()[2]!.champions).toBeNull();
     const row = await env.DB.prepare('SELECT champions FROM groups WHERE id = ?')
       .bind(group.id)

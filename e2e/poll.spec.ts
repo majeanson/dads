@@ -42,6 +42,10 @@ async function futureDay(page: Page): Promise<string> {
  */
 async function startFromNothing(page: Page): Promise<void> {
   await night(page);
+  // Wait for the sheet's body before asking what is in it. Its code can
+  // arrive a moment after the sheet opens, and an instant `isVisible()` then
+  // saw neither shape and cleared nothing.
+  await expect(page.getByTestId('night').or(page.getByTestId('poll')).first()).toBeVisible();
   if (await page.getByTestId('night-call-off').isVisible()) {
     await page.getByTestId('night-call-off').click();
     await page.getByTestId('night-call-off').click();

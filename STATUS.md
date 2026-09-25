@@ -46,7 +46,7 @@ open screens to re-read.
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 379, in workerd against the real migrations
+npm test              # 383, in workerd against the real migrations
 npm run e2e           # 121, against the built stack (111 in Chromium, 10 on the iPhone)
 npm run audit:contrast  # 68 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
@@ -192,9 +192,9 @@ when Settings closes. Four carry a test: the favourites, the table name and
 the fit (unit), and the edit he walked away from (e2e). The rest are small
 enough that the fix is the whole of it.
 
-**Still open**: the crown's dedupe races the four relays it exists for
-(benign — the same crown twice), and "go in twice inside the film" is pinned
-only probabilistically.
+**Closed since**: the crown is claimed before the object waits on D1, so four
+relays make one crown; "go in twice inside the film" holds the clock still and
+fails every time the bug is back. Nothing from this review is open.
 
 ## The review before that
 

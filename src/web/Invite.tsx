@@ -77,7 +77,12 @@ export function Invite() {
             does not have one and a button that does nothing is worse than no
             button. */}
         {typeof navigator.share === 'function' ? (
-          <Button size="lg" onClick={() => void navigator.share({ url: link }).catch(() => {})}>
+          <Button
+            size="lg"
+            onClick={() =>
+              void navigator.share({ text: t('inv.share_text'), url: link }).catch(() => {})
+            }
+          >
             <Share2 size={18} aria-hidden="true" />
             {t('inv.share')}
           </Button>

@@ -16,6 +16,18 @@ test('a dad sends a link, and the man who follows it never sees the code', async
   const link = await marc.getByTestId('invite-link').inputValue();
   expect(link).toMatch(/\/i\/[A-Za-z0-9_-]{32,}$/);
 
+  // What a chat app unfurls from it: a crawler runs no script, so the room's
+  // name has to be in the HTML the link itself serves — and a link that
+  // opens nothing gets the plain preview, so a guess learns nothing.
+  const unfurled = await (await first.request.get(link)).text();
+  expect(unfurled).toContain(`<meta property="og:title" content="${E2E_INVITE_GROUP.name}" />`);
+  expect(unfurled).toContain('/og.png');
+  expect(unfurled).toContain('<div id="root">');
+  const made = new URL(link);
+  const nothing = await (await first.request.get(`${made.origin}/i/${'x'.repeat(43)}`)).text();
+  expect(nothing).toContain('<meta property="og:title" content="dads" />');
+  expect(nothing).not.toContain(E2E_INVITE_GROUP.name);
+
   // A fresh browser is a stranger: no cookie, no device token, no code.
   const second = await browser.newContext();
   const sam = await second.newPage();

@@ -1137,9 +1137,26 @@ export class RoomDO extends DurableObject<Env> {
    * Trusts the frame like the turn nudge does: any dad's socket can send one,
    * and a man who crowns himself by hand has earned it, among five friends.
    */
+  /**
+   * The last game-over this object crowned from, by the winners' names.
+   *
+   * Every framed dad relays the same game-over a few hundred milliseconds
+   * apart, and the check against the stored crown sits behind two D1 round
+   * trips — during which the object takes the next relay, which reads the
+   * same old crown and crowns again. Claimed here, before the first await,
+   * the check-and-claim is one step nothing can come between. The stored
+   * crown still answers for an object that was evicted in between.
+   */
+  private crownClaim: { key: string; at: number } | null = null;
+
   private async crown(winners: string[]): Promise<void> {
     const groupId = this.groupId();
     if (groupId === undefined) return;
+    const key = JSON.stringify([...new Set(winners)].sort());
+    const claimedAt = Date.now();
+    const claim = this.crownClaim;
+    if (claim !== null && claim.key === key && claimedAt - claim.at < CROWN_REPEAT_MS) return;
+    this.crownClaim = { key, at: claimedAt };
     try {
       const { results } = await this.env.DB.prepare(
         'SELECT id, display_name FROM members WHERE group_id = ?',

@@ -166,17 +166,33 @@ test('what he has already read is not announced again on the next open', async (
 test('in, straight back out, and in again: the door still works', async ({ browser }) => {
   // The splash into the conversation runs most of a second. A second press
   // inside it used to do nothing at all — a dead button on home — because the
-  // film was a flag, and setting it true over true is no change. Fast on
-  // purpose: the second press has to land inside the first film.
+  // film was a flag, and setting it true over true is no change.
+  //
+  // The clock is held still, so the second press lands inside the first film
+  // on any machine. Racing it by speed alone passed on a slow runner whether
+  // the bug was there or not.
   const page = await comeIn(browser, 'Quick Door');
   const room = page.locator('main.room');
   await expect(room).toHaveAttribute('data-view', 'home');
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+
   await page.getByTestId('home-go').click();
+  // Far enough for the screen to switch under the glasses (`onCovered`), and
+  // nowhere near the end of the film.
+  await page.clock.runFor(150);
   await expect(room).toHaveAttribute('data-view', 'talk');
   await page.getByTestId('go-home').click();
   await expect(room).toHaveAttribute('data-view', 'home');
+
+  // Still inside the first film: this is the press that used to be dead.
+  await expect(page.getByTestId('splash')).toHaveCount(1);
   await page.getByTestId('home-go').click();
+  await page.clock.runFor(150);
   await expect(room).toHaveAttribute('data-view', 'talk');
+
+  await page.clock.runFor(3000);
+  await expect(page.getByTestId('splash')).toHaveCount(0);
   await page.context().close();
 });
 

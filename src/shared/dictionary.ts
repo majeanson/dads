@@ -157,6 +157,7 @@ const EN = {
   'inv.copy': 'Copy',
   'inv.copied': 'Copied',
   'inv.share': 'Share',
+  'inv.share_text': 'Come in — it’s where we talk, and there’s a table.',
   'inv.making': 'Making a link…',
   'inv.failed': 'Couldn’t make a link. Try again.',
   'set.title': 'Settings',
@@ -215,6 +216,8 @@ const EN = {
   'theme.light': 'Light',
   'theme.dark': 'Dark',
   'sheet.close': 'Close',
+  'sheet.failed': 'That didn’t load — the connection may have dropped.',
+  'sheet.reload': 'Reload the app',
 
   // -------------------------------------------------------- who's here
   'here.title': 'Who’s here',
@@ -597,6 +600,7 @@ const FR: Record<Key, string> = {
   'inv.copy': 'Copie',
   'inv.copied': 'Copié',
   'inv.share': 'Partage',
+  'inv.share_text': 'Viens-t’en — c’est là qu’on jase, pis y a une table.',
   'inv.making': 'On fait le lien…',
   'inv.failed': 'Le lien n’a pas marché. Réessaie.',
   'set.title': 'Réglages',
@@ -656,6 +660,8 @@ const FR: Record<Key, string> = {
   'theme.light': 'Clair',
   'theme.dark': 'Sombre',
   'sheet.close': 'Ferme',
+  'sheet.failed': 'Ça a pas chargé — la connexion a peut-être lâché.',
+  'sheet.reload': 'Recharge l’app',
 
   // ----------------------------------------------------------- qui est là
   'here.title': 'Qui est là',

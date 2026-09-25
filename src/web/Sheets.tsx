@@ -2,17 +2,96 @@ import { CalendarHeart, Coffee, DoorOpen, Search, Send, Settings2, Users } from 
 import type { CallMember, RoomMessage, RoomsOpen, RosterEntry } from '../shared/protocol';
 import type { DadNight } from '../shared/dadNight';
 import type { Todo } from './api';
-import { Board } from './Board';
-import { Find } from './Find';
-import { Here } from './Here';
-import { Invite } from './Invite';
+import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { Menu, type SheetName } from './Menu';
-import { MyRooms } from './MyRooms';
-import { Night } from './Night';
-import { Questions } from './Questions';
-import { Settings } from './Settings';
 import { useT } from './i18n';
+import { Logo } from './Logo';
+import { Button } from './ui/Button';
 import { Sheet } from './ui/Sheet';
+
+/**
+ * The sheets' bodies, loaded when first wanted rather than with the page.
+ *
+ * Home is what the app opens on, and it needs none of them: the week, the
+ * night, the questions, Find, Settings and the rest were a third of what a
+ * phone on LTE parsed before the first screen could paint. They are fetched
+ * in the background once home is up (`preloadSheets`, from `Room`), so
+ * opening one is instant — and a dad whose page was loaded before a deploy
+ * already holds them, rather than asking for files the new deploy no longer
+ * has.
+ */
+const bodies = {
+  Board: () => import('./Board'),
+  Find: () => import('./Find'),
+  Here: () => import('./Here'),
+  Invite: () => import('./Invite'),
+  MyRooms: () => import('./MyRooms'),
+  Night: () => import('./Night'),
+  Questions: () => import('./Questions'),
+  Settings: () => import('./Settings'),
+};
+const Board = lazy(() => bodies.Board().then((m) => ({ default: m.Board })));
+const Find = lazy(() => bodies.Find().then((m) => ({ default: m.Find })));
+const Here = lazy(() => bodies.Here().then((m) => ({ default: m.Here })));
+const Invite = lazy(() => bodies.Invite().then((m) => ({ default: m.Invite })));
+const MyRooms = lazy(() => bodies.MyRooms().then((m) => ({ default: m.MyRooms })));
+const Night = lazy(() => bodies.Night().then((m) => ({ default: m.Night })));
+const Questions = lazy(() => bodies.Questions().then((m) => ({ default: m.Questions })));
+const Settings = lazy(() => bodies.Settings().then((m) => ({ default: m.Settings })));
+
+/** Fetch every sheet's code now, quietly. Failures are the sheet's to report
+ * when it is opened, not this. */
+export function preloadSheets(): void {
+  for (const load of Object.values(bodies)) void load().catch(() => {});
+}
+
+/**
+ * A sheet's body, waited for — and a fetch that failed said in words.
+ *
+ * Without a boundary a failed import throws past React's root and the whole
+ * app goes blank: the network the phone lost on the way into a sheet would
+ * take the conversation with it. This keeps the failure inside the sheet,
+ * with the one thing that fixes it.
+ */
+function Body({ children }: { children: ReactNode }) {
+  return (
+    <Failed>
+      <Suspense
+        fallback={
+          <Logo
+            size={36}
+            hole="var(--bg)"
+            motion="glint"
+            className="mx-auto my-6 block text-muted"
+          />
+        }
+      >
+        {children}
+      </Suspense>
+    </Failed>
+  );
+}
+
+class Failed extends Component<{ children: ReactNode; fallback?: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return this.props.fallback ?? <Reload />;
+  }
+}
+
+function Reload() {
+  const { t } = useT();
+  return (
+    <div className="grid justify-items-start gap-3">
+      <p className="m-0 text-[1.0625rem]">{t('sheet.failed')}</p>
+      <Button onClick={() => location.reload()}>{t('sheet.reload')}</Button>
+    </div>
+  );
+}
 
 export type { SheetName } from './Menu';
 
@@ -115,33 +194,48 @@ export function Sheets({
   if (open === 'here') {
     return (
       <Sheet title={t('here.title')} pose={Users} onClose={close}>
-        <Here
-          roster={roster.map((m) => ({
-            memberId: m.memberId,
-            name: m.name,
-            you: m.memberId === you,
-          }))}
-          call={call}
-        />
+        <Body>
+          <Here
+            roster={roster.map((m) => ({
+              memberId: m.memberId,
+              name: m.name,
+              you: m.memberId === you,
+            }))}
+            call={call}
+          />
+        </Body>
       </Sheet>
     );
   }
 
   if (open === 'prompts') {
     return (
-      <Questions
-        messages={messages}
-        onAnswer={onAnswerPrompt}
-        canAnswer={canAnswer}
-        onClose={close}
-      />
+      // The questions draw their own sheet, so a failure needs one drawn for it.
+      <Failed
+        fallback={
+          <Sheet title={t('menu.questions')} onClose={close}>
+            <Reload />
+          </Sheet>
+        }
+      >
+        <Suspense fallback={null}>
+          <Questions
+            messages={messages}
+            onAnswer={onAnswerPrompt}
+            canAnswer={canAnswer}
+            onClose={close}
+          />
+        </Suspense>
+      </Failed>
     );
   }
 
   if (open === 'board') {
     return (
       <Sheet title={t('b.title')} pose={Coffee} onClose={close}>
-        <Board onChanged={onTodoChanged} />
+        <Body>
+          <Board onChanged={onTodoChanged} />
+        </Body>
       </Sheet>
     );
   }
@@ -149,7 +243,9 @@ export function Sheets({
   if (open === 'night') {
     return (
       <Sheet title={t('n.title')} pose={CalendarHeart} onClose={close}>
-        <Night night={night} you={you} pollPulse={pollPulse} nightPulse={nightPulse} />
+        <Body>
+          <Night night={night} you={you} pollPulse={pollPulse} nightPulse={nightPulse} />
+        </Body>
       </Sheet>
     );
   }
@@ -157,7 +253,9 @@ export function Sheets({
   if (open === 'find') {
     return (
       <Sheet title={t('find.title')} pose={Search} onClose={close}>
-        <Find />
+        <Body>
+          <Find />
+        </Body>
       </Sheet>
     );
   }
@@ -165,7 +263,9 @@ export function Sheets({
   if (open === 'rooms') {
     return (
       <Sheet title={t('rooms.title')} pose={DoorOpen} onClose={close}>
-        <MyRooms onClose={close} />
+        <Body>
+          <MyRooms onClose={close} />
+        </Body>
       </Sheet>
     );
   }
@@ -173,22 +273,26 @@ export function Sheets({
   if (open === 'invite') {
     return (
       <Sheet title={t('inv.title')} pose={Send} onClose={close}>
-        <Invite />
+        <Body>
+          <Invite />
+        </Body>
       </Sheet>
     );
   }
 
   return (
     <Sheet title={t('set.title')} pose={Settings2} onClose={close}>
-      <Settings
-        rooms={rooms}
-        you={{ memberId: you, name: youName }}
-        // A room with no creator is everybody's, which is what it always was.
-        members={members}
-        mine={createdBy == null || createdBy === you}
-        ownerName={createdBy == null ? '' : (ownerName ?? '')}
-        onSignOut={onSignOut}
-      />
+      <Body>
+        <Settings
+          rooms={rooms}
+          you={{ memberId: you, name: youName }}
+          // A room with no creator is everybody's, which is what it always was.
+          members={members}
+          mine={createdBy == null || createdBy === you}
+          ownerName={createdBy == null ? '' : (ownerName ?? '')}
+          onSignOut={onSignOut}
+        />
+      </Body>
     </Sheet>
   );
 }

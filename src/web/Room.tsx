@@ -8,7 +8,7 @@ import { Home } from './Home';
 import { Lines } from './Lines';
 import { Menu } from './Menu';
 import { RoomHeader } from './RoomHeader';
-import { Sheets, type SheetName } from './Sheets';
+import { preloadSheets, Sheets, type SheetName } from './Sheets';
 import { TableColumn } from './TableColumn';
 import { Viewer } from './Viewer';
 import { plural, useT } from './i18n';
@@ -57,6 +57,13 @@ const NOTE_MS = 6000;
 export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
   const { t, lang } = useT();
   const room = useRoom(true, session.group.dadNight, session.group.rooms, session.group.createdBy);
+  // Once home has painted, fetch every sheet's code in the background, so
+  // opening one is instant and a deploy mid-evening cannot leave this page
+  // asking for files that are gone.
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((f: () => void) => window.setTimeout(f, 1500));
+    idle(() => preloadSheets());
+  }, []);
   const [sheet, setSheet] = useState<SheetName | null>(null);
   /**
    * Home or the conversation.

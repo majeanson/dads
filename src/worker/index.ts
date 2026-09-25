@@ -6,6 +6,7 @@ import { getNightIcs } from './routes/calendar';
 import { forget } from './routes/ops';
 import { getIce } from './routes/ice';
 import { createInvite } from './routes/invite';
+import { invitePage } from './routes/preview';
 import { getTodo } from './routes/todo';
 import { getMedia, keepMediaRoute, listMedia, uploadMedia } from './routes/media';
 import { deleteFace, getFace, putFace, putGlasses, putGlassesFit, putName } from './routes/me';
@@ -40,6 +41,11 @@ export default {
 
     if (url.pathname === '/ws' || url.pathname.startsWith('/ws/')) {
       return handleWs(request, env, url, ctx);
+    }
+
+    // An invite link: the same page, with a preview a chat app can unfurl.
+    if (request.method === 'GET' && /^\/i\/[A-Za-z0-9_-]+$/.test(url.pathname)) {
+      return invitePage(request, env, url, isProduction(env));
     }
 
     // Headers for these come from public/_headers: the assets binding answers
