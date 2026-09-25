@@ -544,6 +544,68 @@ test('a change that never reached the room leaves him holding his words', async 
   await context.close();
 });
 
+test('the answer to an edit he walked away from does not touch the next one', async ({
+  browser,
+}) => {
+  // An edit waits for its line to come back changed. Meanwhile he can press
+  // Escape and pick Edit on another line — and when the first answer finally
+  // arrived, it cleared the SECOND edit's words as if they had landed.
+  const context = await browser.newContext();
+  let hold = false;
+  const held: (() => void)[] = [];
+  await context.routeWebSocket('**/ws*', (ws) => {
+    const server = ws.connectToServer();
+    ws.onMessage((m) => server.send(m));
+    server.onMessage((m) => {
+      if (hold && typeof m === 'string' && m.includes('"t":"edited"')) {
+        held.push(() => ws.send(m));
+        return;
+      }
+      ws.send(m);
+    });
+  });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill('Marc Twoedits');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
+
+  const field = page.getByLabel('Say something');
+  for (const words of ['two edits first 01', 'two edits second 02']) {
+    await field.fill(words);
+    await page.getByRole('button', { name: 'Send' }).click();
+    await expect(page.getByTestId('line').filter({ hasText: words })).toBeVisible();
+  }
+  const first = page.getByTestId('line').filter({ hasText: 'two edits first' });
+  const second = page.getByTestId('line').filter({ hasText: 'two edits second' });
+
+  await first.click({ button: 'right' });
+  await page.getByTestId('line-edit').click();
+  await field.fill('two edits first changed 03');
+  hold = true;
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect.poll(() => held.length).toBe(1);
+
+  // He walks away from it and starts on the other line.
+  await field.press('Escape');
+  await expect(page.getByTestId('editing')).toHaveCount(0);
+  await second.click({ button: 'right' });
+  await page.getByTestId('line-edit').click();
+  await field.fill('two edits second, half typed');
+
+  // The first answer lands now. It is about a line he is no longer editing.
+  hold = false;
+  held.shift()!();
+  await expect(page.getByTestId('line').filter({ hasText: 'first changed 03' })).toBeVisible();
+  await expect(page.getByTestId('editing')).toBeVisible();
+  await expect(field).toHaveValue('two edits second, half typed');
+  await expect(page.getByText(/didn’t reach the room/)).toHaveCount(0);
+
+  await context.close();
+});
+
 test('a line that is not yours offers no way to take it back', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc Back3');
   const sam = await comeIn(browser, 'Sam Back3');

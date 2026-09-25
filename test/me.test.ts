@@ -255,6 +255,7 @@ describe('where the glasses sit on his photo', () => {
 
   it('is stored clamped, and null puts it back', async () => {
     const cookie = await comeIn(group, 'Marc');
+    expect((await setFace(cookie)).status).toBe(200);
     const res = await worker.fetch(
       put('/api/me/glasses-fit', cookie, { fit: { x: 0.1, y: -0.08, s: 1.2 } }),
     );
@@ -267,6 +268,25 @@ describe('where the glasses sit on his photo', () => {
     expect(JSON.parse((await stored())!)).toEqual({ x: 0.3, y: -0.35, s: 1.6 });
 
     await worker.fetch(put('/api/me/glasses-fit', cookie, { fit: null }));
+    expect(await stored()).toBeNull();
+  });
+
+  it('is refused over a face with no photograph, and goes when the photo does', async () => {
+    // A fit belongs to one picture's eyes; a face with none is drawn to fit.
+    const cookie = await comeIn(group, 'Marc');
+    const bare = await worker.fetch(
+      put('/api/me/glasses-fit', cookie, { fit: { x: 0.1, y: 0, s: 1 } }),
+    );
+    expect(bare.status).toBe(409);
+    expect(await stored()).toBeNull();
+
+    expect((await setFace(cookie)).status).toBe(200);
+    await worker.fetch(put('/api/me/glasses-fit', cookie, { fit: { x: 0.1, y: 0, s: 1 } }));
+    expect(await stored()).not.toBeNull();
+    const off = await worker.fetch(
+      new Request('https://dads.test/api/me/face', { method: 'DELETE', headers: { cookie } }),
+    );
+    expect(off.status).toBe(200);
     expect(await stored()).toBeNull();
   });
 

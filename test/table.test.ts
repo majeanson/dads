@@ -7,6 +7,7 @@ import {
   JAFFRE_ORIGIN,
   parseTableEvent,
   tableLink,
+  tableName,
   tableSaid,
 } from '../src/shared/jaffre';
 import { englishOf } from '../src/shared/said';
@@ -116,6 +117,14 @@ describe('the link into jaffre', () => {
     // way back, but leaves his jaffre name alone.
     expect(shareUrl).toBe(`${JAFFRE_ORIGIN}/?from=dads#room/the-dads`);
     expect(shareUrl).not.toContain('name=');
+  });
+
+  it('cuts a name that ends on a space to what jaffre will echo back', () => {
+    // Every name the table sends back is trimmed on the way in. A cut that
+    // ended on a space never matched its own echo, and that dad was never
+    // nudged about his turn or crowned for a win.
+    expect(tableName('Marc Antoine Julien Tremblay')).toBe('Marc Antoine Julien');
+    expect(tableName('  Sam  ')).toBe('Sam');
   });
 
   it('hands jaffre the name cut the way jaffre would cut it', () => {

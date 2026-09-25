@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { FIT_LIMITS, parseFit, type GlassesFit } from '../shared/protocol';
 import { setMyGlassesFit } from './api';
 import { Face } from './Face';
@@ -41,6 +41,10 @@ export function GlassesFitter({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const drag = useRef<{ x: number; y: number; from: GlassesFit } | null>(null);
+  /** The button that opened this is gone the moment it did, and the focus went
+   * to the page with it: a keyboard lands on the thing he came to move. */
+  const area = useRef<HTMLDivElement>(null);
+  useEffect(() => area.current?.focus(), []);
 
   const place = (next: GlassesFit) => setDraft(parseFit(next) ?? MIDDLE);
 
@@ -92,6 +96,7 @@ export function GlassesFitter({
     <div className="grid w-[13rem] gap-3" data-testid="glasses-fitter">
       <p className="m-0 text-[1.0625rem] font-semibold">{t('fit.title')}</p>
       <div
+        ref={area}
         role="application"
         tabIndex={0}
         aria-label={t('fit.area')}

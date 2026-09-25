@@ -66,9 +66,14 @@ export function freshTableCode(groupSlug: string, random: string): string {
  */
 export const TABLE_NAME_MAX = 20;
 
-/** A dad's name as the table knows it. */
+/**
+ * A dad's name as the table knows it: cut to jaffre's twenty, and trimmed
+ * after the cut. Every name that comes back from the table is trimmed on the
+ * way in, so a cut that ended on a space ("Marc Antoine Julien ") never
+ * matched its own echo, and that dad was never nudged or crowned.
+ */
 export function tableName(displayName: string): string {
-  return displayName.slice(0, TABLE_NAME_MAX);
+  return displayName.trim().slice(0, TABLE_NAME_MAX).trim();
 }
 
 export interface TableLink {

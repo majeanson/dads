@@ -93,7 +93,10 @@ export function MarkRow({
 }) {
   const { t } = useT();
   const [more, setMore] = useState(false);
-  const six = sixFor(readTally(), Date.now());
+  // Read once per row, not per render: the tap that counts a mark re-renders
+  // the row it is in, and the six reshuffled under his thumb inside a menu
+  // that was still open. The next row he opens has learnt it.
+  const [six] = useState(() => sixFor(readTally(), Date.now()));
   const pick = (emoji: string, on: boolean) => {
     if (on) noteMark(emoji);
     onReact(emoji, on);

@@ -938,7 +938,15 @@ secret, custom domain bound by the route in wrangler.toml.
   (2026-09-17). The card keeps its shape, its size and its type: a group with
   nothing on the books has the same question as a group with a night, a louder
   one if anything, and the old "No dad night yet" was a whisper. It shows the
-  two days the most dads can do, and its one button opens the calendar. The
+  two days the most dads can do, **one to a line** (`NextDays.tsx`,
+  2026-09-25): each a leaf off a tear-off calendar — the month in a band, the
+  date big in the display face — then the weekday, "3 can, 1 might" and the
+  faces of who can, glasses down. The leader wears the accent, the runner-up
+  ink; with nobody marked it is an empty leaf with a "?". It was one
+  sentence, "3 can — Thu, Oct 2 · 2 can — Sat, Oct 4", which was the answer
+  written as a footnote. The rows are not buttons: the one button under them
+  opens the calendar, and two controls for one question is one too many.
+  `fit.spec` measures it in French at 667, where the question wraps. The
   MONTH GRID itself stays in the sheet — it is the right way to answer this
   and the wrong thing to put on a screen that has to fit a 667px phone with a
   door and four menu rows under it.
@@ -1036,6 +1044,15 @@ secret, custom domain bound by the route in wrangler.toml.
   and needs no colour of its own. The artwork's fixed hexes would have put a
   pale face on the pale-blue accent dark mode uses. Decorative, `aria-hidden`:
   the words beside it are the name.
+  **Since 2026-09-25 the door is a speech bubble**, because talking is what
+  it is for: the face big on an accent disc sitting up out of its top edge
+  (`.home-go-face`, ringed in the ground so it stands in front), the words
+  in the display face — the fifth thing that face touches — and a tail off
+  the one sharp corner, bottom left. It tilts under a hover and a press. Its
+  radius is `rounded-[1.75rem]!` and `rounded-bl-[0.375rem]!`, IMPORTANT on
+  purpose: the kit's `rounded-app` is a theme radius tailwind-merge does not
+  recognise, so it survives beside a caller's radius and, being later in the
+  CSS, wins — the bubble rendered square until that was found.
 - **In an empty room the mark starts at nought once the room has said
   hello.** `useSeen` takes `ready` (`connection === 'open'`) for that. It
   used to wait for a line to anchor to, and that line became the mark — so

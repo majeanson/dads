@@ -12,7 +12,7 @@ import { Answers } from './Answers';
 import { FaceStack } from './Face';
 import { plural, useT, weekdayNames } from './i18n';
 import { nightAway } from './NightEditor';
-import { bestDays } from './Poll';
+import { NextDays } from './NextDays';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
 import { buzz } from './buzz';
@@ -121,13 +121,20 @@ export function Home({
     const dy = e.touches[0]!.clientY - pullFrom.current;
     setPull(dy > 0 ? Math.min(dy * 0.5, PULL * 1.3) : 0);
   }
+  const lookTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(lookTimer.current), []);
   function onTouchEnd() {
     if (pull >= PULL && !looking) {
       setLooking(true);
       setAgain((n) => n + 1);
       // Long enough to be seen to look, whatever the network does.
-      setTimeout(() => setLooking(false), 700);
+      lookTimer.current = setTimeout(() => setLooking(false), 700);
     }
+    onTouchCancel();
+  }
+  /** A pull the phone took back — the back-edge swipe, the notification
+   * shade — ends with no touchend, and left the mark hanging half-pulled. */
+  function onTouchCancel() {
     pullFrom.current = null;
     setPull(0);
   }
@@ -198,7 +205,6 @@ export function Home({
   const not = answers.filter((a) => a.answer === 'out');
   const items = state?.items.length ?? 0;
   const away = night === null ? null : nightAway(t, lang, night, now);
-  const best = poll === null ? [] : bestDays(poll, you, 2);
   const full = coming.length >= FULL_TABLE;
   const occurrence = state?.occurrence ?? null;
   // The moment a table fills — whoever filled it, and whether he was looking
@@ -227,6 +233,7 @@ export function Home({
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
     >
       {pull > 0 || looking ? (
         <div
@@ -264,21 +271,7 @@ export function Home({
              * on a screen that has to fit a 667px phone with a door under it.
              */}
             <p className="home-none display">{t('p.title')}</p>
-            {poll === null ? null : best.length === 0 ? (
-              <p className="home-coming" data-testid="home-poll-none">
-                {t('p.nobody')}
-              </p>
-            ) : (
-              <p className="home-coming" data-testid="home-poll-best">
-                {best
-                  .map((d) =>
-                    t(`p.tally_in_${plural(lang, d.in)}`, { n: d.in }).concat(
-                      ` — ${dayNameShort(lang, d.day)}`,
-                    ),
-                  )
-                  .join(' · ')}
-              </p>
-            )}
+            {poll === null ? null : <NextDays poll={poll} you={you} />}
             <Button
               look="primary"
               size="lg"
@@ -437,16 +430,23 @@ export function Home({
           arrow on the right are what make it a way IN rather than a choice —
           the same shape as the rows under it, taller, and the only one filled. */}
       <div className="home-actions">
+        {/* A speech bubble, because that is what the door is for: the face
+            big on the left, sitting up out of the top edge, the words in
+            the display face, and a tail at the bottom where a bubble points
+            back at whoever is talking. The only speech bubble in the app. */}
         <Button
           look="primary"
           className={cn(
-            'home-go h-[clamp(3rem,6.5dvh,4.5rem)] w-full justify-start gap-3.5 rounded-[var(--radius-card)] px-4 text-[1.125rem]',
+            'home-go h-[clamp(3rem,6.5dvh,4.5rem)] w-full justify-start gap-3 mb-1.5 rounded-[1.75rem]! rounded-bl-[0.375rem]! pr-4 pl-[clamp(4.25rem,11dvh,5.5rem)]',
+            'text-[clamp(1.25rem,3dvh,1.5rem)]',
           )}
           onClick={onGo}
           data-testid="home-go"
         >
-          <Logo size={32} hole="var(--accent)" motion={live ? 'live' : 'on'} className="shrink-0" />
-          <span>{t('home.go')}</span>
+          <span className="home-go-face" aria-hidden="true">
+            <Logo size={64} hole="var(--accent)" motion={live ? 'live' : 'on'} />
+          </span>
+          <span className="display min-w-0 truncate">{t('home.go')}</span>
           {unseen > 0 ? (
             <span className="home-new ml-auto text-sm font-normal" data-testid="home-new">
               {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}

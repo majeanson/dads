@@ -63,6 +63,9 @@ export function TableColumn({
     heard.current = false;
     setSilent(false);
     setNote(null);
+    // A new table arrived — maybe somebody else's press, through the stir —
+    // so "couldn't start a new one" is no longer the news on this line.
+    setFailed(false);
     setTable(next);
   }, []);
 

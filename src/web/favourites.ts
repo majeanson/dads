@@ -23,21 +23,36 @@ function score(tally: Tally, emoji: string, now: number): number {
 }
 
 export function sixFor(tally: Tally, now: number): string[] {
-  const used = (MARKS as readonly string[])
-    .filter((e) => score(tally, e, now) > 0)
-    .sort((a, b) => score(tally, b, now) - score(tally, a, now));
   const defaults = REACTIONS as readonly string[];
-  // His favourites that are not defaults, most used first...
-  const extra = used.filter((e) => !defaults.includes(e));
-  // ...and the defaults he uses least give up their places, from the end.
-  const keep = [...defaults]
-    .sort((a, b) => {
-      const d = score(tally, b, now) - score(tally, a, now);
-      return d !== 0 ? d : defaults.indexOf(a) - defaults.indexOf(b);
-    })
-    .slice(0, Math.max(0, 6 - extra.length));
-  const kept = defaults.filter((e) => keep.includes(e));
-  return [...kept, ...extra].slice(0, 6);
+  const s = (e: string) => score(tally, e, now);
+  // Every default, and every other mark he has used at all — one field, won
+  // on score. A default only gives up its place to a mark he has used MORE:
+  // it used to be any mark he had used at all, so seven marks tapped once
+  // each pushed out the 👍 he pressed every day. On a tie the default stays,
+  // and the defaults he uses least are the first to go, from the end.
+  const field = [
+    ...defaults,
+    ...(MARKS as readonly string[]).filter((e) => !defaults.includes(e) && s(e) > 0),
+  ];
+  const six = new Set(
+    [...field]
+      .sort((a, b) => {
+        const d = s(b) - s(a);
+        if (d !== 0) return d;
+        const da = defaults.indexOf(a);
+        const db = defaults.indexOf(b);
+        if (da !== -1 && db !== -1) return da - db;
+        return da !== -1 ? -1 : db !== -1 ? 1 : 0;
+      })
+      .slice(0, 6),
+  );
+  // Shown with the defaults in their own order and his others after them,
+  // most used first.
+  const kept = defaults.filter((e) => six.has(e));
+  const extra = field
+    .filter((e) => six.has(e) && !defaults.includes(e))
+    .sort((a, b) => s(b) - s(a));
+  return [...kept, ...extra];
 }
 
 export function counted(tally: Tally, emoji: string, now: number): Tally {

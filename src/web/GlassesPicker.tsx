@@ -50,6 +50,7 @@ export function GlassesPicker({
   const current = worn ?? 'shades';
 
   async function wear(kind: GlassesKind) {
+    if (busy) return;
     setBusy(true);
     setError(false);
     try {
@@ -88,6 +89,7 @@ export function GlassesPicker({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
+          aria-label={fitting ? t('fit.title') : t('you.glasses')}
           side="bottom"
           align="start"
           sideOffset={6}
@@ -115,7 +117,9 @@ export function GlassesPicker({
                     aria-pressed={current === kind}
                     aria-label={t(`glasses.${kind}`)}
                     title={t(`glasses.${kind}`)}
-                    disabled={busy}
+                    // Not `disabled`: that takes the focus off the pair he
+                    // pressed, and on a failure it never came back.
+                    aria-disabled={busy}
                     onClick={() => void wear(kind)}
                     data-testid={`glasses-${kind}`}
                     className={cn(

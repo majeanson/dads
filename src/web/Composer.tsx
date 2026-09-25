@@ -77,6 +77,17 @@ export function Composer({
   const recorder = useRecorder();
   const picker = useRef<HTMLInputElement>(null);
   const say = useRef<HTMLInputElement>(null);
+  /**
+   * Which edit is the one on the screen now. An edit waits up to
+   * ACK_GRACE_MS for its line, and meanwhile he can press X and pick Edit on
+   * another line, or the same one again. The answer to the first must not
+   * clear the second's words or tell the second it failed: each send takes a
+   * number, and only the newest one's answer is his to hear.
+   */
+  const editSeq = useRef(0);
+  /** The send that holds `sending`, so a stale answer still lets go of the
+   * button unless a newer edit has taken it. */
+  const sendingFor = useRef(0);
 
   const recording = recorder.state.kind === 'recording' || recorder.state.kind === 'asking';
   if (busy) busy.current = draft.trim() !== '' || pending !== null || sending || recording;
@@ -85,6 +96,9 @@ export function Composer({
   // in the outbox of his own head. Cancelling gives the field back empty.
   const editingId = editing?.id ?? null;
   useEffect(() => {
+    // A different line (or none) is a different edit: whatever the last one
+    // is still waiting to hear is no longer about the field.
+    editSeq.current++;
     if (editing) {
       setDraft(editing.body);
       setPending(null);
@@ -93,8 +107,10 @@ export function Composer({
   }, [editingId]);
 
   function cancelContext() {
-    if (editing) onCancelEdit?.();
-    else if (replyTo) onClearReply?.();
+    if (editing) {
+      editSeq.current++;
+      onCancelEdit?.();
+    } else if (replyTo) onClearReply?.();
   }
 
   async function pick(file: File | undefined) {
@@ -180,8 +196,12 @@ export function Composer({
       if (!body || body === editing.body.trim()) return;
       setUploadError(null);
       setSending(true);
+      const mine = ++editSeq.current;
+      sendingFor.current = mine;
       try {
-        if (await onEdit?.(editing.id, body)) {
+        const took = await onEdit?.(editing.id, body);
+        if (mine !== editSeq.current) return;
+        if (took) {
           onCancelEdit?.();
           say.current?.focus();
         } else {
@@ -190,7 +210,7 @@ export function Composer({
       } finally {
         // In a finally for the same reason the upload's is: the room going
         // quiet must not leave him holding a composer he cannot use.
-        setSending(false);
+        if (sendingFor.current === mine) setSending(false);
       }
       return;
     }

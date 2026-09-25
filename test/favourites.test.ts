@@ -43,6 +43,18 @@ describe('the six marks a dad sees first', () => {
     expect(six.indexOf('🍺')).toBeLessThan(six.indexOf('🎉') === -1 ? 99 : six.indexOf('🎉'));
   });
 
+  it('keep a default he uses daily over seven marks tapped once each', () => {
+    // A default gives up its place only to a mark he uses MORE. It used to be
+    // any mark he had used at all: seven taps on seven marks and the 👍 he
+    // pressed every day of the week was gone from the row.
+    let t: Tally = {};
+    for (let d = 0; d < 7; d++) t = counted(t, '👍', now - d * DAY);
+    for (const e of ['🔥', '🍺', '🎉', '👀', '🤝', '🏒', '⚽']) t = use(t, e, 1);
+    const six = sixFor(t, now);
+    expect(six).toHaveLength(6);
+    expect(six[0]).toBe('👍');
+  });
+
   it('never show more than six, whatever he has used', () => {
     let t: Tally = {};
     for (const e of ['🔥', '🍺', '🎉', '👀', '🤝', '🏒', '⚽', '🃏']) t = use(t, e, 3);

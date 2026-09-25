@@ -175,6 +175,10 @@ export function Lines({
                 press.current = { at: Date.now(), whileOpen: menuOpen() };
               }}
               onClickCapture={(event) => {
+                // A click with no pointer behind it — Enter or Space on a
+                // link, a mark, the play button — is never the lift at the
+                // end of a long press, whatever the last press was.
+                if (event.detail === 0) return;
                 if (!notATap(press.current)) return;
                 event.preventDefault();
                 event.stopPropagation();

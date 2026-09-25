@@ -374,8 +374,12 @@ export function useRoom(
             ),
           }));
           // The line coming back changed is the only thing that means the room
-          // took it. Whoever is holding those words can let go of them here.
-          settleEdit(frame.id, true);
+          // took it — and changed to HIS words, the way the resume path checks:
+          // an edit of the same line from his other phone is not this one
+          // landing.
+          if (pendingEdits.current.get(frame.id)?.body.trim() === frame.body) {
+            settleEdit(frame.id, true);
+          }
           return;
         case 'kept':
           heardRev(frame.rev);

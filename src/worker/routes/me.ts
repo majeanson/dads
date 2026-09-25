@@ -103,6 +103,12 @@ export async function putGlassesFit(request: Request, env: Env, prod: boolean): 
   if (body.fit !== null && fit === null) {
     return Response.json({ error: 'bad_fit' }, { status: 400 });
   }
+  // A fit belongs to one picture's eyes, and a face with no picture is drawn
+  // to fit. Stored anyway, it rode every hello for nothing and was thrown
+  // away by the next photo.
+  if (fit !== null && !session.member.avatarAt) {
+    return Response.json({ error: 'no_photo' }, { status: 409 });
+  }
 
   await env.DB.prepare('UPDATE members SET glasses_fit = ? WHERE id = ?')
     .bind(fit === null ? null : JSON.stringify(fit), session.member.id)

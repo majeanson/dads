@@ -397,3 +397,51 @@ test('the calendar fits a narrow phone in French', async ({ browser }) => {
 
   await context.close();
 });
+
+test('home fits the small phone in French asking when the next one is', async ({ browser }) => {
+  // With no night, the card lists the two days the most dads can do, one to
+  // a line, each a calendar leaf with the faces of who can. "C'est quand la
+  // prochaine ?" wraps to two lines in French, so this is the card at its
+  // tallest. Runs after the calendar test, which cleared the night.
+  const context = await browser.newContext({ viewport: SMALL });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await page.getByLabel('Code').fill(E2E_FIT_GROUP.code);
+  await page.getByLabel('Ton nom').fill('Fit Prochaine');
+  await page.getByRole('button', { name: 'Entre' }).click();
+  await expect(page.getByTestId('connection')).toBeVisible();
+  await page.evaluate(() =>
+    fetch('/api/night', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ night: null }),
+    }),
+  );
+  const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  const voters = [];
+  for (const [name, answer] of [
+    ['Ann', 'in'],
+    ['Bea', 'in'],
+    ['Cat', 'maybe'],
+  ] as const) {
+    const other = await browser.newContext();
+    await other.request.post('/api/join', {
+      data: { code: E2E_FIT_GROUP.code, displayName: name },
+    });
+    await other.request.put('/api/poll', { data: { day: day(4), answer: 'in' } });
+    await other.request.put('/api/poll', { data: { day: day(6), answer } });
+    voters.push(other);
+  }
+  await page.reload();
+  const best = page.getByTestId('home-poll-best');
+  await expect(best).toBeVisible({ timeout: 15_000 });
+  await expect(best.locator('li')).toHaveCount(2);
+  await page.waitForTimeout(300);
+
+  expect(await overflow(page, '.home')).toBe(0);
+  expect(await past(page, '.home-card')).toEqual([]);
+
+  for (const other of voters) await other.close();
+  await context.close();
+});

@@ -248,11 +248,12 @@ export function Room({ session, onSignOut }: { session: Session; onSignOut: () =
   const waiting = todo.prompt && room.rooms.questions;
   const soon = nightShort(t, lang, room.night, now);
 
-  /** A member id as a name, for the marks. The roster is five people long. */
+  /** A member id as a name, for the marks. Everyone in the group, not who
+   * is connected: a mark from a dad who is not here tonight was "someone". */
   const nameOf = useCallback(
     (memberId: string) =>
-      room.roster.find((m) => m.memberId === memberId)?.name ?? t('line.someone'),
-    [room.roster, t],
+      room.members.find((m) => m.memberId === memberId)?.name ?? t('line.someone'),
+    [room.members, t],
   );
 
   /**

@@ -46,8 +46,8 @@ open screens to re-read.
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 376, in workerd against the real migrations
-npm run e2e           # 119, against the built stack (109 in Chromium, 10 on the iPhone)
+npm test              # 379, in workerd against the real migrations
+npm run e2e           # 121, against the built stack (111 in Chromium, 10 on the iPhone)
 npm run audit:contrast  # 68 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run prove         # 32, against dads.marcportal.com itself, in its own room
@@ -177,16 +177,24 @@ origin check on every bridge event, reduced motion, the palette blocks and
 the audit, and the dictionary. jaffre `c48042b` is deployed and its
 `winners` shape matches what the room parses.
 
-**Known and open**, smaller, left for another day: the picker popover is a
-dialog with no name and opening the fitter drops focus to the body (the a11y
-suite never opens either); pull-to-refresh has no `touchcancel`; the
-favourites let seven marks tapped once each push out a default pressed daily,
-and the non-default part of the row reshuffles under a thumb; a twenty-char
-cut ending in a space never matches jaffre's trimmed echo, so that dad is
-never crowned or nudged; keyboard activation inside a line is swallowed after
-any menu; the composer's edit ack settles against whatever it is editing now
-rather than what it sent; the crown's dedupe races the four relays it exists
-for (benign) and "go in twice inside the film" is pinned only probabilistically.
+**The smaller ones, fixed the same afternoon**: the picker popover is a named
+dialog, the fitter takes the focus when it opens, and a pair saving no longer
+drops it; a pull on home that the phone cancels no longer leaves the mark
+hanging; a default mark only gives way to one he uses more, and the row no
+longer reshuffles under his thumb inside an open menu; a table name cut on a
+space is trimmed, so that dad is nudged and crowned; a keyboard click inside
+a line is never taken for the lift of a long press; the answer to an edit he
+walked away from no longer clears or scolds the next one, and a live `edited`
+settles only on his own words; a fit is refused over a face with no photo;
+a mark by a dad not here tonight carries his name; the table's failure note
+clears when a new table arrives; and the face preview's object URL is freed
+when Settings closes. Four carry a test: the favourites, the table name and
+the fit (unit), and the edit he walked away from (e2e). The rest are small
+enough that the fix is the whole of it.
+
+**Still open**: the crown's dedupe races the four relays it exists for
+(benign — the same crown twice), and "go in twice inside the film" is pinned
+only probabilistically.
 
 ## The review before that
 

@@ -44,6 +44,17 @@ export function You({ memberId, name }: { memberId: string; name: string }) {
       return null;
     });
   }, [roomFace]);
+  // And when Settings closes with one still held: the room catching up is not
+  // the only way this goes, and an object URL is a copy of the photo that
+  // lives until the page does.
+  const held = useRef<string | false | null>(null);
+  held.current = preview;
+  useEffect(
+    () => () => {
+      if (typeof held.current === 'string') URL.revokeObjectURL(held.current);
+    },
+    [],
+  );
   const picker = useRef<HTMLInputElement>(null);
 
   async function rename(event: FormEvent) {
