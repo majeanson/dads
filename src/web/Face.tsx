@@ -71,14 +71,12 @@ export function Face({
       className={cn('relative inline-block shrink-0', className)}
     >
       {src === null ? (
-        // His colour, softened so the glasses and the smile on it stay dark
-        // enough to read in both themes; the ring keeps it at full strength.
+        // His colour, softened (`.face-blank`, where audit:contrast reads the
+        // mix from) so the ink glasses and smile on it read in both themes;
+        // the ring keeps the colour at full strength.
         <span
-          style={{
-            ...box,
-            background: `color-mix(in oklab, ${dadVar(memberId)} 40%, var(--bg))`,
-          }}
-          className="block rounded-full"
+          style={{ ...box, '--dad': dadVar(memberId) } as CSSProperties}
+          className="face-blank block rounded-full"
         >
           <svg viewBox="0 0 20 20" className="face-smile" aria-hidden="true" focusable="false">
             <path d="M6.5 13.2 Q10 16.2 13.5 13.2" />
@@ -100,6 +98,7 @@ export function Face({
         kind={glasses}
         drop={wear === 'drop'}
         delay={delay}
+        halo
         className={cn('face-shades', wear === 'bob' && 'face-typing')}
       />
     </span>

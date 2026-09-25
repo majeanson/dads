@@ -96,6 +96,63 @@ export function contrast(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/*
+ * `color-mix(in oklab, A p%, B)`, the way a browser does it: into OKLab
+ * (Björn Ottosson's matrices), a straight blend there, and back to sRGB,
+ * clipped. A face with no photograph is filled this way, and the ink on it is
+ * a rendered pair like any other — it just is not a token.
+ */
+const toLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const toGamma = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+
+function hexToOklab(hex) {
+  const h = hex.slice(1);
+  const full = h.length === 3 ? [...h].map((c) => c + c).join('') : h;
+  const [r, g, b] = [0, 2, 4].map((i) => toLinear(parseInt(full.slice(i, i + 2), 16) / 255));
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function oklabToHex([L, A, B]) {
+  const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
+  const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
+  const s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
+  const rgb = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+  return (
+    '#' +
+    rgb
+      .map((c) => Math.round(Math.min(1, Math.max(0, toGamma(c))) * 255))
+      .map((v) => v.toString(16).padStart(2, '0'))
+      .join('')
+  );
+}
+
+export function mixOklab(a, b, pa) {
+  const [x, y] = [hexToOklab(a), hexToOklab(b)];
+  return oklabToHex(x.map((v, i) => v * pa + y[i] * (1 - pa)));
+}
+
+/** The share of his colour in a face with no photograph, from `.face-blank`. */
+function faceMix(css) {
+  const found =
+    /\.face-blank\s*\{[^}]*color-mix\(in oklab,\s*var\(--dad\)\s*(\d+(?:\.\d+)?)%,\s*var\(--bg\)\)/.exec(
+      css,
+    );
+  if (found === null)
+    throw new Error('no .face-blank color-mix(in oklab, var(--dad) N%, var(--bg)) rule');
+  return Number(found[1]) / 100;
+}
+
 export function auditTheme(tokens) {
   return PAIRS.map(([fg, bg, required, what]) => {
     const a = tokens.get(fg);
@@ -175,7 +232,40 @@ for (const [name, tokens] of Object.entries(themes)) {
   }
 }
 
-const total = PAIRS.length * 2;
+/*
+ * The ink on a face with no photograph: his glasses and his smile, drawn in
+ * `--text` on his colour mixed into `--bg`. Graphics, not words, so 3.0
+ * (1.4.11) — but all six colours, in both palettes, because a mix that reads
+ * in light can go to mud in dark, where the colours are the pale ones.
+ */
+const mix = faceMix(css);
+const FACES = [1, 2, 3, 4, 5, 6].map((n) => `dad-${n}`);
+for (const [name, tokens] of Object.entries(themes)) {
+  if (!process.argv.includes('--quiet')) {
+    console.log(`\n${name.toUpperCase()} — faces with no photo (${Math.round(mix * 100)}% mix)`);
+  }
+  for (const dad of FACES) {
+    const colour = tokens.get(dad);
+    const ink = tokens.get('text');
+    const ground = tokens.get('bg');
+    if (!colour || !ink || !ground) {
+      console.error(`  FAIL ${dad}: missing token`);
+      failures += 1;
+      continue;
+    }
+    const fill = mixOklab(colour, ground, mix);
+    const ratio = contrast(ink, fill);
+    const ok = ratio >= 3;
+    if (!ok) failures += 1;
+    if (!process.argv.includes('--quiet') || !ok) {
+      console.log(
+        `  ${ok ? 'ok  ' : 'FAIL'} ${`text on ${dad} face (${fill})`.padEnd(30)} ${`${ratio.toFixed(2)} / 3.0`.padEnd(16)} glasses and smile`,
+      );
+    }
+  }
+}
+
+const total = PAIRS.length * 2 + FACES.length * 2;
 if (!process.argv.includes('--quiet')) {
   console.log(`\n${total - failures}/${total} required pairs pass across both themes`);
 }

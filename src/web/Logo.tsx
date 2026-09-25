@@ -200,11 +200,20 @@ export function Glasses({
   kind = 'shades',
   drop = false,
   delay = 0,
+  halo = false,
   className,
 }: {
   width?: number;
   kind?: GlassesKind;
   drop?: boolean;
+  /**
+   * A hairline of the ground colour round the frames, so a pair reads on a
+   * face of any colour. Drawn IN the svg — the same pair, stroked, behind —
+   * because it used to be a CSS drop-shadow, and once every face wore
+   * glasses that was a filter, and a paint of its own, on every run of a
+   * five-hundred-line conversation.
+   */
+  halo?: boolean;
   /** Milliseconds before they come down, so a row can come down as a wave. */
   delay?: number;
   className?: string;
@@ -217,6 +226,7 @@ export function Glasses({
       aria-hidden="true"
       focusable="false"
       data-glasses={kind}
+      overflow={halo ? 'visible' : undefined}
       className={[drop ? 'logo-anim' : '', className ?? ''].join(' ')}
     >
       <g
@@ -224,6 +234,19 @@ export function Glasses({
         className="logo-glasses"
         style={delay ? { animationDelay: `${delay}ms` } : undefined}
       >
+        {halo ? (
+          // About a pixel either side at a face's size: 352 units across is
+          // roughly 27px on a 32px face, so 26 units of stroke, half outside.
+          <g
+            fill="var(--bg)"
+            stroke="var(--bg)"
+            strokeWidth="26"
+            strokeLinejoin="round"
+            data-halo=""
+          >
+            <Pair kind={kind} />
+          </g>
+        ) : null}
         <Pair kind={kind} />
       </g>
     </svg>

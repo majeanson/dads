@@ -1740,7 +1740,15 @@
     width: 84%;
     height: auto;
     color: var(--text);
-    filter: drop-shadow(0 0 1px var(--bg));
+    /* The halo is drawn inside the svg (`Glasses halo`), not filtered on. */
+  }
+
+  /* A dad with no photograph: his colour (`--dad`, set by `Face`), mixed into
+     the ground so the ink glasses and smile on it read in both themes.
+     `npm run audit:contrast` reads THIS percentage and checks the ink on every
+     dad's mix in both palettes — change it here and the audit follows. */
+  .face-blank {
+    background: color-mix(in oklab, var(--dad) 40%, var(--bg));
   }
 
   /* The smile under them, on a dad with no photograph: with the glasses it is
