@@ -18,6 +18,20 @@ import { cn } from './cn';
 let openedAt = 0;
 let isOpen = false;
 
+/**
+ * The page behind an open menu is inert, not only hidden.
+ *
+ * Radix hides it from a screen reader with aria-hidden while the menu is
+ * open, but the header, the list and the composer inside stayed focusable —
+ * hidden from one reader, reachable by another route, which axe rightly
+ * calls serious. `inert` takes them out of both. A tap on them still reaches
+ * the document, so the menu closes on it the way it always did, and the tap
+ * itself does nothing underneath — which is what a modal menu promised.
+ */
+function behind(open: boolean): void {
+  document.getElementById('root')?.toggleAttribute('inert', open);
+}
+
 export function notATap(press: { at: number; whileOpen: boolean }): boolean {
   return press.whileOpen || openedAt >= press.at;
 }
@@ -102,7 +116,10 @@ export function LineMenu({
   const ours = useRef(false);
   useEffect(
     () => () => {
-      if (ours.current) isOpen = false;
+      if (ours.current) {
+        isOpen = false;
+        behind(false);
+      }
     },
     [],
   );
@@ -112,6 +129,7 @@ export function LineMenu({
       onOpenChange={(open) => {
         isOpen = open;
         ours.current = open;
+        behind(open);
         if (open) openedAt = Date.now();
         else setArmed(false);
       }}
@@ -144,7 +162,7 @@ export function LineMenu({
           {/* The marks first, because it is the one anybody presses. They
               share the row and wrap rather than shrinking to nothing when the
               menu is squeezed; the ones already yours are outlined. */}
-          <MarkRow mine={mine} onReact={onReact} />
+          <MarkRow mine={mine} onReact={onReact} inMenu />
 
           <ContextMenu.Separator className="my-1 h-px bg-line" />
 

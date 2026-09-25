@@ -361,6 +361,31 @@ describe('RoomDO', () => {
     expect(seen(sam).some((b) => b.includes('Marc'))).toBe(false);
   });
 
+  it('says nothing when the man who left is gone from the group', async () => {
+    // A leave armed for a dad the teardown then deleted fails the insert on
+    // its foreign key. Nobody is left to record, and it used to log a stack
+    // trace on every run.
+    const marc = await enter(group, 'Marc');
+    const sam = await enter(group, 'Sam');
+    open.push(sam);
+    await sam.next('roster', (f) => f.roster.length === 2);
+    marc.close();
+    await sam.next('roster', (f) => f.roster.length === 1);
+    await env.DB.prepare('DELETE FROM members WHERE group_id = ? AND display_name = ?')
+      .bind(group.id, 'Marc')
+      .run();
+
+    const said = vi.spyOn(console, 'error');
+    try {
+      expect(await graceWindowPasses()).toBe(true);
+      await new Promise((r) => setTimeout(r, 50));
+      expect(said.mock.calls.filter((c) => c[0] === 'presence write failed')).toEqual([]);
+    } finally {
+      said.mockRestore();
+    }
+    expect(await presence(group.id)).not.toContain('Marc out');
+  });
+
   it('treats a return within the grace window as never having left', async () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');

@@ -291,6 +291,13 @@ weakening `sessionSecret()`.
   the player seeks past the end once on load, which makes the browser find
   out, and puts it back to nought before anybody hears it. `room.spec.ts` long-presses and taps text, a link, a
   photo, a clip and a voice note with real touch events.
+- **The page behind an open line menu is `inert`** (2026-09-25). Radix hides
+  it with aria-hidden, but the header, the list and the composer stayed
+  focusable, which axe calls serious; `inert` takes them out of both, and a tap
+  outside still closes the menu. Inside the menu the marks are
+  `menuitemcheckbox` (`MarkRow inMenu`), because a menu holds only menu
+  items. `a11y.spec` now walks the line menu, the glasses picker and fitter,
+  and home with dates voted on and with a night answered.
 - **`LineMenu` is a Radix context menu** — right-click on a laptop and a long
   press on a phone from one primitive, keyboard route included. It wraps only
   chat and prompt lines. The destructive item ARMS on the first select

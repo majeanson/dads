@@ -1651,6 +1651,11 @@ export class RoomDO extends DurableObject<Env> {
         .bind(newId('pres'), groupId, memberId, name, kind, Date.now())
         .run();
     } catch (err) {
+      // The man, or the whole group, is gone from D1 while this object still
+      // had his leave armed: prove's teardown sweeps the members it invented,
+      // and a test run deletes and remakes its groups. There is nobody left
+      // to record, so there is nothing to say about it.
+      if (String(err).includes('FOREIGN KEY')) return;
       // Nobody is waiting on this, and nothing downstream depends on it.
       console.error('presence write failed', { groupId, name, kind }, err);
     }

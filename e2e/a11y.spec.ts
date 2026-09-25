@@ -140,6 +140,71 @@ for (const theme of ['light', 'dark'] as const) {
       await close();
     }
 
+    // A line's own menu: marks, reply, edit, copy, take it back.
+    await page.getByTestId('home-go').click();
+    await page
+      .getByTestId('line')
+      .filter({ hasText: `a ${theme} line` })
+      .click({ button: 'right' });
+    await expect(page.getByTestId('line-menu')).toBeVisible();
+    found.push(...(await faults(page, 'a line’s menu')));
+    await page.keyboard.press('Escape');
+    await page.getByTestId('go-home').click();
+
+    // Home in its other two shapes. With no night and days voted on, the card
+    // is a list of calendar leaves; with a night and an answer, it is the
+    // three-segment control. The door opened on neither.
+    const night = (body: unknown) =>
+      page.evaluate(
+        (b) =>
+          fetch('/api/night', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ night: b }),
+          }),
+        body,
+      );
+    await night(null);
+    const soon = new Date(Date.now() + 4 * 86_400_000).toISOString().slice(0, 10);
+    await page.evaluate(
+      (day) =>
+        fetch('/api/poll', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ day, answer: 'in' }),
+        }),
+      soon,
+    );
+    await page.reload();
+    await expect(page.getByTestId('home-poll-best')).toBeVisible();
+    found.push(...(await faults(page, 'home, asking when the next one is')));
+    await night({ weekday: 4, time: '21:00', tz: 'America/Montreal' });
+    await expect(page.getByTestId('home-when')).toBeVisible();
+    await page.getByTestId('home-in').click();
+    await expect(page.getByTestId('home-in')).toHaveAttribute('aria-pressed', 'true');
+    found.push(...(await faults(page, 'home, with a night and an answer')));
+    await page.getByTestId('dad-night').click();
+    await settled();
+    found.push(...(await faults(page, 'dad night, with one on the books')));
+    await close();
+
+    // The glasses: the six, and fitting them over a photo. Popovers the rest
+    // of this walk never opens.
+    await page
+      .getByRole('navigation', { name: 'Rooms' })
+      .getByRole('button', { name: /^Settings/ })
+      .click();
+    await settled();
+    await page.setInputFiles('#face', 'public/icon-192.png');
+    await page.getByTestId('glasses-open').click();
+    await expect(page.getByTestId('glasses-picker')).toBeVisible();
+    found.push(...(await faults(page, 'the glasses')));
+    await page.getByTestId('glasses-fit').click({ timeout: 15_000 });
+    await expect(page.getByTestId('glasses-fitter')).toBeVisible();
+    found.push(...(await faults(page, 'fitting the glasses')));
+    await page.keyboard.press('Escape');
+    await close();
+
     expect(found).toEqual([]);
     await context.close();
   });

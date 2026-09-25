@@ -87,9 +87,14 @@ export function Marks({
 export function MarkRow({
   mine,
   onReact,
+  inMenu = false,
 }: {
   mine: string[];
   onReact: (emoji: string, on: boolean) => void;
+  /** Inside a line's menu, where a menu may hold only menu items: the marks
+   * are then checkable items and the "+" an item, read as such. Everywhere
+   * else they are toggle buttons. */
+  inMenu?: boolean;
 }) {
   const { t } = useT();
   const [more, setMore] = useState(false);
@@ -107,7 +112,7 @@ export function MarkRow({
       <button
         key={emoji}
         type="button"
-        aria-pressed={on}
+        {...(inMenu ? { role: 'menuitemcheckbox', 'aria-checked': on } : { 'aria-pressed': on })}
         aria-label={emoji}
         data-testid={`react-${emoji}`}
         onClick={() => pick(emoji, !on)}
@@ -130,6 +135,7 @@ export function MarkRow({
         <button
           type="button"
           aria-expanded={more}
+          role={inMenu ? 'menuitem' : undefined}
           aria-label={t('line.more_marks')}
           data-testid="react-more"
           onClick={() => setMore((v) => !v)}

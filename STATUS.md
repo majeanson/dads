@@ -46,7 +46,7 @@ open screens to re-read.
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 385, in workerd against the real migrations
+npm test              # 386, in workerd against the real migrations
 npm run e2e           # 122, against the built stack (112 in Chromium, 10 on the iPhone)
 npm run audit:contrast  # 68 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
