@@ -50,7 +50,7 @@ npm test              # 376, in workerd against the real migrations
 npm run e2e           # 119, against the built stack (109 in Chromium, 10 on the iPhone)
 npm run audit:contrast  # 68 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
-npm run prove         # 32, against dads.marcportal.com itself
+npm run prove         # 32, against dads.marcportal.com itself, in its own room
 npm run backup        # every D1 table into backups/, gitignored
 ```
 
@@ -309,12 +309,15 @@ made the first summary never arrive.
 still fire on the same clock; the open reaches the phones that asked, and the
 summary is gone.)
 
-## Production, 2026-09-22
+## Production, 2026-09-25
 
-One room, **Throwback daddies** (`throwback-daddies`), opened at the door on
-2026-09-17: two members, ten lines. The room this document calls `the-dads`
-above no longer exists — production was wiped and rebuilt before the repo went
-public. No room has been opened by anybody else.
+Two rooms. **Throwback daddies** (`throwback-daddies`), opened at the door on
+2026-09-17, is the dads'. **The Prove Room** (`prove-room`) was made from the
+laptop on 2026-09-25 for `npm run prove`, which used to write into the dads'
+room and now never touches it; its word is in this machine's `.dev.vars`. The
+room this document calls `the-dads` above no longer exists — production was
+wiped and rebuilt before the repo went public. No room has been opened by
+anybody else.
 
 ## Notes
 
@@ -326,5 +329,6 @@ public. No room has been opened by anybody else.
   that were out. From a laptop, without costing the group its history:
   `npm run group:create -- --slug <slug> --rotate --code "<code>" --remote`
 - Every driven check against production joins as a new member, because a fresh
-  browser is a fresh dad. Sweeping them up afterwards:
+  browser is a fresh dad. `prove`'s teardown sweeps its own by name; anything
+  driven by hand is swept with
   `delete from members where id not in (select distinct member_id from messages)`

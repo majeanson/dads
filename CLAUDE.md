@@ -1779,8 +1779,28 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
 ## Proving it in production
 
 `npm run prove` runs `prod/` against **dads.marcportal.com**. It is not in CI
-and is not part of `npm run e2e`, because it writes into the room five real
-people use.
+and is not part of `npm run e2e`: it needs the live site and two things that
+live only on this machine, and it writes into a real room.
+
+- **It has a room of its own** (2026-09-25): "The Prove Room", slug
+  `prove-room`, made with `group:create --remote`. It used to write into the
+  room the real dads use, and the word had to be typed on every run as the
+  friction that kept it from being run by accident. Its word is `PROD_CODE`
+  in the gitignored `.dev.vars`, beside the `OPS_SECRET` the teardown sweeps
+  with; `prod/devvars.ts` reads both there, the environment winning. The
+  word is a real room's word and lives nowhere else — not in this file, not
+  in a default. Losing `.dev.vars` means rotating it:
+  `npm run group:create -- --slug prove-room --rotate --remote`, then writing
+  the printed word back. The room's name must never start with `prove-`: the
+  teardown deletes every ROOM the suite opened by that prefix on the name.
+- **A decoration that hangs off its box is not a fault** (2026-09-25).
+  `screens.spec` flags anything wider than its box with overflow visible,
+  and every face and every pose is: the glasses are wider than the face and
+  the badge sits on the corner, on purpose. `aria-hidden` subtrees are
+  skipped — nothing in them is read or pressed, and anything that is, is
+  not hidden — and only IN-FLOW descendants count: the header's "N here" is
+  a hit area laid over the faces at `-inset-2.5`, which `scrollWidth`
+  counts and the layout never does.
 
 - It proves the DEPLOYMENT, not the code: the custom domain, the assets binding
   answering before the Worker, the headers that only exist because

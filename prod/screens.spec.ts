@@ -73,7 +73,27 @@ function probe(): string[] {
 
   for (const el of document.querySelectorAll('*')) {
     if (el === document.body || el === doc || !visible(el)) continue;
-    if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX === 'visible') {
+    // Decoration hangs off its box on purpose — the badge on a pose's corner,
+    // a pair of glasses wider than the face — and nothing in it is read or
+    // pressed. Anything that is, is not aria-hidden.
+    if (el.closest('[aria-hidden="true"]')) continue;
+    if (el.scrollWidth <= el.clientWidth + 1 || getComputedStyle(el).overflowX !== 'visible') {
+      continue;
+    }
+    // Only what is IN THE FLOW can widen a box, and so the page. A hit area
+    // laid over its control (`absolute -inset-2.5` on the header's count)
+    // reaches past the box by design, and `scrollWidth` counts it anyway;
+    // whether a control itself hangs off the screen is the check above.
+    const edge = el.getBoundingClientRect().right;
+    const inFlow = [...el.querySelectorAll('*')].some((d) => {
+      const cs = getComputedStyle(d);
+      return (
+        cs.position !== 'absolute' &&
+        cs.position !== 'fixed' &&
+        d.getBoundingClientRect().right > edge + 1
+      );
+    });
+    if (inFlow) {
       faults.push(`wider than its box: ${el.tagName}.${String(el.className).slice(0, 24)}`);
     }
   }

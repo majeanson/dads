@@ -1,18 +1,26 @@
 import { expect, type Browser, type Page } from '@playwright/test';
+import { devVar } from './devvars';
 
 /**
- * The word of the room this suite writes into, and it lives in the
- * environment or nowhere.
+ * The word of the room this suite writes into: `PROD_CODE`, from the
+ * environment or from the gitignored `.dev.vars`, and nowhere else.
  *
- * A default here would be the one live secret in a public repository, and a
- * word this app can never show — it is kept as a PBKDF2 hash — has no
- * business being written down beside the tests that use it. Refusing to run
- * without it is also the friction this suite wants: it writes into a room
- * real people are in, and it should not be runnable by accident.
+ * A default here would be a live secret in a public repository, and a word
+ * this app can never show — it is kept as a PBKDF2 hash — has no business
+ * being written down beside the tests that use it. The room is one made for
+ * this suite (2026-09-25, "The Prove Room", slug `prove-room`, opened with
+ * `group:create --remote`): it used to write into the room the real dads
+ * use, which is why the word had to be typed every run as friction. With a
+ * room of its own there is nobody to disturb, and the word can live where
+ * the ops secret already does.
  */
 export const CODE = (() => {
-  const code = process.env.PROD_CODE;
-  if (!code) throw new Error('PROD_CODE is not set: the room this writes into names its own word.');
+  const code = devVar('PROD_CODE');
+  if (!code) {
+    throw new Error(
+      "PROD_CODE is not set: put the prove room's word in .dev.vars, or in the environment.",
+    );
+  }
   return code;
 })();
 
@@ -51,7 +59,7 @@ export function note(what: string): string {
   return `${MARK}${what} ${Date.now()}`;
 }
 
-/** A new dad in the real room. */
+/** A new dad in the prove room. */
 export async function comeIn(browser: Browser, what: string): Promise<Page> {
   const context = await browser.newContext();
   const page = await context.newPage();

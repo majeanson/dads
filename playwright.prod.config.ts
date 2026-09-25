@@ -11,9 +11,10 @@ import { defineConfig, devices } from '@playwright/test';
  * could not have been caught anywhere else — the endpoint allowlist refusing
  * Chrome's real push host was invisible until somebody drove this.
  *
- * It is NOT in CI and is not part of `npm run e2e`, because it writes into the
- * room five real people use. One worker, in order, and the teardown sweeps up
- * after it.
+ * It is NOT in CI and is not part of `npm run e2e`: it needs the live site, a
+ * word and a secret that live only on this machine, and it writes into a real
+ * room — its own since 2026-09-25 (`prove-room`), not the dads'. One worker,
+ * in order, and the teardown sweeps up after it.
  */
 const BASE = process.env.PROD_URL ?? 'https://dads.marcportal.com';
 

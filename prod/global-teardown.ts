@@ -1,24 +1,10 @@
-import { readFileSync } from 'node:fs';
 import { run } from '../scripts/run';
+import { devVar } from './devvars';
 import { MARK } from './names';
 
-/**
- * The ops secret, from the environment or from .dev.vars.
- *
- * .dev.vars is gitignored and is already where this machine keeps the things
- * production knows and the repo must not.
- */
-function opsSecret(): string | null {
-  if (process.env.DADS_OPS_SECRET) return process.env.DADS_OPS_SECRET;
-  try {
-    const line = readFileSync('.dev.vars', 'utf8')
-      .split(/\r?\n/)
-      .find((l) => l.startsWith('OPS_SECRET='));
-    return line ? line.slice('OPS_SECRET='.length).trim() : null;
-  } catch {
-    return null;
-  }
-}
+/** The ops secret: `DADS_OPS_SECRET` in the environment, or `OPS_SECRET` in
+ * `.dev.vars`, where this machine already keeps it for `wrangler dev`. */
+const opsSecret = () => devVar('OPS_SECRET', 'DADS_OPS_SECRET');
 
 /**
  * Deleting from D1 is only half of it.
