@@ -171,21 +171,35 @@ export default function globalSetup(): void {
   );
   wrangler('d1', 'execute', 'dads', '--local', '-y', '--file', reset);
 
+  // With the same second and third go the reset gets: the database the last
+  // run's server held can still be locked here, and one busy moment used to
+  // end the whole run before a single test started.
   for (const group of GROUPS) {
-    run(
-      'npx',
-      [
-        'tsx',
-        'scripts/create-group.ts',
-        '--slug',
-        group.slug,
-        '--name',
-        group.name,
-        '--code',
-        group.code,
-      ],
-      'inherit',
-    );
+    let last: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        run(
+          'npx',
+          [
+            'tsx',
+            'scripts/create-group.ts',
+            '--slug',
+            group.slug,
+            '--name',
+            group.name,
+            '--code',
+            group.code,
+          ],
+          'inherit',
+        );
+        last = undefined;
+        break;
+      } catch (err) {
+        last = err;
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1500);
+      }
+    }
+    if (last !== undefined) throw last;
   }
 
   // A few days of questions behind the fit group.

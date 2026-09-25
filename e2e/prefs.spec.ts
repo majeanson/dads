@@ -116,9 +116,13 @@ test('the app’s own words follow each dad, in the room they share', async ({ b
   await expect(marc.getByTestId('home-when')).toContainText('jeudi', { ignoreCase: true });
   await expect(sam.getByTestId('home-when')).toContainText('Thursday', { timeout: 15_000 });
 
-  // And the conversation stayed the conversation.
+  // And the conversation stayed the conversation: nothing about the night in
+  // it, in either language. Not "no lines at all" — this room is shared with
+  // the rest of the file, and a retry of it runs after tests that talk.
   await talk(marc);
-  await expect(marc.getByTestId('line')).toHaveCount(0);
+  await expect(marc.getByTestId('line').filter({ hasText: /jeudi|thursday|21:00/i })).toHaveCount(
+    0,
+  );
 
   await fr.close();
   await en.close();
@@ -213,7 +217,9 @@ test('a dad changes the name he goes by, and the roster follows', async ({ brows
   await expect(samPage.getByTestId('roster-entry').filter({ hasText: 'Gus-antoine' })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(samPage.getByTestId('line')).toHaveCount(0);
+  // Nothing said about it: not "no lines at all", which this shared room
+  // cannot promise once the file has been retried, but no line naming him.
+  await expect(samPage.getByTestId('line').filter({ hasText: /Gus/ })).toHaveCount(0);
 
   await marc.close();
   await sam.close();
@@ -347,6 +353,10 @@ test('a dad chooses his glasses, and they stay his', async ({ page }) => {
   await expect(worn).toHaveAttribute('data-glasses', 'shades');
 
   await picker.getByTestId('glasses-aviators').click();
+  // The picker closes once the room has the pair. Reopening before that
+  // pressed the button of a popover that was still open — which closes it —
+  // and the save then closed it too, leaving nothing to look in. CI found it.
+  await expect(picker).toHaveCount(0);
   await page.getByTestId('glasses-open').click();
   await expect(picker.getByTestId('glasses-aviators')).toHaveAttribute('aria-pressed', 'true');
   // And the pair he chose is ON him — choosing that changed nothing on his
