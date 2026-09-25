@@ -73,7 +73,7 @@ test('a room is opened, shared, and its switches belong to the man who opened it
 
   // The switches are the creator's: the line says so, and one answers him.
   await openSettings(maker);
-  await expect(maker.getByTestId('rooms-owner')).toContainText('you opened this room');
+  await expect(maker.getByTestId('rooms-owner')).toContainText('The word');
   await maker.getByTestId('room-questions').click();
   await expect(maker.getByTestId('room-questions')).not.toBeChecked();
   await maker.getByRole('button', { name: 'Close', exact: true }).click();
@@ -144,6 +144,7 @@ test('the creator changes the word, then hands the room on', async ({ browser })
 
   // The word: never shown, only replaced.
   await openSettings(maker);
+  await maker.getByTestId('room-owning').click();
   await expect(maker.getByTestId('room-word')).toHaveValue('');
   await maker.getByTestId('room-word').fill(second);
   await maker.getByRole('button', { name: 'Change it' }).click();
@@ -162,6 +163,7 @@ test('the creator changes the word, then hands the room on', async ({ browser })
 
   // Handing it over, armed once because it cannot be undone from this side.
   await openSettings(maker);
+  await maker.getByTestId('room-owning').click();
   await maker.getByTestId('hand-to').selectOption({ label: 'Sam Handed' });
   await maker.getByTestId('hand-over').click();
   await maker.getByTestId('hand-over').click();
@@ -169,7 +171,7 @@ test('the creator changes the word, then hands the room on', async ({ browser })
   // It is Sam's room now: his switches move and Marc's have gone from his
   // screen altogether.
   await openSettings(guest);
-  await expect(guest.getByTestId('rooms-owner')).toContainText('you opened this room');
+  await expect(guest.getByTestId('rooms-owner')).toContainText('The word');
   await guest.getByTestId('room-week').click();
   await expect(guest.getByTestId('room-week')).not.toBeChecked();
 

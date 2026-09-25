@@ -24,6 +24,28 @@ export function VoiceNote({ src }: { src: string }) {
   const [playing, setPlaying] = useState(false);
   const [at, setAt] = useState(0);
   const [length, setLength] = useState(Number.NaN);
+  /**
+   * Chrome reports a note it recorded itself as endless. A MediaRecorder
+   * webm carries no duration in its header, so `loadedmetadata` says
+   * Infinity and stays that way until the whole thing has played once — no
+   * length beside it, a bar that never fills, a tap on it that goes nowhere.
+   * Seeking past the end is the one thing that makes the browser find out:
+   * it scans to the last frame, fires `durationchange` with the real number,
+   * and the note is put back to the start before anybody hears it.
+   */
+  const probing = useRef(false);
+  function learned(el: HTMLAudioElement) {
+    if (Number.isFinite(el.duration)) {
+      setLength(el.duration);
+      if (probing.current) {
+        probing.current = false;
+        el.currentTime = 0;
+      }
+    } else if (el.duration === Number.POSITIVE_INFINITY && !probing.current) {
+      probing.current = true;
+      el.currentTime = 1e101;
+    }
+  }
 
   function toggle() {
     const el = audio.current;
@@ -79,9 +101,11 @@ export function VoiceNote({ src }: { src: string }) {
         ref={audio}
         src={src}
         preload="metadata"
-        onLoadedMetadata={(e) => setLength(e.currentTarget.duration)}
-        onDurationChange={(e) => setLength(e.currentTarget.duration)}
-        onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => learned(e.currentTarget)}
+        onDurationChange={(e) => learned(e.currentTarget)}
+        onTimeUpdate={(e) => {
+          if (!probing.current) setAt(e.currentTarget.currentTime);
+        }}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => {

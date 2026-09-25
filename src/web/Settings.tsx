@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react';
+import { ChevronDown, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { setRooms } from './api';
 import { useT } from './i18n';
@@ -6,6 +6,7 @@ import { Remind } from './Remind';
 import { Toggles } from './Toggles';
 import { You } from './You';
 import { Button } from './ui/Button';
+import { cn } from './ui/cn';
 import { Switch } from './ui/Switch';
 import type { RoomsOpen, RosterEntry } from '../shared/protocol';
 import { TheRoom } from './TheRoom';
@@ -42,6 +43,8 @@ export function Settings({
   // else's copy along a moment later.
   const [shown, setShown] = useState(rooms);
   const [busy, setBusy] = useState(false);
+  /** The word and the handover, shown only once the creator asks. */
+  const [owning, setOwning] = useState(false);
 
   async function toggle(key: keyof RoomsOpen) {
     if (!mine) return;
@@ -74,15 +77,42 @@ export function Settings({
       </section>
 
       <section>
-        <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('set.rooms')}</h2>
+        {/* The heading's row is the one place the rest of owning a room —
+            the word, and handing it on — can live without costing the sheet
+            a pixel: a joined dad's Settings fills a 667px phone exactly, so
+            for the creator a paragraph, a row, even a sentence of its own
+            put it past the bottom. The control sits beside the heading, its
+            hit area reaching beyond the line the way the header's count
+            does, and the two forms mount only once he opens it. */}
+        <div className="mb-1 flex items-baseline justify-between gap-3">
+          <h2 className="m-0 text-[1.0625rem] font-semibold text-muted">{t('set.rooms')}</h2>
+          {mine && ownerName !== '' ? (
+            <button
+              type="button"
+              className="-my-2.5 flex min-h-11 min-w-0 cursor-pointer items-center gap-1 text-sm text-muted"
+              aria-expanded={owning}
+              onClick={() => setOwning((o) => !o)}
+              data-testid="room-owning"
+            >
+              <span className="min-w-0 truncate" data-testid="rooms-owner">
+                {t('set.owning')}
+              </span>
+              <ChevronDown
+                size={16}
+                aria-hidden="true"
+                className={cn('shrink-0 transition-transform', owning && 'rotate-180')}
+              />
+            </button>
+          ) : null}
+        </div>
         {/* These three decide what the room IS, so they belong to the man who
             opened it. Said in words rather than shown as three dead switches
             with no explanation: a control a dad cannot work is a control that
             needs to say why. A room with no creator says nothing, because
             there is nothing to say — they are everybody's, as they were. */}
-        {ownerName === '' ? null : (
+        {ownerName === '' || mine ? null : (
           <p className="m-0 mb-1 text-sm text-muted" data-testid="rooms-owner">
-            {mine ? t('set.yours_to_change') : t('set.owner', { name: ownerName })}
+            {t('set.owner', { name: ownerName })}
           </p>
         )}
         <div className="border-t border-line">
@@ -101,8 +131,8 @@ export function Settings({
         {/* The rest of owning a room, and only for the man who does: the word
             that opens it, and handing it on. A room with no creator shows
             neither, because there is nobody they would belong to. */}
-        {mine && ownerName !== '' ? (
-          <div className="mt-4">
+        {mine && ownerName !== '' && owning ? (
+          <div className="mt-3">
             <TheRoom members={members} you={you.memberId} />
           </div>
         ) : null}

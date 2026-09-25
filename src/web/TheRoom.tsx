@@ -26,6 +26,9 @@ const WORD_ERRORS: Record<WordError, Key> = {
 export function TheRoom({ members, you }: { members: RosterEntry[]; you: string }) {
   const { t } = useT();
 
+  // Mounted only once the creator opens it from the line above the switches
+  // (`Settings`): two fields with a paragraph each is what took HIS Settings
+  // past the bottom of a 667px phone, for him alone.
   return (
     <div className="grid grid-cols-1 gap-4">
       <Word />

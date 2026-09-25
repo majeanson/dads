@@ -46,9 +46,9 @@ open screens to re-read.
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 352, in workerd against the real migrations
-npm run e2e           # 92, against the built stack
-npm run audit:contrast  # 26 colour pairs, both themes
+npm test              # 376, in workerd against the real migrations
+npm run e2e           # 119, against the built stack (109 in Chromium, 10 on the iPhone)
+npm run audit:contrast  # 68 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run prove         # 32, against dads.marcportal.com itself
 npm run backup        # every D1 table into backups/, gitignored
@@ -119,7 +119,76 @@ home cut down to one question, the rooms, the calendar. Nothing was broken.
 What came back was about the look: a few screens still need decluttering, and
 some need to be more interesting to look at.
 
+On 2026-09-25 every screen was walked at 390×667 in English, French and dark
+by a headless phone and read off contact sheets — not a hand on a real one,
+but the pass that found the night sheet's wrapped answers and the creator's
+Settings running off the bottom. What a real thumb still owes: the splash and
+the glasses on a real screen, and the voice note's length on an iPhone.
+
 ## The last review
+
+A hostile read over the week that brought the glasses and the fit, the change
+log, the crown, the splash and the iPhone project (2026-09-25; 35 commits,
+about 5,900 lines), then every screen at 390×667 in English, French and dark.
+Six defects were fixed the same day, and two things the walk turned up; every
+one is pinned by a test that fails without the fix.
+
+- **A resume past a hundred pruned pictures locked the phone out.** The two
+  `IN (…)` queries the resume path builds were the only ones in the object
+  not chunked at 80, and the local D1 refuses more than a hundred bound
+  parameters just as the real one does: the hello threw, the client asked
+  the same question again with the same `rev`, and a home-screen app never
+  reloads. Every such query goes through one `chunks()` now.
+- **A lost echo cost two self-inflicted reconnects.** The room dropped a
+  re-sent cid in silence, so a phone whose socket died between the room
+  taking the line and the echo reaching it held the line for ever — closed a
+  perfectly good socket after eight seconds to try again, was ignored again,
+  and closed again. The repeat is answered with the line it already became,
+  and a line since taken back with a refusal that names it.
+- **A line taken back from under an open menu swallowed every tap after it.**
+  The "a menu is open" flag lived at module scope and was only ever reset by
+  a close Radix reported; an unmount reports nothing. From then on every tap
+  on every line was treated as the lift at the end of a long press. The flag
+  comes down when an open menu unmounts.
+- **A voice note recorded in Chrome had no length and no seeking** until it
+  had played once, because a MediaRecorder webm carries no duration. The
+  player now seeks past the end once on load, which makes the browser find
+  out, and puts it back to nought.
+- **Home overflowed the small phone with a full table and the night days
+  away.** "Full table" shared the countdown's line, which does not exist
+  past three days out; the row it then took was the ten pixels home had to
+  spare. It takes the place of "In" before the names now, which costs a
+  word rather than a line.
+- **The fitter's footer hung fifty pixels past its popover in French**, and
+  English fit by six. The footer wraps and the reset button says less.
+- **The night sheet's three answers wrapped two-and-one** in both languages,
+  under a card that had shown the same question as one row. It is home's
+  control now (`Answers.tsx`).
+- **The creator's Settings did not fit the phone.** The word and the handover
+  came with a paragraph each, and the fit suite signs in as a joined dad who
+  never sees them — and his sheet fills the phone to the pixel, so nothing
+  of its own fits. Both are behind a control on the heading's own row now,
+  and the suite opens a room of its own to measure the creator's sheet.
+
+The read also confirmed clean: group scoping and authority on every route
+added this week, SQL parameterisation, the three migrations against a live
+D1, the one-alarm rule, the `rev` arithmetic and the `fresh` replace, the
+origin check on every bridge event, reduced motion, the palette blocks and
+the audit, and the dictionary. jaffre `c48042b` is deployed and its
+`winners` shape matches what the room parses.
+
+**Known and open**, smaller, left for another day: the picker popover is a
+dialog with no name and opening the fitter drops focus to the body (the a11y
+suite never opens either); pull-to-refresh has no `touchcancel`; the
+favourites let seven marks tapped once each push out a default pressed daily,
+and the non-default part of the row reshuffles under a thumb; a twenty-char
+cut ending in a space never matches jaffre's trimmed echo, so that dad is
+never crowned or nudged; keyboard activation inside a line is swallowed after
+any menu; the composer's edit ack settles against whatever it is editing now
+rather than what it sent; the crown's dedupe races the four relays it exists
+for (benign) and "go in twice inside the film" is pinned only probabilistically.
+
+## The review before that
 
 A hostile read over the fortnight that brought replies, edits, marks and the
 emoji picker found three defects, and running `prove` against the live site
@@ -161,7 +230,7 @@ edit and retract authority checks against the archive and the tail, the mark
 allowlist before it reaches a column, the group scoping on every write, and
 the double tap's exclusion of links, photographs and controls.
 
-## The review before that
+## Two before that
 
 A hostile read over the fortnight that brought search, the viewer, keeping a
 photograph, home and the `Room.tsx` decomposition found five defects. Four are

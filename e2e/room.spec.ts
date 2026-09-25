@@ -191,6 +191,12 @@ test('a dad says it instead of typing it', async ({ browser }) => {
   await expect(marc.getByTestId('voice-note')).toHaveCount(1, { timeout: 15_000 });
   await expect(sam.getByTestId('voice-note')).toHaveCount(1, { timeout: 15_000 });
 
+  // And it says how long it is before anybody presses Play. Chrome's own
+  // recording carries no length in its header — the browser reports it as
+  // endless until it has played once — so the note had no length, a bar
+  // that never filled, and a tap on it that went nowhere.
+  await expect(sam.getByTestId('voice-note')).toContainText(/^0:0[1-9]$/, { timeout: 10_000 });
+
   // And the composer is back to normal.
   await expect(marc.getByTestId('recording')).toHaveCount(0);
   await expect(marc.getByTestId('record')).toBeVisible();
@@ -844,6 +850,55 @@ test('on a phone, a long press on any line is the menu and a tap is its one thin
   await expect(page.getByTestId('tap-marks')).toHaveCount(0);
 
   await context.close();
+});
+
+test('a line taken back from under an open menu does not eat the next tap', async ({ browser }) => {
+  // Sam holds a finger on Marc's line and the menu is up. Marc, on his own
+  // phone, takes the line back — and the menu goes with it, unmounted while
+  // open, which is a close Radix never reports. The flag that said "a menu is
+  // open" stayed up for good, and from then on every tap on every line was
+  // swallowed as the lift at the end of a long press: no marks, no photo, no
+  // link, a play button that did nothing.
+  const marc = await comeIn(browser, 'Marc Withdraws');
+  const context = await browser.newContext({ ...devices['iPhone 13'] });
+  const sam = await context.newPage();
+  await sam.goto('/');
+  await sam.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await sam.getByLabel('Your name').fill('Sam Pressing');
+  await sam.getByRole('button', { name: 'Come in' }).click();
+  await expect(sam.getByTestId('connection')).toHaveText(/here$/);
+  await talk(sam);
+
+  for (const words of ['flag line one', 'flag line two']) {
+    await marc.getByLabel('Say something').fill(words);
+    await marc.getByLabel('Say something').press('Enter');
+    await expect(sam.getByTestId('line').filter({ hasText: words })).toBeVisible();
+  }
+
+  const cdp = await context.newCDPSession(sam);
+  const first = sam.getByTestId('line').filter({ hasText: 'flag line one' });
+  await first.scrollIntoViewIfNeeded();
+  const box = (await first.locator('.body').boundingBox())!;
+  const point = { x: box.x + box.width / 2, y: box.y + Math.min(box.height / 2, 20) };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+  await sam.waitForTimeout(900);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(sam.getByTestId('line-menu')).toBeVisible();
+
+  const marcs = marc.getByTestId('line').filter({ hasText: 'flag line one' });
+  await marcs.click({ button: 'right' });
+  await marc.getByTestId('line-retract').click();
+  await marc.getByTestId('line-retract').click();
+  await expect(first).toHaveCount(0);
+  await expect(sam.getByTestId('line-menu')).toHaveCount(0);
+
+  // A plain tap on the words of the line still there opens the six under it.
+  const second = sam.getByTestId('line').filter({ hasText: 'flag line two' });
+  await second.locator('.body').tap();
+  await expect(second.getByTestId('tap-marks')).toBeVisible();
+
+  await context.close();
+  await marc.context().close();
 });
 
 test('a laptop gets an emoji button, and it lands where the caret is', async ({ browser }) => {

@@ -158,6 +158,30 @@ describe('RoomDO', () => {
       (f) => f.t === 'msg' && f.message.body === 'on the train, back later',
     );
     expect(said).toHaveLength(1);
+
+    // But the SENDER hears it again, as the same line: his outbox holds a
+    // line until its own id comes back, and the echo is the thing a dropped
+    // socket cost him. Silence left him closing a good socket every eight
+    // seconds to try again.
+    const echoes = marc.frames.filter((f) => f.t === 'msg' && f.cid === 'c-abc');
+    expect(echoes).toHaveLength(2);
+    expect(echoes[1]).toMatchObject({ message: { id: first.message.id, seq: first.message.seq } });
+  });
+
+  it('refuses a re-sent line by name once it has been taken back', async () => {
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    marc.say('never mind', 'c-regret');
+    const first = await marc.next('msg', (f) => f.cid === 'c-regret');
+    marc.retract(first.message.id);
+    await marc.next('gone', (f) => f.id === first.message.id);
+
+    // Not posted again, and not silence either: a refusal that names the
+    // line is what lets the outbox let go of it.
+    marc.say('never mind', 'c-regret');
+    const refused = await marc.next('error', (f) => f.cid === 'c-regret');
+    expect(refused.code).toBe('gone');
+    expect(marc.frames.filter((f) => f.t === 'msg' && f.cid === 'c-regret')).toHaveLength(1);
   });
 
   it('shows a newcomer everyone already here', async () => {
@@ -625,6 +649,32 @@ describe('RoomDO', () => {
       open.push(back);
       const hello = await back.next('hello');
       expect(hello.media).toEqual([{ mediaId: 'med_gone', kept: null }]);
+    });
+
+    it('still says hello to a resume past a hundred pruned pictures', async () => {
+      // D1 takes about a hundred bound parameters. A phone that slept a
+      // fortnight while the shelf turned over asks about every one of them at
+      // once, and an unchunked `IN (...)` threw while building its hello — so
+      // it reconnected with the same question, for ever.
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      marc.say('a busy fortnight');
+      await marc.next('msg', (f) => f.message.body === 'a busy fortnight');
+      const { sam, resume } = await samLeaves();
+
+      const mediaIds = Array.from({ length: 120 }, (_, i) => `med_${String(i).padStart(3, '0')}`);
+      const room = env.ROOM.get(env.ROOM.idFromName(group.id));
+      await room.fetch('https://room/unshelved', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Dads-Group-Id': group.id },
+        body: JSON.stringify({ mediaIds }),
+      });
+
+      const back = await enter(group, 'Sam', sam.cookie, resume);
+      open.push(back);
+      const hello = await back.next('hello');
+      expect(hello.fresh).toBe(false);
+      expect(hello.media.map((m) => m.mediaId)).toEqual(mediaIds);
     });
 
     it('says nothing on a resume where nothing happened', async () => {

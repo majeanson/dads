@@ -95,6 +95,19 @@ const TURN_NUDGE_EVERY_MS = 3 * 60_000;
 const CID_MEMORY_MS = 5 * 60_000;
 
 /**
+ * Ids in slices D1 can take: it allows about a hundred bound parameters per
+ * statement, and a backfill or a resume can name five hundred lines, thirty
+ * days of media, or every mark in the tail. Every `IN (...)` in here is built
+ * from one of these, because the one that was not threw while building the
+ * hello frame — and a dad whose hello throws reconnects with the same
+ * question until he reloads, which from a home screen is never.
+ */
+const IN_CHUNK = 80;
+function* chunks<T>(ids: readonly T[]): Generator<T[]> {
+  for (let i = 0; i < ids.length; i += IN_CHUNK) yield ids.slice(i, i + IN_CHUNK);
+}
+
+/**
  * How far back the room remembers what happened to lines it had already said.
  *
  * A socket that resumes rather than reloads asks for everything after the
@@ -621,8 +634,11 @@ export class RoomDO extends DurableObject<Env> {
 
     // A dad whose phone lost the signal re-sends what it was holding. If the
     // room got it the first time, the second copy is the same line and not a
-    // second thing said.
-    if (cid !== undefined && !this.firstTimeSeen(cid)) return;
+    // second thing said — and what he is missing is the echo, so he gets it.
+    if (cid !== undefined) {
+      const posted = this.alreadyPosted(cid);
+      if (posted !== null) return this.echo(ws, posted, cid);
+    }
 
     // What he is answering, as a snapshot taken now: an id the room cannot
     // find is dropped quietly and the line still posts, because the words
@@ -1006,18 +1022,38 @@ export class RoomDO extends DurableObject<Env> {
     return row !== null;
   }
 
-  /** Lines already posted, by the sender's own id for them. */
-  private readonly postedCids = new Map<string, number>();
+  /** Lines already posted, by the sender's own id for them: when, and which
+   * line it became. */
+  private readonly postedCids = new Map<string, { at: number; id: string }>();
 
-  /** True the first time a cid is offered, false for a repeat of one we have
-   * already posted. */
-  private firstTimeSeen(cid: string, now = Date.now()): boolean {
-    for (const [seen, at] of this.postedCids) {
+  /** The line a cid already became, or null the first time it is offered. */
+  private alreadyPosted(cid: string, now = Date.now()): string | null {
+    for (const [seen, { at }] of this.postedCids) {
       if (now - at > CID_MEMORY_MS) this.postedCids.delete(seen);
     }
-    if (this.postedCids.has(cid)) return false;
-    this.postedCids.set(cid, now);
-    return true;
+    return this.postedCids.get(cid)?.id ?? null;
+  }
+
+  /**
+   * A re-sent line, answered with the line it already is.
+   *
+   * The phone that sends a cid twice is one whose socket died between the
+   * room taking the line and the echo reaching it. It holds the line until it
+   * sees its own id come back, and dropping the repeat in silence left it
+   * holding for ever: eight seconds on, it closed a perfectly good socket to
+   * try again, was ignored again, and closed again — three tries, two
+   * reconnects, "1 line waiting" under a line already on its screen. The
+   * repeat gets the echo the first send did not deliver, to that socket
+   * only; if the line has since been taken back, it gets a refusal that
+   * names it, which is what lets the outbox let go.
+   */
+  private async echo(ws: WebSocket, id: string, cid: string): Promise<void> {
+    const row = this.ctx.storage.sql
+      .exec<TailRow>('SELECT * FROM tail WHERE id = ?', id)
+      .toArray()[0];
+    if (row === undefined) return this.sendTo(ws, { t: 'error', code: 'gone', cid });
+    const message = (await this.messagesFrom([row]))[0];
+    if (message !== undefined) this.sendTo(ws, { t: 'msg', message, cid });
   }
 
   private async scheduleLeave(who: SocketIdentity): Promise<void> {
@@ -1328,9 +1364,7 @@ export class RoomDO extends DurableObject<Env> {
 
     // Chunked for the same reason the attachments are: D1 takes about a
     // hundred bound parameters and a backfill can carry five hundred lines.
-    const CHUNK = 80;
-    for (let i = 0; i < ids.length; i += CHUNK) {
-      const slice = ids.slice(i, i + CHUNK);
+    for (const slice of chunks(ids)) {
       const placeholders = slice.map(() => '?').join(', ');
       const { results } = await this.env.DB.prepare(
         `SELECT message_id, member_id, emoji FROM reactions
@@ -1480,14 +1514,20 @@ export class RoomDO extends DurableObject<Env> {
     }
     const groupId = this.groupId();
     const older = lineIds.filter((id) => !words.has(id));
+    // Chunked, like every other `IN (...)` a resume can build: the log keeps
+    // thirty days of changes, D1 takes about a hundred bound parameters, and a
+    // phone that slept a fortnight while the shelf turned over would otherwise
+    // throw here, get no hello, and reconnect with the same `rev` for ever.
     if (older.length > 0 && groupId !== undefined) {
-      const { results } = await this.env.DB.prepare(
-        `SELECT id, body, edited_at FROM messages
-          WHERE group_id = ? AND id IN (${older.map(() => '?').join(', ')})`,
-      )
-        .bind(groupId, ...older)
-        .all<{ id: string; body: string; edited_at: number | null }>();
-      for (const r of results) words.set(r.id, { body: r.body, editedAt: r.edited_at });
+      for (const slice of chunks(older)) {
+        const { results } = await this.env.DB.prepare(
+          `SELECT id, body, edited_at FROM messages
+            WHERE group_id = ? AND id IN (${slice.map(() => '?').join(', ')})`,
+        )
+          .bind(groupId, ...slice)
+          .all<{ id: string; body: string; edited_at: number | null }>();
+        for (const r of results) words.set(r.id, { body: r.body, editedAt: r.edited_at });
+      }
     }
     const marks = await this.reactionsById(lineIds);
     const changed = lineIds.flatMap((id) => {
@@ -1497,13 +1537,15 @@ export class RoomDO extends DurableObject<Env> {
 
     const kept = new Map<string, boolean>();
     if (mediaIds.length > 0 && groupId !== undefined) {
-      const { results } = await this.env.DB.prepare(
-        `SELECT id, kept FROM media
-          WHERE group_id = ? AND id IN (${mediaIds.map(() => '?').join(', ')})`,
-      )
-        .bind(groupId, ...mediaIds)
-        .all<{ id: string; kept: number }>();
-      for (const r of results) kept.set(r.id, r.kept === 1);
+      for (const slice of chunks(mediaIds)) {
+        const { results } = await this.env.DB.prepare(
+          `SELECT id, kept FROM media
+            WHERE group_id = ? AND id IN (${slice.map(() => '?').join(', ')})`,
+        )
+          .bind(groupId, ...slice)
+          .all<{ id: string; kept: number }>();
+        for (const r of results) kept.set(r.id, r.kept === 1);
+      }
     }
     const media = mediaIds.map((mediaId) => ({ mediaId, kept: kept.get(mediaId) ?? null }));
 
@@ -1523,6 +1565,9 @@ export class RoomDO extends DurableObject<Env> {
   ): Promise<void> {
     const id = newId('msg');
     const createdAt = Date.now();
+    // Remembered by the sender's own id for it, so a re-send after a dropped
+    // echo can be answered with THIS line rather than posted again.
+    if (cid !== undefined) this.postedCids.set(cid, { at: createdAt, id });
 
     const meta = said === null ? null : JSON.stringify(said);
     const seq = this.ctx.storage.sql
@@ -1648,6 +1693,11 @@ export class RoomDO extends DurableObject<Env> {
         : this.ctx.storage.sql
             .exec<TailRow>('SELECT * FROM tail WHERE seq > ? ORDER BY seq ASC', after)
             .toArray();
+    return this.messagesFrom(rows);
+  }
+
+  /** Tail rows as the lines a client is handed, attachments and marks on. */
+  private async messagesFrom(rows: TailRow[]): Promise<RoomMessage[]> {
     const wanted = [...new Set(rows.map((r) => r.media_id).filter((id) => id !== null))];
     const [attachments, reactions] = await Promise.all([
       this.attachmentsById(wanted),
@@ -1686,9 +1736,7 @@ export class RoomDO extends DurableObject<Env> {
     // carry more distinct ids than that in one backfill. Unchunked, a
     // reconnect would throw, the hello frame would never be built, and that
     // dad would be stuck in a reconnect loop he could not get out of.
-    const CHUNK = 80;
-    for (let i = 0; i < ids.length; i += CHUNK) {
-      const slice = ids.slice(i, i + CHUNK);
+    for (const slice of chunks(ids)) {
       const placeholders = slice.map(() => '?').join(', ');
       const { results } = await this.env.DB.prepare(
         `SELECT id, name, content_type, width, height, kept FROM media

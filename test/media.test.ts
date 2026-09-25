@@ -518,12 +518,13 @@ describe('a photo in the conversation', () => {
     expect(marc.frames.some((f) => f.t === 'msg' && f.message.body === 'and again')).toBe(false);
   });
 
-  it('takes a re-sent line back silently, picture and all', async () => {
+  it('takes a re-sent line as the line it already is, picture and all', async () => {
     // The phone in the dead spot re-sends what it was holding, and that is
     // the same line arriving twice rather than a second use of the picture.
-    // It has to be DROPPED and not refused: an `error` frame drops the oldest
-    // line in the outbox, so refusing a recovery would cost a dad a different
-    // line entirely.
+    // It must not be refused: a refusal would name the line and the outbox
+    // would drop a recovery that had in fact landed. It is not posted again
+    // either — the sender gets the echo the first try did not deliver, with
+    // the same id and the same picture on it.
     const marc = await enter(group, 'Marc');
     open.push(marc);
 
@@ -531,16 +532,19 @@ describe('a photo in the conversation', () => {
     marc.say('in the pool', uploaded.media.id, 'c-recovered');
     await until(() => marc.frames.some((f) => f.t === 'msg' && f.message.body === 'in the pool'));
     marc.say('in the pool', uploaded.media.id, 'c-recovered');
-    // A line the room will post, sent after the one it must drop: the socket
-    // is handled in order, so once this is back the re-send has been dealt with.
+    // A line the room will post, sent after the repeat: the socket is handled
+    // in order, so once this is back the re-send has been dealt with.
     marc.say('and that was that');
     await until(() =>
       marc.frames.some((f) => f.t === 'msg' && f.message.body === 'and that was that'),
     );
 
-    expect(
-      marc.frames.filter((f) => f.t === 'msg' && f.message.body === 'in the pool'),
-    ).toHaveLength(1);
+    const heard = marc.frames.flatMap((f) =>
+      f.t === 'msg' && f.message.body === 'in the pool' ? [f.message] : [],
+    );
+    expect(heard).toHaveLength(2);
+    expect(heard[1]!.id).toBe(heard[0]!.id);
+    expect(heard[1]!.media?.id).toBe(uploaded.media.id);
     expect(marc.frames.some((f) => f.t === 'error')).toBe(false);
   });
 

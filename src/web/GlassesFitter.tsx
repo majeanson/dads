@@ -127,7 +127,9 @@ export function GlassesFitter({
           {t('fit.failed')}
         </p>
       ) : null}
-      <div className="flex items-center justify-between gap-2">
+      {/* Allowed to wrap: a button never does, and "Remets-les au milieu"
+          beside "Enregistre" hung fifty pixels past a thirteen-rem popover. */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button look="quiet" size="sm" disabled={busy} onClick={() => setDraft(MIDDLE)}>
           {t('fit.reset')}
         </Button>

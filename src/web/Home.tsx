@@ -8,6 +8,7 @@ import {
   type NightState,
   type PollState,
 } from './api';
+import { Answers } from './Answers';
 import { FaceStack } from './Face';
 import { plural, useT, weekdayNames } from './i18n';
 import { nightAway } from './NightEditor';
@@ -311,14 +312,15 @@ export function Home({
                 the screen saying the same thing twice in a smaller voice. */}
             {/* How far off it is, only when that is news — and a full table
                 on the same line, so the news costs the card no height: home
-                is measured to fit a 667px phone with ten pixels to spare. */}
-            {away === null && !full ? null : (
+                is measured to fit a 667px phone with ten pixels to spare.
+                With the night further off there is no line to share, and a
+                row of its own put home past the bottom of that phone; the
+                news then sits at the head of the names, which wrap anyway. */}
+            {away === null ? null : (
               <p className="home-meta">
-                {away === null ? null : (
-                  <span className="home-away" data-testid="home-away">
-                    {away}
-                  </span>
-                )}
+                <span className="home-away" data-testid="home-away">
+                  {away}
+                </span>
                 {full ? (
                   <span className="home-full" data-testid="home-full">
                     <Glasses width={24} drop={cheer} />
@@ -355,76 +357,56 @@ export function Home({
                 />
               )}
               <p className="home-coming" data-testid="home-who-coming">
-                {state === null
-                  ? // Not "nobody has said yet" — it has not been asked yet.
-                    '…'
-                  : answers.length === 0
-                    ? t('n.nobody_yet')
-                    : [
-                        coming.length > 0
-                          ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
-                          : null,
-                        might.length > 0
-                          ? t('n.maybe_list', { names: might.map((a) => a.name).join(', ') })
-                          : null,
-                        not.length > 0
-                          ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
+                {state === null ? (
+                  // Not "nobody has said yet" — it has not been asked yet.
+                  '…'
+                ) : answers.length === 0 ? (
+                  t('n.nobody_yet')
+                ) : (
+                  <>
+                    {/* With the news and no countdown line to share, "Full
+                        table" takes the place of "In" rather than a row or a
+                        phrase of its own: four names already wrap, and a
+                        phrase in front of them was one more line on a card
+                        with ten pixels to spare. */}
+                    {coming.length > 0 && full && away === null ? (
+                      <>
+                        <span className="home-full" data-testid="home-full">
+                          <Glasses width={24} drop={cheer} />
+                          {t('home.full_table')}
+                        </span>
+                        {t('home.full_join')}
+                        {coming.map((a) => a.name).join(', ')}
+                      </>
+                    ) : coming.length > 0 ? (
+                      t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
+                    ) : null}
+                    {[
+                      coming.length > 0 ? '' : null,
+                      might.length > 0
+                        ? t('n.maybe_list', { names: might.map((a) => a.name).join(', ') })
+                        : null,
+                      not.length > 0
+                        ? t('n.out_list', { names: not.map((a) => a.name).join(', ') })
+                        : null,
+                    ]
+                      .filter((part) => part !== null)
+                      .join(' · ')}
+                  </>
+                )}
               </p>
             </div>
 
-            {/*
-             * One question, three answers, all three on the screen from the
-             * start and the one he gave filled in.
-             *
-             * It used to be two buttons that collapsed into one toggle once he
-             * had answered, and the reason was sound: an RSVP is announced by
-             * name, so a man who cannot come must not have to say he can and
-             * then take it back. Three answers cannot be a toggle — pressing
-             * one to cycle through the other two is a button that has to
-             * explain itself — so they simply all stay, and pressing another
-             * changes his mind. The same rule, kept by different means.
-             *
-             * No icons here, unlike everywhere else: three controls across a
-             * 390px card in French ("Je suis là · Peut-être · Je peux pas")
-             * has room for the words or for the glyphs, and the words are the
-             * ones that say anything.
-             */}
-            <div
-              className="home-answers"
-              role="group"
-              aria-label={t('n.title')}
-              data-chosen={mine?.answer ?? 'none'}
-            >
-              {/* The one filled segment, sliding to whichever he chose. It is
-                  a picture of the answer, not the answer: each segment still
-                  carries aria-pressed, and the words stay where they are. */}
-              <span className="home-answers-thumb" aria-hidden="true" />
-              <Answer
-                answer="in"
-                mine={mine?.answer ?? null}
-                busy={busy}
-                onAnswer={answer}
-                testId="home-in"
-              />
-              <Answer
-                answer="maybe"
-                mine={mine?.answer ?? null}
-                busy={busy}
-                onAnswer={answer}
-                testId="home-maybe"
-              />
-              <Answer
-                answer="out"
-                mine={mine?.answer ?? null}
-                busy={busy}
-                onAnswer={answer}
-                testId="home-out"
-              />
-            </div>
+            {/* One question, three answers, all three on the screen from the
+                start and the one he gave filled in. It used to be two buttons
+                that collapsed into one toggle once he had answered; the
+                reason for that is kept by the control itself (`Answers`). */}
+            <Answers
+              mine={mine?.answer ?? null}
+              busy={busy}
+              onAnswer={answer}
+              ids={{ in: 'home-in', maybe: 'home-maybe', out: 'home-out' }}
+            />
 
             {/* The way into the rest of the night — what to get into, the
                 calendar, changing it. Always here, because the card is the
@@ -483,56 +465,5 @@ export function Home({
         {menu}
       </div>
     </div>
-  );
-}
-
-/**
- * One of the three answers.
- *
- * Three segments of one control, and a filled thumb that slides under the
- * one he chose — so what he said is on the screen without a word explaining
- * it, and changing his mind is something he can watch happen. The accessible name carries what
- * pressing it would DO — "You're in. Press to say you might make it." is a
- * sentence a screen reader needs and a sighted man does not, because he can
- * see which one is filled.
- */
-function Answer({
-  answer,
-  mine,
-  busy,
-  onAnswer,
-  testId,
-}: {
-  answer: AnswerKind;
-  mine: AnswerKind | null;
-  busy: boolean;
-  onAnswer: (answer: AnswerKind) => void;
-  testId: string;
-}) {
-  const { t } = useT();
-  const chosen = mine === answer;
-  const label = answer === 'in' ? t('n.im_in') : answer === 'maybe' ? t('n.maybe') : t('n.cant');
-
-  return (
-    <Button
-      look="quiet"
-      size="lg"
-      className={cn(
-        'home-answer relative h-[clamp(2.75rem,6dvh,3.25rem)] px-1 text-base font-medium',
-        'rounded-[calc(var(--radius-control)-0.25rem)] transition-colors duration-200',
-        chosen
-          ? answer === 'out'
-            ? 'text-paper hover:text-paper'
-            : 'text-on-accent hover:text-on-accent'
-          : 'text-ink',
-      )}
-      disabled={busy}
-      aria-pressed={chosen}
-      onClick={() => void onAnswer(answer)}
-      data-testid={testId}
-      data-mine={chosen ? 'yes' : 'no'}
-    >
-      {label}
-    </Button>
   );
 }

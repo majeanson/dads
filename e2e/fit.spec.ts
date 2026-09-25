@@ -233,6 +233,134 @@ test('the three answers fit a narrow phone in French', async ({ browser }) => {
   await context.close();
 });
 
+test('home fits the small phone with a full table and the night days away', async ({ browser }) => {
+  // "Full table" shares the countdown's line, so the news costs no height —
+  // when there IS a countdown. Further than three days out there is none,
+  // and a row of its own put home past the bottom of this phone, for exactly
+  // the group the line is about: four in, on a Sunday, for Thursday. The
+  // fit above never had an RSVP on it, so it could not see this.
+  const context = await browser.newContext({ viewport: SMALL });
+  const page = await context.newPage();
+  await comeIn(page, 'Fit Full');
+  const weekday = (new Date().getDay() + 5) % 7;
+  await page.evaluate(
+    (weekday) =>
+      fetch('/api/night', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ night: { weekday, time: '21:00', tz: 'America/Montreal' } }),
+      }),
+    weekday,
+  );
+  await expect(page.getByTestId('home-when')).toBeVisible();
+  await expect(page.getByTestId('home-away')).toHaveCount(0);
+
+  const seated = [];
+  for (const name of ['Al', 'Bo', 'Cy', 'Di']) {
+    const other = await browser.newContext();
+    const res = await other.request.post('/api/join', {
+      data: { code: E2E_FIT_GROUP.code, displayName: name },
+    });
+    expect(res.ok()).toBe(true);
+    expect((await other.request.put('/api/rsvp', { data: { answer: 'in' } })).ok()).toBe(true);
+    seated.push(other);
+  }
+  await expect(page.getByTestId('home-full')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('home-away')).toHaveCount(0);
+  await page.waitForTimeout(300);
+
+  expect(await overflow(page, '.home')).toBe(0);
+  expect(await past(page, '.home-card')).toEqual([]);
+
+  for (const other of seated) await other.close();
+  await context.close();
+});
+
+test('the night sheet’s three answers share one row on the small phone', async ({ browser }) => {
+  // The same control as home's card. Three separate buttons wrapped
+  // two-and-one on a 390px phone, in both languages, which read as broken
+  // under a card that had just shown the same question as one row.
+  const context = await browser.newContext({ viewport: SMALL });
+  const page = await context.newPage();
+  await comeIn(page, 'Fit Sheet Answers');
+  await page.getByTestId('dad-night').click();
+  await expect(page.getByTestId('rsvp-out')).toBeVisible();
+  await page.waitForTimeout(200);
+  const rows = await Promise.all(
+    ['rsvp-in', 'rsvp-maybe', 'rsvp-out'].map(async (id) => {
+      const box = (await page.getByTestId(id).boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(SMALL.width);
+      return Math.round(box.y);
+    }),
+  );
+  expect(rows).toEqual([rows[0], rows[0], rows[0]]);
+  await context.close();
+});
+
+test('the creator’s settings fit the small phone', async ({ browser }) => {
+  // Only the man who opened the room sees the word and the handover, and the
+  // rest of this file signs in as a joined dad — so Settings fit the phone
+  // for everybody except him. Its own address, so opening a room here does
+  // not count against the three a day the new-room spec spends.
+  const context = await browser.newContext({
+    viewport: SMALL,
+    extraHTTPHeaders: { 'CF-Connecting-IP': '10.9.9.9' },
+  });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByTestId('start-room').click();
+  await page.getByLabel('What to call it').fill('The Fit Owner');
+  await page.getByLabel('The word to get in').fill(`fit owner ${Date.now().toString(36)}`);
+  await page.getByLabel('Your name').fill('Fit Owner');
+  await page.getByTestId('open-room').click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+
+  await page
+    .getByRole('navigation', { name: 'Rooms' })
+    .getByRole('button', { name: /^Settings/ })
+    .click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  // It really is the creator's sheet: the row that holds the two forms.
+  await expect(page.getByTestId('room-owning')).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(await overflow(page, '[role="dialog"] > div:last-child')).toBe(0);
+
+  // And the forms are still one press away.
+  await page.getByTestId('room-owning').click();
+  await expect(page.getByTestId('room-word')).toBeVisible();
+  await context.close();
+});
+
+test('the glasses fitter fits a narrow phone in French', async ({ browser }) => {
+  // The fitter is a popover thirteen rems wide, and its two buttons never
+  // wrap: "Remets-les au milieu" beside "Enregistre" hung fifty pixels past
+  // its edge. English fit by six pixels, which is why nobody saw it.
+  const { context, page } = await narrow(browser, 'Fit Lunettes');
+  await page.getByTestId('home-go').click();
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page
+    .getByRole('navigation', { name: 'Rooms' })
+    .getByRole('button', { name: /^Réglages/ })
+    .click();
+  await page.setInputFiles('#face', 'public/icon-192.png');
+  await page.getByTestId('glasses-open').click();
+  await page.getByTestId('glasses-fit').click({ timeout: 15_000 });
+  const fitter = page.getByTestId('glasses-fitter');
+  await expect(fitter).toBeVisible();
+  await page.waitForTimeout(200);
+
+  expect(await past(page, '[data-testid="glasses-fitter"]')).toEqual([]);
+  const box = (await fitter.boundingBox())!;
+  for (const id of ['fit-save', 'fit-area', 'fit-size']) {
+    const inside = (await page.getByTestId(id).boundingBox())!;
+    expect({
+      id,
+      over: Math.max(0, Math.round(inside.x + inside.width - box.x - box.width)),
+    }).toEqual({ id, over: 0 });
+  }
+  await context.close();
+});
+
 test('the calendar fits a narrow phone in French', async ({ browser }) => {
   // A month grid is the tallest thing in the app that is not a list, and this
   // is the state every group lands in: nothing on the books, nothing marked.

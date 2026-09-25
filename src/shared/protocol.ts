@@ -410,7 +410,7 @@ export type ServerFrame =
    */
   | {
       t: 'error';
-      code: 'bad_frame' | 'too_long' | 'empty' | 'no_prompt' | 'no_media';
+      code: 'bad_frame' | 'too_long' | 'empty' | 'no_prompt' | 'no_media' | 'gone';
       cid?: string;
     };
 

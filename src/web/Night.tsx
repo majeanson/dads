@@ -1,4 +1,4 @@
-import { CalendarPlus, CalendarX, Check, Minus, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { CalendarPlus, CalendarX, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   addNightItem,
@@ -11,6 +11,7 @@ import {
   type NightState,
   type Rsvp,
 } from './api';
+import { Answers } from './Answers';
 import { useT } from './i18n';
 import { nightDetail, NightEditor } from './NightEditor';
 import { Button } from './ui/Button';
@@ -363,41 +364,15 @@ function Coming({
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          look={mine === 'in' ? 'primary' : 'plain'}
-          size="lg"
-          disabled={busy}
-          aria-pressed={mine === 'in'}
-          onClick={() => onAnswer('in')}
-          data-testid="rsvp-in"
-        >
-          <Check size={18} aria-hidden="true" />
-          {t('n.im_in')}
-        </Button>
-        <Button
-          look={mine === 'maybe' ? 'primary' : 'plain'}
-          size="lg"
-          disabled={busy}
-          aria-pressed={mine === 'maybe'}
-          onClick={() => onAnswer('maybe')}
-          data-testid="rsvp-maybe"
-        >
-          <Minus size={18} aria-hidden="true" />
-          {t('n.maybe')}
-        </Button>
-        <Button
-          look={mine === 'out' ? 'danger' : 'plain'}
-          size="lg"
-          disabled={busy}
-          aria-pressed={mine === 'out'}
-          onClick={() => onAnswer('out')}
-          data-testid="rsvp-out"
-        >
-          <X size={18} aria-hidden="true" />
-          {t('n.cant')}
-        </Button>
-      </div>
+      {/* The same control as home's card: three separate buttons wrapped
+          two-and-one on a 390px phone, in both languages, under a card that
+          had shown the same question as one row. */}
+      <Answers
+        mine={mine}
+        busy={busy}
+        onAnswer={onAnswer}
+        ids={{ in: 'rsvp-in', maybe: 'rsvp-maybe', out: 'rsvp-out' }}
+      />
 
       {/* Names, not a count. "3 coming" is a number a man reads as a quorum;
           the names tell him whether HIS friend is coming, which is the thing

@@ -105,10 +105,20 @@ weakening `sessionSecret()`.
   carries a `cid` the browser chose, the room echoes it on the broadcast, and
   the sender holds the line in an outbox until it sees its own id. Unanswered
   after 8s, the client closes its own socket so the reconnect can re-send.
-- **The room drops a repeat of a cid it has already posted** (5 minutes of
-  memory, in the object rather than the tail — a re-send only ever happens
-  seconds after the first try). Without it, every recovered line would post
-  twice.
+- **The room answers a repeat of a cid with the line it already became**
+  (2026-09-25; 5 minutes of memory, in the object rather than the tail — a
+  re-send only ever happens seconds after the first try). It used to DROP
+  the repeat in silence, which posted nothing twice but left the phone
+  holding a line already on its screen: the echo is what the dead socket
+  cost it, and without one the outbox closed a perfectly good socket every
+  eight seconds to try again, three times over. `postedCids` keeps the id
+  the cid became and `echo()` sends that socket the `msg` frame the first
+  try did not deliver; a line since taken back gets `error` `gone`, named,
+  so the outbox lets go. Every `IN (…)` the object builds goes through
+  `chunks()`: D1 takes about a hundred bound parameters, the local one
+  enforces it too, and the two in the resume path that did not chunk threw
+  while building the hello — the same reconnect-for-ever the backfill had
+  already learned about once.
 - Three things stop the outbox growing for ever: 20 lines held, 3 tries each,
   and an `error` frame drops the line it NAMES — a body the room refuses
   would otherwise be re-sent all evening.
@@ -244,9 +254,17 @@ weakening `sessionSecret()`.
   followed the link or opened the marks under the menu: the line swallows the
   click of a press during which a menu opened, or that began while one was
   open (`notATap`) — never "a click soon after", which also ate a quick real
-  tap. And **a voice note is the app's own player** (`VoiceNote`): the
-  browser's kept every touch to itself, so a long press on a voice note never
-  reached the line. `room.spec.ts` long-presses and taps text, a link, a
+  tap. **The "a menu is open" flag comes down when an open menu unmounts**
+  (2026-09-25): Radix only reports a close that happens, and a line taken
+  back from under another dad's open menu reported nothing — the flag
+  stayed up and every tap on every line was swallowed until another menu
+  opened and closed. And **a voice note is the app's own player**
+  (`VoiceNote`): the browser's kept every touch to itself, so a long press
+  on a voice note never reached the line. **Chrome reports its own
+  recording as endless** — a MediaRecorder webm carries no duration, so the
+  note had no length and a bar that never filled until it had played once;
+  the player seeks past the end once on load, which makes the browser find
+  out, and puts it back to nought before anybody hears it. `room.spec.ts` long-presses and taps text, a link, a
   photo, a clip and a voice note with real touch events.
 - **`LineMenu` is a Radix context menu** — right-click on a laptop and a long
   press on a phone from one primitive, keyboard route included. It wraps only
@@ -346,6 +364,14 @@ weakening `sessionSecret()`.
   he watches happen. "Can't" is filled in ink, not red — not coming is not an
   error — and `audit:contrast` checks that pair. Beside the names of who is
   coming sit their faces (`FaceStack`); his pops in when he answers.
+  **The night sheet uses the same control** (`Answers.tsx`, 2026-09-25): its
+  three separate buttons wrapped two-and-one on a 390px phone in both
+  languages, under a card that had just shown the same question as one row.
+  **"Full table" shares the countdown's line only when there is one**: past
+  three days there is no countdown, and a row of its own put home past the
+  bottom of the 667px phone for exactly the group it is about; it then takes
+  the place of "In" before the names — four names already wrap, and a phrase
+  in front of them was one more line. The fit suite seats four.
 - **Two consecutive RSVP lines from one dad are one change of mind**, and
   `supersedes` in `messageGroups.ts` drops the earlier — which predates
   "maybe" and is why an e2e cannot expect to find "might make it" after he has
@@ -750,7 +776,10 @@ the screen knew something and did not say it.
     and one fixed spot sat a pair on foreheads and chins. "Fit them on your
     photo" turns the picker's popover into `GlassesFitter` — a second step
     in the same popover, because a button of its own would cost Settings a
-    row the fit suite does not allow. He drags (or uses the arrow keys) and
+    row the fit suite does not allow. Its footer wraps and its reset says
+    "Centre them" / "Recentre-les": "Remets-les au milieu" beside
+    "Enregistre" hung fifty pixels past a thirteen-rem popover, and English
+    fit by six. He drags (or uses the arrow keys) and
     sizes with a slider; `{x, y, s}` is a share of the face's size and a
     scale, clamped by `parseFit` on both sides, so it holds at 18px and at
     144px. Only over a photograph, and cleared by the face routes whenever
@@ -1251,7 +1280,12 @@ neither see nor scroll anything.
   back); the week puts the weeks behind this one on a tab (`ui/Tabs.tsx`,
   Radix, inside a sheet only — the "no tab strip over the room" rule stands)
   and sits Save beside the last field; settings puts the face beside the name
-  with the label sr-only. Both were measured at 390×667 in both languages.
+  with the label sr-only, and folds the creator's word and handover behind
+  a control on the "In this room" heading's own row (`room-owning`,
+  2026-09-25) — a joined dad's Settings fills the 667px phone to the pixel,
+  so for the creator a paragraph, a row, even a sentence of its own put it
+  past the bottom, and the suite, signed in as a joined dad, never saw it. Both were measured at 390×667 in both languages, and Settings as
+  the creator too.
 - **The week says what it is.** One line under the title, and "Everyone, this
   week" over the rows: "The week" on its own was a title a dad had to work
   out, with a form and a list that did not say whose they were.

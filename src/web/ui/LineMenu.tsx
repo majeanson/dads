@@ -1,6 +1,6 @@
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { Copy, Pencil, Pin, PinOff, Reply, Trash2 } from 'lucide-react';
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useT } from '../i18n';
 import { MarkRow } from '../Marks';
 import { cn } from './cn';
@@ -91,11 +91,27 @@ export function LineMenu({
    * that did not yet know it was editing.)
    */
   const away = useRef(false);
+  /**
+   * Whether THIS menu is the one open. Radix only reports a close that
+   * happens; a menu unmounted while open — the line under it taken back by
+   * the man who said it, on another phone — reports nothing, and the flag
+   * above stayed up for good: every tap on every line after that was
+   * swallowed as the lift of a long press, until another menu opened and
+   * closed. Unmounting takes the flag down if it was ours.
+   */
+  const ours = useRef(false);
+  useEffect(
+    () => () => {
+      if (ours.current) isOpen = false;
+    },
+    [],
+  );
 
   return (
     <ContextMenu.Root
       onOpenChange={(open) => {
         isOpen = open;
+        ours.current = open;
         if (open) openedAt = Date.now();
         else setArmed(false);
       }}
