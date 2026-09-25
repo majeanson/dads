@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { GLASSES, type GlassesKind } from '../shared/protocol';
 import { setMyGlasses } from './api';
 import { useT } from './i18n';
+import { Face } from './Face';
 import { Glasses } from './Logo';
 import { cn } from './ui/cn';
 
@@ -16,8 +17,22 @@ import { cn } from './ui/cn';
  *
  * Not optimistic: a pair that failed to save and showed as chosen would be
  * the one screen in the room that disagreed with the others.
+ *
+ * Each of the six is HIM wearing it (2026-09-24), photo or colour, rather
+ * than the pair on its own: every face in the app wears his glasses now, so
+ * choosing a pair is choosing how he looks, and that is what he should see.
+ * `photo` is the picture he may have picked a moment ago, before the room
+ * has it.
  */
-export function GlassesPicker({ worn }: { worn: GlassesKind | undefined }) {
+export function GlassesPicker({
+  memberId,
+  worn,
+  photo,
+}: {
+  memberId: string;
+  worn: GlassesKind | undefined;
+  photo?: string | false | null;
+}) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -84,12 +99,12 @@ export function GlassesPicker({ worn }: { worn: GlassesKind | undefined }) {
                 onClick={() => void wear(kind)}
                 data-testid={`glasses-${kind}`}
                 className={cn(
-                  'grid h-12 w-20 cursor-pointer place-items-center rounded-[var(--radius-control)] border',
+                  'grid h-16 w-20 cursor-pointer place-items-center rounded-[var(--radius-control)] border',
                   'transition-[border-color,scale] duration-100 active:scale-90',
                   current === kind ? 'border-accent bg-panel' : 'border-edge hover:border-accent',
                 )}
               >
-                <Glasses kind={kind} width={44} />
+                <Face memberId={memberId} photo={photo} tryOn={kind} size={44} />
               </button>
             ))}
           </div>

@@ -1,6 +1,7 @@
 import { faceUrl } from './api';
 import { dadVar } from './dadColour';
 import type { CSSProperties } from 'react';
+import type { GlassesKind } from '../shared/protocol';
 import { Glasses } from './Logo';
 import { useMember } from './members';
 import { cn } from './ui/cn';
@@ -33,6 +34,7 @@ import { cn } from './ui/cn';
 export function Face({
   memberId,
   photo,
+  tryOn,
   wear = 'still',
   delay = 0,
   size = 28,
@@ -46,6 +48,8 @@ export function Face({
    * caught up. Absent or null: whatever the room has.
    */
   photo?: string | false | null;
+  /** A pair to show him in instead of his own: the picker, trying them on. */
+  tryOn?: GlassesKind;
   wear?: 'still' | 'drop' | 'bob';
   /** Milliseconds before a `drop`, so a row can come down as a wave. */
   delay?: number;
@@ -53,7 +57,7 @@ export function Face({
   className?: string;
 }) {
   const dad = useMember(memberId);
-  const glasses = dad?.glasses;
+  const glasses = tryOn ?? dad?.glasses;
   const src = photo === false ? null : (photo ?? faceUrl(memberId, dad?.face));
   // His colour, as a ring inside the circle: an outline, so it shows on a
   // photograph as well as on his colour.

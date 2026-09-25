@@ -274,6 +274,13 @@ test('a dad chooses his glasses, and they stay his', async ({ page }) => {
   await page.getByTestId('glasses-open').click();
   const picker = page.getByTestId('glasses-picker');
   await expect(picker.getByTestId('glasses-shades')).toHaveAttribute('aria-pressed', 'true');
+  // Each of the six is him wearing it — his face, with that pair on — not
+  // the pair on its own.
+  for (const kind of ['shades', 'aviators', 'round', 'square', '3d', 'goggles']) {
+    const option = picker.getByTestId(`glasses-${kind}`);
+    await expect(option.locator('.face-smile')).toHaveCount(1);
+    await expect(option.locator('.face-shades')).toHaveAttribute('data-glasses', kind);
+  }
 
   // Not optimistic: the pair is his when the room has it, and every screen
   // hears it the same way — including this one.

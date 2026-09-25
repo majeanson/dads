@@ -177,7 +177,7 @@ export function You({ memberId, name }: { memberId: string; name: string }) {
           {/* Quiet, not danger: taking off a picture you can put back in ten
               seconds is not the same act as taking back something you said,
               and two red buttons in one app teaches nobody anything. */}
-          <GlassesPicker worn={me?.glasses} />
+          <GlassesPicker memberId={memberId} worn={me?.glasses} photo={preview} />
 
           {hasFace ? (
             <Button look="quiet" disabled={busy} onClick={() => void remove()}>
