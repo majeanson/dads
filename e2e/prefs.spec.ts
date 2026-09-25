@@ -248,6 +248,20 @@ test('a photo he has just added wears his glasses, and a new pair lands on it', 
   await page.getByTestId('glasses-picker').getByTestId('glasses-round').click();
   await expect(face.locator('img')).toBeVisible();
   await expect(face.locator('.face-shades')).toHaveAttribute('data-glasses', 'round');
+  // The button and the picture read the same list, so they agree.
+  await expect(face.getByText('Change it')).toBeVisible();
+
+  // Taking it off: the picture goes and stays gone. It used to come back for
+  // a moment — the room's copy, until the room caught up — and the button
+  // could say "Take it off" beside a face with no photo on it.
+  await face.getByRole('button', { name: 'Take it off' }).click();
+  await expect(face.locator('img')).toHaveCount(0);
+  await expect(face.getByText('Add a face')).toBeVisible();
+  for (let i = 0; i < 5; i++) {
+    await page.waitForTimeout(200);
+    await expect(face.locator('img')).toHaveCount(0);
+  }
+  await expect(face.locator('.face-shades')).toHaveAttribute('data-glasses', 'round');
 });
 
 test('a dad chooses his glasses, and they stay his', async ({ page }) => {

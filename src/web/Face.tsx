@@ -39,9 +39,13 @@ export function Face({
   className,
 }: {
   memberId: string;
-  /** A picture he has only just chosen, shown before the room has it — so
-   * the glasses are on it from the first moment, not after a reopen. */
-  photo?: string | null;
+  /**
+   * What he has just done to his picture, ahead of the room saying so: a
+   * picture just chosen (its URL), or none (`false`) just after he took it
+   * off — otherwise the old one came back for a moment before the room
+   * caught up. Absent or null: whatever the room has.
+   */
+  photo?: string | false | null;
   wear?: 'still' | 'drop' | 'bob';
   /** Milliseconds before a `drop`, so a row can come down as a wave. */
   delay?: number;
@@ -50,7 +54,7 @@ export function Face({
 }) {
   const dad = useMember(memberId);
   const glasses = dad?.glasses;
-  const src = photo ?? faceUrl(memberId, dad?.face);
+  const src = photo === false ? null : (photo ?? faceUrl(memberId, dad?.face));
   // His colour, as a ring inside the circle: an outline, so it shows on a
   // photograph as well as on his colour.
   const box = {

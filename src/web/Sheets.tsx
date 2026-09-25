@@ -182,14 +182,7 @@ export function Sheets({
     <Sheet title={t('set.title')} pose={Settings2} onClose={close}>
       <Settings
         rooms={rooms}
-        // From the roster rather than the session: the session was written at
-        // the door and does not know about a face set since.
-        you={{
-          memberId: you,
-          name: youName,
-          face: roster.find((m) => m.memberId === you)?.face,
-          glasses: members.find((m) => m.memberId === you)?.glasses,
-        }}
+        you={{ memberId: you, name: youName }}
         // A room with no creator is everybody's, which is what it always was.
         members={members}
         mine={createdBy == null || createdBy === you}

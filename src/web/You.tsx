@@ -1,9 +1,9 @@
-import type { GlassesKind } from '../shared/protocol';
 import { GlassesPicker } from './GlassesPicker';
 import { Check, Trash2, UserRound } from 'lucide-react';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { clearMyFace, setMyFace, setMyName } from './api';
 import { Face } from './Face';
+import { useMember } from './members';
 import { useT } from './i18n';
 import { prepareFace } from './media';
 import { Button } from './ui/Button';
@@ -20,26 +20,30 @@ import { FIELD } from './ui/field';
  * browser is where the twelve-megapixel original already is and the server
  * has no business receiving it.
  */
-export function You({
-  memberId,
-  name,
-  face,
-  glasses,
-}: {
-  memberId: string;
-  name: string;
-  /** The version of his face from the roster, or undefined for none. */
-  face: number | undefined;
-  /** The pair he wears, from the room's members. */
-  glasses?: GlassesKind;
-}) {
+export function You({ memberId, name }: { memberId: string; name: string }) {
   const { t } = useT();
+  // His face and his pair from the same list every other face reads. The
+  // button that says Add or Remove used to read the roster while the picture
+  // read the members, and the two could disagree about whether he had one.
+  const me = useMember(memberId);
   const [draft, setDraft] = useState(name);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** Shown the moment he picks one, so the face changes with the tap rather
-   * than after a round trip through R2. */
-  const [preview, setPreview] = useState<string | null>(null);
+  /**
+   * What he just did, until the room has it: the picture he picked (shown
+   * the moment he picks it, rather than after a round trip through R2), or
+   * `false` for the one he just took off. Null: whatever the room has.
+   * Cleared when the room's version of his face changes, which is the room
+   * catching up.
+   */
+  const [preview, setPreview] = useState<string | false | null>(null);
+  const roomFace = me?.face;
+  useEffect(() => {
+    setPreview((was) => {
+      if (typeof was === 'string') URL.revokeObjectURL(was);
+      return null;
+    });
+  }, [roomFace]);
   const picker = useRef<HTMLInputElement>(null);
 
   async function rename(event: FormEvent) {
@@ -75,7 +79,7 @@ export function You({
       // JPEG for the life of the page — the same thing the composer's own
       // preview already takes care of.
       setPreview((was) => {
-        if (was !== null) URL.revokeObjectURL(was);
+        if (typeof was === 'string') URL.revokeObjectURL(was);
         return URL.createObjectURL(square);
       });
     } catch {
@@ -92,8 +96,8 @@ export function You({
     try {
       await clearMyFace();
       setPreview((was) => {
-        if (was !== null) URL.revokeObjectURL(was);
-        return null;
+        if (typeof was === 'string') URL.revokeObjectURL(was);
+        return false;
       });
     } catch {
       setError(t('you.failed'));
@@ -102,7 +106,7 @@ export function You({
     }
   }
 
-  const hasFace = preview !== null || face !== undefined;
+  const hasFace = preview === null ? roomFace !== undefined : preview !== false;
 
   return (
     <div className="grid gap-3" data-testid="you">
@@ -173,7 +177,7 @@ export function You({
           {/* Quiet, not danger: taking off a picture you can put back in ten
               seconds is not the same act as taking back something you said,
               and two red buttons in one app teaches nobody anything. */}
-          <GlassesPicker worn={glasses} />
+          <GlassesPicker worn={me?.glasses} />
 
           {hasFace ? (
             <Button look="quiet" disabled={busy} onClick={() => void remove()}>
