@@ -249,47 +249,53 @@ function YourWeek({ row, onSaved }: { row: BoardRow | null; onSaved: () => void 
 
   return (
     <form className="grid gap-3" data-testid="your-week" onSubmit={submit}>
-      <fieldset className="m-0 flex flex-wrap items-center gap-2 border-0 p-0">
-        {/* Which end is which, on the screen and not only in the accessible
-            name. Five bare numbers do not say whether 1 is a good week or a
-            bad one, and a screen reader was being told something a sighted
-            dad had to guess — the wrong way round for the most-used control
-            on this sheet. */}
-        <legend className="mb-1.5 text-base text-muted">
-          {t('b.how_was')} <span className="text-sm whitespace-nowrap">({t('b.scale')})</span>
-        </legend>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <label
-            key={n}
-            className={cn(
-              // Five of these at 48px and four gaps sit inside a 360px phone
-              // with room to spare, and a number is the easiest thing in the
-              // app to miss with a thumb when it is 40.
-              'relative grid h-12 w-12 cursor-pointer place-items-center rounded-[var(--radius-control)] border text-lg tabular-nums',
-              'transition-colors duration-75',
-              rating === n
-                ? 'border-accent bg-accent text-on-accent'
-                : 'border-edge text-muted hover:border-accent hover:text-accent',
-              'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
-            )}
-          >
-            {/* Transparent and filling the label: the input IS the hit area.
-                A 0x0 input has no bounding box, which costs it its own click
-                target and makes it invisible to anything driving the page. */}
-            <input
-              type="radio"
-              name="rating"
-              value={n}
-              checked={rating === n}
-              onChange={() => setRating(n)}
-              className="absolute inset-0 m-0 cursor-pointer opacity-0"
-            />
-            <span aria-hidden="true">{n}</span>
-            <span className="sr-only">
-              {n} — {ratingWord(t, n)}
-            </span>
-          </label>
-        ))}
+      <fieldset className="m-0 grid gap-1.5 border-0 p-0">
+        <legend className="mb-1.5 text-base text-muted">{t('b.how_was')}</legend>
+        {/*
+         * One control, like home's three answers: five segments on one
+         * track, the chosen one filled. Five loose boxes read as five
+         * separate things to press rather than one scale.
+         *
+         * Which end is which is on the screen, under the two ends, and in
+         * every segment's accessible name. Five bare numbers do not say
+         * whether 1 is a good week or a bad one, and a screen reader was once
+         * told something a sighted dad had to guess.
+         */}
+        <div className="grid grid-cols-5 gap-1 rounded-[var(--radius-control)] border border-edge bg-paper p-1">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <label
+              key={n}
+              className={cn(
+                // 44px tall, and a fifth of the width each: the easiest thing
+                // on this sheet to miss with a thumb when it is small.
+                'relative grid h-11 cursor-pointer place-items-center rounded-[calc(var(--radius-control)-0.25rem)] text-lg tabular-nums',
+                'transition-colors duration-150',
+                rating === n ? 'bg-accent text-on-accent' : 'text-muted hover:text-accent',
+                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
+              )}
+            >
+              {/* Transparent and filling the label: the input IS the hit area.
+                  A 0x0 input has no bounding box, which costs it its own click
+                  target and makes it invisible to anything driving the page. */}
+              <input
+                type="radio"
+                name="rating"
+                value={n}
+                checked={rating === n}
+                onChange={() => setRating(n)}
+                className="absolute inset-0 m-0 cursor-pointer opacity-0"
+              />
+              <span aria-hidden="true">{n}</span>
+              <span className="sr-only">
+                {n} — {ratingWord(t, n)}
+              </span>
+            </label>
+          ))}
+        </div>
+        <span className="flex justify-between px-1 text-sm text-muted" aria-hidden="true">
+          <span>{ratingWord(t, 1)}</span>
+          <span>{ratingWord(t, 5)}</span>
+        </span>
       </fieldset>
 
       {/* A visible label, like the field below it. A placeholder is not a

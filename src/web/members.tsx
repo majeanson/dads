@@ -46,6 +46,14 @@ export function useCrowned(memberId: string): boolean {
   return isChampion(useContext(Crowned), memberId, Date.now());
 }
 
+/** A dad by the name he goes by, for a quote: a reply's snapshot carries
+ * the name it was said under and no id. The first of two with one name. */
+export function useMemberNamed(name: string): RosterEntry | undefined {
+  const byId = useContext(Members);
+  for (const m of byId.values()) if (m.name === name) return m;
+  return undefined;
+}
+
 /** One dad, or undefined for an id the room has not told us about. */
 export function useMember(memberId: string): RosterEntry | undefined {
   return useContext(Members).get(memberId);

@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { fetchTodaysPrompt, type TodaysPrompt } from './api';
 import { PenLine } from 'lucide-react';
+import { dadVar } from './dadColour';
+import { Face } from './Face';
 import { plural, promptText, useT } from './i18n';
 import { Button } from './ui/Button';
 import { FIELD } from './ui/field';
@@ -59,7 +61,16 @@ export function PromptCard({
   }
 
   return (
-    <section className="mb-6" data-testid="prompt-card">
+    // On a card, the way home puts the night on one: a screen with one
+    // question on it reads as being ABOUT that question when the question
+    // has an edge. The quote mark is the accent's one job here.
+    <section
+      className="rounded-[var(--radius-card)] bg-panel p-[clamp(1rem,3dvh,1.5rem)]"
+      data-testid="prompt-card"
+    >
+      <span aria-hidden="true" className="display block h-6 text-6xl leading-none text-accent">
+        “
+      </span>
       <p className="m-0 text-2xl leading-snug font-medium" data-testid="prompt-body">
         {promptText(lang, today.prompt)}
       </p>
@@ -83,10 +94,19 @@ export function PromptCard({
       {answersToday.length > 0 ? (
         <section className="mb-4" data-testid="prompt-answers">
           <h3 className="m-0 mb-1 text-sm font-semibold text-muted">{t('q.what_they_said')}</h3>
-          <ul className="m-0 list-none border-l-2 border-line py-0 pl-3">
+          <ul className="m-0 grid list-none gap-2 p-0">
             {answersToday.map((m) => (
-              <li key={m.id} className="py-1.5 text-base" data-testid="prompt-answer">
-                <span className="font-semibold">{m.name}</span> {m.body}
+              <li key={m.id} className="flex gap-2.5 text-base" data-testid="prompt-answer">
+                {m.memberId ? <Face memberId={m.memberId} size={26} /> : null}
+                <span className="min-w-0">
+                  <span
+                    className="font-semibold"
+                    style={m.memberId ? { color: dadVar(m.memberId) } : undefined}
+                  >
+                    {m.name}
+                  </span>{' '}
+                  {m.body}
+                </span>
               </li>
             ))}
           </ul>
@@ -116,7 +136,14 @@ export function PromptCard({
           </div>
         </form>
       ) : (
-        <Button size="lg" onClick={() => setOpen(true)}>
+        // The card's one action, filled until he has answered; after that it
+        // is the quieter "say more".
+        <Button
+          size="lg"
+          look={answered ? 'plain' : 'primary'}
+          className="w-full"
+          onClick={() => setOpen(true)}
+        >
           <PenLine size={18} aria-hidden="true" />
           {answered ? t('q.say_more') : t('q.answer')}
         </Button>

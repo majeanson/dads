@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { Mic, Pencil, Plus, Reply, SendHorizontal, Square, X } from 'lucide-react';
 import { useT } from './i18n';
+import { Quote } from './Lines';
 import { isImage, prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
 import { Button } from './ui/Button';
@@ -252,7 +253,7 @@ export function Composer({
 
   return (
     <form
-      className="composer rounded-xl border border-line bg-panel p-1.5 shadow-sm"
+      className="composer rounded-[1.625rem] border border-line bg-panel p-1.5 shadow-sm"
       onSubmit={submit}
       onPaste={(event) => {
         const file = event.clipboardData.files[0];
@@ -271,18 +272,15 @@ export function Composer({
           ) : (
             <Reply size={14} aria-hidden="true" className="shrink-0 text-muted" />
           )}
-          <span className="context-what">
-            {editing ? (
-              t('composer.editing')
-            ) : (
-              <>
-                <span className="text-muted">
-                  {t('composer.replying', { name: replyTo!.name })}
-                </span>{' '}
-                {replyTo!.body}
-              </>
-            )}
-          </span>
+          {/* A reply is the same card the answer will carry in the room,
+              so what he sees here is what everybody will see above his words. */}
+          {editing ? (
+            <span className="context-what">{t('composer.editing')}</span>
+          ) : (
+            <span className="min-w-0 flex-1">
+              <Quote reply={replyTo!} label={t('composer.replying', { name: replyTo!.name })} />
+            </span>
+          )}
           <Button
             look="quiet"
             size="iconSm"
@@ -344,7 +342,7 @@ export function Composer({
           <Button
             look="danger"
             size="icon"
-            className="h-11 w-11"
+            className="h-11 w-11 rounded-full!"
             aria-label={t('composer.cancel')}
             onClick={recorder.cancel}
           >
@@ -354,7 +352,7 @@ export function Composer({
           <Button
             look="primary"
             size="icon"
-            className="h-11 w-11"
+            className="h-11 w-11 rounded-full!"
             aria-label={t('composer.send')}
             disabled={sending}
             onClick={() => void sendVoice()}
@@ -368,7 +366,7 @@ export function Composer({
           <label
             htmlFor="attach"
             className={cn(
-              'grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-app',
+              'grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full',
               'border border-edge text-muted transition-colors duration-75',
               'hover:border-accent hover:text-accent',
               'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent',
@@ -431,7 +429,7 @@ export function Composer({
             <Button
               look="plain"
               size="icon"
-              className="h-11 w-11"
+              className="h-11 w-11 rounded-full!"
               aria-label={t('composer.record')}
               disabled={sending}
               onClick={() => void recorder.start()}
@@ -445,7 +443,7 @@ export function Composer({
               type="submit"
               look="primary"
               size="icon"
-              className="h-11 w-11"
+              className="h-11 w-11 rounded-full!"
               aria-label={t('composer.send')}
               disabled={
                 sending ||

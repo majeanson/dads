@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import type { Attachment as MessageAttachment, RoomMessage } from '../shared/protocol';
 import { parts, shortLink } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
@@ -7,6 +7,7 @@ import { Face } from './Face';
 import { dadVar } from './dadColour';
 import { useT } from './i18n';
 import { Logo } from './Logo';
+import { useMemberNamed } from './members';
 import { MarkRow, Marks, marksOf, QuickMark } from './Marks';
 import type { Row } from './messageGroups';
 import { LineMenu, menuOpen, notATap } from './ui/LineMenu';
@@ -222,12 +223,7 @@ export function Lines({
                 {/* What he was answering, as it was: a name and a cut-down
                     line, above his own. It goes nowhere on a tap — the
                     original may be older than the backfill. */}
-                {row.message.reply ? (
-                  <span className="quote" data-testid="quote">
-                    <span className="quote-who">{row.message.reply.name}</span>
-                    {row.message.reply.body}
-                  </span>
-                ) : null}
+                {row.message.reply ? <Quote reply={row.message.reply} /> : null}
                 {row.message.kind === 'prompt' ? (
                   <span className="answer-tag">{t('line.answered')}</span>
                 ) : null}
@@ -275,7 +271,7 @@ export function Lines({
                   </span>
                 ) : null}
               </span>
-              <span className="when flex items-start gap-1">
+              <span className="when items-start gap-1">
                 <time>{clock(row.message.createdAt)}</time>
                 <QuickMark
                   mine={marksOf(row.message, you)}
@@ -305,5 +301,36 @@ export function Lines({
           list to a screen reader, hidden so it is not counted. */}
       <li ref={bottom} aria-hidden="true" className="m-0 h-0 p-0" />
     </ol>
+  );
+}
+
+/**
+ * What he was answering, as it was: a small card with a bar in the colour of
+ * the man who said it, and his name in that colour over the cut-down line.
+ * It was a hairline and a grey name, and read as a footnote to the answer
+ * rather than the thing being answered. Goes nowhere on a tap — the original
+ * may be older than the backfill.
+ */
+export function Quote({
+  reply,
+  label,
+}: {
+  reply: { name: string; body: string };
+  /** What the coloured line says, when it is not just his name. */
+  label?: string;
+}) {
+  const who = useMemberNamed(reply.name);
+  const colour = who ? dadVar(who.memberId) : 'var(--border-strong)';
+  return (
+    <span
+      className="quote"
+      data-testid="quote"
+      // The name at full strength only where it is a dad's colour, which the
+      // contrast audit holds as text on this ground; otherwise ink.
+      style={{ '--quote': colour, '--quote-ink': who ? colour : 'var(--text)' } as CSSProperties}
+    >
+      <span className="quote-who">{label ?? reply.name}</span>
+      <span className="quote-body">{reply.body}</span>
+    </span>
   );
 }

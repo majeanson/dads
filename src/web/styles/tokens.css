@@ -276,6 +276,9 @@
   .line .body a {
     text-decoration: underline;
     text-underline-offset: 0.15em;
+    /* A shortened address is still one long word, and with nowhere to break
+       it ran out of its cell and under the clock beside it. */
+    overflow-wrap: anywhere;
   }
 
   /* One focus treatment, never removed. */
@@ -1123,6 +1126,11 @@
   }
 
   .line .when {
+    /* Here, not as a `flex` utility on the element: a utility beats this
+       layer, and it was quietly beating the phone layout's display:none for a
+       continued line — whose clock then sat, invisible, over the end of his
+       words, and showed through them under a pointer. */
+    display: flex;
     color: var(--muted);
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
@@ -1325,21 +1333,29 @@
 
   /* What he was answering, above his own words: a name and a cut-down line
      on a hairline, the way every chat draws a quote. */
-  .line .quote {
+  .quote {
     display: block;
-    margin-bottom: 0.15rem;
-    padding-left: 0.5rem;
-    border-left: 2px solid var(--line);
-    color: var(--muted);
+    margin: 0.15rem 0 0.3rem;
+    padding: 0.3rem 0.6rem;
+    border-left: 3px solid var(--quote, var(--border-strong));
+    border-radius: 0.25rem 0.625rem 0.625rem 0.25rem;
+    background: var(--bg-soft);
     font-size: 0.875rem;
+    line-height: 1.35;
+    overflow: hidden;
+  }
+
+  .quote-who {
+    display: block;
+    color: var(--quote-ink, var(--text));
+    font-weight: 600;
+  }
+  .quote-body {
+    display: block;
+    color: var(--muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .line .quote-who {
-    margin-right: 0.35rem;
-    font-weight: 600;
   }
 
   /* One word after the words, not a badge. */

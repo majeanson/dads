@@ -216,7 +216,13 @@ export function RoomHeader({
       {slim ? (
         <span className="head-actions">
           <JoinCall state={callState} onJoin={onJoinCall} />
-          <Button size="icon" onClick={onMenu} aria-label={t('room.menu')} className="relative">
+          <Button
+            size="icon"
+            look="quiet"
+            onClick={onMenu}
+            aria-label={t('room.menu')}
+            className="relative rounded-full!"
+          >
             <MenuIcon size={22} aria-hidden="true" />
             <span className="sr-only">{t('room.menu')}</span>
             {/* The one place a dot is right: the words are behind the button

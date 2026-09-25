@@ -178,12 +178,22 @@ test('in, straight back out, and in again, in French', async ({ page }) => {
   await page.getByRole('button', { name: 'FR', exact: true }).tap();
   await page.getByRole('button', { name: 'Ferme', exact: true }).tap();
   const room = page.locator('main.room');
+  // The clock held still, as in home.spec: the second press lands inside the
+  // first film on any machine, instead of only on a fast one — under a loaded
+  // full run the film's timing drifted and this failed with nothing wrong.
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.getByTestId('home-go').tap();
+  await page.clock.runFor(150);
   await expect(room).toHaveAttribute('data-view', 'talk');
   await page.getByTestId('go-home').tap();
   await expect(room).toHaveAttribute('data-view', 'home');
+  await expect(page.getByTestId('splash')).toHaveCount(1);
   await page.getByTestId('home-go').tap();
+  await page.clock.runFor(150);
   await expect(room).toHaveAttribute('data-view', 'talk');
+  await page.clock.runFor(3000);
+  await expect(page.getByTestId('splash')).toHaveCount(0);
 });
 
 test('a phone that drops out comes back to what changed', async ({ browser }) => {

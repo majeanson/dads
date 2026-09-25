@@ -173,7 +173,14 @@ export function JoinCall({
   }
 
   return (
-    <Button size="icon" onClick={onJoin} disabled={state === 'joining'} aria-label={t('call.join')}>
+    <Button
+      size="icon"
+      look="quiet"
+      className="rounded-full!"
+      onClick={onJoin}
+      disabled={state === 'joining'}
+      aria-label={t('call.join')}
+    >
       <Phone size={22} aria-hidden="true" />
       <span className="sr-only">{state === 'joining' ? t('call.opening') : t('call.join')}</span>
     </Button>
