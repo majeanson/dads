@@ -4,6 +4,8 @@ import { GLASSES, type GlassesKind } from '../shared/protocol';
 import { setMyGlasses } from './api';
 import { useT } from './i18n';
 import { Face } from './Face';
+import { GlassesFitter } from './GlassesFitter';
+import { useMember } from './members';
 import { Glasses } from './Logo';
 import { cn } from './ui/cn';
 
@@ -23,6 +25,10 @@ import { cn } from './ui/cn';
  * choosing a pair is choosing how he looks, and that is what he should see.
  * `photo` is the picture he may have picked a moment ago, before the room
  * has it.
+ *
+ * Over a photograph there is a second step: "Fit them on your photo" turns
+ * the six into the fitter (`GlassesFitter`), in the same popover, because a
+ * button of its own would cost the Settings sheet a row it cannot spare.
  */
 export function GlassesPicker({
   memberId,
@@ -35,6 +41,10 @@ export function GlassesPicker({
 }) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
+  const [fitting, setFitting] = useState(false);
+  const me = useMember(memberId);
+  // Only over a photograph: a face with none is drawn to fit.
+  const hasPhoto = typeof photo === 'string' || (photo !== false && me?.face !== undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const current = worn ?? 'shades';
@@ -53,7 +63,13 @@ export function GlassesPicker({
   }
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setFitting(false);
+      }}
+    >
       <Popover.Trigger asChild>
         <button
           type="button"
@@ -82,37 +98,55 @@ export function GlassesPicker({
             'motion-pop origin-[var(--radix-popper-transform-origin)]',
           )}
         >
-          <div
-            role="group"
-            aria-label={t('you.glasses')}
-            className="grid grid-cols-3 gap-1.5"
-            data-testid="glasses-picker"
-          >
-            {GLASSES.map((kind) => (
-              <button
-                key={kind}
-                type="button"
-                aria-pressed={current === kind}
-                aria-label={t(`glasses.${kind}`)}
-                title={t(`glasses.${kind}`)}
-                disabled={busy}
-                onClick={() => void wear(kind)}
-                data-testid={`glasses-${kind}`}
-                className={cn(
-                  'grid h-16 w-20 cursor-pointer place-items-center rounded-[var(--radius-control)] border',
-                  'transition-[border-color,scale] duration-100 active:scale-90',
-                  current === kind ? 'border-accent bg-panel' : 'border-edge hover:border-accent',
-                )}
+          {fitting ? (
+            <GlassesFitter memberId={memberId} photo={photo} onDone={() => setOpen(false)} />
+          ) : (
+            <>
+              <div
+                role="group"
+                aria-label={t('you.glasses')}
+                className="grid grid-cols-3 gap-1.5"
+                data-testid="glasses-picker"
               >
-                <Face memberId={memberId} photo={photo} tryOn={kind} size={44} />
-              </button>
-            ))}
-          </div>
-          {error ? (
-            <p className="mt-2 text-[1.0625rem] text-danger" role="alert">
-              {t('you.glasses_failed')}
-            </p>
-          ) : null}
+                {GLASSES.map((kind) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    aria-pressed={current === kind}
+                    aria-label={t(`glasses.${kind}`)}
+                    title={t(`glasses.${kind}`)}
+                    disabled={busy}
+                    onClick={() => void wear(kind)}
+                    data-testid={`glasses-${kind}`}
+                    className={cn(
+                      'grid h-16 w-20 cursor-pointer place-items-center rounded-[var(--radius-control)] border',
+                      'transition-[border-color,scale] duration-100 active:scale-90',
+                      current === kind
+                        ? 'border-accent bg-panel'
+                        : 'border-edge hover:border-accent',
+                    )}
+                  >
+                    <Face memberId={memberId} photo={photo} tryOn={kind} size={44} />
+                  </button>
+                ))}
+              </div>
+              {error ? (
+                <p className="mt-2 text-[1.0625rem] text-danger" role="alert">
+                  {t('you.glasses_failed')}
+                </p>
+              ) : null}
+              {hasPhoto ? (
+                <button
+                  type="button"
+                  onClick={() => setFitting(true)}
+                  data-testid="glasses-fit"
+                  className="mt-2 min-h-11 w-full cursor-pointer rounded-[var(--radius-control)] px-2 text-base font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  {t('fit.open')}
+                </button>
+              ) : null}
+            </>
+          )}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

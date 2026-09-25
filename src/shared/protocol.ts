@@ -172,11 +172,46 @@ export function isGlasses(value: unknown): value is GlassesKind {
   return typeof value === 'string' && (GLASSES as readonly string[]).includes(value);
 }
 
+/**
+ * Where his glasses sit on his photograph: an offset from the default spot
+ * as a share of the face's size (so it holds at 18px and at 160px), and a
+ * scale. Only ever applied over a photo.
+ */
+export interface GlassesFit {
+  x: number;
+  y: number;
+  s: number;
+}
+
+/** How far a fit may go. Past these a pair is off the face, not on it. */
+export const FIT_LIMITS = { x: 0.3, y: 0.35, sMin: 0.6, sMax: 1.6 } as const;
+
+/**
+ * A fit, or null for anything that is not one: three finite numbers, clamped
+ * to the limits and rounded, so what is stored is always something a face
+ * can wear and nothing a client sends can put a pair across the screen.
+ */
+export function parseFit(value: unknown): GlassesFit | null {
+  if (!value || typeof value !== 'object') return null;
+  const { x, y, s } = value as Record<string, unknown>;
+  if (typeof x !== 'number' || typeof y !== 'number' || typeof s !== 'number') return null;
+  if (![x, y, s].every(Number.isFinite)) return null;
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  const round = (v: number) => Math.round(v * 1000) / 1000;
+  return {
+    x: round(clamp(x, -FIT_LIMITS.x, FIT_LIMITS.x)),
+    y: round(clamp(y, -FIT_LIMITS.y, FIT_LIMITS.y)),
+    s: round(clamp(s, FIT_LIMITS.sMin, FIT_LIMITS.sMax)),
+  };
+}
+
 export interface RosterEntry {
   memberId: string;
   name: string;
   /** The pair he wears, when he has chosen one. Absent is the app's shades. */
   glasses?: GlassesKind;
+  /** Where they sit on his photo, when he has moved them. */
+  fit?: GlassesFit;
   /**
    * When this dad last set his face, or absent if he has none.
    *

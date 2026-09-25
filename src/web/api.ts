@@ -1,5 +1,5 @@
 import type { DadNight } from '../shared/dadNight';
-import type { Found, RoomsOpen } from '../shared/protocol';
+import type { Found, GlassesFit, RoomsOpen } from '../shared/protocol';
 
 /** A night as the client sends it: the zone is omitted when the group already
  * has one, so the server keeps it rather than adopting the editor's. */
@@ -560,6 +560,16 @@ export async function setMyGlasses(glasses: string): Promise<void> {
     body: JSON.stringify({ glasses }),
   });
   if (!res.ok) throw new Error(`PUT /api/me/glasses ${res.status}`);
+}
+
+/** Where his glasses sit on his photo, or null for the default spot. */
+export async function setMyGlassesFit(fit: GlassesFit | null): Promise<void> {
+  const res = await fetch('/api/me/glasses-fit', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fit }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/me/glasses-fit ${res.status}`);
 }
 
 /** His face. Square, shrunk in the browser, replacing whatever was there. */

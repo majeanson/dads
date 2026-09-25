@@ -730,6 +730,20 @@ the screen knew something and did not say it.
     face does not know about glasses and a frame without them would take
     them off every screen. Not optimistic, for the same reason as a keep.
     The app's own mark always wears the shades: it is the brand, not a dad.
+  - **He can put them on his eyes** (2026-09-24, migration 0021,
+    `members.glasses_fit`). A photo's eyes are wherever the camera put them,
+    and one fixed spot sat a pair on foreheads and chins. "Fit them on your
+    photo" turns the picker's popover into `GlassesFitter` — a second step
+    in the same popover, because a button of its own would cost Settings a
+    row the fit suite does not allow. He drags (or uses the arrow keys) and
+    sizes with a slider; `{x, y, s}` is a share of the face's size and a
+    scale, clamped by `parseFit` on both sides, so it holds at 18px and at
+    144px. Only over a photograph, and cleared by the face routes whenever
+    he sets a new photo or takes his off: a fit belongs to one picture's
+    eyes. `Face` applies it with the CSS `translate` and `scale`
+    properties, never `transform`, which the typing bob already is. The
+    area refuses `dragstart`: the photo is an `<img>`, and the browser's own
+    image drag cancelled the pointer after one step — the e2e found it.
   - **A dad typing wears his glasses bobbing** on his face in the header
     (`face-typing`), so who is typing can be seen without reading.
   - **What the splash DOES runs on timers, never on animation frames.** The

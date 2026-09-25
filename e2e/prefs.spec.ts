@@ -264,6 +264,63 @@ test('a photo he has just added wears his glasses, and a new pair lands on it', 
   await expect(face.locator('.face-shades')).toHaveAttribute('data-glasses', 'round');
 });
 
+test('he fits his glasses to his photo, and every face of his wears them there', async ({
+  page,
+}) => {
+  await comeIn(page, 'Vic Fit');
+  await home(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+
+  // With no photo there is nothing to fit: a colour face is drawn to fit.
+  await page.getByTestId('glasses-open').click();
+  await expect(page.getByTestId('glasses-picker')).toBeVisible();
+  await expect(page.getByTestId('glasses-fit')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await page.setInputFiles('#face', 'public/icon-192.png');
+  const face = page.getByTestId('you');
+  await expect(face.locator('img')).toBeVisible();
+
+  await page.getByTestId('glasses-open').click();
+  await page.getByTestId('glasses-fit').click();
+  const fitter = page.getByTestId('glasses-fitter');
+  await expect(fitter).toBeVisible();
+  const area = fitter.getByTestId('fit-area');
+  await expect(area).toHaveAttribute('data-fit', '0,0,1');
+
+  // A drag moves them — down and to the right, by a share of the face.
+  const box = (await area.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 14, box.y + box.height / 2 + 22, { steps: 5 });
+  await page.mouse.up();
+  const dragged = (await area.getAttribute('data-fit'))!.split(',').map(Number);
+  expect(dragged[0]).toBeGreaterThan(0.05);
+  expect(dragged[1]).toBeGreaterThan(0.1);
+
+  // The keys move them too, and the slider sizes them.
+  await area.focus();
+  await page.keyboard.press('ArrowUp');
+  const keyed = (await area.getAttribute('data-fit'))!.split(',').map(Number);
+  expect(keyed[1]).toBeCloseTo(dragged[1]! - 0.01, 3);
+  await fitter.getByTestId('fit-size').fill('1.3');
+  await expect(area).toHaveAttribute('data-fit', /,1\.3$/);
+
+  await fitter.getByTestId('fit-save').click();
+  await expect(fitter).toHaveCount(0);
+
+  // Not optimistic: his face in Settings wears them where he put them once
+  // the room has it — and so does the face beside what he says.
+  const worn = face.locator('.face-shades');
+  await expect(worn).toHaveCSS('scale', '1.3');
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await talk(page);
+  await page.getByLabel('Say something').fill('fitted at last');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const line = page.getByTestId('line').filter({ hasText: 'fitted at last' });
+  await expect(line.locator('.face-shades')).toHaveCSS('scale', '1.3');
+});
+
 test('a dad chooses his glasses, and they stay his', async ({ page }) => {
   await comeIn(page, 'Ivo Frames');
   await home(page);

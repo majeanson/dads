@@ -1,4 +1,4 @@
-import { isGlasses } from '../../shared/protocol';
+import { isGlasses, parseFit } from '../../shared/protocol';
 import type { Env } from '../env';
 import { currentSession, MAX_NAME_LENGTH } from './auth';
 
@@ -81,6 +81,41 @@ export async function putGlasses(request: Request, env: Env, prod: boolean): Pro
   return Response.json({ ok: true, glasses: body.glasses });
 }
 
+/**
+ * PUT /api/me/glasses-fit — { fit: {x, y, s} | null }
+ *
+ * Where his glasses sit on his photograph. Clamped by parseFit, so what is
+ * stored is always something a face can wear; null puts them back on the
+ * default spot. Not optimistic, like the pair itself: every screen hears it
+ * through the room the same way, his own included.
+ */
+export async function putGlassesFit(request: Request, env: Env, prod: boolean): Promise<Response> {
+  const session = await currentSession(request, env, prod);
+  if (!session) return new Response('no', { status: 401 });
+
+  let body: { fit?: unknown };
+  try {
+    body = (await request.json()) as { fit?: unknown };
+  } catch {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+  const fit = body.fit === null ? null : parseFit(body.fit);
+  if (body.fit !== null && fit === null) {
+    return Response.json({ error: 'bad_fit' }, { status: 400 });
+  }
+
+  await env.DB.prepare('UPDATE members SET glasses_fit = ? WHERE id = ?')
+    .bind(fit === null ? null : JSON.stringify(fit), session.member.id)
+    .run();
+
+  await tellTheRoom(env, session.group.id, {
+    memberId: session.member.id,
+    name: session.member.displayName,
+    face: session.member.avatarAt ?? null,
+  });
+  return Response.json({ ok: true, fit });
+}
+
 /** PUT /api/me/name — { name } */
 export async function putName(request: Request, env: Env, prod: boolean): Promise<Response> {
   const session = await currentSession(request, env, prod);
@@ -150,7 +185,9 @@ export async function putFace(request: Request, env: Env, prod: boolean): Promis
   await env.MEDIA.put(key, bytes, { httpMetadata: { contentType: declared } });
 
   const at = Date.now();
-  await env.DB.prepare('UPDATE members SET avatar_key = ?, avatar_at = ? WHERE id = ?')
+  await env.DB.prepare(
+    'UPDATE members SET avatar_key = ?, avatar_at = ?, glasses_fit = NULL WHERE id = ?',
+  )
     .bind(key, at, session.member.id)
     .run();
 
@@ -170,7 +207,9 @@ export async function deleteFace(request: Request, env: Env, prod: boolean): Pro
   await env.MEDIA.delete(faceKey(session.group.id, session.member.id)).catch((err: unknown) => {
     console.error('me: could not delete a face', err);
   });
-  await env.DB.prepare('UPDATE members SET avatar_key = NULL, avatar_at = NULL WHERE id = ?')
+  await env.DB.prepare(
+    'UPDATE members SET avatar_key = NULL, avatar_at = NULL, glasses_fit = NULL WHERE id = ?',
+  )
     .bind(session.member.id)
     .run();
 

@@ -1,7 +1,7 @@
 import { faceUrl } from './api';
 import { dadVar } from './dadColour';
 import type { CSSProperties } from 'react';
-import type { GlassesKind } from '../shared/protocol';
+import type { GlassesFit, GlassesKind } from '../shared/protocol';
 import { Glasses } from './Logo';
 import { useMember } from './members';
 import { cn } from './ui/cn';
@@ -35,6 +35,7 @@ export function Face({
   memberId,
   photo,
   tryOn,
+  fitting,
   wear = 'still',
   delay = 0,
   size = 28,
@@ -50,6 +51,11 @@ export function Face({
   photo?: string | false | null;
   /** A pair to show him in instead of his own: the picker, trying them on. */
   tryOn?: GlassesKind;
+  /**
+   * Where the pair sits while he is fitting it (the editor's live preview),
+   * in place of where the room has it. Null: the default spot.
+   */
+  fitting?: GlassesFit | null;
   wear?: 'still' | 'drop' | 'bob';
   /** Milliseconds before a `drop`, so a row can come down as a wave. */
   delay?: number;
@@ -59,6 +65,26 @@ export function Face({
   const dad = useMember(memberId);
   const glasses = tryOn ?? dad?.glasses;
   const src = photo === false ? null : (photo ?? faceUrl(memberId, dad?.face));
+  // Where the pair sits: only over a photograph (a face with none is drawn to
+  // fit), and not over one he picked a moment ago — the room clears his fit
+  // with a new photo, because it belonged to the old one's eyes.
+  const fit =
+    src === null
+      ? null
+      : fitting !== undefined
+        ? fitting
+        : typeof photo === 'string'
+          ? null
+          : (dad?.fit ?? null);
+  // `translate` and `scale`, not `transform`: they compose with the bob a
+  // typing face does, which IS a transform, rather than being wiped by it.
+  const placed: CSSProperties | undefined =
+    fit === null
+      ? undefined
+      : {
+          translate: `${(fit.x * size).toFixed(2)}px ${(fit.y * size).toFixed(2)}px`,
+          scale: String(fit.s),
+        };
   // His colour, as a ring inside the circle: an outline, so it shows on a
   // photograph as well as on his colour.
   const box = {
@@ -103,6 +129,7 @@ export function Face({
         drop={wear === 'drop'}
         delay={delay}
         halo
+        style={placed}
         className={cn('face-shades', wear === 'bob' && 'face-typing')}
       />
     </span>

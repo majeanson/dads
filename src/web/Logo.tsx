@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type CSSProperties } from 'react';
 import type { GlassesKind } from '../shared/protocol';
 
 /**
@@ -201,6 +201,7 @@ export function Glasses({
   drop = false,
   delay = 0,
   halo = false,
+  style,
   className,
 }: {
   width?: number;
@@ -216,6 +217,8 @@ export function Glasses({
   halo?: boolean;
   /** Milliseconds before they come down, so a row can come down as a wave. */
   delay?: number;
+  /** Where on a face it sits, when he has moved it there (`Face`). */
+  style?: CSSProperties;
   className?: string;
 }) {
   return (
@@ -227,6 +230,7 @@ export function Glasses({
       focusable="false"
       data-glasses={kind}
       overflow={halo ? 'visible' : undefined}
+      style={style}
       className={[drop ? 'logo-anim' : '', className ?? ''].join(' ')}
     >
       <g

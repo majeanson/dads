@@ -229,3 +229,95 @@ describe('the glasses a dad wears', () => {
     ws.close(1000, 'bye');
   });
 });
+
+describe('where the glasses sit on his photo', () => {
+  let group: SeededGroup;
+  beforeEach(async () => {
+    await resetTables();
+    group = await seedGroup();
+  });
+
+  const stored = async () =>
+    (
+      await env.DB.prepare('SELECT glasses_fit FROM members WHERE group_id = ?')
+        .bind(group.id)
+        .first<{ glasses_fit: string | null }>()
+    )?.glasses_fit;
+
+  const setFace = (cookie: string) =>
+    worker.fetch(
+      new Request('https://dads.test/api/me/face', {
+        method: 'PUT',
+        headers: { cookie, 'Content-Type': 'image/png' },
+        body: PNG,
+      }),
+    );
+
+  it('is stored clamped, and null puts it back', async () => {
+    const cookie = await comeIn(group, 'Marc');
+    const res = await worker.fetch(
+      put('/api/me/glasses-fit', cookie, { fit: { x: 0.1, y: -0.08, s: 1.2 } }),
+    );
+    expect(res.status).toBe(200);
+    expect(JSON.parse((await stored())!)).toEqual({ x: 0.1, y: -0.08, s: 1.2 });
+
+    // Past the limits is clamped to them, not refused: a thumb dragged off
+    // the edge meant "as far as it goes".
+    await worker.fetch(put('/api/me/glasses-fit', cookie, { fit: { x: 9, y: -9, s: 99 } }));
+    expect(JSON.parse((await stored())!)).toEqual({ x: 0.3, y: -0.35, s: 1.6 });
+
+    await worker.fetch(put('/api/me/glasses-fit', cookie, { fit: null }));
+    expect(await stored()).toBeNull();
+  });
+
+  it('refuses a stranger, and anything that is not three numbers', async () => {
+    const cookie = await comeIn(group, 'Marc');
+    expect(
+      (await worker.fetch(put('/api/me/glasses-fit', '', { fit: { x: 0, y: 0, s: 1 } }))).status,
+    ).toBe(401);
+    for (const fit of [
+      'up a bit',
+      { x: 0, y: 0 },
+      { x: '0', y: 0, s: 1 },
+      { x: Number.NaN, y: 0, s: 1 },
+      42,
+    ]) {
+      expect((await worker.fetch(put('/api/me/glasses-fit', cookie, { fit }))).status).toBe(400);
+    }
+    expect(await stored()).toBeNull();
+  });
+
+  it('reaches the room, and starts over with a new photo', async () => {
+    const cookie = await comeIn(group, 'Marc');
+    expect((await setFace(cookie)).status).toBe(200);
+    await worker.fetch(put('/api/me/glasses-fit', cookie, { fit: { x: 0, y: 0.1, s: 0.9 } }));
+
+    const res = await worker.fetch('https://dads.test/ws', {
+      headers: { Upgrade: 'websocket', Cookie: cookie },
+    });
+    const ws = res.webSocket!;
+    ws.accept();
+    const frames: { t: string; members?: { fit?: unknown }[]; member?: { fit?: unknown } }[] = [];
+    ws.addEventListener('message', (e) => {
+      if (e.data !== 'pong') frames.push(JSON.parse(e.data as string));
+    });
+    const wait = async (ok: () => boolean) => {
+      for (let i = 0; i < 200 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
+      expect(ok()).toBe(true);
+    };
+    await wait(() => frames.some((f) => f.t === 'hello'));
+    expect(frames.find((f) => f.t === 'hello')!.members?.[0]?.fit).toEqual({
+      x: 0,
+      y: 0.1,
+      s: 0.9,
+    });
+
+    // A fit belongs to one picture's eyes: a new photo puts it back.
+    frames.length = 0;
+    await setFace(cookie);
+    expect(await stored()).toBeNull();
+    await wait(() => frames.some((f) => f.t === 'member'));
+    expect(frames.find((f) => f.t === 'member')!.member?.fit).toBeUndefined();
+    ws.close(1000, 'bye');
+  });
+});

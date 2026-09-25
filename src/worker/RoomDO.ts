@@ -14,7 +14,17 @@ import {
 } from '../shared/protocol';
 import { tableName } from '../shared/jaffre';
 import { parseSaid, type Said } from '../shared/said';
-import { isGlasses, REPLY_QUOTE_LENGTH, type ReplyTo } from '../shared/protocol';
+import { isGlasses, parseFit, REPLY_QUOTE_LENGTH, type ReplyTo } from '../shared/protocol';
+
+/** A stored fit, or nothing: NULL, or anything that no longer parses as one. */
+function storedFit(raw: string | null | undefined) {
+  if (!raw) return null;
+  try {
+    return parseFit(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
 
 /** A stored quote, or nothing: a row from before replies existed has none. */
 function parseReply(raw: string | null | undefined): ReplyTo | null {
@@ -331,11 +341,14 @@ export class RoomDO extends DurableObject<Env> {
       // a face set tonight belongs beside what he said on Tuesday. The pair
       // he wears is read here rather than carried in: a change of name or
       // face does not know it, and a frame without it would take his glasses
-      // off every screen.
-      const worn = await this.env.DB.prepare('SELECT glasses FROM members WHERE id = ?')
+      // off every screen. Where they sit on his photo, the same.
+      const worn = await this.env.DB.prepare(
+        'SELECT glasses, glasses_fit FROM members WHERE id = ?',
+      )
         .bind(memberId)
-        .first<{ glasses: string | null }>()
+        .first<{ glasses: string | null; glasses_fit: string | null }>()
         .catch(() => null);
+      const fit = storedFit(worn?.glasses_fit);
       this.broadcast({
         t: 'member',
         member: {
@@ -343,6 +356,7 @@ export class RoomDO extends DurableObject<Env> {
           name,
           face: face ?? undefined,
           ...(isGlasses(worn?.glasses) ? { glasses: worn.glasses } : {}),
+          ...(fit ? { fit } : {}),
         },
       });
 
@@ -450,6 +464,7 @@ export class RoomDO extends DurableObject<Env> {
           name,
           ...(face ? { face } : {}),
           ...(own?.glasses ? { glasses: own.glasses } : {}),
+          ...(own?.fit ? { fit: own.fit } : {}),
         },
       });
     }
@@ -1277,7 +1292,7 @@ export class RoomDO extends DurableObject<Env> {
     if (groupId === undefined) return [];
     try {
       const { results } = await this.env.DB.prepare(
-        'SELECT id, display_name, avatar_at, glasses FROM members WHERE group_id = ?',
+        'SELECT id, display_name, avatar_at, glasses, glasses_fit FROM members WHERE group_id = ?',
       )
         .bind(groupId)
         .all<{
@@ -1285,13 +1300,18 @@ export class RoomDO extends DurableObject<Env> {
           display_name: string;
           avatar_at: number | null;
           glasses: string | null;
+          glasses_fit: string | null;
         }>();
-      return results.map((r) => ({
-        memberId: r.id,
-        name: r.display_name,
-        face: r.avatar_at ?? undefined,
-        ...(isGlasses(r.glasses) ? { glasses: r.glasses } : {}),
-      }));
+      return results.map((r) => {
+        const fit = storedFit(r.glasses_fit);
+        return {
+          memberId: r.id,
+          name: r.display_name,
+          face: r.avatar_at ?? undefined,
+          ...(isGlasses(r.glasses) ? { glasses: r.glasses } : {}),
+          ...(fit ? { fit } : {}),
+        };
+      });
     } catch (err) {
       console.error('members failed', err);
       return [];
