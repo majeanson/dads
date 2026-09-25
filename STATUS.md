@@ -8,23 +8,24 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 
 ## What a dad can do
 
-|                     |                                                                                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Get in**          | Follow a link, or type the code, and a name. Remembered on that device forever.                                                      |
-| **Open a room**     | Anybody at the door can start one and choose its word. Whoever opens it owns its switches and its word, and can hand it on.          |
-| **Be in several**   | One phone, several rooms, and a sheet to move between them without typing a word again.                                              |
-| **See at a glance** | The app opens on home, which asks one question: are you coming on Thursday. The door into the talk and the menu's rows sit under it. |
-| **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers, marks, replies, edits and a way to take a line back.          |
-| **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.                                              |
-| **Be heard**        | Voice call in the room, camera optional. Full WebRTC mesh.                                                                           |
-| **Show something**  | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.                                                          |
-| **Look at it**      | A photograph opens full-screen in the app, moves to the next one, and saves to the phone.                                            |
-| **Keep it**         | Any dad can take a picture off the shelf so the next upload never reaches it.                                                        |
-| **Answer**          | A curated question every day, answered in front of the others. What was asked before is one row away.                                |
-| **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened. The weeks before are a tab.                                  |
-| **Play**            | Jaffre framed beside the conversation, name passed through, the table's state in its own panel head.                                 |
-| **Turn up**         | A standing dad night or one arranged evening: countdown, in / maybe / out, what to get into, a nudge, an .ics.                       |
-| **Pick a date**     | With no evening to come, a shared month calendar: everyone marks the days they can, anyone locks one in.                             |
+|                     |                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Get in**          | Follow a link, or type the code, and a name. Remembered on that device forever.                                                       |
+| **Be invited**      | A link unfurls in a chat app with the room's name, its night and a picture, in the sender's language — and opens the door in it.      |
+| **Open a room**     | Anybody at the door can start one and choose its word. Whoever opens it owns its switches and its word, and can hand it on.           |
+| **Be in several**   | One phone, several rooms, and a sheet to move between them without typing a word again.                                               |
+| **See at a glance** | The app opens on home, which asks one question: are you coming on Thursday. The door, a speech bubble, and the menu sit under it.     |
+| **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers, marks, replies quoted in the dad's colour, edits, take-backs.  |
+| **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.                                               |
+| **Be heard**        | Voice call in the room, camera optional. Full WebRTC mesh.                                                                            |
+| **Show something**  | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.                                                           |
+| **Look at it**      | A photograph opens full-screen in the app, moves to the next one, and saves to the phone.                                             |
+| **Keep it**         | Any dad can take a picture off the shelf so the next upload never reaches it.                                                         |
+| **Answer**          | A curated question every day, answered in front of the others. What was asked before is one row away.                                 |
+| **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened. The weeks before are a tab.                                   |
+| **Play**            | Jaffre framed beside the conversation, name passed through, the table's state in its own panel head.                                  |
+| **Turn up**         | A standing dad night or one arranged evening: countdown, in / maybe / out with faces, what to get into, a nudge, an .ics.             |
+| **Pick a date**     | With no evening to come, a shared month calendar; home shows the leading days one to a line, as calendar leaves. Anyone locks one in. |
 
 The conversation is only what the dads typed. The room used to narrate itself
 (RSVPs, check-ins, seats at the table, the night being set, a closing summary);
@@ -68,9 +69,15 @@ Honest list. Everything else in here has a test standing behind it.
    configured in production now (`dads-key`), so a dad behind a strict NAT has
    a way through as well — verified by `/api/ice` returning credentialed
    `turn:` and `turns:` servers alongside the STUN ones.
-   That is now the only one. The reminder was one of the others and has been
-   driven end to end against production; the newest half was the last, and a
-   real phone has now been through it — both below.
+2. **What a real chat app does with an invite link.** The HTML a crawler
+   receives is checked on the live site — one set of Open Graph tags, the
+   room's name, the night in the sender's language, a 1200×630 picture — and
+   an e2e pins it. What WhatsApp or iMessage then draws, and how long it
+   caches a preview, is theirs; only sending one to a phone answers it.
+
+The reminder was once on this list and has been driven end to end against
+production; the newest half was on it too, and a real phone has been through
+it since — both below.
 
 ## Proven: the reminder, and what it took to see it
 
@@ -122,8 +129,42 @@ some need to be more interesting to look at.
 On 2026-09-25 every screen was walked at 390×667 in English, French and dark
 by a headless phone and read off contact sheets — not a hand on a real one,
 but the pass that found the night sheet's wrapped answers and the creator's
-Settings running off the bottom. What a real thumb still owes: the splash and
-the glasses on a real screen, and the voice note's length on an iPhone.
+Settings running off the bottom. The afternoon's redesign was checked the same
+way. What a real thumb still owes: the splash and the glasses on a real
+screen, the voice note's length on an iPhone, and the new look — the speech
+bubble, the leaves, the segmented controls — in a hand rather than a
+headless browser.
+
+## After the review, 2026-09-25
+
+The rest of the day, once the review's list was closed. Each piece has its
+own note in CLAUDE.md; this is the map.
+
+- **Invites that unfurl.** `/i/<token>` is served by the Worker with Open
+  Graph tags: the room's name, its night if one is still to come, and a
+  picture (`og.png`, `og-fr.png`). An invite remembers the sender's language
+  (migration 0023), so the preview speaks it and a friend's door opens in
+  it. An expired or invented link gets the plain preview. The first live
+  check caught the shell's own "dads" tags sitting ahead of the room's name;
+  they are swapped out now, and a test insists on exactly one title.
+- **Less to load.** The eight sheets load apart from the page and are fetched
+  in the background once home has painted: initial JavaScript 564 kB to
+  501 kB. A sheet whose code fails to arrive says so and offers a reload.
+- **One look.** Home's "when's the next one" lists its days one to a line as
+  calendar leaves; the door is a speech bubble with the face on it. A
+  reply's quote is a card in the quoted dad's colour, the composer one
+  rounded bar, the header's icons quiet and round. The question of the day
+  sits on a card; the night sheet opens on a leaf with who is coming by
+  face. Every choose-one-of-a-few is the same segmented control: home's
+  answers, the week's 1–5, Settings' language and theme.
+- **Hardening.** The accessibility suite walks a line's menu, the glasses
+  picker and fitter, and home in all three shapes; it found the page behind
+  an open menu still focusable (now inert) and the marks inside it announced
+  as plain buttons (now menu choices). A leave armed for a member who has
+  since been deleted is quiet instead of a stack trace. A continued line's
+  clock no longer sits over the end of its words on a narrow screen.
+- **Proving without the dads' room.** `npm run prove` writes into a room of
+  its own (below), and ran green against everything above.
 
 ## The last review
 
@@ -326,6 +367,12 @@ room and now never touches it; its word is in this machine's `.dev.vars`. The
 room this document calls `the-dads` above no longer exists — production was
 wiped and rebuilt before the repo went public. No room has been opened by
 anybody else.
+
+The last `prove`, after the day's final deploy: 28 passed, 2 passed on a
+retry and 2 skipped — all four in the room-opening tests, which skip once an
+address has opened its three rooms for the day, and this machine had run the
+suite several times. One cleanup query hit a transient Cloudflare API error;
+the database afterwards held no test members, items or rooms.
 
 ## Notes
 
