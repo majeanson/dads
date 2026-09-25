@@ -708,6 +708,17 @@ test('on a phone, the marks under the last line scroll into sight', async ({ bro
   await expect(line.getByTestId('react-all')).toBeVisible();
   await expect.poll(() => below('react-all')).toBeLessThanOrEqual(0);
 
+  // Showing the row must not cost him "following down": a line arriving now
+  // lands where he can see it. A smooth scroll used to pass through spots the
+  // list read as "he scrolled up", and the next line stayed below the fold.
+  const other = await comeIn(browser, 'Lou Arrives');
+  await other.getByLabel('Say something').fill('arriving while the marks are open');
+  await other.getByRole('button', { name: 'Send' }).click();
+  const arrived = page.getByTestId('line').filter({ hasText: 'arriving while the marks are open' });
+  await expect(arrived).toBeVisible();
+  await expect.poll(() => below('line')).toBeLessThanOrEqual(1);
+
+  await other.context().close();
   await context.close();
 });
 

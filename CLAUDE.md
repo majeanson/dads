@@ -183,9 +183,13 @@ weakening `sessionSecret()`.
   selecting text. A mark vibrates (`buzz.ts`) where Android lets it.
   **The row scrolls itself into sight** (2026-09-24, `inView` in `Lines`):
   the last line is the one a man at the bottom answers, and its row opened
-  under the fold, "+" further still. It keeps itself on screen when it opens
-  and whenever it grows. The e2e fills the list first — with a short list
-  the row was 4px under and the rise animation hid it.
+  under the fold, "+" further still. It scrolls the LIST (never
+  `scrollIntoView`, which moves the page under an iOS keyboard too), in one
+  step (a smooth scroll passed through positions the list read as "he
+  scrolled up", and the next line did not follow him down), and only when it
+  opens or "+" changes what is in it — a resize is also the keyboard or the
+  phone turning. The e2e fills the list first — with a short list the row
+  was 4px under and the rise animation hid it — and then has a line arrive.
 - **A reply carries a SNAPSHOT, not a reference** (migration 0017,
   `messages.reply` and `tail.reply` as JSON `{id, name, body}`). The original
   may scroll out of the backfill, be taken back or be changed afterwards, and

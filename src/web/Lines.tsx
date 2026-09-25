@@ -19,15 +19,30 @@ function clock(ts: number): string {
  * The marks a tap opens under a line keep themselves on the screen. Tapping
  * the LAST line — the one a man at the bottom is most likely to answer —
  * opened the row below the fold, and "+" grew it further down still. So the
- * list scrolls just enough to show all of it, when it opens and whenever it
- * grows; `nearest` does nothing when it is already in view.
+ * list scrolls just enough to show all of it, when it opens and when "+"
+ * changes what is in it — and at no other time.
+ *
+ * The LIST, not \`scrollIntoView\`, which also moves every scrolling ancestor
+ * (the page, under an iOS keyboard). In one step, not smoothly: a smooth
+ * scroll passes through positions that are not the bottom, the list's own
+ * scroll handler read one of them as "he scrolled up", and a line arriving
+ * then did not follow him down. And on what is IN the row, not its size: a
+ * resize is also the keyboard or the phone turning, and those were never his
+ * tap.
  */
 function inView(el: HTMLElement | null) {
   if (!el) return;
-  const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const show = () => el.scrollIntoView({ block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
-  const watch = new ResizeObserver(show);
-  watch.observe(el);
+  const show = () => {
+    const list = el.closest('ol');
+    if (list === null) return;
+    const row = el.getBoundingClientRect();
+    const box = list.getBoundingClientRect();
+    if (row.bottom > box.bottom) list.scrollTop += row.bottom - box.bottom;
+    else if (row.top < box.top) list.scrollTop -= box.top - row.top;
+  };
+  show();
+  const watch = new MutationObserver(show);
+  watch.observe(el, { childList: true, subtree: true });
   return () => watch.disconnect();
 }
 
