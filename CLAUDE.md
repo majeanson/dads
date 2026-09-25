@@ -234,20 +234,20 @@ weakening `sessionSecret()`.
   line WITHOUT a quote when the id is nothing: his words are the thing and
   the quote is the context. A quote goes nowhere on a tap, for the same
   reason a search result does.
-- **A quote is a card in its dad's colour** (2026-09-25, in
-  ): a bar and his name in the colour his face is ringed in,
+- **A quote is a card in its dad's colour** (2026-09-25, `Quote` in
+  `Lines.tsx`): a bar and his name in the colour his face is ringed in,
   over the cut-down line, on the soft ground where the audit already holds
   the six colours as text. It was a hairline and a grey name and read as a
   footnote. The snapshot has a name and no id, so the colour is found by
-  name (); a name nobody goes by any more is in ink. The
+  name (`useMemberNamed`); a name nobody goes by any more is in ink. The
   composer's reply strip is the same card, so he sees above his words what
   everybody will. The composer itself is one rounded bar with round
   buttons, and the header's call and menu are quiet round icons.
 - **A continued line's clock is hidden by the stylesheet, not fought by a
-  utility.** Its element carried Tailwind's , which beat the phone
-  layout's — so on a narrow screen the clock sat invisible
+  utility.** Its element carried Tailwind's `flex`, which beat the phone
+  layout's `display: none` — so on a narrow screen the clock sat invisible
   over the end of his words and showed through them under a pointer.
-  lives in now. The general rule again: a
+  `display: flex` lives in `.line .when` now. The general rule again: a
   layered rule that must win over an element's utility cannot.
 - **A quote survives an edit and does NOT survive a retraction.** The snapshot
   exists so it can go on saying what he was answering; the one case where
@@ -522,7 +522,7 @@ the screen knew something and did not say it.
   with the faces and coloured names of who gave them, and Answer as the
   card's one filled button until he has answered. **The week's 1–5 is one
   segmented control**, like home's three answers, with the two ends'
-  words under it ( is gone; each segment's accessible name
+  words under it (`b.scale` is gone; each segment's accessible name
   still carries its word).
 - **The week's note field has a visible label**, like the field under it. A
   placeholder is not a label: it goes the moment he types, it is the first
