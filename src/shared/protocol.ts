@@ -95,6 +95,14 @@ export interface Reaction {
   by: string[];
 }
 
+/** What a line is NOW, for a socket resuming after it changed. */
+export interface LineState {
+  id: string;
+  body: string;
+  editedAt: number | null;
+  reactions: Reaction[];
+}
+
 /**
  * What a line was answering, as it was at the time.
  *
@@ -237,21 +245,30 @@ export type ServerFrame =
        * version that has since gone stale.
        */
       members: RosterEntry[];
-      /** Messages after the client's `after`, oldest first. */
+      /** Messages after the client's `after`, oldest first — or, when
+       * `fresh`, the whole backfill, to replace what it holds. */
       messages: RoomMessage[];
       /**
-       * Lines taken back while this socket was away, for a client resuming
-       * from its last seq rather than reloading — it still holds them, and
-       * everyone else has lost them. Empty on a fresh load.
+       * The room's newest change to a line it already said (see `rev` on the
+       * frames below). The client keeps it and resumes with `?rev=`.
+       */
+      rev: number;
+      /**
+       * Replace, don't merge: this is a fresh load, or a resume from further
+       * back than the room remembers, and the backfill is the whole truth.
+       */
+      fresh: boolean;
+      /**
+       * On a resume, what happened to lines this socket already holds while
+       * it was away — everything after its `rev`, however long ago it left.
+       * A backfill by seq never mentions any of it, because a line changing
+       * does not move its seq. Empty when `fresh`.
        */
       gone: string[];
-      /**
-       * Lines CHANGED while this socket was away, at or before its `after` —
-       * the backfill is by seq and an edit does not move one, so a resume
-       * would otherwise keep showing the old words. Empty on a fresh load,
-       * whose backfill already has the new ones.
-       */
-      edited: { id: string; body: string; editedAt: number }[];
+      /** Lines whose words or marks changed, with what they are now. */
+      changed: LineState[];
+      /** Pictures kept, let go, or pruned off the shelf (`kept: null`). */
+      media: { mediaId: string; kept: boolean | null }[];
     }
   | { t: 'roster'; roster: RosterEntry[] }
   /** One dad's name or face changed. Distinct from `roster`, which is about
@@ -265,12 +282,12 @@ export type ServerFrame =
    * that chose it: its line arrived and can stop being held. */
   | { t: 'msg'; message: RoomMessage; cid?: string }
   /** A line somebody took back. Drop it: it is gone from the archive too. */
-  | { t: 'gone'; id: string }
+  | { t: 'gone'; id: string; rev: number }
   /** Every mark on one line, after a change. Whole list, not a delta: five
    * dads tapping at once is not worth a merge rule on the client. */
-  | { t: 'reacted'; id: string; reactions: Reaction[] }
+  | { t: 'reacted'; id: string; reactions: Reaction[]; rev: number }
   /** A line whose words changed. Everyone is told, the editor included. */
-  | { t: 'edited'; id: string; body: string; editedAt: number }
+  | { t: 'edited'; id: string; body: string; editedAt: number; rev: number }
   | { t: 'typing'; memberId: string; name: string }
   /**
    * A picture taken off the shelf, or put back on it.
@@ -280,7 +297,13 @@ export type ServerFrame =
    * about one dad's screen. Addressed by media id: the same picture can only
    * be on one line, but the line's id is not what the pruner knows it by.
    */
-  | { t: 'kept'; mediaId: string; on: boolean }
+  | { t: 'kept'; mediaId: string; on: boolean; rev: number }
+  /**
+   * Pictures pruned off the shelf by somebody else's upload. Only the man who
+   * uploaded used to be told, and every other open phone went on showing a
+   * photograph whose file was gone.
+   */
+  | { t: 'unshelved'; mediaIds: string[]; rev: number }
   | { t: 'night'; night: DadNight | null }
   /**
    * Something changed that a screen reads over HTTP: who is coming and what

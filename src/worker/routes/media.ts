@@ -120,8 +120,24 @@ export async function uploadMedia(
   }
 
   const dropped = await pruneMedia(env, session.group.id);
+  if (dropped.length > 0) {
+    // Every other open phone is still showing them. The uploader hears it in
+    // this answer; the room tells everybody, and remembers it for a phone
+    // that resumes later.
+    const stub = env.ROOM.get(env.ROOM.idFromName(session.group.id));
+    await stub
+      .fetch('https://room/unshelved', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          [IDENTITY_HEADERS.groupId]: session.group.id,
+        },
+        body: JSON.stringify({ mediaIds: dropped }),
+      })
+      .catch((err: unknown) => console.error('media: room not told of a prune', err));
+  }
   const media = await mediaFor(env, session.group.id, id);
-  return Response.json({ media, dropped });
+  return Response.json({ media, dropped: dropped.length });
 }
 
 /**

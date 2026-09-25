@@ -69,10 +69,20 @@ class Dad {
   }
 }
 
-async function enter(group: SeededGroup, name: string, cookie?: string, after?: number) {
+/** Where a socket that resumes left off: its last line, and its last change. */
+interface Resume {
+  after: number;
+  rev?: number;
+}
+
+async function enter(group: SeededGroup, name: string, cookie?: string, resume?: Resume) {
   if (!cookie)
     cookie = cookieFrom(await worker.fetch(postJoin({ code: group.code, displayName: name })));
-  const url = `https://dads.test/ws${after ? `?after=${after}` : ''}`;
+  const query =
+    resume === undefined
+      ? ''
+      : `?after=${resume.after}${resume.rev === undefined ? '' : `&rev=${resume.rev}`}`;
+  const url = `https://dads.test/ws${query}`;
   const res = await worker.fetch(url, { headers: { Upgrade: 'websocket', Cookie: cookie } });
   expect(res.status).toBe(101);
   expect(res.webSocket).toBeTruthy();
@@ -187,15 +197,17 @@ describe('RoomDO', () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
+    const { rev } = await sam.next('hello');
     marc.say('before');
     const before = await sam.next('msg', (f) => f.message.body === 'before');
 
     marc.say('while sam was away');
     await marc.next('msg', (f) => f.message.body === 'while sam was away');
 
-    const samAgain = await enter(group, 'Sam', sam.cookie, before.message.seq);
+    const samAgain = await enter(group, 'Sam', sam.cookie, { after: before.message.seq, rev });
     open.push(samAgain);
     const hello = await samAgain.next('hello');
+    expect(hello.fresh).toBe(false);
     expect(bodies(hello.messages)).toEqual(['while sam was away']);
   });
 
@@ -526,58 +538,150 @@ describe('RoomDO', () => {
       expect(row).not.toBeNull();
     });
 
-    it('tells a socket that resumed rather than reloaded', async () => {
+    /**
+     * Sam is here, goes quiet, and comes back from where he left off — his
+     * last line AND the last change he heard of. Everything that happens to
+     * a line he already holds has to reach him on the hello, because none of
+     * it moves a line's seq and the backfill never mentions it.
+     */
+    async function samLeaves(): Promise<{ sam: Dad; resume: Resume }> {
+      const sam = await enter(group, 'Sam');
+      const hello = await sam.next('hello');
+      const after = hello.messages.at(-1)?.seq ?? 0;
+      sam.close();
+      await new Promise((r) => setTimeout(r, 30));
+      return { sam, resume: { after, rev: hello.rev } };
+    }
+
+    it('tells a socket that resumed about a line taken back', async () => {
       const marc = await enter(group, 'Marc');
       open.push(marc);
       marc.say('said and regretted');
       const posted = await marc.next('msg', (f) => f.message.body === 'said and regretted');
 
-      // Sam is here, goes quiet, and comes back from where he left off.
-      const sam = await enter(group, 'Sam');
-      await sam.next('hello');
-      const at = posted.message.seq;
-      sam.close();
-      await new Promise((r) => setTimeout(r, 30));
-
+      const { sam, resume } = await samLeaves();
       marc.retract(posted.message.id);
       await marc.next('gone');
 
-      const back = await enter(group, 'Sam', sam.cookie, at);
+      const back = await enter(group, 'Sam', sam.cookie, resume);
       open.push(back);
       const hello = await back.next('hello');
       // He is holding it from before, so the room has to say so; a reload
       // would have needed nothing, because the tail no longer has it.
-      expect(hello.gone).toContain(posted.message.id);
+      expect(hello.fresh).toBe(false);
+      expect(hello.gone).toEqual([posted.message.id]);
+      // A line taken back is gone, not changed, whatever happened before.
+      expect(hello.changed).toEqual([]);
     });
 
-    it('tells a socket that resumed about a line changed while it was away', async () => {
+    it('tells a socket that resumed about words changed and marks put on', async () => {
       const marc = await enter(group, 'Marc');
       open.push(marc);
       marc.say('see you at eight');
       const posted = await marc.next('msg', (f) => f.message.body === 'see you at eight');
+      const id = posted.message.id;
 
-      const sam = await enter(group, 'Sam');
-      await sam.next('hello');
-      const at = posted.message.seq;
-      sam.close();
-      await new Promise((r) => setTimeout(r, 30));
+      const { sam, resume } = await samLeaves();
+      marc.edit(id, 'see you at nine');
+      await marc.next('edited', (f) => f.id === id);
+      marc.react(id, '👍', true);
+      await marc.next('reacted', (f) => f.id === id && f.reactions.length === 1);
 
-      marc.edit(posted.message.id, 'see you at nine');
-      await marc.next('edited', (f) => f.id === posted.message.id);
-
-      // Backfill is by seq and an edit does not move a line's seq, so the
-      // resume would never mention it. `edited` on the hello is how it does.
-      const back = await enter(group, 'Sam', sam.cookie, at);
+      const back = await enter(group, 'Sam', sam.cookie, resume);
       open.push(back);
       const hello = await back.next('hello');
-      expect(hello.edited).toEqual([
-        { id: posted.message.id, body: 'see you at nine', editedAt: expect.any(Number) },
+      // One entry for the line, as it is NOW — not one per thing that happened.
+      expect(hello.changed).toEqual([
+        {
+          id,
+          body: 'see you at nine',
+          editedAt: expect.any(Number),
+          reactions: [{ emoji: '👍', by: [expect.any(String)] }],
+        },
       ]);
+      expect(hello.rev).toBeGreaterThan(resume.rev!);
+    });
 
-      // A fresh load gets the new words in the backfill and needs none of it.
-      const fresh = await enter(group, 'Sam', sam.cookie);
-      open.push(fresh);
-      expect((await fresh.next('hello')).edited).toEqual([]);
+    it('tells a socket that resumed about pictures pruned off the shelf', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      // A line first: a screen with nothing on it has nothing to resume.
+      marc.say('a photo went up');
+      await marc.next('msg', (f) => f.message.body === 'a photo went up');
+      const { sam, resume } = await samLeaves();
+
+      // What the upload route does after a prune: the room tells whoever is
+      // open, and remembers it for whoever resumes.
+      const room = env.ROOM.get(env.ROOM.idFromName(group.id));
+      await room.fetch('https://room/unshelved', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Dads-Group-Id': group.id },
+        body: JSON.stringify({ mediaIds: ['med_gone'] }),
+      });
+      const live = await marc.next('unshelved');
+      expect(live.mediaIds).toEqual(['med_gone']);
+
+      const back = await enter(group, 'Sam', sam.cookie, resume);
+      open.push(back);
+      const hello = await back.next('hello');
+      expect(hello.media).toEqual([{ mediaId: 'med_gone', kept: null }]);
+    });
+
+    it('says nothing on a resume where nothing happened', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      marc.say('a quiet one');
+      await marc.next('msg', (f) => f.message.body === 'a quiet one');
+
+      const { sam, resume } = await samLeaves();
+      const back = await enter(group, 'Sam', sam.cookie, resume);
+      open.push(back);
+      const hello = await back.next('hello');
+      expect(hello.fresh).toBe(false);
+      expect(hello.messages).toEqual([]);
+      expect(hello.gone).toEqual([]);
+      expect(hello.changed).toEqual([]);
+      expect(hello.media).toEqual([]);
+    });
+
+    it('hands a fresh backfill to a resume it cannot vouch for', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      marc.say('the whole truth');
+      const posted = await marc.next('msg', (f) => f.message.body === 'the whole truth');
+      const after = posted.message.seq;
+
+      // No rev at all: a build from before there was one. The room cannot say
+      // what happened to the lines it holds, so it replaces them.
+      const old = await enter(group, 'Sam', undefined, { after });
+      open.push(old);
+      const oldHello = await old.next('hello');
+      expect(oldHello.fresh).toBe(true);
+      expect(bodies(oldHello.messages)).toContain('the whole truth');
+
+      // A rev ahead of anything this room ever numbered: storage lost, or a
+      // number from another room. The same answer.
+      const ahead = await enter(group, 'Sam', old.cookie, { after, rev: 999_999 });
+      open.push(ahead);
+      expect((await ahead.next('hello')).fresh).toBe(true);
+    });
+
+    it('stamps every change with a rising rev, on the frame and the next hello', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      const first = await marc.next('hello');
+      marc.say('count me');
+      const posted = await marc.next('msg', (f) => f.message.body === 'count me');
+      marc.react(posted.message.id, '😂', true);
+      const marked = await marc.next('reacted', (f) => f.id === posted.message.id);
+      marc.edit(posted.message.id, 'count me twice');
+      const edited = await marc.next('edited', (f) => f.id === posted.message.id);
+      expect(marked.rev).toBeGreaterThan(first.rev);
+      expect(edited.rev).toBeGreaterThan(marked.rev);
+
+      const later = await enter(group, 'Marc', marc.cookie);
+      open.push(later);
+      expect((await later.next('hello')).rev).toBe(edited.rev);
     });
   });
   describe('marks on a line', () => {

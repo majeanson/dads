@@ -122,6 +122,17 @@ export function useRoom(
 
   const socket = useRef<WebSocket | null>(null);
   const lastSeq = useRef(0);
+  /**
+   * The newest change to an older line this socket has heard of — an edit, a
+   * mark, a line taken back, a picture kept or pruned. A reconnect asks for
+   * everything after it (`?rev=`), because none of those move a line's seq
+   * and the backfill by seq would never mention them. Null until the first
+   * hello: a socket that never had one has nothing to resume.
+   */
+  const lastRev = useRef<number | null>(null);
+  const heardRev = (rev: number) => {
+    lastRev.current = Math.max(lastRev.current ?? 0, rev);
+  };
   const attempt = useRef(0);
   const typingTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   /**
@@ -153,12 +164,12 @@ export function useRoom(
    * them, and after ACK_GRACE_MS he is told they did not land rather than
    * being left looking at a line that never changed.
    */
-  const pendingEdits = useRef(new Map<string, (took: boolean) => void>());
+  const pendingEdits = useRef(new Map<string, { body: string; done: (took: boolean) => void }>());
   const settleEdit = (id: string, took: boolean) => {
     const waiting = pendingEdits.current.get(id);
     if (waiting === undefined) return;
     pendingEdits.current.delete(id);
-    waiting(took);
+    waiting.done(took);
   };
 
   /** Anything at all from the server, pong included. */
@@ -173,8 +184,15 @@ export function useRoom(
 
     const connect = () => {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const after = lastSeq.current > 0 ? `?after=${lastSeq.current}` : '';
-      const ws = new WebSocket(`${proto}//${location.host}/ws${after}`);
+      // Resume only with both halves: where the lines got to, and the last
+      // change to an older one. Without the second the room cannot say what
+      // happened to the lines this screen already holds, and a fresh backfill
+      // is the honest answer.
+      const resume =
+        lastSeq.current > 0 && lastRev.current !== null
+          ? `?after=${lastSeq.current}&rev=${lastRev.current}`
+          : '';
+      const ws = new WebSocket(`${proto}//${location.host}/ws${resume}`);
       socket.current = ws;
 
       ws.onopen = () => {
@@ -259,17 +277,55 @@ export function useRoom(
         .filter((m) => !lost.has(m.id))
         .map((m) => (m.reply && lost.has(m.reply.id) ? { ...m, reply: null } : m));
 
+    /**
+     * What a resuming hello says happened while this socket was away, as a
+     * change to the lines this screen holds. Null-safe to call with nothing
+     * in it: an empty replay returns the SAME array, so a reconnect that
+     * missed nothing re-renders nothing.
+     *
+     * It is also where an edit that landed while the socket was dropping
+     * settles: its `edited` frame never came back, but the line's words
+     * here are his new ones, so the composer can let go of them rather than
+     * telling him, a few seconds later, that they did not land.
+     */
+    const settle = (frame: Extract<ServerFrame, { t: 'hello' }>) => {
+      const lost = new Set(frame.gone);
+      const changed = new Map(frame.changed.map((c) => [c.id, c]));
+      const media = new Map(frame.media.map((m) => [m.mediaId, m.kept]));
+      for (const c of frame.changed) {
+        const waiting = pendingEdits.current.get(c.id);
+        if (waiting !== undefined && waiting.body.trim() === c.body) settleEdit(c.id, true);
+      }
+      return (messages: RoomMessage[]): RoomMessage[] => {
+        if (lost.size === 0 && changed.size === 0 && media.size === 0) return messages;
+        return (lost.size === 0 ? messages : without(messages, lost)).map((m) => {
+          const c = changed.get(m.id);
+          const k = m.media ? media.get(m.media.id) : undefined;
+          if (c === undefined && k === undefined) return m;
+          return {
+            ...m,
+            ...(c === undefined
+              ? {}
+              : { body: c.body, editedAt: c.editedAt, reactions: c.reactions }),
+            ...(k === undefined || !m.media
+              ? {}
+              : { media: k === null ? null : { ...m.media, kept: k } }),
+          };
+        });
+      };
+    };
+
     const handle = (frame: ServerFrame) => {
       switch (frame.t) {
         case 'hello': {
           const last = frame.messages.at(-1);
           if (last) lastSeq.current = last.seq;
-          // A socket that resumed rather than reloaded is still holding lines
-          // the room has lost. `gone` is how it finds out.
-          const lost = new Set(frame.gone ?? []);
-          // And lines whose words changed, which a backfill by seq never
-          // mentions because an edit does not move a line's seq.
-          const changed = new Map((frame.edited ?? []).map((e) => [e.id, e]));
+          // Set, not raised: a fresh hello may come from a room whose count
+          // restarted, and the room's number is the one to resume from.
+          lastRev.current = frame.rev;
+          // A resume says what happened to the lines this screen already
+          // holds while it was away; a fresh hello replaces them outright.
+          const replay = frame.fresh ? null : settle(frame);
           setState((s) => ({
             ...s,
             connection: 'open',
@@ -277,20 +333,27 @@ export function useRoom(
             roster: frame.roster,
             members: frame.members ?? s.members,
             call: frame.call,
-            messages: merge(
-              (lost.size === 0 ? s.messages : without(s.messages, lost)).map((m) => {
-                const e = changed.get(m.id);
-                return e ? { ...m, body: e.body, editedAt: e.editedAt } : m;
-              }),
-              frame.messages,
+            messages: replay === null ? frame.messages : merge(replay(s.messages), frame.messages),
+          }));
+          return;
+        }
+        case 'unshelved': {
+          heardRev(frame.rev);
+          const pruned = new Set(frame.mediaIds);
+          setState((s) => ({
+            ...s,
+            messages: s.messages.map((m) =>
+              m.media && pruned.has(m.media.id) ? { ...m, media: null } : m,
             ),
           }));
           return;
         }
         case 'gone':
+          heardRev(frame.rev);
           setState((s) => ({ ...s, messages: without(s.messages, new Set([frame.id])) }));
           return;
         case 'reacted':
+          heardRev(frame.rev);
           setState((s) => ({
             ...s,
             messages: s.messages.map((m) =>
@@ -299,6 +362,7 @@ export function useRoom(
           }));
           return;
         case 'edited':
+          heardRev(frame.rev);
           setState((s) => ({
             ...s,
             messages: s.messages.map((m) =>
@@ -310,6 +374,7 @@ export function useRoom(
           settleEdit(frame.id, true);
           return;
         case 'kept':
+          heardRev(frame.rev);
           // By media id, not by line: the pruner knows a picture by the id on
           // the shelf, and that is what the room broadcast.
           setState((s) => ({
@@ -546,9 +611,12 @@ export function useRoom(
     ws.send(JSON.stringify({ t: 'edit', id, body }));
     return new Promise<boolean>((resolve) => {
       const timer = setTimeout(() => settleEdit(id, false), ACK_GRACE_MS);
-      pendingEdits.current.set(id, (took) => {
-        clearTimeout(timer);
-        resolve(took);
+      pendingEdits.current.set(id, {
+        body,
+        done: (took) => {
+          clearTimeout(timer);
+          resolve(took);
+        },
       });
     });
   }, []);

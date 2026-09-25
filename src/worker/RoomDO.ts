@@ -5,6 +5,7 @@ import {
   type Attachment,
   parseClientFrame,
   type CallMember,
+  type LineState,
   type RoomMessage,
   type RoomsOpen,
   type Reaction,
@@ -83,14 +84,19 @@ const TURN_NUDGE_EVERY_MS = 3 * 60_000;
 const CID_MEMORY_MS = 5 * 60_000;
 
 /**
- * How long the room remembers that a line was taken back.
+ * How far back the room remembers what happened to lines it had already said.
  *
- * Only for the socket that reconnects WITHOUT reloading — it resumes from its
- * last seq and would otherwise keep a line everyone else has lost. A reload
- * needs nothing: the line is out of the tail, so a fresh backfill cannot
- * mention it. A day is far longer than any dead spot.
+ * A socket that resumes rather than reloads asks for everything after the
+ * last change it saw (`?rev=`), and a home-screen app can sleep for DAYS
+ * before it does: a one-day window let a photograph taken back on Monday
+ * stay on a phone that woke on Thursday. Past these bounds the room does not
+ * guess — it hands the phone a fresh backfill to replace what it holds.
  */
-const RETRACTED_MEMORY_MS = 24 * 60 * 60 * 1000;
+const CHANGE_MEMORY_MS = 30 * 24 * 60 * 60 * 1000;
+const CHANGE_MEMORY_ROWS = 5000;
+
+/** What changed: a line's words or marks, a line taken back, or a picture. */
+type ChangeKind = 'line' | 'gone' | 'media';
 
 /** How long before the table opens the phones are told. The evening before,
  * while a man can still move something. */
@@ -149,14 +155,19 @@ export class RoomDO extends DurableObject<Env> {
           media_id   TEXT,
           meta       TEXT
         );
-        -- Lines taken back, so a socket that reconnects without reloading is
-        -- told about the ones it missed. A reload needs none of this: the
-        -- line is gone from the tail, so a fresh backfill never mentions it.
-        -- Swept in retract(), because that is the only thing that adds a row.
-        CREATE TABLE IF NOT EXISTS retracted (
-          id TEXT PRIMARY KEY,
-          at INTEGER NOT NULL
+        -- Everything that happened to a line after it was said — words or
+        -- marks changed, taken back, its picture kept or pruned — in order,
+        -- so a socket that resumes without reloading can be told all of it
+        -- since the last one it saw (rev). A line changing does not move its
+        -- seq, so the backfill by seq never would. Swept in noteChange().
+        CREATE TABLE IF NOT EXISTS changes (
+          rev  INTEGER PRIMARY KEY AUTOINCREMENT,
+          kind TEXT NOT NULL,
+          ref  TEXT NOT NULL,
+          at   INTEGER NOT NULL
         );
+        -- What changes replaced: retractions only, for a day.
+        DROP TABLE IF EXISTS retracted;
         CREATE TABLE IF NOT EXISTS leaving (
           member_id TEXT PRIMARY KEY,
           name      TEXT NOT NULL,
@@ -255,7 +266,19 @@ export class RoomDO extends DurableObject<Env> {
 
     if (url.pathname === '/kept' && request.method === 'POST') {
       const { mediaId, on } = (await request.json()) as { mediaId: string; on: boolean };
-      this.broadcast({ t: 'kept', mediaId, on });
+      const rev = this.noteChange('media', mediaId);
+      this.broadcast({ t: 'kept', mediaId, on, rev });
+      return new Response(null, { status: 204 });
+    }
+
+    // Pictures an upload pushed off the shelf. The Worker has deleted them;
+    // every open phone is still showing them, and only the uploader was told.
+    if (url.pathname === '/unshelved' && request.method === 'POST') {
+      const { mediaIds } = (await request.json()) as { mediaIds: string[] };
+      if (mediaIds.length === 0) return new Response(null, { status: 204 });
+      let rev = 0;
+      for (const id of mediaIds) rev = this.noteChange('media', id);
+      this.broadcast({ t: 'unshelved', mediaIds, rev });
       return new Response(null, { status: 204 });
     }
 
@@ -363,6 +386,7 @@ export class RoomDO extends DurableObject<Env> {
     await this.rescheduleAlarm();
 
     const after = Number(url.searchParams.get('after') ?? '');
+    const since = Number(url.searchParams.get('rev') ?? '');
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
@@ -373,8 +397,18 @@ export class RoomDO extends DurableObject<Env> {
     const face = Number.isFinite(faceHeader) && faceHeader > 0 ? faceHeader : undefined;
     server.serializeAttachment({ memberId, name, face } satisfies SocketIdentity);
 
-    const resuming = Number.isFinite(after) && after > 0;
+    // A resume is only a resume if the room can say everything that happened
+    // since: a `rev` it no longer remembers back to (or none at all, from a
+    // build before there was one) gets a fresh backfill to replace with.
+    const resuming =
+      Number.isFinite(after) &&
+      after > 0 &&
+      url.searchParams.has('rev') &&
+      Number.isInteger(since) &&
+      since >= 0 &&
+      this.remembersSince(since);
     const members = await this.membersOfGroup();
+    const replay = resuming ? await this.replaySince(since) : null;
     const hello: ServerFrame = {
       t: 'hello',
       you: { memberId, name },
@@ -382,12 +416,11 @@ export class RoomDO extends DurableObject<Env> {
       call: this.callRoster(),
       members,
       messages: await this.backfill(resuming ? after : null),
-      // Only for a resume. A fresh load is backfilled from a tail the line is
-      // already out of, so there is nothing on that screen to take back.
-      gone: resuming ? this.retractedSince() : [],
-      // The same for a line changed rather than taken back. Lines after
-      // `after` are in the backfill with their new words already.
-      edited: resuming ? this.editedSince(after) : [],
+      rev: this.currentRev(),
+      fresh: !resuming,
+      gone: replay?.gone ?? [],
+      changed: replay?.changed ?? [],
+      media: replay?.media ?? [],
     };
     server.send(JSON.stringify(hello));
 
@@ -652,7 +685,7 @@ export class RoomDO extends DurableObject<Env> {
       id,
       memberId,
     );
-    this.broadcast({ t: 'edited', id, body, editedAt });
+    this.broadcast({ t: 'edited', id, body, editedAt, rev: this.noteChange('line', id) });
     if (groupId !== undefined) {
       await this.env.DB.prepare(
         'UPDATE messages SET body = ?, edited_at = ? WHERE id = ? AND group_id = ? AND member_id = ?',
@@ -1122,11 +1155,7 @@ export class RoomDO extends DurableObject<Env> {
     // reload agree with what they are already looking at.
     await this.unquote(id);
 
-    const now = Date.now();
-    this.ctx.storage.sql.exec('DELETE FROM retracted WHERE at < ?', now - RETRACTED_MEMORY_MS);
-    this.ctx.storage.sql.exec('INSERT OR REPLACE INTO retracted (id, at) VALUES (?, ?)', id, now);
-
-    this.broadcast({ t: 'gone', id });
+    this.broadcast({ t: 'gone', id, rev: this.noteChange('gone', id) });
   }
 
   /**
@@ -1187,7 +1216,12 @@ export class RoomDO extends DurableObject<Env> {
           .run();
       }
       const all = await this.reactionsById([id]);
-      this.broadcast({ t: 'reacted', id, reactions: all.get(id) ?? [] });
+      this.broadcast({
+        t: 'reacted',
+        id,
+        reactions: all.get(id) ?? [],
+        rev: this.noteChange('line', id),
+      });
     } catch (err) {
       // Nobody is waiting on this and nothing downstream depends on it. A
       // mark that did not land is a mark a man can press again.
@@ -1265,32 +1299,119 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   /**
-   * Lines at or before `after` whose words changed in the last day, for a
-   * socket resuming where it left off. From the tail, which holds the current
-   * words; a line edited after it left the tail is one nobody resuming holds.
-   * The same day as `retracted`, and for the same reason: a resume only ever
-   * happens after a gap of seconds or minutes, not days.
+   * Write down that something happened to a line (or its picture), and
+   * return its `rev` for the frame that says so.
+   *
+   * Swept here, the only place that adds a row: past CHANGE_MEMORY_MS or
+   * CHANGE_MEMORY_ROWS the oldest go — but never the newest, which is what
+   * `currentRev` reads, so the count never goes backwards.
    */
-  private editedSince(after: number): { id: string; body: string; editedAt: number }[] {
-    return this.ctx.storage.sql
-      .exec<{ id: string; body: string; edited_at: number }>(
-        'SELECT id, body, edited_at FROM tail WHERE seq <= ? AND edited_at >= ?',
-        after,
-        Date.now() - RETRACTED_MEMORY_MS,
+  private noteChange(kind: ChangeKind, ref: string): number {
+    const now = Date.now();
+    const rev = this.ctx.storage.sql
+      .exec<{ rev: number }>(
+        'INSERT INTO changes (kind, ref, at) VALUES (?, ?, ?) RETURNING rev',
+        kind,
+        ref,
+        now,
       )
-      .toArray()
-      .map((r) => ({ id: r.id, body: r.body, editedAt: r.edited_at }));
+      .one().rev;
+    this.ctx.storage.sql.exec(
+      'DELETE FROM changes WHERE rev < ? AND (at < ? OR rev <= ?)',
+      rev,
+      now - CHANGE_MEMORY_MS,
+      rev - CHANGE_MEMORY_ROWS,
+    );
+    return rev;
   }
 
-  /** Everything taken back recently, for a socket resuming where it left off. */
-  private retractedSince(): string[] {
-    return this.ctx.storage.sql
-      .exec<{ id: string }>(
-        'SELECT id FROM retracted WHERE at >= ?',
-        Date.now() - RETRACTED_MEMORY_MS,
+  /** The newest change, or 0 in a room where nothing has changed yet. */
+  private currentRev(): number {
+    return (
+      this.ctx.storage.sql.exec<{ rev: number | null }>('SELECT MAX(rev) AS rev FROM changes').one()
+        .rev ?? 0
+    );
+  }
+
+  /**
+   * Whether every change after `since` is still written down. Not if the
+   * oldest one kept is past the one after it (swept), and not if `since` is
+   * ahead of anything this room has ever numbered (a room that lost its
+   * storage, or a number from somewhere else).
+   */
+  private remembersSince(since: number): boolean {
+    const { oldest, newest } = this.ctx.storage.sql
+      .exec<{ oldest: number | null; newest: number | null }>(
+        'SELECT MIN(rev) AS oldest, MAX(rev) AS newest FROM changes',
       )
-      .toArray()
-      .map((r) => r.id);
+      .one();
+    if (since > (newest ?? 0)) return false;
+    return oldest === null || since >= oldest - 1;
+  }
+
+  /**
+   * Everything that happened after `since`, as what it is NOW rather than
+   * as the steps that got there: a line marked, unmarked and edited is one
+   * entry with its current words and marks. Words from the tail, which
+   * holds the newest; from the archive for a line older than the tail.
+   */
+  private async replaySince(since: number): Promise<{
+    gone: string[];
+    changed: LineState[];
+    media: { mediaId: string; kept: boolean | null }[];
+  }> {
+    const rows = this.ctx.storage.sql
+      .exec<{ kind: ChangeKind; ref: string }>(
+        'SELECT kind, ref FROM changes WHERE rev > ? ORDER BY rev',
+        since,
+      )
+      .toArray();
+    const gone = new Set(rows.filter((r) => r.kind === 'gone').map((r) => r.ref));
+    const lineIds = [
+      ...new Set(rows.filter((r) => r.kind === 'line' && !gone.has(r.ref)).map((r) => r.ref)),
+    ];
+    const mediaIds = [...new Set(rows.filter((r) => r.kind === 'media').map((r) => r.ref))];
+
+    const words = new Map<string, { body: string; editedAt: number | null }>();
+    for (const id of lineIds) {
+      const row = this.ctx.storage.sql
+        .exec<{ body: string; edited_at: number | null }>(
+          'SELECT body, edited_at FROM tail WHERE id = ?',
+          id,
+        )
+        .toArray()[0];
+      if (row !== undefined) words.set(id, { body: row.body, editedAt: row.edited_at });
+    }
+    const groupId = this.groupId();
+    const older = lineIds.filter((id) => !words.has(id));
+    if (older.length > 0 && groupId !== undefined) {
+      const { results } = await this.env.DB.prepare(
+        `SELECT id, body, edited_at FROM messages
+          WHERE group_id = ? AND id IN (${older.map(() => '?').join(', ')})`,
+      )
+        .bind(groupId, ...older)
+        .all<{ id: string; body: string; edited_at: number | null }>();
+      for (const r of results) words.set(r.id, { body: r.body, editedAt: r.edited_at });
+    }
+    const marks = await this.reactionsById(lineIds);
+    const changed = lineIds.flatMap((id) => {
+      const w = words.get(id);
+      return w === undefined ? [] : [{ id, ...w, reactions: marks.get(id) ?? [] }];
+    });
+
+    const kept = new Map<string, boolean>();
+    if (mediaIds.length > 0 && groupId !== undefined) {
+      const { results } = await this.env.DB.prepare(
+        `SELECT id, kept FROM media
+          WHERE group_id = ? AND id IN (${mediaIds.map(() => '?').join(', ')})`,
+      )
+        .bind(groupId, ...mediaIds)
+        .all<{ id: string; kept: number }>();
+      for (const r of results) kept.set(r.id, r.kept === 1);
+    }
+    const media = mediaIds.map((mediaId) => ({ mediaId, kept: kept.get(mediaId) ?? null }));
+
+    return { gone: [...gone], changed, media };
   }
 
   private async post(

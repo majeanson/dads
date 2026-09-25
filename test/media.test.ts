@@ -268,8 +268,18 @@ describe('the ten-photo cap', () => {
       .first<{ n: number }>();
     expect(full?.n).toBe(MEDIA_PER_GROUP);
 
+    // Somebody else is looking at the room while it happens.
+    const sam = await enter(group, 'Sam');
     const eleventh = await uploadOne(cookie, 'photo-10.png');
     expect(eleventh.dropped).toBe(1);
+    // And is told, not left showing a photograph whose file is gone.
+    await until(() => sam.frames.some((f) => f.t === 'unshelved'));
+    expect(sam.frames).toContainEqual({
+      t: 'unshelved',
+      mediaIds: [ids[0]],
+      rev: expect.any(Number),
+    });
+    sam.close();
 
     const after = await env.DB.prepare('SELECT COUNT(*) AS n FROM media WHERE group_id = ?')
       .bind(group.id)
@@ -718,7 +728,12 @@ describe('keeping a photograph', () => {
     expect((await keep(sam.cookie, id, true)).status).toBe(200);
     await until(() => marc.frames.some((f) => f.t === 'kept'));
 
-    expect(marc.frames).toContainEqual({ t: 'kept', mediaId: id, on: true });
+    expect(marc.frames).toContainEqual({
+      t: 'kept',
+      mediaId: id,
+      on: true,
+      rev: expect.any(Number),
+    });
 
     marc.close();
     sam.close();

@@ -147,12 +147,12 @@ export function safeContentType(declared: string): string {
  * attachment, which is recoverable, while a blob with no record is invisible
  * and pays rent forever.
  */
-export async function pruneMedia(env: Env, groupId: string): Promise<number> {
+export async function pruneMedia(env: Env, groupId: string): Promise<string[]> {
   const shelves = await Promise.all([
     pruneShelf(env, groupId, false, MEDIA_PER_GROUP),
     pruneShelf(env, groupId, true, VOICE_PER_GROUP),
   ]);
-  return shelves[0] + shelves[1];
+  return [...shelves[0], ...shelves[1]];
 }
 
 /**
@@ -171,7 +171,7 @@ async function pruneShelf(
   groupId: string,
   voice: boolean,
   keep: number,
-): Promise<number> {
+): Promise<string[]> {
   const { results } = await env.DB.prepare(
     `SELECT id, r2_key FROM media
       WHERE group_id = ?1 AND kept = 0 AND (content_type LIKE 'audio/%') = ?3
@@ -181,7 +181,7 @@ async function pruneShelf(
     .bind(groupId, keep, voice ? 1 : 0)
     .all<{ id: string; r2_key: string }>();
 
-  if (results.length === 0) return 0;
+  if (results.length === 0) return [];
 
   await Promise.all(
     results.map((row) =>
@@ -198,7 +198,7 @@ async function pruneShelf(
     .bind(...results.map((r) => r.id))
     .run();
 
-  return results.length;
+  return results.map((r) => r.id);
 }
 
 /**

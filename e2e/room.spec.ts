@@ -1,5 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { devices, expect, test, type Browser, type Locator, type Page } from '@playwright/test';
+import {
+  devices,
+  expect,
+  test,
+  type Browser,
+  type Locator,
+  type Page,
+  type WebSocketRoute,
+} from '@playwright/test';
 import { talk } from './talk';
 import { E2E_ROOM_GROUP } from './global-setup';
 
@@ -355,6 +363,128 @@ test('a dad changes his own line, and the others read the new words', async ({ b
   await sam.context().close();
 });
 
+test('a phone that drops out and comes back sees what happened to the lines it holds', async ({
+  browser,
+}) => {
+  // Sam's socket goes, the way a tunnel takes it, and while he is gone Marc
+  // changes a line Sam already has and marks it. Neither moves the line's
+  // seq, so a backfill by seq would never mention them: the resume carries
+  // them (`?rev=`), and Sam's screen shows both without a reload.
+  const marc = await comeIn(browser, 'Marc Tunnel');
+
+  const context = await browser.newContext();
+  let down = false;
+  const live: WebSocketRoute[] = [];
+  await context.routeWebSocket('**/ws*', (ws) => {
+    if (down) {
+      ws.close();
+      return;
+    }
+    const server = ws.connectToServer();
+    live.push(ws);
+    ws.onMessage((m) => server.send(m));
+    server.onMessage((m) => ws.send(m));
+  });
+  const sam = await context.newPage();
+  await sam.goto('/');
+  await sam.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await sam.getByLabel('Your name').fill('Sam Tunnel');
+  await sam.getByRole('button', { name: 'Come in' }).click();
+  await expect(sam.getByTestId('connection')).toHaveText(/here$/);
+  await talk(sam);
+
+  await marc.getByLabel('Say something').fill('into the tunnel at eight');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const his = marc.getByTestId('line').filter({ hasText: 'into the tunnel at eight' });
+  await expect(his).toBeVisible();
+  await expect(
+    sam.getByTestId('line').filter({ hasText: 'into the tunnel at eight' }),
+  ).toBeVisible();
+
+  // Into the tunnel.
+  down = true;
+  for (const ws of live.splice(0)) await ws.close();
+
+  await his.click({ button: 'right' });
+  await marc.getByTestId('line-edit').click();
+  await marc.getByLabel('Say something').fill('out of the tunnel at nine');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const changed = marc.getByTestId('line').filter({ hasText: 'out of the tunnel at nine' });
+  await expect(changed).toBeVisible();
+  await changed.click({ button: 'right' });
+  await marc.getByTestId('line-menu').getByTestId('react-🙏').click();
+  await expect(changed.getByTestId('mark').filter({ hasText: '🙏' })).toContainText('1');
+
+  // Out of it. His socket comes back on its own, and resumes.
+  down = false;
+  const samLine = sam.getByTestId('line').filter({ hasText: 'out of the tunnel at nine' });
+  await expect(samLine).toBeVisible({ timeout: 20_000 });
+  await expect(samLine.getByTestId('mark').filter({ hasText: '🙏' })).toContainText('1');
+  await expect(sam.getByTestId('line').filter({ hasText: 'into the tunnel at eight' })).toHaveCount(
+    0,
+  );
+
+  await marc.context().close();
+  await context.close();
+});
+
+test('an edit the room took, whose answer was lost, is not reported as lost', async ({
+  browser,
+}) => {
+  // The room changes the line and says so — and that answer dies with the
+  // socket. The resume carries the new words, and the composer takes that as
+  // the answer: it lets go of them rather than telling him, a few seconds
+  // later, that they did not land and inviting him to send them twice.
+  const context = await browser.newContext();
+  let eatEdits = false;
+  const live: WebSocketRoute[] = [];
+  await context.routeWebSocket('**/ws*', (ws) => {
+    const server = ws.connectToServer();
+    live.push(ws);
+    ws.onMessage((m) => server.send(m));
+    server.onMessage((m) => {
+      if (eatEdits && typeof m === 'string' && m.includes('"t":"edited"')) {
+        // The answer is lost, and the socket with it.
+        eatEdits = false;
+        void ws.close();
+        return;
+      }
+      ws.send(m);
+    });
+  });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill('Marc Lostanswer');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
+
+  await page.getByLabel('Say something').fill('lost answer at seven');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const his = page.getByTestId('line').filter({ hasText: 'lost answer at seven' });
+  await expect(his).toBeVisible();
+
+  await his.click({ button: 'right' });
+  await page.getByTestId('line-edit').click();
+  await page.getByLabel('Say something').fill('lost answer at eight');
+  eatEdits = true;
+  await page.getByRole('button', { name: 'Send' }).click();
+
+  // Back on a new socket, the line says what he changed it to, and the
+  // composer has let go of the words.
+  await expect(page.getByTestId('line').filter({ hasText: 'lost answer at eight' })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByTestId('editing')).toHaveCount(0);
+  await expect(page.getByLabel('Say something')).toHaveValue('');
+  // Past the grace, still nothing saying it failed.
+  await page.waitForTimeout(9_000);
+  await expect(page.getByText(/didn’t reach the room/)).toHaveCount(0);
+
+  await context.close();
+});
+
 test('a change that never reached the room leaves him holding his words', async ({ browser }) => {
   // The dead spot: the socket stays OPEN and swallows everything, which is
   // what a tunnel does and what going offline does not. A chat line survives
@@ -438,7 +568,7 @@ test('a mark says you read it without spending a line', async ({ browser }) => {
 
   // A line nobody has marked carries no control at all — that is what keeps
   // this out of the conversation.
-  await expect(sam.getByTestId('mark')).toHaveCount(0);
+  await expect(line.getByTestId('mark')).toHaveCount(0);
 
   await line.click({ button: 'right' });
   await sam.getByTestId('react-👍').click();

@@ -77,8 +77,23 @@ weakening `sessionSecret()`.
 - The DO keeps a capped `tail` (500 rows) in its own SQLite for backfill, and
   writes every line to D1 `messages` as the uncapped archive. Fan-out happens
   **before** the archive write — a dad never waits on D1 to see his own line.
-- Clients reconnect with `?after=<last seq>` and get only what they missed.
-  `seq` is the DO's autoincrement and is the dedupe key on the client.
+- Clients reconnect with `?after=<last seq>&rev=<last change>` and get only
+  what they missed. `seq` is the DO's autoincrement and is the dedupe key on
+  the client.
+- **A line changing is not a new line, so it has its own count** (`changes`
+  in the DO, 2026-09-24). An edit, a mark, a line taken back, a picture kept
+  or pruned — none moves a line's seq, so a backfill by seq never mentions
+  them, and a phone that resumed after a dead spot kept the old words, the
+  old marks, a photo taken back. Every such change is a row with a `rev`, the
+  frame that announces it carries the `rev`, and a resume gets everything
+  after its own as what each line IS now (`hello.gone`, `.changed`, `.media`)
+  — however long ago it left. It replaced two patches with a day's window
+  each (`retracted`, then `hello.edited`); a code review caught that a
+  home-screen app sleeps for days, and that marks and keeps had the same gap.
+  Thirty days and 5000 rows are kept; a `rev` older than that, missing, or
+  ahead of the room gets `fresh: true` and a whole backfill to REPLACE with,
+  because past what it remembers the room does not guess. Pruned photos are
+  a change too (`unshelved`): only the uploader used to hear about them.
 - Leaving is on a 15s grace timer backed by one alarm (`leaving` table), so a
   phone switching wifi→LTE does not print "left"/"came in". Returning inside
   the window cancels the row _and_ reschedules the alarm.
@@ -114,9 +129,9 @@ weakening `sessionSecret()`.
   **The attached media goes with it**, blob and record — a photo that outlived
   its line is the whole reason anyone wants this. No time limit, for the same
   reason. Refusal is silent.
-- **`retracted` in the DO is only for a socket that resumes without
-  reloading.** It holds a day of ids and rides along on `hello.gone`. A reload
-  needs none of it: the line is out of the tail, so a fresh backfill cannot
+- **A socket that resumes without reloading is told what was taken back**
+  through the change log (`hello.gone`; see `changes` above). A reload needs
+  none of it: the line is out of the tail, so a fresh backfill cannot
   mention it.
 - **Taking it back is not optimistic.** The line stays on his own screen until
   the room says it is gone. For this one feature, a local vanish that failed on
@@ -199,13 +214,11 @@ weakening `sessionSecret()`.
   looking at the old words with his new ones gone. The edit waits
   `ACK_GRACE_MS` for its own line; unanswered, he keeps what he typed, the
   composer says so, and pressing Send again is the whole retry. `edited_at` is the one fact kept; the words before it are not.
-  **A socket that resumes is told about the edits it missed** (2026-09-24,
-  `hello.edited`, beside `hello.gone`). The backfill is by seq and an edit
-  does not move a line's seq, so a phone that resumed after a dead spot —
-  far more common than a reload — kept showing the old words. The room reads
-  the tail's current words for lines at or before `after` edited in the last
-  day, the same window as `retracted`, with no table of its own. A reload
-  needs none of it: the tail has the new words.
+  **A socket that resumes is told about the edits it missed** (`hello.changed`,
+  from the change log above) — and an edit of HIS whose `edited` frame died
+  with the socket settles there: the line's words on the resume are his new
+  ones, so the composer lets go of them rather than telling him eight
+  seconds later that they did not land and inviting a second send.
 - **Reply and Edit are the composer's state, held in `Room`**, never both at
   once: the line menu sets one and clears the other, the composer shows a
   strip above the field saying which, and Escape or the X clears it.
