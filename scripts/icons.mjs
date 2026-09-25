@@ -54,7 +54,9 @@ await page.setContent(`<style>
   .og h1 { margin: 0; font-size: 168px; line-height: 1; letter-spacing: -0.03em; }
   .og p { margin: 20px 0 0; font-size: 44px; line-height: 1.2; opacity: 0.85; }
 </style><div class="og">${face}<div><h1>dads</h1><p>Somewhere to talk,<br>and a table to sit at.</p></div></div>`);
-await page.evaluate(() => document.fonts.ready);
+// A string, not a function: this runs in the page, and the linter reads the
+// file as Node, where there is no document.
+await page.evaluate('document.fonts.ready');
 writeFileSync(`${PUBLIC}og.png`, await page.locator('.og').screenshot());
 console.log(`${'og.png'.padEnd(22)} 1200×630`);
 
