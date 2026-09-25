@@ -1,4 +1,11 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import {
+  devices,
+  expect,
+  test,
+  type Locator,
+  type Page,
+  type WebSocketRoute,
+} from '@playwright/test';
 import { talk } from './talk';
 import { E2E_SAFARI_GROUP } from './global-setup';
 
@@ -135,4 +142,94 @@ test('a photo and a pair of glasses, on his face at once', async ({ page }) => {
   await page.getByTestId('glasses-open').tap();
   await page.getByTestId('glasses-picker').getByTestId('glasses-aviators').tap();
   await expect(face.locator('.face-shades')).toHaveAttribute('data-glasses', 'aviators');
+});
+
+test('dark, asked for, is dark', async ({ page }) => {
+  await comeIn(page, 'Gil Safari');
+  await page.getByRole('button', { name: 'Settings' }).tap();
+  await page.getByRole('button', { name: 'Dark' }).tap();
+  // The same pinned value as Chromium's check: the page really is dark.
+  const bg = await page.evaluate(() =>
+    getComputedStyle(document.body).backgroundColor.replace(/\s/g, ''),
+  );
+  expect(bg).toBe('rgb(18,19,20)');
+});
+
+test('a photograph opens in the app, and closes back to the room', async ({ page }) => {
+  await comeIn(page, 'Hal Safari');
+  await talk(page);
+  await page.setInputFiles('#attach', 'public/icon-192.png');
+  await expect(page.getByTestId('pending-media')).toBeVisible();
+  const line = await say(page, 'safari line 04 a picture');
+  await line.getByTestId('photo').tap();
+  const viewer = page.getByTestId('viewer');
+  await expect(viewer).toBeVisible();
+  await expect(viewer.getByTestId('viewer-shot')).toBeVisible();
+  await viewer.getByRole('button', { name: 'Close', exact: true }).tap();
+  await expect(viewer).toHaveCount(0);
+  await expect(page.locator('main.room')).toHaveAttribute('data-view', 'talk');
+});
+
+test('in, straight back out, and in again, in French', async ({ page }) => {
+  // The door's dead second press, on the engine where the splash is a
+  // masked SVG painted Safari's way — and in the language whose test found it.
+  await comeIn(page, 'Ivo Safari');
+  await page.getByRole('button', { name: 'Settings' }).tap();
+  await page.getByRole('button', { name: 'FR', exact: true }).tap();
+  await page.getByRole('button', { name: 'Ferme', exact: true }).tap();
+  const room = page.locator('main.room');
+  await page.getByTestId('home-go').tap();
+  await expect(room).toHaveAttribute('data-view', 'talk');
+  await page.getByTestId('go-home').tap();
+  await expect(room).toHaveAttribute('data-view', 'home');
+  await page.getByTestId('home-go').tap();
+  await expect(room).toHaveAttribute('data-view', 'talk');
+});
+
+test('a phone that drops out comes back to what changed', async ({ browser }) => {
+  // The change log on WebKit: while this phone's socket is gone, another dad
+  // changes a line it holds and marks it; the resume brings both.
+  const context = await browser.newContext({ ...devices['iPhone 13'] });
+  let down = false;
+  const live: WebSocketRoute[] = [];
+  await context.routeWebSocket('**/ws*', (ws) => {
+    if (down) {
+      void ws.close();
+      return;
+    }
+    const server = ws.connectToServer();
+    live.push(ws);
+    ws.onMessage((m) => server.send(m));
+    server.onMessage((m) => ws.send(m));
+  });
+  const phone = await context.newPage();
+  await comeIn(phone, 'Jo Safari');
+  await talk(phone);
+
+  const other = await (await browser.newContext({ ...devices['iPhone 13'] })).newPage();
+  await comeIn(other, 'Kit Safari');
+  await talk(other);
+  const his = await say(other, 'safari line 05 before the tunnel');
+  await expect(phone.getByTestId('line').filter({ hasText: 'safari line 05' })).toBeVisible();
+
+  down = true;
+  for (const ws of live.splice(0)) await ws.close();
+
+  await longPress(his.locator('.body'));
+  await other.getByTestId('line-edit').tap();
+  await other.getByLabel('Say something').fill('safari line 05 after the tunnel');
+  await other.getByRole('button', { name: 'Send' }).tap();
+  const changed = other.getByTestId('line').filter({ hasText: 'after the tunnel' });
+  await expect(changed).toBeVisible();
+  await changed.locator('.body').tap();
+  await changed.getByTestId('tap-marks').getByTestId('react-🙏').tap();
+  await expect(changed.getByTestId('mark').filter({ hasText: '🙏' })).toContainText('1');
+
+  down = false;
+  const back = phone.getByTestId('line').filter({ hasText: 'after the tunnel' });
+  await expect(back).toBeVisible({ timeout: 20_000 });
+  await expect(back.getByTestId('mark').filter({ hasText: '🙏' })).toContainText('1');
+
+  await other.context().close();
+  await context.close();
 });

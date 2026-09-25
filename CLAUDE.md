@@ -1765,7 +1765,11 @@ people use.
   neither. The long press there is dispatched pointer events (the half Radix
   listens for), because WebKit has no CDP touch; what iOS itself does — the
   loupe, the callout, the keyboard — no desktop WebKit can prove, and a phone
-  still has to. Run one with `--project=webkit-iphone`.
+  still has to. Run one with `--project=webkit-iphone`. **Nor codecs**:
+  Playwright's WebKit on Windows and Linux does not carry Safari's (no AAC,
+  no H.264), so whether an iPhone plays a Chrome dad's voice note is not a
+  question this project can answer, and it asks none — a test that failed
+  for the build's reasons would be worse than no test.
 - **A fixed `settle()` before an assertion is a race, and a loaded machine
   loses it.** The suite is green run alone and on CI, and drops one or two
   tests in a different file every time when something else is running — a
