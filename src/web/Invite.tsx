@@ -1,5 +1,5 @@
 import { Check, Copy, Share2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createInvite } from './api';
 import { useT } from './i18n';
 import { Button } from './ui/Button';
@@ -21,6 +21,11 @@ export function Invite() {
   const [link, setLink] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
+  // One timer, restarted by every copy: a second press inside the two seconds
+  // used to be taken down by the FIRST press's timer, a second early — the
+  // same true-over-true shape as the door's dead second press.
+  const copiedFor = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(copiedFor.current), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +42,8 @@ export function Invite() {
     try {
       await navigator.clipboard.writeText(link);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      clearTimeout(copiedFor.current);
+      copiedFor.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       // A browser that will not give up the clipboard leaves the link on the
       // screen, selectable. That is the fallback, and it needs no sentence.
