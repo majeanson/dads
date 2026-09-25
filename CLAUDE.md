@@ -384,6 +384,14 @@ weakening `sessionSecret()`.
   becomes the calendar again in the same breath, because "when is the next
   one" is the question that follows. Without it the group was stuck with a
   date nobody could move until it had been and gone.
+- **The night sheet opens on a leaf** (2026-09-25, `NightLeaf` in
+  `Night.tsx`): the same tear-off leaf home uses for the days being voted
+  on, in the accent — a standing night is its weekday over its hour, an
+  arranged one its month over its date — with the sentence beside it.
+  **Who is coming is one line per answer**, faces first, where it was one
+  run-on sentence strung together with dots (`rsvp-who` still holds the
+  "In: Marc" words the specs read). **Each thing to get into carries its
+  author's face.**
 - **Calling one off is not clearing the night.** One says which evening is
   not happening; the other is a group that has stopped having a standing
   night. They were two room lines (`night_off`, `night_cleared`) until the
@@ -729,6 +737,15 @@ the screen knew something and did not say it.
   Checked at 390px in French as well as English: "Mets une soirée de gars" and
   "ta semaine à remplir" are the rows that would overflow first, and a menu
   row does not wrap.
+- **Every choice of a few is one segmented control** (2026-09-25): home's
+  three answers, the week's 1-5, and now Settings' language and theme — a
+  track with the chosen segment filled (`TRACK` and `segment()` in
+  `Toggles.tsx`). They were loose square buttons with an outline, the one
+  screen where picking one of three looked different. The segments stay
+  44px on a slim track so a row is no taller than before, which the fit
+  suite measures. "Add a face" is "Ajoute ta face" in French now, and both
+  buttons beside the face are the 16px body size, so the pair fits one row
+  on a 390px phone in French; narrower still, they wrap.
 - **One list, one row size.** Language and Theme sit in the same list as the
   three switches and were set smaller; a settings screen that answers three
   questions in two sizes makes a dad work out which is which.

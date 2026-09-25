@@ -164,8 +164,8 @@ export function You({ memberId, name }: { memberId: string; name: string }) {
             htmlFor="face"
             className={[
               // The same shape as a Button, because it sits beside one.
-              'inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-4',
-              'border border-edge text-[1.0625rem] font-medium transition-colors duration-75',
+              'inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-3.5',
+              'border border-edge text-base font-medium transition-colors duration-75',
               'hover:border-accent hover:text-accent',
               'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2',
               'has-[:focus-visible]:outline-accent',

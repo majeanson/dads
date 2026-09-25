@@ -12,14 +12,22 @@ import {
   type Rsvp,
 } from './api';
 import { Answers } from './Answers';
-import { useT } from './i18n';
+import { Face, FaceStack } from './Face';
+import { useT, weekdayNames } from './i18n';
 import { nightDetail, NightEditor } from './NightEditor';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
 import { Switch } from './ui/Switch';
 import { FIELD } from './ui/field';
 import { Poll } from './Poll';
-import { civilDayIn, nextStart, repeats, stillToCome, type DadNight } from '../shared/dadNight';
+import {
+  civilDayIn,
+  nextStart,
+  parseDay,
+  repeats,
+  stillToCome,
+  type DadNight,
+} from '../shared/dadNight';
 
 const EMPTY: NightState = { occurrence: null, answers: [], items: [] };
 
@@ -110,7 +118,12 @@ export function Night({
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3">
-            <p className="m-0 flex items-center gap-3 text-[1.125rem]" data-testid="night-when">
+            <div className="flex items-center gap-3 text-[1.125rem]" data-testid="night-when">
+              {/* The night on a leaf, the way home shows the days being voted
+                  on: a standing night is its weekday over its hour, an
+                  arranged one its month over its date. The words beside it
+                  say the same thing for anyone reading it aloud. */}
+              <NightLeaf night={night} />
               <span className="min-w-0 flex-1">{nightDetail(t, lang, night, Date.now())}</span>
               {/* The countdown only reaches a dad who has opened the room. His
                   own calendar reaches him on Thursday afternoon, where the
@@ -124,7 +137,7 @@ export function Night({
                 <CalendarPlus size={20} aria-hidden="true" />
                 <span className="sr-only">{t('n.calendar')}</span>
               </a>
-            </p>
+            </div>
 
             {/*
              * Always the same day, or arranged one evening at a time.
@@ -377,20 +390,40 @@ function Coming({
       {/* Names, not a count. "3 coming" is a number a man reads as a quorum;
           the names tell him whether HIS friend is coming, which is the thing
           that actually decides it. */}
+      {/* One line per answer, faces first: who is in reads at a glance and
+          the names say it for sure. It was one run-on sentence with the three
+          answers strung together by dots. */}
       {answers.length === 0 ? null : (
-        <p className="m-0 text-[1.0625rem] text-muted" data-testid="rsvp-who">
-          {[
-            coming.length > 0
-              ? t('n.in_list', { names: coming.map((a) => a.name).join(', ') })
-              : '',
-            might.length > 0
-              ? t('n.maybe_list', { names: might.map((a) => a.name).join(', ') })
-              : '',
-            not.length > 0 ? t('n.out_list', { names: not.map((a) => a.name).join(', ') }) : '',
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
+        <div className="grid gap-2" data-testid="rsvp-who">
+          {(
+            [
+              [coming, 'n.in_list', true],
+              [might, 'n.maybe_list', false],
+              [not, 'n.out_list', false],
+            ] as const
+          ).map(([list, key, down]) =>
+            list.length === 0 ? null : (
+              <p
+                key={key}
+                className={cn(
+                  'm-0 flex items-center gap-2.5 text-[1.0625rem]',
+                  down ? 'text-ink' : 'text-muted',
+                )}
+              >
+                <FaceStack
+                  people={list.map((a) => ({ memberId: a.memberId, shades: down }))}
+                  size={26}
+                  max={4}
+                  ring="var(--bg)"
+                  className="shrink-0"
+                />
+                <span className="min-w-0">
+                  {t(key, { names: list.map((a) => a.name).join(', ') })}
+                </span>
+              </p>
+            ),
+          )}
+        </div>
       )}
     </>
   );
@@ -440,6 +473,9 @@ function Agenda({
               key={item.id}
               data-testid="agenda-item"
             >
+              {/* Whose it is, as a face: a list of things men brought reads
+                  as the men who brought them. */}
+              <Face memberId={item.memberId} size={28} />
               <span className="min-w-0 flex-1 text-[1.0625rem]">
                 {item.body} <span className="text-muted">— {item.name}</span>
               </span>
@@ -479,5 +515,34 @@ function Agenda({
         </Button>
       </form>
     </section>
+  );
+}
+
+/**
+ * The night as a leaf off a calendar, like the days home shows being voted
+ * on. A standing night has no date to put on it, so the band is its weekday
+ * and the big line its hour; an arranged evening is its month over its date.
+ * Decoration: the words beside it are the name.
+ */
+function NightLeaf({ night }: { night: DadNight }) {
+  const { lang } = useT();
+  const parts = night.date ? parseDay(night.date) : null;
+  const band =
+    parts !== null
+      ? new Intl.DateTimeFormat(lang, { month: 'short', timeZone: 'UTC' }).format(
+          Date.UTC(parts.year, parts.month - 1, parts.day),
+        )
+      : weekdayNames(lang)[night.weekday]!.slice(0, 3);
+  const big = parts !== null ? String(parts.day) : night.time;
+  return (
+    <span
+      className="home-leaf"
+      data-accent="yes"
+      data-wide={parts === null ? 'yes' : undefined}
+      aria-hidden="true"
+    >
+      <span className="home-leaf-month">{band}</span>
+      <span className="home-leaf-date display">{big}</span>
+    </span>
   );
 }

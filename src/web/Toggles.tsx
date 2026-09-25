@@ -1,7 +1,7 @@
 import { Moon, Sun, SunMoon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useT, type Lang } from './i18n';
-import { Button } from './ui/Button';
+import { cn } from './ui/cn';
 import { useTheme, type Theme } from './theme';
 
 const LANGS: { id: Lang; label: string }[] = [
@@ -48,19 +48,38 @@ export function LangToggle({ compact = false }: { compact?: boolean }) {
     );
   }
   return (
-    <div className="flex gap-1.5" role="group" aria-label={t('menu.language')}>
+    <div className={TRACK} role="group" aria-label={t('menu.language')}>
       {LANGS.map((l) => (
-        <Button
+        <button
           key={l.id}
-          size="icon"
-          className={lang === l.id ? 'border-accent text-accent' : 'text-muted'}
+          type="button"
+          className={segment(lang === l.id, 'text-base font-semibold')}
           aria-pressed={lang === l.id}
           onClick={() => setLang(l.id)}
         >
           {l.label}
-        </Button>
+        </button>
       ))}
     </div>
+  );
+}
+
+/**
+ * A choice of a few, as one control: a track with the chosen segment filled (44px segments on a slim track, so a row is
+ * no taller than the square buttons it replaced),
+ * the shape home's three answers and the week's 1-5 already have. These were
+ * loose square buttons with an outline for the chosen one, which made
+ * Settings the one screen where picking one of three looked different.
+ */
+const TRACK =
+  'inline-flex gap-0.5 rounded-[var(--radius-control)] border border-edge bg-paper p-0.5';
+function segment(on: boolean, extra = ''): string {
+  return cn(
+    'grid h-11 min-w-11 cursor-pointer place-items-center rounded-[calc(var(--radius-control)-0.25rem)] px-2.5',
+    'transition-colors duration-150',
+    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+    on ? 'bg-accent text-on-accent' : 'text-muted hover:text-ink',
+    extra,
   );
 }
 
@@ -78,7 +97,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
     // The same 64px and the same size of word as a Switch row: these sit in
     // one list with those, and a list that answers three questions in two
     // sizes makes a dad work out which is which.
-    <div className="flex min-h-[clamp(2.75rem,6dvh,4rem)] items-center justify-between gap-3 border-b border-line py-2.5">
+    <div className="flex min-h-[clamp(2.75rem,6dvh,4rem)] items-center justify-between gap-3 border-b border-line py-1.5">
       <span className="text-[1.125rem] text-muted">{label}</span>
       {children}
     </div>
@@ -103,19 +122,19 @@ export function Toggles() {
       <Row label={t('menu.theme')}>
         {/* The glyphs carry the meaning — a sun, a moon, a phone — and each
             has its words underneath for anything reading the page aloud. */}
-        <div className="flex gap-1.5" role="group" aria-label={t('menu.theme')}>
+        <div className={TRACK} role="group" aria-label={t('menu.theme')}>
           {themes.map((th) => (
-            <Button
+            <button
               key={th.id}
-              size="icon"
+              type="button"
               aria-pressed={theme === th.id}
               onClick={() => setTheme(th.id)}
               title={th.label}
-              className={theme === th.id ? 'border-accent text-accent' : 'text-muted'}
+              className={segment(theme === th.id)}
             >
               <th.Icon size={20} aria-hidden="true" />
               <span className="sr-only">{th.label}</span>
-            </Button>
+            </button>
           ))}
         </div>
       </Row>

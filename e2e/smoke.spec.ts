@@ -9,7 +9,10 @@ test('the stack answers: assets serve the shell, the worker reaches D1', async (
   expect(await health.json()).toEqual({ ok: true, db: true });
 
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'dads' })).toBeVisible();
+  // The first page a run loads, often while the other worker is hammering
+  // the same freshly booted server: the shell can take past the default five
+  // seconds to paint, and failing there says nothing about the app.
+  await expect(page.getByRole('heading', { name: 'dads' })).toBeVisible({ timeout: 15_000 });
 });
 
 /**

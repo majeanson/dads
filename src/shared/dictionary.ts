@@ -647,7 +647,7 @@ const FR: Record<Key, string> = {
   'glasses.goggles': 'Lunettes de ski',
   'you.name': 'Ton nom',
   'you.save': 'Enregistre',
-  'you.add_face': 'Ajoute une photo',
+  'you.add_face': 'Ajoute ta face',
   'you.change_face': 'Change-la',
   'you.remove_face': 'Enlève-la',
   'you.bad_image': 'Ce navigateur n’a pas pu lire cette image. Essaie un JPEG.',

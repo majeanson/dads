@@ -803,6 +803,25 @@
     background: var(--accent);
     color: var(--on-accent);
   }
+  /* A leaf that stands for the night itself wears the accent, like the
+     day in the lead; a standing night's leaf carries an hour, which is wider
+     than a date. */
+  .home-leaf[data-accent] {
+    border-color: var(--accent);
+  }
+  .home-leaf[data-accent] .home-leaf-month {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .home-leaf[data-wide] {
+    width: auto;
+    min-width: clamp(2.75rem, 7dvh, 3.25rem);
+  }
+  .home-leaf[data-wide] .home-leaf-date {
+    padding-inline: 0.5rem;
+    font-size: clamp(1.125rem, 3dvh, 1.375rem);
+    line-height: 1.5;
+  }
   /* A date nobody has written on yet. */
   .home-leaf[data-empty] {
     border-style: dashed;

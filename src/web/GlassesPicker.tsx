@@ -77,8 +77,8 @@ export function GlassesPicker({
           data-testid="glasses-open"
           className={cn(
             // The same shape as "Add a face", which it sits beside.
-            'inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-4',
-            'border border-edge text-[1.0625rem] font-medium text-ink transition-colors duration-75',
+            'inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-3.5',
+            'border border-edge text-base font-medium text-ink transition-colors duration-75',
             'hover:border-accent hover:text-accent',
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
           )}
