@@ -375,3 +375,28 @@ test('a fourth dad in fills the table, and home says so', async ({ browser }) =>
   for (const context of seated) await context.close();
   await watcher.context().close();
 });
+
+test('the first frame comes down, at the door and in the room', async ({ browser }) => {
+  // index.html paints the splash's opening before any script has run. It
+  // catches no pointer and every control under it is "visible" to a test, so
+  // a shell that never came down would pass every other spec in here while
+  // a dad looked at a blue face for ever. This is the one that would notice.
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('/');
+  await expect(page.getByLabel('Code')).toBeVisible();
+  await expect(page.locator('#shell')).toHaveCount(0);
+
+  await page.getByLabel('Code').fill(E2E_HOME_GROUP.code);
+  await page.getByLabel('Your name').fill('Shell Watcher');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+
+  // A returning dad: the shell hands over to the splash, and both go.
+  await page.reload();
+  await expect(page.getByTestId('home')).toBeVisible();
+  await expect(page.locator('#shell')).toHaveCount(0);
+  await expect(page.getByTestId('splash')).toHaveCount(0);
+
+  await context.close();
+});

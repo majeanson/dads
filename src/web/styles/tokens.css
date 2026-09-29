@@ -1880,6 +1880,36 @@
     pointer-events: none;
   }
 
+  /* index.html's first frame, drawn exactly where the splash starts: the
+     face at 48% of the width up to 208px, in the middle of the screen. It
+     sits over the splash until the app takes it down, and catches nothing. */
+  #shell {
+    position: fixed;
+    inset: 0;
+    z-index: 101;
+    display: grid;
+    place-items: center;
+    background: var(--accent);
+    pointer-events: none;
+    transition: opacity 180ms ease-out;
+  }
+  #shell[data-gone] {
+    opacity: 0;
+  }
+  #shell svg {
+    width: min(48vw, 208px);
+    height: min(48vw, 208px);
+  }
+  #shell circle {
+    fill: var(--on-accent);
+  }
+  #shell path {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 24;
+    stroke-linecap: round;
+  }
+
   .splash-face {
     transform-box: fill-box;
     transform-origin: center;

@@ -1799,6 +1799,18 @@ icons` rasterises the favicon, the 192/512 and the apple-touch-icon from it
 
 ## From the home screen
 
+- **The first paint is index.html's, not React's** (2026-09-29). On a phone
+  profile (slow 4G, 4× CPU) the page was blank for 1.7s while a 418 KB bundle
+  arrived and ran — half of it react-dom, so there was little to split. Now
+  `#shell` in index.html paints the splash's own opening (the accent ground,
+  the face, the smile) as soon as the stylesheet lands; its look is in
+  `tokens.css` on the palette's tokens, so it is not a sixth place to change
+  a hex. `App` takes it down (`shell.ts`) in a LAYOUT effect once the session
+  is known, so the door or the splash is on screen in the frame it goes —
+  dropping it on mount showed the "…" of a loading session between two blue
+  screens. The splash that takes over skips its face's pop, which is already
+  there. It catches no pointer, so every other spec would pass under a shell
+  that never left; `home.spec` has the one that notices.
 - **A home-screen app is not loaded fresh; it is woken.** Nothing is cached
   (the service worker keeps no shell, every asset revalidates), so a cold load
   is always the newest build — but iOS keeps the page alive for days, and a

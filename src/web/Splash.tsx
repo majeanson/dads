@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { shellUp } from './shell';
 
 /** Where the left lens sits in the mark's 512 square, as fractions of it. */
 export const LEFT_LENS = { x: 102 / 512, y: 214 / 512, w: 132 / 512, h: 90 / 512, r: 38 / 512 };
@@ -102,6 +103,9 @@ export function Splash({
   way?: keyof typeof PACE;
 }) {
   const pace = PACE[way];
+  // The first load's splash starts where index.html's shell already is: the
+  // face is on the screen, so it does not pop in a second time.
+  const [handedOver] = useState(() => way === 'open' && shellUp());
   const mask = useId();
   const zooms = useRef<(SVGGElement | null)[]>([]);
   const drops = useRef<(SVGGElement | null)[]>([]);
@@ -212,7 +216,13 @@ export function Splash({
           <rect width={vw} height={vh} fill="var(--accent)" />
           <g ref={zoomer(1)}>
             <g transform={place}>
-              <circle className="splash-face" cx="256" cy="256" r="216" fill="var(--on-accent)" />
+              <circle
+                className={handedOver ? undefined : 'splash-face'}
+                cx="256"
+                cy="256"
+                r="216"
+                fill="var(--on-accent)"
+              />
               <g ref={dropper(1)} fill="var(--accent)">
                 <rect x="80" y="196" width="352" height="34" rx="17" />
                 {/* The frames. In dark mode the face and the conversation are

@@ -78,6 +78,16 @@
     </script>
   </head>
   <body>
+    <!-- The first frame, before any script: the splash's own opening, so a
+         phone has a face on the screen while the bundle is still arriving.
+         src/web/shell.ts takes it down once the door or the room is ready;
+         its look is #shell in tokens.css, on the palette's own tokens. -->
+    <div id="shell" aria-hidden="true">
+      <svg viewBox="0 0 512 512">
+        <circle cx="256" cy="256" r="216" />
+        <path d="M196 350 q60 48 120 0" />
+      </svg>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/web/main.tsx"></script>
   </body>
