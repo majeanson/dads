@@ -48,8 +48,8 @@ open screens to re-read.
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 395, in workerd against the real migrations
-npm run e2e           # 126, against the built stack (116 in Chromium, 10 on the iPhone)
+npm test              # 402, in workerd against the real migrations
+npm run e2e           # 128, against the built stack (118 in Chromium, 10 on the iPhone)
 npm run audit:contrast  # 68 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run prove         # 32, against dads.marcportal.com itself, in its own room

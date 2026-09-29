@@ -12,9 +12,13 @@ test.describe.configure({ mode: 'serial' });
 
 const run = Date.now().toString(36);
 
+/** Each room from an address of its own: three a day is the door's limit. */
+let opened = 0;
+
 async function openRoom(browser: Browser, name: string, word: string): Promise<Page> {
+  opened += 1;
   const context = await browser.newContext({
-    extraHTTPHeaders: { 'CF-Connecting-IP': '10.9.9.11' },
+    extraHTTPHeaders: { 'CF-Connecting-IP': `10.9.9.${20 + opened}` },
   });
   const page = await context.newPage();
   await page.goto('/');
@@ -52,6 +56,11 @@ test('the creator takes a dad out, and his screen goes to the door', async ({ br
   await opener.getByTestId('remove-do').click();
   // And it says what it could not do: the word still opens the door.
   await expect(opener.getByTestId('remove-done')).toContainText('Sam Removed is out');
+  // And he is nobody to pick any more, in either list.
+  await expect(
+    opener.getByTestId('remove-who').locator('option', { hasText: 'Sam Removed' }),
+  ).toHaveCount(0);
+  await expect(opener.getByTestId('hand-to')).toHaveCount(0);
 
   // Sam is at the door, told why, on the phone he was holding.
   await expect(sam.getByTestId('door-out')).toContainText(`Remove Room ${run}`);
@@ -126,4 +135,36 @@ test('a phone asleep when he was taken out finds the door when it wakes', async 
 
   await opener.context().close();
   await context.close();
+});
+
+test('leaving one of two rooms lands him in the other', async ({ browser }) => {
+  const home = `depart home ${run}`;
+  const second = `depart second ${run}`;
+  const homeOpener = await openRoom(browser, `Home Room ${run}`, home);
+  const secondOpener = await openRoom(browser, `Second Room ${run}`, second);
+
+  // One phone, both rooms: in by the door, then the second from "Your rooms".
+  const sam = await comeIn(browser, home, 'Sam Two Rooms');
+  await menu(sam);
+  await sam.getByTestId('menu-rooms').click();
+  await sam.getByTestId('other-word').fill(second);
+  await sam.getByTestId('other-name').fill('Sam Two Rooms');
+  await sam.getByTestId('rooms-join').click();
+  await expect(secondOpener.getByTestId('connection')).toHaveText('2 here');
+
+  await menu(sam);
+  await sam.getByTestId('menu-rooms').click();
+  await sam.getByTestId('rooms-leave-do').click();
+  await sam.getByTestId('rooms-leave-do').click();
+
+  // Not the door: the room he still has, as himself.
+  await expect(homeOpener.getByTestId('connection')).toHaveText('2 here');
+  await expect(sam.getByTestId('home')).toBeVisible();
+  await expect(sam.getByLabel('Code')).toHaveCount(0);
+  await expect(sam.getByText(`Home Room ${run}`).first()).toBeVisible();
+  await expect(secondOpener.getByTestId('connection')).toHaveText('1 here');
+
+  await homeOpener.context().close();
+  await secondOpener.context().close();
+  await sam.context().close();
 });

@@ -400,3 +400,17 @@ test('the first frame comes down, at the door and in the room', async ({ browser
 
   await context.close();
 });
+
+test('the first frame comes down on the screen that says the house is unreachable', async ({
+  browser,
+}) => {
+  // The third way out of "loading": neither the door nor the room. The shell
+  // must not sit over the one message that explains what is wrong.
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.route('**/api/me', (route) => route.fulfill({ status: 500, body: 'down' }));
+  await page.goto('/');
+  await expect(page.getByText('Can’t reach the house right now.')).toBeVisible();
+  await expect(page.locator('#shell')).toHaveCount(0);
+  await context.close();
+});
