@@ -1301,6 +1301,19 @@ these are the parts:
   that depends on what was RENDERED — whether `toRows` actually placed a
   divider, which it declines to do at the top of a list.
 
+- **`RoomDO` is the object's surface and nothing else** (2026-09-29). It
+  was 1,800 lines; now it is the upgrade, the frame switch, the close and the
+  alarm, and what each does lives in `src/worker/room/`: `lines` (post, edit,
+  retract, marks, the cid echo), `changes` (the change log and the resume),
+  `hydrate` (attachments and marks from D1), `presence`, `call`, `night`,
+  `table`, `members`, `internal` (the Worker-only paths), `schedule` (the one
+  alarm) and `storage` (the tail's schema). Each takes the one `Room` from
+  `room.ts`. **What the object remembers only while awake is `room.memory`,
+  never a module variable** — objects of one class can share an isolate, and a
+  map at module scope would be every group's at once. The frame switch ends
+  in a `never`, so a new client frame fails the typecheck rather than
+  falling through.
+
 - **`useFreshBuild` takes a FUNCTION, not a boolean.** It is only ever asked
   at the instant a dad comes back to the app, and the answer has to be the
   current one. As a boolean, "his hands are free" had to travel from the
