@@ -88,3 +88,42 @@ test('a dad leaves by himself; the creator hands it on first', async ({ browser 
   await opener.context().close();
   await sam.context().close();
 });
+
+test('a phone asleep when he was taken out finds the door when it wakes', async ({ browser }) => {
+  // It never heard the `removed` frame — asleep, it was not there to — so
+  // all it sees is its socket gone and the next one refused. Without asking
+  // the session it would sit on "reconnecting" for ever. The frame is dropped
+  // on its way to him here; going offline does not do it, because Chromium's
+  // offline mode leaves an open websocket alone.
+  const word = `depart asleep ${run}`;
+  const opener = await openRoom(browser, `Asleep Room ${run}`, word);
+
+  const context = await browser.newContext();
+  await context.routeWebSocket(/\/ws/, (ws) => {
+    const server = ws.connectToServer();
+    server.onMessage((frame) => {
+      if (typeof frame === 'string' && frame.includes('"t":"removed"')) return;
+      ws.send(frame);
+    });
+  });
+  const sam = await context.newPage();
+  await sam.goto('/');
+  await sam.getByLabel('Code').fill(word);
+  await sam.getByLabel('Your name').fill('Sam Asleep');
+  await sam.getByRole('button', { name: 'Come in' }).click();
+  await expect(opener.getByTestId('connection')).toHaveText('2 here');
+
+  await settings(opener);
+  await opener.getByTestId('room-owning').click();
+  await opener.getByTestId('remove-who').selectOption({ label: 'Sam Asleep' });
+  await opener.getByTestId('remove-do').click();
+  await opener.getByTestId('remove-do').click();
+  await expect(opener.getByTestId('remove-done')).toBeVisible();
+
+  await expect(sam.getByTestId('door-out')).toContainText(`Asleep Room ${run}`, {
+    timeout: 30_000,
+  });
+
+  await opener.context().close();
+  await context.close();
+});

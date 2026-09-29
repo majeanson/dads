@@ -442,6 +442,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   - The word still opens the door; the creator's fold says so beside the word
     form. A removed dad lands on the door told why; one who LEAVES does not
     (`leavingRoom()`).
+  - **A socket refused before it opened asks `/api/me`**, and a 204 is
+    `removed`: a phone asleep at the time never hears the frame.
 
 ## The three switches
 

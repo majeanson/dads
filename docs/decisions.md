@@ -1284,6 +1284,14 @@ secret, custom domain bound by the route in wrangler.toml.
   with "You're no longer in …"; one who LEAVES gets no such line
   (`leavingRoom()`), because his own flow is already taking him to his next
   room or the door.
+  **A phone asleep when he was taken out never hears `removed`**: it wakes,
+  its socket is refused, and it would reconnect for ever with a cookie that
+  opens nothing. So a socket that closes without ever having opened asks
+  `/api/me`; a 204 is treated as `removed`, and a network that is down fails
+  the fetch and changes nothing. The e2e drops the frame with
+  `routeWebSocket`, because Chromium's offline mode leaves an open websocket
+  alone — the first version of the test went offline and passed with the
+  probe broken.
 
 ## The three switches
 

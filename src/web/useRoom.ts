@@ -201,8 +201,10 @@ export function useRoom(
           : '';
       const ws = new WebSocket(`${proto}//${location.host}/ws${resume}`);
       socket.current = ws;
+      let opened = false;
 
       ws.onopen = () => {
+        opened = true;
         attempt.current = 0;
         lastHeard.current = Date.now();
         // Still held, not cleared: a line is delivered when it comes back with
@@ -261,6 +263,21 @@ export function useRoom(
         if (pingTimer) clearInterval(pingTimer);
         socket.current = null;
         if (closedByUs.current) return;
+        // Refused before it ever opened: the network, or a room he is no
+        // longer in. A phone asleep when he was taken out never heard the
+        // `removed` frame, and would reconnect for ever with a cookie that
+        // opens nothing. The session says which; a network that is down
+        // fails the fetch and changes nothing.
+        if (!opened) {
+          void fetch('/api/me')
+            .then((res) => {
+              if (res.status !== 204 || closedByUs.current) return;
+              closedByUs.current = true;
+              if (reconnectTimer) clearTimeout(reconnectTimer);
+              setState((s) => ({ ...s, removed: true }));
+            })
+            .catch(() => {});
+        }
         setState((s) => ({ ...s, connection: 'reconnecting' }));
         const delay = Math.min(RECONNECT_MAX_MS, RECONNECT_MIN_MS * 2 ** attempt.current);
         attempt.current += 1;
