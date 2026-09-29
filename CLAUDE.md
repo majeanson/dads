@@ -1248,6 +1248,35 @@ secret, custom domain bound by the route in wrangler.toml.
   one place both are on screen: the room he is in says "you're here", the
   others say what he is called there.
 
+- **A dad can leave, and the creator can take one out** (2026-09-29,
+  migration 0024). Rooms anybody can open are rooms anybody can end up in,
+  and until this nobody could get a man out or walk out himself.
+  **Gone is a mark, never a delete** (`members.gone_at`): deleting the row
+  would take his name off his lines (the archive joins `members` for it) and
+  cascade away his weeks. `depart()` marks him, overwrites the device token's
+  hash with `gone:<id>` (the column is NOT NULL and unique per group), drops
+  his push subscriptions, his RSVPs for nights still to come and his open
+  poll votes — a yes for last month is a fact, one for Thursday a promise
+  nobody will keep — and tells the room, which sends `removed` to his
+  sockets, clears their attachments (so the close is not a wifi drop: no
+  grace, no second "out") and closes them, then broadcasts `departed`.
+  **Everything that means "the men in this room" filters `gone_at IS NULL`**:
+  the session, the device-token rejoin, the rooms list, the handover target,
+  turn nudges and crowns, and the board's empty rows (his filled-in weeks
+  stay). `hello.members` KEEPS him, `gone: true`, because his face belongs
+  beside what he said; every picker on the client filters it. A new query
+  over `members` has to decide which of the two it is.
+  **Removing is the creator's, and nobody's in a room with no creator** — not
+  everybody's, which is the switches' rule: a switch turned wrong can be
+  turned back, a friend taken out of his own room cannot. **The creator
+  cannot leave while anybody else is in** (409 `hand_over_first`); the last
+  man out may. **The word still opens the door afterwards**, and he comes
+  back as a new dad; the creator's fold says so beside the word form rather
+  than keeping a ban list. A dad removed while looking lands on the door
+  with "You're no longer in …"; one who LEAVES gets no such line
+  (`leavingRoom()`), because his own flow is already taking him to his next
+  room or the door.
+
 ## The three switches
 
 - **The three switches are the CREATOR's** (2026-09-17), and this reverses

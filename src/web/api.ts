@@ -178,6 +178,33 @@ export async function handRoom(memberId: string): Promise<void> {
   if (!res.ok) throw new Error(`PUT /api/rooms/owner ${res.status}`);
 }
 
+/** Take a dad out of the room. The creator's; throws on refusal. */
+export async function removeMember(memberId: string): Promise<void> {
+  const res = await fetch('/api/rooms/remove', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ memberId }),
+  });
+  if (!res.ok) throw new Error(`POST /api/rooms/remove ${res.status}`);
+}
+
+/** Walk out of this room. A creator with others still in it is asked to hand
+ * it on first. */
+export async function leaveRoom(): Promise<'left' | 'hand_over_first' | 'failed'> {
+  leaving = true;
+  const res = await fetch('/api/rooms/leave', { method: 'POST' }).catch(() => null);
+  if (res?.ok) return 'left';
+  leaving = false;
+  return res?.status === 409 ? 'hand_over_first' : 'failed';
+}
+
+/** He is walking out himself, so the room closing his socket is expected and
+ * the page is already on its way somewhere: no "you're no longer in" door. */
+let leaving = false;
+export function leavingRoom(): boolean {
+  return leaving;
+}
+
 /** A room this device is in. */
 export interface MyRoom {
   id: string;

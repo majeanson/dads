@@ -2,7 +2,7 @@ import type { DadNight } from '../../shared/dadNight';
 import type { RoomsOpen } from '../../shared/protocol';
 import { noteChange } from './changes';
 import { forget } from './lines';
-import { restamp } from './members';
+import { departed, restamp } from './members';
 import { applyNight } from './night';
 import type { Room } from './room';
 import { rescheduleAlarm } from './schedule';
@@ -105,6 +105,17 @@ export async function internalRoute(
       room.learnGroup(groupId);
       await restamp(room, memberId, name, face);
       return Response.json({ ok: true });
+    }
+
+    // A dad left or was taken out; see `departed`.
+    case '/depart': {
+      const { groupId, memberId } = (await request.json()) as {
+        groupId: string;
+        memberId: string;
+      };
+      room.learnGroup(groupId);
+      await departed(room, memberId);
+      return done();
     }
 
     // Lines taken out of the tail by pattern; see `forget`.

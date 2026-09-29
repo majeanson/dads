@@ -209,7 +209,7 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
   const now = Date.now();
 
   const existing = await env.DB.prepare(
-    'SELECT id FROM members WHERE group_id = ? AND device_token_hash = ?',
+    'SELECT id FROM members WHERE group_id = ? AND device_token_hash = ? AND gone_at IS NULL',
   )
     .bind(group.id, deviceHash)
     .first<{ id: string }>();
@@ -291,7 +291,7 @@ export async function currentSession(
             g.dad_night_weekday, g.dad_night_time, g.dad_night_date, g.dad_night_tz,
             g.questions_on, g.week_on, g.table_on, g.created_by, m.avatar_at
        FROM members m JOIN groups g ON g.id = m.group_id
-      WHERE m.id = ? AND m.group_id = ?`,
+      WHERE m.id = ? AND m.group_id = ? AND m.gone_at IS NULL`,
   )
     .bind(identity.memberId, identity.groupId)
     .first<{

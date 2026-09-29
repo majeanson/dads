@@ -17,7 +17,7 @@ import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
 import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp';
 import { postRoom } from './routes/create';
 import { listMine, switchRoom } from './routes/mine';
-import { putOwner, putRooms, putWord } from './routes/rooms';
+import { postLeave, postRemove, putOwner, putRooms, putWord } from './routes/rooms';
 import { search } from './routes/search';
 import { getTable, postNewTable } from './routes/table';
 import { addPrompt, getPromptAnswers, getTodaysPrompt, listPrompts } from './routes/prompts';
@@ -132,6 +132,12 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'PUT /api/rooms/owner':
       return putOwner(request, env, prod);
+
+    case 'POST /api/rooms/remove':
+      return postRemove(request, env, prod);
+
+    case 'POST /api/rooms/leave':
+      return postLeave(request, env, prod);
 
     case 'PUT /api/night':
       return setNight(request, env, prod);

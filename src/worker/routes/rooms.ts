@@ -3,6 +3,8 @@ import type { Env } from '../env';
 import { sessionSecret } from '../env';
 import type { RoomsOpen } from '../../shared/protocol';
 import { hashInviteCode, inviteCodeLookup, randomToken } from '../crypto';
+import { depart } from '../depart';
+import { clearedIdentityCookie } from '../identity';
 import { currentSession, type Session } from './auth';
 import { MAX_CODE_LENGTH, MIN_CODE_LENGTH } from './create';
 
@@ -200,7 +202,7 @@ export async function putOwner(
   // His own group's, or it is not a handover at all: an id from another room
   // would park the switches somewhere nobody in here can reach.
   const to = await env.DB.prepare(
-    'SELECT id, display_name FROM members WHERE id = ? AND group_id = ?',
+    'SELECT id, display_name FROM members WHERE id = ? AND group_id = ? AND gone_at IS NULL',
   )
     .bind(memberId, session.group.id)
     .first<{ id: string; display_name: string }>();
@@ -221,4 +223,82 @@ export async function putOwner(
   });
 
   return Response.json({ createdBy: to.id });
+}
+
+/**
+ * POST /api/rooms/remove — take a dad out of the room.
+ *
+ * The creator's, like the word: a man whose invite got out, or who should
+ * never have been let in, is exactly what the man who opened the room needs
+ * to be able to fix. A room with NO creator gets nobody who can do this — not
+ * everybody, which is the switches' rule: a switch turned the wrong way can
+ * be turned back, and a friend taken out of his own room by another cannot.
+ * Anyone can still leave one himself.
+ *
+ * Not himself (that is leaving), and not a dad already gone. What stays and
+ * what goes is `depart`'s. The word still opens the door afterwards; the
+ * client offers to change it, which is the one way to be sure.
+ */
+export async function postRemove(
+  request: Request,
+  env: Env,
+  isProduction: boolean,
+): Promise<Response> {
+  const session = await currentSession(request, env, isProduction);
+  if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 });
+  if (session.group.createdBy !== session.member.id) {
+    return Response.json({ error: 'not_yours' }, { status: 403 });
+  }
+
+  let body: { memberId?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+  const memberId = typeof body.memberId === 'string' ? body.memberId : '';
+  if (memberId === '' || memberId === session.member.id) {
+    return Response.json({ error: 'not_a_member' }, { status: 400 });
+  }
+
+  if (!(await depart(env, session.group.id, memberId))) {
+    return Response.json({ error: 'not_a_member' }, { status: 400 });
+  }
+  return new Response(null, { status: 204 });
+}
+
+/**
+ * POST /api/rooms/leave — walk out of this room.
+ *
+ * Anybody's, with one exception: the creator, while anybody else is still in
+ * it. Leaving would leave the switches and the word with nobody — the room
+ * would go on for the others with no one able to change what it is — so he
+ * hands it on first, which Settings already does. The last man out may go;
+ * the room stays, with its history, for nobody.
+ *
+ * The cookie goes with him. His other rooms are untouched, and the client
+ * takes him to one of them, or to the door.
+ */
+export async function postLeave(
+  request: Request,
+  env: Env,
+  isProduction: boolean,
+): Promise<Response> {
+  const session = await currentSession(request, env, isProduction);
+  if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 });
+
+  if (session.group.createdBy === session.member.id) {
+    const others = await env.DB.prepare(
+      'SELECT 1 AS n FROM members WHERE group_id = ? AND id != ? AND gone_at IS NULL LIMIT 1',
+    )
+      .bind(session.group.id, session.member.id)
+      .first<{ n: number }>();
+    if (others !== null) return Response.json({ error: 'hand_over_first' }, { status: 409 });
+  }
+
+  await depart(env, session.group.id, session.member.id);
+  return new Response(null, {
+    status: 204,
+    headers: { 'Set-Cookie': clearedIdentityCookie(isProduction) },
+  });
 }

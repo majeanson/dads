@@ -1,6 +1,6 @@
-import { Check, DoorOpen, LogIn, Plus } from 'lucide-react';
+import { Check, DoorClosed, DoorOpen, LogIn, Plus } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
-import { fetchMyRooms, join, switchRoom, type MyRoom } from './api';
+import { fetchMyRooms, join, leaveRoom, switchRoom, type MyRoom } from './api';
 import { useT } from './i18n';
 import { ITEM } from './Menu';
 import { NewRoom } from './NewRoom';
@@ -22,7 +22,16 @@ import { cn } from './ui/cn';
  * change all of it at once is to start again, and it takes the time a tap
  * already takes.
  */
-export function MyRooms({ onClose }: { onClose: () => void }) {
+export function MyRooms({
+  onClose,
+  handOverFirst,
+  onSettings,
+}: {
+  onClose: () => void;
+  /** He opened this room and others are still in it. */
+  handOverFirst: boolean;
+  onSettings: () => void;
+}) {
   const { t } = useT();
   const [rooms, setRooms] = useState<MyRoom[] | null>(null);
   const [going, setGoing] = useState<string | null>(null);
@@ -113,6 +122,100 @@ export function MyRooms({ onClose }: { onClose: () => void }) {
           </Button>
         )}
       </div>
+
+      {rooms === null ? null : (
+        <Leave
+          room={rooms.find((r) => r.current)}
+          others={rooms.filter((r) => !r.current)}
+          handOverFirst={handOverFirst}
+          onSettings={onSettings}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Walking out of the room he is in.
+ *
+ * Last in the sheet and armed, because it is the one thing in here that a
+ * tap cannot undo: getting back in takes the word. His other rooms are the
+ * list above, and he goes to the first of them — or to the door, if this was
+ * his only one. What he said stays behind, under his name.
+ */
+function Leave({
+  room,
+  others,
+  handOverFirst,
+  onSettings,
+}: {
+  room: MyRoom | undefined;
+  others: MyRoom[];
+  handOverFirst: boolean;
+  onSettings: () => void;
+}) {
+  const { t } = useT();
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  if (room === undefined) return null;
+
+  async function go() {
+    setBusy(true);
+    setFailed(false);
+    const result = await leaveRoom();
+    if (result !== 'left') {
+      setBusy(false);
+      setArmed(false);
+      setFailed(true);
+      return;
+    }
+    const next = others[0];
+    // Reloads either way: into the next room, or — with no cookie now — to
+    // the door.
+    if (next !== undefined) await switchRoom(next.id).catch(() => false);
+    location.reload();
+  }
+
+  return (
+    <div
+      className="mt-1 grid grid-cols-1 gap-2 border-t border-line pt-3"
+      data-testid="rooms-leave"
+    >
+      {handOverFirst ? (
+        <p className="m-0 text-sm text-muted">
+          {t('rooms.leave_owner')}{' '}
+          <button
+            type="button"
+            className="cursor-pointer text-accent underline"
+            onClick={onSettings}
+          >
+            {t('set.title')}
+          </button>
+        </p>
+      ) : (
+        <p className="m-0 text-sm text-muted">{t('rooms.leave_hint')}</p>
+      )}
+      <Button
+        block
+        look={armed ? 'danger' : 'plain'}
+        className={ITEM}
+        disabled={busy || handOverFirst}
+        onClick={() => (armed ? void go() : setArmed(true))}
+        data-testid="rooms-leave-do"
+      >
+        <DoorClosed size={22} aria-hidden="true" className="shrink-0" />
+        <span className="min-w-0 truncate">
+          {armed
+            ? t('rooms.leave_sure', { room: room.name })
+            : t('rooms.leave', { room: room.name })}
+        </span>
+      </Button>
+      {failed ? (
+        <p className="error m-0 text-sm" role="alert">
+          {t('rooms.leave_failed')}
+        </p>
+      ) : null}
     </div>
   );
 }

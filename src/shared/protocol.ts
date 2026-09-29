@@ -239,6 +239,12 @@ export interface RosterEntry {
    * change the moment he sets a new one.
    */
   face?: number;
+  /**
+   * He has left the room, or been taken out of it. Only ever on the members
+   * list, never the roster: he stays there so his face stays beside what he
+   * said, and everything that means "the men in this room" leaves him out.
+   */
+  gone?: boolean;
 }
 
 /**
@@ -398,6 +404,15 @@ export type ServerFrame =
    * creator, which is what every room made before creators existed has.
    */
   | { t: 'owner'; createdBy: string | null }
+  /**
+   * To the sockets of a dad who has just left the room or been taken out of
+   * it, and then they close. The app goes to the door rather than reconnecting
+   * for ever with a cookie that no longer opens anything.
+   */
+  | { t: 'removed' }
+  /** To everybody else: that dad is gone. His lines keep his face; the lists
+   * of who is in the room lose him. */
+  | { t: 'departed'; memberId: string }
   /**
    * A frame the room would not take.
    *

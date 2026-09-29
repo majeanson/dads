@@ -70,7 +70,7 @@ async function crown(room: Room, winners: string[]): Promise<void> {
   room.memory.crownClaim = { key, at: claimedAt };
   try {
     const { results } = await room.env.DB.prepare(
-      'SELECT id, display_name FROM members WHERE group_id = ?',
+      'SELECT id, display_name FROM members WHERE group_id = ? AND gone_at IS NULL',
     )
       .bind(groupId)
       .all<{ id: string; display_name: string }>();
@@ -119,7 +119,7 @@ async function nudgeTurn(room: Room, name: string): Promise<void> {
     // Compared as the table knows the name: jaffre keeps twenty
     // characters, and a longer dads name would otherwise never match.
     const { results } = await room.env.DB.prepare(
-      'SELECT id, display_name FROM members WHERE group_id = ?',
+      'SELECT id, display_name FROM members WHERE group_id = ? AND gone_at IS NULL',
     )
       .bind(groupId)
       .all<{ id: string; display_name: string }>();

@@ -1,6 +1,8 @@
 import { isGlasses, type RosterEntry } from '../../shared/protocol';
-import { broadcastRoster } from './presence';
+import { broadcastCallRoster, hangUp } from './call';
+import { broadcastRoster, cancelLeave, notePresence } from './presence';
 import type { Room, SocketIdentity } from './room';
+import { rescheduleAlarm } from './schedule';
 import { storedFit } from './storage';
 
 /**
@@ -20,7 +22,7 @@ export async function membersOfGroup(room: Room): Promise<RosterEntry[]> {
   if (groupId === undefined) return [];
   try {
     const { results } = await room.env.DB.prepare(
-      'SELECT id, display_name, avatar_at, glasses, glasses_fit FROM members WHERE group_id = ?',
+      'SELECT id, display_name, avatar_at, glasses, glasses_fit, gone_at FROM members WHERE group_id = ?',
     )
       .bind(groupId)
       .all<{
@@ -29,6 +31,7 @@ export async function membersOfGroup(room: Room): Promise<RosterEntry[]> {
         avatar_at: number | null;
         glasses: string | null;
         glasses_fit: string | null;
+        gone_at: number | null;
       }>();
     return results.map((r) => {
       const fit = storedFit(r.glasses_fit);
@@ -38,6 +41,7 @@ export async function membersOfGroup(room: Room): Promise<RosterEntry[]> {
         face: r.avatar_at ?? undefined,
         ...(isGlasses(r.glasses) ? { glasses: r.glasses } : {}),
         ...(fit ? { fit } : {}),
+        ...(r.gone_at !== null ? { gone: true } : {}),
       };
     });
   } catch (err) {
@@ -91,4 +95,42 @@ export async function restamp(
       ...(fit ? { fit } : {}),
     },
   });
+}
+
+/**
+ * A dad has left the room, or been taken out of it; D1 already says so.
+ *
+ * His open sockets are told and closed from in here, because the cookie
+ * stops working on the next REQUEST and a socket that is already open never
+ * makes another one. Their attachments are cleared first, so the close that
+ * follows is not a dad dropping off the wifi: no grace, no second "out".
+ * Then everybody else hears it — the roster without him, the call without
+ * him, and `departed` for the lists of the room's men.
+ */
+export async function departed(room: Room, memberId: string): Promise<void> {
+  let was: SocketIdentity | null = null;
+  let onCall = false;
+  for (const ws of room.ctx.getWebSockets(memberId)) {
+    const who = ws.deserializeAttachment() as SocketIdentity | null;
+    if (who !== null) {
+      was = who;
+      onCall ||= who.inCall === true;
+    }
+    room.sendTo(ws, { t: 'removed' });
+    ws.serializeAttachment(null);
+    try {
+      ws.close(4001, 'gone');
+    } catch {
+      // Already closing.
+    }
+  }
+  if (cancelLeave(room, memberId)) await rescheduleAlarm(room);
+  if (was !== null) await notePresence(room, memberId, was.name, 'out');
+
+  broadcastRoster(room);
+  if (onCall && was !== null) {
+    broadcastCallRoster(room);
+    hangUp(room, was);
+  }
+  room.broadcast({ t: 'departed', memberId });
 }

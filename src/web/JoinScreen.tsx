@@ -41,7 +41,14 @@ function inviteFromUrl(): string {
   return match[1] ?? '';
 }
 
-export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void }) {
+export function JoinScreen({
+  onJoined,
+  outOf,
+}: {
+  onJoined: (session: Session) => void;
+  /** The room he was just taken out of, to say so at the door he lands on. */
+  outOf?: string;
+}) {
   const { t, lang } = useT();
   const [invite] = useState(inviteFromUrl);
   /** The door has two sides now: walking in, and opening one. A dad who was
@@ -97,6 +104,13 @@ export function JoinScreen({ onJoined }: { onJoined: (session: Session) => void 
           <p className="mt-2 mb-8 text-[1.0625rem] text-muted">
             {invite ? t('join.invited') : t('join.lede')}
           </p>
+          {/* Said once, here: he was in a room a moment ago and now he is at
+              the door, and the screen should not leave him guessing why. */}
+          {outOf ? (
+            <p className="-mt-4 mb-6 text-[1.0625rem]" role="status" data-testid="door-out">
+              {t('join.out', { room: outOf })}
+            </p>
+          ) : null}
 
           <form onSubmit={submit} className="grid grid-cols-1 gap-4">
             {/* A dad who followed a link has already been let in by whoever sent

@@ -47,6 +47,9 @@ export interface RoomState {
   tablePulse: number;
   /** Lines typed while the socket was down, waiting to go. */
   waiting: number;
+  /** He left this room or was taken out of it, and the room has closed his
+   * socket. Nothing reconnects: his cookie opens nothing now. */
+  removed: boolean;
 }
 
 /**
@@ -121,6 +124,7 @@ export function useRoom(
     todoPulse: 0,
     tablePulse: 0,
     waiting: 0,
+    removed: false,
   });
 
   const socket = useRef<WebSocket | null>(null);
@@ -397,6 +401,20 @@ export function useRoom(
           return;
         case 'owner':
           setState((s) => ({ ...s, createdBy: frame.createdBy }));
+          return;
+        case 'removed':
+          // Not a dropped connection: nothing to reconnect to.
+          closedByUs.current = true;
+          setState((s) => ({ ...s, removed: true }));
+          return;
+        case 'departed':
+          // Kept, marked: his lines still want his face.
+          setState((s) => ({
+            ...s,
+            members: s.members.map((m) =>
+              m.memberId === frame.memberId ? { ...m, gone: true } : m,
+            ),
+          }));
           return;
         case 'champions':
           setState((s) => ({ ...s, champions: frame.champions }));

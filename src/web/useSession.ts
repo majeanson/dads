@@ -3,7 +3,7 @@ import { fetchSession, leave as leaveApi, type Session } from './api';
 
 type State =
   | { status: 'loading' }
-  | { status: 'out' }
+  | { status: 'out'; outOf?: string }
   | { status: 'in'; session: Session }
   | { status: 'error'; message: string };
 
@@ -32,5 +32,8 @@ export function useSession() {
     setState({ status: 'out' });
   }, []);
 
-  return { state, signedIn, signOut };
+  /** The room closed his socket: he left it, or was taken out of it. */
+  const removedFrom = useCallback((room: string) => setState({ status: 'out', outOf: room }), []);
+
+  return { state, signedIn, signOut, removedFrom };
 }

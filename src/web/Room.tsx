@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchMyRooms, fetchTodo, keepMedia, type Session, type Todo } from './api';
+import { fetchMyRooms, fetchTodo, keepMedia, leavingRoom, type Session, type Todo } from './api';
 import type { RoomMessage } from '../shared/protocol';
 import { ArrowDown } from 'lucide-react';
 import { CallBar } from './CallBar';
@@ -53,9 +53,23 @@ const NOTE_MS = 6000;
  * header, the list, the composer and the sheets are their own files, and what
  * he has read is `useSeen`.
  */
-export function Room({ session, onSignOut }: { session: Session; onSignOut: () => void }) {
+export function Room({
+  session,
+  onSignOut,
+  onRemoved,
+}: {
+  session: Session;
+  onSignOut: () => void;
+  /** The room closed his socket for good: he is not in it any more. */
+  onRemoved: () => void;
+}) {
   const { t, lang } = useT();
   const room = useRoom(true, session.group.dadNight, session.group.rooms, session.group.createdBy);
+  // Taken out of the room, or walked out of it on another of his phones: the
+  // door, saying so. Walking out on THIS one is already going somewhere.
+  useEffect(() => {
+    if (room.removed && !leavingRoom()) onRemoved();
+  }, [room.removed, onRemoved]);
   // Once home has painted, fetch every sheet's code in the background, so
   // opening one is instant and a deploy mid-evening cannot leave this page
   // asking for files that are gone.

@@ -61,9 +61,11 @@ export async function buildBoard(
   // Members drive the rows, not the entries: a dad who did not check in has to
   // show up as a blank, or the board only ever flatters whoever turned up.
   const [members, checkIns, commitments] = await Promise.all([
-    env.DB.prepare('SELECT id, display_name FROM members WHERE group_id = ? ORDER BY display_name')
+    env.DB.prepare(
+      'SELECT id, display_name, gone_at FROM members WHERE group_id = ? ORDER BY display_name',
+    )
       .bind(groupId)
-      .all<{ id: string; display_name: string }>(),
+      .all<{ id: string; display_name: string; gone_at: number | null }>(),
     env.DB.prepare(
       `SELECT member_id, week, rating, note FROM check_ins
         WHERE group_id = ? AND week IN (${placeholders})`,
@@ -89,9 +91,12 @@ export async function buildBoard(
 
   const board: BoardWeek[] = weeks.map((w) => ({
     week: w,
-    rows: members.results.map((m) => {
+    rows: members.results.flatMap((m) => {
       const c = checkInBy.get(`${w}:${m.id}`);
       const k = commitmentBy.get(`${w}:${m.id}`);
+      // A dad who has left keeps the weeks he filled in — they are the
+      // group's history — and is not a blank row in the ones he did not.
+      if (m.gone_at !== null && !c && !k) return [];
       return {
         memberId: m.id,
         name: m.display_name,

@@ -8,7 +8,7 @@ import { useSession } from './useSession';
 /** Door or room, in whichever of the two languages this dad reads. */
 function Shell() {
   const { t } = useT();
-  const { state, signedIn, signOut } = useSession();
+  const { state, signedIn, signOut, removedFrom } = useSession();
 
   // The first frame index.html painted comes down once there is something
   // to show instead — in a LAYOUT effect, so the door or the splash is on
@@ -20,9 +20,16 @@ function Shell() {
 
   if (state.status === 'loading') return <main className="quiet">…</main>;
   if (state.status === 'error') return <main className="error">{t('app.unreachable')}</main>;
-  if (state.status === 'out') return <JoinScreen onJoined={signedIn} />;
+  if (state.status === 'out') return <JoinScreen onJoined={signedIn} outOf={state.outOf} />;
 
-  return <Room session={state.session} onSignOut={() => void signOut()} />;
+  const room = state.session.group.name;
+  return (
+    <Room
+      session={state.session}
+      onSignOut={() => void signOut()}
+      onRemoved={() => removedFrom(room)}
+    />
+  );
 }
 
 export function App() {

@@ -260,7 +260,15 @@ export function Sheets({
     return (
       <Sheet title={t('rooms.title')} pose={DoorOpen} onClose={close}>
         <Body>
-          <MyRooms onClose={close} />
+          <MyRooms
+            onClose={close}
+            // The creator with anybody else still in it hands it on first:
+            // leaving would leave the word and the switches with nobody.
+            handOverFirst={
+              createdBy === you && members.some((m) => m.memberId !== you && m.gone !== true)
+            }
+            onSettings={() => onOpen('settings')}
+          />
         </Body>
       </Sheet>
     );
