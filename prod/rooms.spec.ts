@@ -152,9 +152,10 @@ test('the calendar picks a night, and it can be called off again', async ({ brow
   await page.getByTestId('dad-night').click();
   await expect(page.getByTestId('poll')).toBeVisible();
 
-  const today = Number(new Date().getDate());
-  if (today >= 28) await page.getByTestId('poll-next').click();
-  const cell = page.getByTestId('poll-day').filter({ hasText: /^28$/ });
+  // The 28th of next month is ahead of today whatever today is.
+  await page.getByTestId('poll-next').click();
+  // By the date, not the text: a day somebody marked also shows his count.
+  const cell = page.locator('[data-testid="poll-day"][data-day$="-28"]');
   await expect(cell).toBeEnabled();
   await cell.click();
   await page.getByTestId('poll-time').fill('20:30');

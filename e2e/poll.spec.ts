@@ -16,17 +16,20 @@ async function comeIn(browser: import('@playwright/test').Browser, name: string)
 }
 
 /**
- * A day in the month showing that is definitely not in the past.
+ * A day that is definitely not in the past, on the screen of the dad asking.
  *
- * The 28th: every month has one, and the calendar opens on the month the
- * group is standing in — so on the 29th of a month this pages forward once
- * and takes the 28th of the next one. Nothing in these tests depends on
- * WHICH day it is, only that everybody is marking the same one.
+ * The 28th of NEXT month: every month has one, it is ahead of today whatever
+ * today is, and so is the 27th the "moved" test shifts it to. It used to page
+ * forward only from the 28th on, which put Marc on next month while Sam's
+ * sheet opened on this one — the day Marc marked was not on Sam's screen, and
+ * the serial retry then found Marc's vote in the first test. Every dad who
+ * needs the day walks here himself.
  */
 async function futureDay(page: Page): Promise<string> {
-  const today = Number(new Date().getDate());
-  if (today >= 28) await page.getByTestId('poll-next').click();
-  const cell = page.getByTestId('poll-day').filter({ hasText: /^28$/ });
+  await expect(page.getByTestId('poll')).toBeVisible();
+  await page.getByTestId('poll-next').click();
+  // By the date, not the text: a day somebody marked also shows his count.
+  const cell = page.locator('[data-testid="poll-day"][data-day$="-28"]');
   await expect(cell).toBeEnabled();
   return (await cell.getAttribute('data-day'))!;
 }
@@ -111,8 +114,8 @@ test('the calendar is shared, and any dad locks the day in', async ({ browser })
   // Sam is looking at his own screen and finds out without a reload: the room
   // pokes every open socket, and the calendar re-reads.
   await night(sam);
+  expect(await futureDay(sam)).toBe(day);
   const his = sam.locator(`[data-testid="poll-day"][data-day="${day}"]`);
-  await expect(his).toBeVisible();
   await expect(sam.getByTestId('poll-best').filter({ hasText: 'Marc Picker' })).toBeVisible({
     timeout: 15_000,
   });
