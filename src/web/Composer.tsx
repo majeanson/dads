@@ -105,6 +105,7 @@ export function Composer({
       setPending(null);
     } else setDraft('');
     // Only when WHICH line changes, not on every render of the same one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId]);
 
   function cancelContext() {

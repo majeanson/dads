@@ -383,7 +383,7 @@ test('a phone that drops out and comes back sees what happened to the lines it h
   const live: WebSocketRoute[] = [];
   await context.routeWebSocket('**/ws*', (ws) => {
     if (down) {
-      ws.close();
+      void ws.close();
       return;
     }
     const server = ws.connectToServer();

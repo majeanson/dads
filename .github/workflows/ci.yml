@@ -21,6 +21,9 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint
+      # The generated Env and runtime types match wrangler.toml and the
+      # installed wrangler. A bump or a new binding means `npm run types`.
+      - run: npm run types && git diff --exit-code worker-configuration.d.ts
       - run: npm run typecheck
       # The palette in both themes, and the two explicit theme blocks against
       # the two they are copied from.

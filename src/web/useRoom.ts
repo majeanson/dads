@@ -186,6 +186,7 @@ export function useRoom(
   useEffect(() => {
     if (!enabled) return;
     closedByUs.current = false;
+    const typers = typingTimers.current;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let pingTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -548,8 +549,8 @@ export function useRoom(
       closedByUs.current = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (pingTimer) clearInterval(pingTimer);
-      for (const t of typingTimers.current.values()) clearTimeout(t);
-      typingTimers.current.clear();
+      for (const t of typers.values()) clearTimeout(t);
+      typers.clear();
       socket.current?.close();
       socket.current = null;
     };

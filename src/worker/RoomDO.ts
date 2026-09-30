@@ -42,7 +42,8 @@ export class RoomDO extends DurableObject<Env> {
     this.room = makeRoom(ctx, env);
     // Keepalive that never wakes a hibernating object.
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
-    ctx.blockConcurrencyWhile(async () => initStorage(ctx.storage.sql));
+    // A constructor cannot await; the runtime holds every event until it settles.
+    void ctx.blockConcurrencyWhile(async () => initStorage(ctx.storage.sql));
   }
 
   // ---------------------------------------------------------------- upgrade
