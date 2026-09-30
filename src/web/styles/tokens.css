@@ -616,8 +616,11 @@
     letter-spacing: -0.02em;
   }
 
+  /* The hour in the accent, the day in ink: one colour on the card, on the
+     thing a dad has to turn up for. Audited as accent on `bg-soft`. */
   .home-time {
     font-variant-numeric: tabular-nums;
+    color: var(--accent);
   }
 
   /* A group with no night reads a SENTENCE here, not a name, and a sentence
