@@ -348,7 +348,6 @@ const EN = {
 
   // ------------------------------------------------------- dad night
   'n.title': 'Dad night',
-  'n.set': 'Set dad night',
   'n.day': 'Day',
   'n.date': 'Date',
   'n.call_off': 'Can’t do that night',
@@ -375,11 +374,8 @@ const EN = {
   'n.change': 'Change it',
   'n.none': 'No dad night yet.',
   'n.save_failed': 'Couldn’t save that. Try again.',
-  'n.item': 'Dad night {countdown}',
-  'n.item_live': 'Dad night — the table’s open',
   'n.detail': '{when} · {countdown}',
   'n.detail_live': '{when} · the table’s open',
-  'n.item_plain': 'Dad night {when}',
   'n.soon_live': 'the table’s open',
   'n.when': '{weekday}s at {time}',
   'n.countdown_now': 'any moment',
@@ -808,7 +804,6 @@ const FR: Record<Key, string> = {
 
   // -------------------------------------------------------- soirée de gars
   'n.title': 'Soirée de gars',
-  'n.set': 'Mets une soirée de gars',
   'n.day': 'Jour',
   'n.date': 'Date',
   'n.call_off': 'Je peux plus cette soirée-là',
@@ -835,11 +830,8 @@ const FR: Record<Key, string> = {
   'n.change': 'Change-la',
   'n.none': 'Pas encore de soirée de gars.',
   'n.save_failed': 'Ça n’a pas enregistré. Réessaie.',
-  'n.item': 'Soirée de gars {countdown}',
-  'n.item_live': 'Soirée de gars — la table est ouverte',
   'n.detail': '{when} · {countdown}',
   'n.detail_live': '{when} · la table est ouverte',
-  'n.item_plain': 'Soirée de gars {when}',
   'n.soon_live': 'la table est ouverte',
   'n.when': 'les {weekday}s à {time}',
   'n.countdown_now': 'd’une minute à l’autre',
