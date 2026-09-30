@@ -21,7 +21,16 @@ export function run(cmd: string, args: string[], stdout: 'pipe' | 'inherit' = 'p
   return out ?? '';
 }
 
+/**
+ * cmd.exe knows no escape inside quotes, so a `"` in an argument would end
+ * the quoting and expose whatever follows, and a line break ends the command
+ * outright. Neither can be passed faithfully: refuse them rather than run
+ * something else. (`%NAME%` still expands where NAME is a variable; a LIKE
+ * pattern's `%` names none.) A quoted argument's trailing backslashes are
+ * doubled, or the C runtime reads the last one as escaping the closing quote.
+ */
 function quoteForCmd(arg: string): string {
-  if (arg === '' || /[\s"&|<>^()]/.test(arg)) return `"${arg.replace(/"/g, '\\"')}"`;
+  if (/["\r\n]/.test(arg)) throw new Error(`run: cmd.exe cannot carry ${JSON.stringify(arg)}`);
+  if (arg === '' || /[\s&|<>^()]/.test(arg)) return `"${arg.replace(/\\+$/, '$&$&')}"`;
   return arg;
 }
