@@ -180,9 +180,9 @@ Tuesday. The rules are in CLAUDE.md, and the reasoning is in
 
 - **The nightly e2e was red** from the 28th on: the poll spec paged one dad
   to next month and not the other. It was a test bug, and the same one was in `prod/`.
-- **Tooling.** wrangler 4.143.1, vitest-plugin 1.3.2, typescript-eslint
-  8.71; `npm audit` clean. vitest 5 and TypeScript 7 wait on their plugins'
-  peer ranges.
+- **Tooling.** wrangler 4.143.1, vitest-plugin 1.3.3, typescript-eslint
+  8.71, TypeScript 6.0 (typescript-eslint takes up to 6.0.x); `npm audit`
+  clean. vitest 5 and TypeScript 7 wait on their plugins' peer ranges.
 - **`RoomDO` is its surface** — 1,812 lines down to 220, the rest in
   `src/worker/room/` — with no change in behaviour.
 - **A face at the first paint.** `index.html` paints the splash's opening

@@ -118,9 +118,16 @@ group, invite the actual dads.
 
 1. **Nobody shows up.** Mitigated only by the scheduled night; the whole product depends on it
    being a real commitment between real friends. Nothing technical fixes this.
+   **Open, 2026-09-29**: the dads' room has been open since 09-17 — too early to tell. Look
+   again in a few weeks, from counts in production D1 (lines, RSVPs, votes, check-ins).
 2. **Jaffre iframe fights us** — third-party cookie / storage partitioning may break jaffre's
    own identity inside the frame. M6 starts with a 30-minute spike to confirm jaffre loads and
    holds a session in an iframe on a different origin before building the bridge.
+   **Settled 2026-09-29**: identity is an HMAC token in localStorage, not a cookie; a silent
+   frame offers the own-tab link and a retry.
 3. **Group-visible check-ins are socially heavy.** That's the chosen design; if it chills
    participation the smallest fix is a per-entry "just the number" mode. Not building it now.
+   **Still waiting, 2026-09-29**: decided by the same counts as risk 1.
 4. **Invite code leaks.** Codes are rotatable per group; hashed at rest; rate-limited verify.
+   **Settled 2026-09-29**: invite links carry their own secret, never the word; the creator
+   changes the word from Settings, which kills the outstanding links.

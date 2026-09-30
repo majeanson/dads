@@ -344,7 +344,9 @@ describe('the ten-photo cap', () => {
       headers: { Cookie: cookie },
     });
     expect(gone.status).toBe(404);
-  });
+    // Thirty-one uploads in a row: about five seconds on a laptop running the
+    // whole suite, which is vitest's default limit. Slow, not a race.
+  }, 20_000);
 
   it('lists the photographs a room still holds, under a week of voice notes', async () => {
     const cookie = await cookieFor(group);
