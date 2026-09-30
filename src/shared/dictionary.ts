@@ -227,6 +227,8 @@ const EN = {
   'remind.on': 'Tell me when it opens',
   'remind.needs_install': 'Add dads to your home screen to be told when the table opens.',
   'remind.blocked': 'Your browser is blocking notifications from this site.',
+  'remind.offer': 'Remind me the day before',
+  'remind.offer_no': 'Not now',
   'menu.language': 'Language',
   'menu.theme': 'Theme',
   'theme.system': 'Follow the phone',
@@ -683,6 +685,8 @@ const FR: Record<Key, string> = {
   'remind.needs_install':
     'Ajoute dads à ton écran d’accueil pour être averti quand la table ouvre.',
   'remind.blocked': 'Ton navigateur bloque les notifications de ce site.',
+  'remind.offer': 'Rappelle-moi la veille',
+  'remind.offer_no': 'Pas maintenant',
   'menu.language': 'Langue',
   'menu.theme': 'Thème',
   'theme.system': 'Comme le téléphone',

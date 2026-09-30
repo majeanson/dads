@@ -1691,6 +1691,16 @@ neither see nor scroll anything.
   a tap opens the app, which is the fallback everywhere. The worker shows
   only the two actions it knows: an action is a button that runs code in
   there, and the payload does not get to name one.
+- **Offered on home, once, when he answers** (2026-09-30). Two weeks in, one
+  dad of three had turned reminders on, and the other two had opened the room
+  once each: a switch in Settings is found by the man who already comes back.
+  The moment a dad says "In" or "Might" is the one where "remind me the day
+  before" means something, so home asks then, in the 40px row that normally
+  leads into the night sheet (home has no height to give; the row comes back
+  when he answers). Once per phone, yes or no, because an offer repeated after
+  "not now" is nagging; storage that refuses means never asking. Its e2e stubs
+  `/api/push` and `Notification.permission`, since local has no VAPID keys and
+  headless Chromium reports notifications `denied` whatever is granted.
 
 ## Small things that turned out to matter
 

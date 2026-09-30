@@ -13,6 +13,7 @@ import { FaceStack } from './Face';
 import { plural, useT, weekdayNames } from './i18n';
 import { nightAway } from './NightEditor';
 import { NextDays } from './NextDays';
+import { RemindOffer, worthOffering } from './Remind';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
 import { buzz } from './buzz';
@@ -179,10 +180,14 @@ export function Home({
     return () => clearInterval(timer);
   }, []);
 
+  /** The reminder offer, standing in for the night's quiet row. */
+  const [offer, setOffer] = useState(false);
+
   async function answer(next: AnswerKind) {
     setBusy(true);
     try {
       setState(await setRsvp(next));
+      if (next !== 'out') void worthOffering().then((ok) => ok && setOffer(true));
     } catch {
       // The room is the record; a failed press leaves this as it was.
     } finally {
@@ -396,18 +401,24 @@ export function Home({
             {/* The way into the rest of the night — what to get into, the
                 calendar, changing it. Always here, because the card is the
                 only place the night lives on this screen: there is no Dad
-                night row under it saying the same thing twice. */}
-            <Button
-              look="quiet"
-              className="home-items h-10"
-              onClick={onNight}
-              data-testid="dad-night"
-            >
-              {items === 0
-                ? t('home.night_more')
-                : t(`home.items_${plural(lang, items)}`, { n: items })}
-              <ArrowRight size={15} aria-hidden="true" />
-            </Button>
+                night row under it saying the same thing twice. Just after he
+                says he is coming, and once per phone, the reminder offer
+                stands in for it. */}
+            {offer ? (
+              <RemindOffer onDone={() => setOffer(false)} />
+            ) : (
+              <Button
+                look="quiet"
+                className="home-items h-10"
+                onClick={onNight}
+                data-testid="dad-night"
+              >
+                {items === 0
+                  ? t('home.night_more')
+                  : t(`home.items_${plural(lang, items)}`, { n: items })}
+                <ArrowRight size={15} aria-hidden="true" />
+              </Button>
+            )}
           </>
         )}
       </section>

@@ -89,6 +89,40 @@ test('home says when the night is, and takes his answer', async ({ browser }) =>
   await marc.context().close();
 });
 
+test('saying he is coming offers the reminder once, and "not now" is kept', async ({ browser }) => {
+  const dad = await comeIn(browser, 'Reminded');
+  // The local server has no VAPID keys, so it answers 503 and nothing is
+  // offered. Pretend it has some: the offer is what is under test, not the
+  // push service, which needs a headed browser to prove. Headless Chromium
+  // also reports notifications as denied whatever is granted, which is
+  // "blocked" and never offered: the page is told nobody has asked yet.
+  await dad.evaluate(() =>
+    Object.defineProperty(Notification, 'permission', { get: () => 'default' }),
+  );
+  await dad.route('**/api/push*', (route) =>
+    route.fulfill({ json: { key: 'BKey', known: false } }),
+  );
+
+  // The night from the test above is still on the books.
+  await dad.getByTestId('home-in').click();
+  await expect(dad.getByTestId('remind-offer')).toBeVisible();
+  // It stands in for the night's quiet row until he answers it.
+  await expect(dad.getByTestId('dad-night')).toHaveCount(0);
+
+  await dad.getByRole('button', { name: 'Not now', exact: true }).click();
+  await expect(dad.getByTestId('remind-offer')).toHaveCount(0);
+  await expect(dad.getByTestId('dad-night')).toBeVisible();
+
+  // Asked once per phone: a second answer does not ask again.
+  await dad.getByTestId('home-maybe').click();
+  await expect(dad.getByTestId('home-who-coming')).toContainText('Might: Reminded');
+  await dad.getByTestId('home-in').click();
+  await expect(dad.getByTestId('home-who-coming')).toContainText('Reminded');
+  await expect(dad.getByTestId('remind-offer')).toHaveCount(0);
+
+  await dad.context().close();
+});
+
 test('the header counts who is about, and home counts what he has not read', async ({
   browser,
 }) => {

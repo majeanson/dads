@@ -565,6 +565,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - iPhone: only from the home screen (`pushShape()`).
 - The day-before nudge carries `rsvp-in`/`rsvp-out` (`RSVP_ACTIONS`, pinned —
   `sw.js` matches the strings by hand); the worker shows only actions it knows.
+- **Home offers the reminder once per phone** (`RemindOffer`), right after an
+  answer that is not "Can't", in the place of the night's quiet row. Yes or
+  "not now" sets `dads.remind.asked`; it is Settings' same subscription.
 
 ## Small things that turned out to matter
 
