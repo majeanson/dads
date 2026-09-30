@@ -102,10 +102,8 @@ export async function getPoll(
  *
  * Nothing is said in the room. Five dads marking a fortnight each would be
  * sixty lines about one decision, which is how a conversation becomes a
- * calendar. What IS announced is the poll opening and the date being locked
- * in — the two moments anybody needs to know about. Everyone looking at the
- * calendar right now finds out through a `poll` frame instead, which is a
- * nudge to re-read and not a line.
+ * calendar. Everyone looking at the calendar right now finds out through a
+ * `poll` frame instead, which is a nudge to re-read and not a line.
  */
 export async function putVote(
   request: Request,

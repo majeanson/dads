@@ -250,8 +250,9 @@ export async function leave(): Promise<void> {
 }
 
 /**
- * Any dad can set the group's night; the room announces who did it. Throws on
- * failure so the caller can say so rather than silently doing nothing.
+ * Any dad can set the group's night; the room sends every open screen the new
+ * one, and says nothing in the conversation. Throws on failure so the caller
+ * can say so rather than silently doing nothing.
  */
 export async function setNight(night: NightInput | null): Promise<void> {
   const res = await fetch('/api/night', {
@@ -574,8 +575,8 @@ export async function findLines(q: string, signal?: AbortSignal): Promise<Found[
  *
  * It was settable exactly once, and changing it meant signing out and
  * rejoining — which in this app means arriving as a stranger with none of
- * your history. The room announces it by name, because a name changing with
- * nothing said is four men wondering who the new bloke is.
+ * your history. The room re-stamps his open sockets and tells every phone
+ * who he is now, so his old lines carry the new name too.
  */
 export async function setMyName(name: string): Promise<void> {
   const res = await fetch('/api/me/name', {

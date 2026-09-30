@@ -84,7 +84,7 @@ export const MARKS = [
 /** The six a phone shows before it has learnt anything about its dad. */
 export const REACTIONS = ['👍', '❤️', '😂', '💪', '🙏', '😎'] as const;
 
-export function isReaction(emoji: string): boolean {
+function isReaction(emoji: string): boolean {
   return (MARKS as readonly string[]).includes(emoji);
 }
 
@@ -215,7 +215,7 @@ export interface Champions {
 }
 
 /** A week: a crown from last Thursday's game, not last month's. */
-export const CHAMPION_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+const CHAMPION_FOR_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Whether a dad is wearing the crown right now. */
 export function isChampion(champions: Champions | null, memberId: string, now: number): boolean {

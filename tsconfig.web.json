@@ -14,6 +14,9 @@
     "src/web/**/*.tsx",
     "vite.config.ts",
     "e2e/**/*.ts",
+    "prod/**/*.ts",
+    "playwright.config.ts",
+    "playwright.prod.config.ts",
     "scripts/**/*.ts",
     "src/worker/crypto.ts"
   ]

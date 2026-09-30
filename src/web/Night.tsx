@@ -305,7 +305,7 @@ function Change({
  * that date's weekday the standing one.
  *
  * Any dad may, like the night itself and the three switches. It goes through
- * the same route the editor uses, so the room announces it by name.
+ * the same route the editor uses, so every open screen hears of it.
  */
 function Repeat({ night, busy }: { night: DadNight; busy: boolean }) {
   const { t } = useT();

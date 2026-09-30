@@ -41,7 +41,7 @@ export async function messagesFrom(room: Room, rows: TailRow[]): Promise<RoomMes
  * reconnects, and looking it up means that line quietly loses its picture
  * instead of showing a broken one forever.
  */
-export async function attachmentsById(room: Room, ids: string[]): Promise<Map<string, Attachment>> {
+async function attachmentsById(room: Room, ids: string[]): Promise<Map<string, Attachment>> {
   const found = new Map<string, Attachment>();
   const groupId = room.groupId();
   if (ids.length === 0 || !groupId) return found;

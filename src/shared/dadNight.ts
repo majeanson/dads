@@ -38,7 +38,7 @@ export interface DadNight {
 /** How long a dad night counts as "on". Long enough to cover a late arrival. */
 export const NIGHT_DURATION_MS = 3 * 60 * 60 * 1000;
 
-export const WEEKDAY_NAMES = [
+const WEEKDAY_NAMES = [
   'Sunday',
   'Monday',
   'Tuesday',
@@ -196,7 +196,7 @@ export function parseTime(time: string): { hour: number; minute: number } | null
   return { hour, minute };
 }
 
-export function isValidTimeZone(tz: string): boolean {
+function isValidTimeZone(tz: string): boolean {
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: tz });
     return true;

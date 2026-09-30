@@ -6,7 +6,7 @@ import { currentSession, type Session } from './auth';
 
 /** Long enough for the thought, short enough that it is not the conversation
  * itself — the conversation is the point of turning up. */
-export const MAX_ITEM_LENGTH = 200;
+const MAX_ITEM_LENGTH = 200;
 
 /** Enough for an evening. Past this the list stops being a list. */
 const MAX_ITEMS = 30;
@@ -75,11 +75,7 @@ async function answersFor(env: Env, session: Session, occurrence: number): Promi
 }
 
 /** Everything the week has put up for one evening, oldest first. */
-export async function itemsFor(
-  env: Env,
-  groupId: string,
-  occurrence: number,
-): Promise<NightItem[]> {
+async function itemsFor(env: Env, groupId: string, occurrence: number): Promise<NightItem[]> {
   const { results } = await env.DB.prepare(
     `SELECT i.id, i.member_id, i.body, m.display_name
        FROM night_items i JOIN members m ON m.id = i.member_id
@@ -225,9 +221,9 @@ export async function getRsvps(
 /**
  * PUT /api/rsvp — { answer: 'in' | 'maybe' | 'out' }
  *
- * Announced in the room by name, like the night itself and like a check-in:
- * saying you are coming where the others can see it is the entire mechanism.
- * Changing your mind rewrites the row and says so again.
+ * Not a line: open screens get a `stir` and read who is coming again, by
+ * name — saying you are coming where the others can see it is the entire
+ * mechanism. Changing your mind rewrites the row.
  *
  * `{ coming: boolean }` is still accepted, and has to be: the notification
  * actions in `public/sw.js` answer from the lock screen, and a phone with the

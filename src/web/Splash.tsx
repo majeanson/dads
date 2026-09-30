@@ -2,9 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { shellUp } from './shell';
 
 /** Where the left lens sits in the mark's 512 square, as fractions of it. */
-export const LEFT_LENS = { x: 102 / 512, y: 214 / 512, w: 132 / 512, h: 90 / 512, r: 38 / 512 };
+const LEFT_LENS = { x: 102 / 512, y: 214 / 512, w: 132 / 512, h: 90 / 512, r: 38 / 512 };
 /** And the right one: the conversation is through the other eye. */
-export const RIGHT_LENS = { ...LEFT_LENS, x: 278 / 512 };
+const RIGHT_LENS = { ...LEFT_LENS, x: 278 / 512 };
 type Lens = typeof LEFT_LENS;
 
 /**

@@ -27,7 +27,7 @@ const FACE_EDGE = 320;
  * voice notes and throws the rest away, so the ceiling on a group is bounded
  * either way.
  */
-export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 export interface Prepared {
   blob: Blob;

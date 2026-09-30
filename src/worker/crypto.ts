@@ -20,19 +20,11 @@ export const PBKDF2_ITERATIONS = 100_000;
 
 const encoder = new TextEncoder();
 
-export function base64url(bytes: ArrayBuffer | Uint8Array): string {
+function base64url(bytes: ArrayBuffer | Uint8Array): string {
   const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   let binary = '';
   for (const byte of view) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-export function fromBase64url(value: string): Uint8Array {
-  const padded = value.replace(/-/g, '+').replace(/_/g, '/');
-  const binary = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4));
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
 }
 
 /** 256 bits of randomness, url-safe. Used for device tokens and row ids. */

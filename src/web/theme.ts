@@ -17,7 +17,7 @@ export type Theme = 'system' | 'light' | 'dark';
 
 const STORAGE = 'dads.theme';
 
-export function storedTheme(): Theme {
+function storedTheme(): Theme {
   try {
     const saved = localStorage.getItem(STORAGE);
     if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;

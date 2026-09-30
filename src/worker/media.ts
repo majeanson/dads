@@ -120,14 +120,6 @@ export function isImage(contentType: string): boolean {
   return INLINE_IMAGES.has(contentType.toLowerCase());
 }
 
-export function isVideo(contentType: string): boolean {
-  return INLINE_VIDEO.has(contentType.toLowerCase());
-}
-
-export function isAudio(contentType: string): boolean {
-  return INLINE_AUDIO.has(contentType.toLowerCase());
-}
-
 /**
  * What we are willing to write down as a file's type.
  *

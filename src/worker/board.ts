@@ -13,7 +13,7 @@ import type { Env } from './env';
 export const MAX_NOTE_LENGTH = 280;
 export const MAX_COMMITMENT_LENGTH = 200;
 /** How far back the board shows. Enough to see whether a habit is forming. */
-export const BOARD_WEEKS = 6;
+const BOARD_WEEKS = 6;
 
 export type Outcome = 'pending' | 'done' | 'missed';
 

@@ -7,8 +7,8 @@ import { currentSession, type Session } from './auth';
  * PUT /api/night — { night: DadNight | null }
  *
  * Any dad can set it. There is no admin role in a group of five friends who
- * already know each other, and the change is announced in the room by name,
- * which is the only accountability this needs.
+ * already know each other. The change reaches every open screen; nothing is
+ * said in the conversation.
  */
 export async function setNight(
   request: Request,
@@ -101,8 +101,8 @@ export async function writeNight(
     settled = { ...settled, tz: stored?.dad_night_tz ?? settled.tz };
   }
 
-  // Tell the room: it re-arms its timers, announces the change and pushes the
-  // new schedule to anyone already connected.
+  // Tell the room: it re-arms its timers and pushes the new schedule to anyone
+  // already connected.
   const stub = env.ROOM.get(env.ROOM.idFromName(session.group.id));
   await stub.fetch('https://room/night', {
     method: 'POST',

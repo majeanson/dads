@@ -27,8 +27,11 @@ export default tseslint.config(
       'src/**/*.{ts,tsx}',
       'test/**/*.ts',
       'e2e/**/*.ts',
+      'prod/**/*.ts',
       'scripts/**/*.ts',
       'vite.config.ts',
+      'playwright.config.ts',
+      'playwright.prod.config.ts',
     ],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },

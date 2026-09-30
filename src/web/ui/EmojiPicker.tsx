@@ -12,7 +12,7 @@ import { Button } from './Button';
  * only offered where there is a mouse; on a phone the keyboard's own emoji
  * key is the picker and a second one would be a fourth control on the row.
  */
-export const EMOJI = MARKS;
+const EMOJI = MARKS;
 
 export function EmojiPicker({
   onPick,

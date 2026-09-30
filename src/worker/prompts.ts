@@ -8,7 +8,6 @@ import type { Env } from './env';
  */
 
 export const MAX_PROMPT_LENGTH = 240;
-export const MAX_ANSWER_LENGTH = 2000;
 /** How far back the list view shows. Long enough to see a habit, short enough
  * to stay one screen of scrolling. */
 const HISTORY_DAYS = 60;

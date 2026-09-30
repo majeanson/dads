@@ -9,9 +9,9 @@ import { cn } from './ui/cn';
  * Three segments of one control, and a filled thumb that slides under the
  * one he chose — so what he said is on the screen without a word explaining
  * it, and changing his mind is something he can watch happen. All three stay
- * on the screen from the start: an RSVP is announced by name, so a man who
- * cannot come must not have to say he can and then take it back, and three
- * answers cannot be a toggle.
+ * on the screen from the start: who is coming is on every dad's screen by
+ * name, so a man who cannot come must not have to say he can and then take
+ * it back, and three answers cannot be a toggle.
  *
  * Shared by home's card and the night sheet. The sheet used to have three
  * separate buttons that wrapped two-and-one on a 390px phone, in both

@@ -40,7 +40,7 @@ export interface Tally {
  * Pure and exported because home shows the leading days and the sheet shows
  * the whole calendar, and both have to agree about which day is winning.
  */
-export function talliesOf(poll: PollState, you: string): Map<string, Tally> {
+function talliesOf(poll: PollState, you: string): Map<string, Tally> {
   const out = new Map<string, Tally>();
   for (const { day, votes } of poll.days) {
     const tally: Tally = { day, in: 0, maybe: 0, mine: null, names: { in: [], maybe: [] } };

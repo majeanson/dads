@@ -1,15 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { translator, type Lang, type T } from '../shared/dictionary';
 
-export {
-  nightWhen,
-  plural,
-  translator,
-  weekdayNames,
-  type Key,
-  type Lang,
-  type T,
-} from '../shared/dictionary';
+export { nightWhen, plural, weekdayNames, type Key, type Lang, type T } from '../shared/dictionary';
 
 const STORAGE = 'dads.lang';
 

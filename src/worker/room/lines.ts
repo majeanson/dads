@@ -409,7 +409,7 @@ async function echo(room: Room, ws: WebSocket, id: string, cid: string): Promise
   if (message !== undefined) room.sendTo(ws, { t: 'msg', message, cid });
 }
 
-export async function post(
+async function post(
   room: Room,
   kind: RoomMessage['kind'],
   memberId: string | null,

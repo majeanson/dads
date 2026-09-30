@@ -69,16 +69,6 @@ export function nightShort(t: T, lang: Lang, night: DadNight | null, now: number
   return `${day} ${night.time}`;
 }
 
-export function nightItem(t: T, lang: Lang, night: DadNight | null, now: number): string {
-  if (night === null) return t('n.set');
-  const phase = phaseOf(night, now);
-  if (phase?.kind === 'live') return t('n.item_live');
-  if (phase?.kind === 'upcoming') {
-    return t('n.item', { countdown: countdownIn(t, lang, phase.startsIn) });
-  }
-  return t('n.item_plain', { when: nightWhen(lang, night) });
-}
-
 /**
  * The sheet's own line: the day and the hour, and how far off it is.
  *
@@ -96,8 +86,8 @@ export function nightDetail(t: T, lang: Lang, night: DadNight, now: number): str
 }
 
 /**
- * Setting it. Any dad can — there is no admin here — and the change is
- * announced in the room by name, which is the whole social mechanism.
+ * Setting it. Any dad can — there is no admin here — and the change reaches
+ * every open screen; nothing is said in the conversation.
  */
 export function NightEditor({ night, onDone }: { night: DadNight | null; onDone: () => void }) {
   const { t, lang } = useT();
