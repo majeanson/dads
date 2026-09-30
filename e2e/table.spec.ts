@@ -79,7 +79,7 @@ test('the group gets its own table, addressed to the dad by name', async ({ brow
   await expect(frame).toBeVisible();
 
   const src = await frame.getAttribute('src');
-  expect(src).toContain('#room/e2e-table');
+  expect(src).toMatch(/#room\/e2e-table-[0-9a-f]{6}$/);
   expect(src).toContain('name=Marc');
   expect(src).toContain('from=dads');
 

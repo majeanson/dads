@@ -12,7 +12,7 @@ import {
   signIdentity,
   verifyIdentity,
 } from '../identity';
-import { checkJoinThrottle, clearJoinFailures, recordJoinFailure } from '../throttle';
+import { checkJoinThrottle, recordJoinFailure } from '../throttle';
 import { groupIdForInvite } from './invite';
 
 export const MAX_NAME_LENGTH = 32;
@@ -230,8 +230,6 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
       .bind(memberId, group.id, displayName, deviceHash, now, now)
       .run();
   }
-
-  await clearJoinFailures(env, request, isProduction);
 
   const cookie = await signIdentity(env, { groupId: group.id, memberId }, isProduction);
   const session: Session = {

@@ -103,6 +103,14 @@ export async function checkJoinThrottle(
   };
 }
 
+/**
+ * A wrong word at the door, or ANY word tried where a room's word is chosen
+ * (opening a room, changing one): "that word is taken" says a room has it, so
+ * those two doors are guesses too. Nothing clears the count — a success
+ * would, once, and then a man with a room of his own could reset his own
+ * bucket between every nine guesses at somebody else's. It runs out with the
+ * window.
+ */
 export async function recordJoinFailure(
   env: Env,
   request: Request,
@@ -123,14 +131,4 @@ export async function recordJoinFailure(
   )
     .bind(bucket, now, WINDOW_MS)
     .run();
-}
-
-/** A dad who got in is not a suspect. */
-export async function clearJoinFailures(
-  env: Env,
-  request: Request,
-  isProduction: boolean,
-): Promise<void> {
-  const bucket = await bucketFor(env, request, isProduction);
-  await env.DB.prepare('DELETE FROM join_attempts WHERE bucket = ?').bind(bucket).run();
 }

@@ -183,20 +183,22 @@ describe('POST /api/join', () => {
     expect(other.status).toBe(200);
   });
 
-  it('does not count a successful join as a failure', async () => {
+  it('neither counts a successful join nor forgives the failures before it', async () => {
     const ip = { 'CF-Connecting-IP': '203.0.113.9' };
     for (let i = 0; i < 9; i++) {
       await worker.fetch(postJoin({ code: 'wrong', displayName: 'x' }, ip));
     }
+    // Into a room of his own, say. If this cleared the bucket, nine guesses
+    // at somebody else's word and one at his own would go on for ever.
     expect(
       (await worker.fetch(postJoin({ code: group.code, displayName: 'Marc' }, ip))).status,
     ).toBe(200);
-    // The success cleared the bucket: nine more wrong tries are allowed again.
-    for (let i = 0; i < 9; i++) {
-      expect((await worker.fetch(postJoin({ code: 'wrong', displayName: 'x' }, ip))).status).toBe(
-        401,
-      );
-    }
+    expect((await worker.fetch(postJoin({ code: 'wrong', displayName: 'x' }, ip))).status).toBe(
+      401,
+    );
+    expect((await worker.fetch(postJoin({ code: 'wrong', displayName: 'x' }, ip))).status).toBe(
+      429,
+    );
   });
 });
 

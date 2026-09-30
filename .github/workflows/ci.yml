@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
 
+# Nothing here writes to the repository; the deploy's credentials are its own
+# secrets, not this token.
+permissions:
+  contents: read
+
 # Static checks, unit tests and the build. Everything here runs without a
 # browser, without wrangler dev and without a single credential, so it stays
 # cheap enough to run on every push.

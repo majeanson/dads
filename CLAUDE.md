@@ -52,7 +52,14 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   member row on every request. A device token in localStorage, HMAC'd in
   `members.device_token_hash`, rejoins a browser whose cookie is gone.
 - Failed joins are throttled per IP in `join_attempts` (10 per 10 minutes);
-  success clears the bucket; only the IP's HMAC is stored.
+  only the IP's HMAC is stored. **Nothing clears the bucket** — a success
+  once did, and a room of one's own made that a reset button. **Every word
+  tried at opening a room or changing a word counts too** ("taken" is an
+  answer), checked before the lookup.
+- **A write or the socket from another origin is 403** (`crossOrigin` in
+  `index.ts`): SameSite=Lax trusts every `*.marcportal.com`. No Origin is
+  allowed (scripts, tests); localhost outside production. The Worker deletes
+  every `X-Dads-*` the client sent before setting its own.
 - `scripts/create-group.ts --rotate` UPDATEs hash and salt in place: members,
   archive and board must survive a passphrase change.
 - **An invite link carries its own secret, never the code** (the app does not
@@ -240,7 +247,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - Jaffre is framed cross-origin (no XFO, no CSP, no cookies; identity is an
   HMAC token in localStorage).
 - Embed URL is `/?name=…&from=dads#room/<code>`, **never** `/join/<code>`.
-- `groups.jaffre_room_code` is minted once, then read back. **A new table is
+- `groups.jaffre_room_code` is minted once, then read back, **never the
+  bare slug** (the name is on every invite preview). **A new table is
   a new code** (`POST /api/table/new`, `freshTableCode`, armed, any dad), and
   every screen re-fetches on a `stir` with `what: 'table'`.
 - Names are cut to jaffre's twenty (`tableName`); nudges and crowns compare on
@@ -296,7 +304,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - **A control is 44px** (kit default). `sm`/`iconSm` only inside the
   conversation. `lg` (3.25rem, 17px) is the one action on a sheet; `FIELD`
   matches it. Sheet and door text is 17px; the conversation is untouched.
-- Menu and switch rows are 64px at 1.125rem; sheet headers `text-3xl`.
+- Menu and switch rows are 64px at 1.125rem; sheet headers top out at
+  `text-3xl` (a `clamp` on `dvh`).
   Check at 390px in French.
 - **Every choice of a few is one segmented control** (`TRACK`, `segment()` in
   `Toggles.tsx`).
@@ -384,8 +393,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   `menu`, `settings`, `invite`, `night` — idempotent.
 - The card is the one place with `--radius-card`/`--radius-control`, on
   `--bg-soft`. **Shapes are passed as Tailwind classes, not CSS.**
-- **The door is a speech bubble**; its radius is `rounded-[1.75rem]!` and
-  `rounded-bl-[0.375rem]!`, IMPORTANT on purpose (tailwind-merge does not
+- **The door is a speech bubble**; its radius is `rounded-[2.25rem]!` and
+  `rounded-bl-[0.5rem]!`, IMPORTANT on purpose (tailwind-merge does not
   know `rounded-app`). `Logo.tsx` is `icon.svg` minus the square, in
   `currentColor`.
 - **Home is a VIEW, not a route** (`data-view` on `main.room`); the stage is
@@ -490,8 +499,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 
 ## The conversation is what a dad typed
 
-- **The room writes no lines.** `say()` and `/announce` are gone. Each fact
-  has a screen of its own.
+- **The room writes no lines.** The old `say()` (the room's own voice) and
+  `/announce` are gone; `say` in `room/lines.ts` now posts what a dad
+  typed. Each fact has a screen of its own.
 - Screens that need to look again get a `stir` frame (`night`, `todo`,
   `table`). **A stir belongs on a WRITE, never a GET.** An open sheet re-reads
   on the stir.
@@ -608,6 +618,7 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - `theme-color` is the real `--bg`; `theme.ts` keeps an explicit choice in
   step.
 - The door carries the language toggle (`LangToggle compact`).
+- An `.ics` `SUMMARY` goes through `icsText`: anybody names a room.
 
 ## From the home screen
 

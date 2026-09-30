@@ -37,6 +37,7 @@ const EN = {
   'new.code_too_long': 'That word is too long.',
   'new.code_taken': 'Another room already uses that word. Try a different one.',
   'new.too_many_rooms': 'That’s enough rooms for one day. Try again tomorrow.',
+  'new.too_many_words': 'Too many words tried. Give it ten minutes.',
   'new.unknown': 'Couldn’t open the room. Try again.',
   'new.made': 'The room is yours. Send the word to the others.',
 
@@ -495,6 +496,7 @@ const FR: Record<Key, string> = {
   'new.code_too_long': 'Ce mot est trop long.',
   'new.code_taken': 'Un autre salon utilise déjà ce mot. Prends-en un autre.',
   'new.too_many_rooms': 'Ça fait assez de salons pour aujourd’hui. Réessaie demain.',
+  'new.too_many_words': 'Trop de mots essayés. Attends dix minutes.',
   'new.unknown': 'Le salon s’est pas ouvert. Réessaie.',
   'new.made': 'Le salon est à toi. Envoie le mot aux autres.',
 

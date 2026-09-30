@@ -26,6 +26,15 @@ function utcStamp(ts: number): string {
   return `${new Date(ts).toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`;
 }
 
+/** A room's name as RFC 5545 TEXT. Anybody names a room, and a line break in
+ * one would otherwise be a second line in every member's calendar file. */
+export function icsText(text: string): string {
+  return text
+    .replace(/[\\;,]/g, (c) => `\\${c}`)
+    .replace(/\r\n|[\r\n]/g, '\\n')
+    .replace(/\p{Cc}/gu, '');
+}
+
 /**
  * GET /api/night.ics — the standing night, as a repeating appointment.
  *
@@ -70,7 +79,7 @@ export async function getNightIcs(
     // they agreed to, and taking a wrong repeating event out of a phone is
     // harder than putting the right single one in.
     ...(repeats(night) ? [`RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[night.weekday] ?? 'TH'}`] : []),
-    `SUMMARY:${session.group.name}`,
+    `SUMMARY:${icsText(session.group.name)}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ];

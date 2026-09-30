@@ -15,6 +15,7 @@ const MESSAGES: Record<CreateError, Key> = {
   missing_name: 'join.missing_name',
   name_too_long: 'join.name_too_long',
   too_many_rooms: 'new.too_many_rooms',
+  too_many_attempts: 'new.too_many_words',
   unknown: 'new.unknown',
 };
 

@@ -130,6 +130,28 @@ describe('opening a room', () => {
     expect(((await fourth.json()) as { error: string }).error).toBe('too_many_rooms');
   });
 
+  it('counts every word tried as a guess at somebody else’s', async () => {
+    // "That word is taken" says some room has it. Without a count, a stranger
+    // could ask it as fast as he could type and then walk in at the door.
+    await worker.fetch(postRoom({ name: 'Theirs', code: 'their secret word', displayName: 'A' }));
+    const ip = { 'CF-Connecting-IP': '203.0.113.20' };
+    for (let i = 0; i < 10; i++) {
+      const res = await worker.fetch(
+        postRoom({ name: 'Mine', code: 'their secret word', displayName: 'B' }, ip),
+      );
+      expect(res.status).toBe(409);
+    }
+    const locked = await worker.fetch(
+      postRoom({ name: 'Mine', code: 'their secret word', displayName: 'B' }, ip),
+    );
+    expect(locked.status).toBe(429);
+    expect(((await locked.json()) as { error: string }).error).toBe('too_many_attempts');
+    // And the door itself is shut to him too: one bucket for every guess.
+    expect(
+      (await worker.fetch(postJoin({ code: 'their secret word', displayName: 'B' }, ip))).status,
+    ).toBe(429);
+  });
+
   describe('and whose switches they are', () => {
     it('lets the creator change what the room has open, and nobody else', async () => {
       const made = await worker.fetch(
@@ -203,6 +225,26 @@ describe('opening a room', () => {
         body: JSON.stringify({ code: 'already spoken for' }),
       });
       expect(res.status).toBe(409);
+    });
+
+    it('counts every word he tries, taken or not', async () => {
+      // A room of his own is three clicks away, so changing its word must not
+      // be a free way to ask whether any other room has a given one.
+      const ip = { 'CF-Connecting-IP': '203.0.113.21' };
+      const mine = cookieFrom(
+        await worker.fetch(postRoom({ name: 'Mine', code: 'my own word', displayName: 'B' }, ip)),
+      );
+      const word = (code: string) =>
+        worker.fetch('https://dads.test/api/rooms/word', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Cookie: mine, ...ip },
+          body: JSON.stringify({ code }),
+        });
+      // Opening the room was one word already.
+      for (let i = 1; i < 10; i++) expect((await word(`guess number ${i}`)).status).toBe(200);
+      const locked = await word('guess number ten');
+      expect(locked.status).toBe(429);
+      expect(((await locked.json()) as { error: string }).error).toBe('too_many_attempts');
     });
 
     it('kills the invite links that were out when the word changes', async () => {

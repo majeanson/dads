@@ -64,6 +64,26 @@ weakening `sessionSecret()`.
   browser rejoin as the same member if the cookie is gone.
 - Failed joins are throttled per IP in `join_attempts` (10 per 10 minutes).
   A success clears the bucket. Only the IP's HMAC is stored.
+  **Changed 2026-09-30**, from a security read of the public repo: once
+  anybody could open a room, "a success clears the bucket" meant nine
+  guesses at the dads' word, one correct join to a room of his own, and nine
+  more, for ever. And `code_taken` at opening a room (and at changing a
+  room's word, which any creator can do) answered "is this some room's
+  word?" after one indexed lookup, throttled by nothing — a free oracle for
+  the door. Now nothing clears the bucket (it runs out with its window), and
+  every word tried at those two routes counts against the same bucket,
+  checked before the lookup; changing a word counts even when it is free,
+  because that route has no other limit. The same read found: writes and the
+  socket took any Origin, and SameSite=Lax sends the cookie from every
+  `*.marcportal.com` (jaffre among them) — now a foreign Origin is 403; the
+  Worker only SET `X-Dads-Face`/`-Night` when the session had one, so a
+  client's own passed through and could arm a night — now every `X-Dads-*`
+  is deleted first; the first table code was the bare slug, findable from
+  any invite preview — now it carries the same random suffix a new table
+  does; and a room name with a line break became extra lines in the `.ics`.
+  The e2e workflow's `branches: [main]` on `workflow_run` matched a fork's
+  branch named main; it now also wants a push to this repository, and both
+  workflows run with `contents: read`.
 - `scripts/create-group.ts` is the only way a group comes to exist, and
   `--rotate` is how a code changes. Rotating UPDATEs the hash and salt in
   place: the members, the archive and the board are the group's history and

@@ -7,6 +7,7 @@ import { depart } from '../depart';
 import { clearedIdentityCookie } from '../identity';
 import { currentSession, type Session } from './auth';
 import { MAX_CODE_LENGTH, MIN_CODE_LENGTH } from './create';
+import { checkJoinThrottle, recordJoinFailure } from '../throttle';
 
 /**
  * PUT /api/rooms — what this group has open.
@@ -145,6 +146,18 @@ export async function putWord(
   if ([...code].length > MAX_CODE_LENGTH) {
     return Response.json({ error: 'code_too_long' }, { status: 400 });
   }
+
+  // Anybody can own a room, so "taken" here would answer guesses at every
+  // other room's word as fast as he could type them. Every word tried counts
+  // against the door's bucket, like opening a room.
+  const guesses = await checkJoinThrottle(env, request, isProduction);
+  if (!guesses.allowed) {
+    return Response.json(
+      { error: 'too_many_attempts', retryAfterSeconds: guesses.retryAfterSeconds },
+      { status: 429, headers: { 'Retry-After': String(guesses.retryAfterSeconds) } },
+    );
+  }
+  await recordJoinFailure(env, request, isProduction);
 
   const secret = sessionSecret(env, isProduction);
   const lookup = await inviteCodeLookup(secret, code);

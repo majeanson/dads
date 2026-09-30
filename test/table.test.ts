@@ -290,25 +290,26 @@ describe('GET /api/table', () => {
     const first = (await (
       await worker.fetch('https://dads.test/api/table', { headers: { Cookie: cookie } })
     ).json()) as { code: string; embedUrl: string };
-    expect(first.code).toBe('the-dads');
+    // The room's name, and something nobody could guess from the name.
+    expect(first.code).toMatch(/^the-dads-[0-9a-f]{6}$/);
     expect(first.embedUrl).toContain('name=Marc');
 
     const stored = await env.DB.prepare('SELECT jaffre_room_code FROM groups WHERE id = ?')
       .bind(group.id)
       .first<{ jaffre_room_code: string }>();
-    expect(stored?.jaffre_room_code).toBe('the-dads');
+    expect(stored?.jaffre_room_code).toBe(first.code);
 
     // Renaming the group must not move the table.
     await env.DB.prepare('UPDATE groups SET slug = ? WHERE id = ?')
       .bind('renamed-lot', group.id)
       .run();
-    expect(await tableCodeFor(env, { id: group.id, slug: 'renamed-lot' })).toBe('the-dads');
+    expect(await tableCodeFor(env, { id: group.id, slug: 'renamed-lot' })).toBe(first.code);
   });
 
   it('gives each group its own table', async () => {
     const other = await seedGroup({ slug: 'other-dads' });
-    expect(await tableCodeFor(env, other)).toBe('other-dads');
-    expect(await tableCodeFor(env, group)).toBe('the-dads');
+    expect(await tableCodeFor(env, other)).toMatch(/^other-dads-[0-9a-f]{6}$/);
+    expect(await tableCodeFor(env, group)).toMatch(/^the-dads-[0-9a-f]{6}$/);
   });
 });
 
@@ -338,13 +339,14 @@ describe('POST /api/table/new', () => {
     const marc = await enter(group, 'Marc');
     const sam = await enter(group, 'Sam');
     open.push(marc, sam);
-    expect(await tableCodeFor(env, group)).toBe('the-dads');
+    const before = await tableCodeFor(env, group);
 
     // Any dad, not only the one who owns the room's switches.
     const res = await post(sam.cookie);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { code: string; embedUrl: string };
     expect(body.code).toMatch(/^the-dads-[0-9a-f]{6}$/);
+    expect(body.code).not.toBe(before);
     expect(body.embedUrl).toContain(`#room/${body.code}`);
     expect(body.embedUrl).toContain('name=Sam');
 
@@ -360,12 +362,13 @@ describe('POST /api/table/new', () => {
   });
 
   it('has nothing to replace in a room with the table switched off', async () => {
+    const before = await tableCodeFor(env, group);
     await env.DB.prepare('UPDATE groups SET table_on = 0 WHERE id = ?').bind(group.id).run();
     const cookie = cookieFrom(
       await worker.fetch(postJoin({ code: group.code, displayName: 'Marc' })),
     );
     expect((await post(cookie)).status).toBe(404);
-    expect(await tableCodeFor(env, group)).toBe('the-dads');
+    expect(await tableCodeFor(env, group)).toBe(before);
   });
 });
 

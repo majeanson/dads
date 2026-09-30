@@ -94,6 +94,7 @@ export type CreateError =
   | 'missing_name'
   | 'name_too_long'
   | 'too_many_rooms'
+  | 'too_many_attempts'
   | 'unknown';
 
 /**
@@ -145,7 +146,8 @@ export async function createInvite(lang: 'en' | 'fr'): Promise<{ url: string; ex
 }
 
 /** What can go wrong changing a room's word. */
-export type WordError = 'code_too_short' | 'code_too_long' | 'code_taken' | 'not_yours' | 'unknown';
+export type WordError =
+  'code_too_short' | 'code_too_long' | 'code_taken' | 'not_yours' | 'too_many_attempts' | 'unknown';
 
 /**
  * Change the word that opens this room. The creator's, like the switches.

@@ -35,6 +35,10 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
+    if (crossOrigin(request, url, isProduction(env))) {
+      return new Response('forbidden', { status: 403 });
+    }
+
     if (url.pathname.startsWith('/api/')) {
       return handleApi(request, env, url);
     }
@@ -62,6 +66,25 @@ export default {
  */
 function isProduction(env: Env): boolean {
   return env.ENVIRONMENT === 'production';
+}
+
+/**
+ * A write, or the socket, asked for by another site's page. SameSite=Lax
+ * keeps the cookie from other SITES, but every *.marcportal.com is the same
+ * site, so a script loose on a sibling (jaffre, say) would otherwise ride a
+ * dad's cookie into the room. Compared with the request's own origin, so
+ * workers.dev keeps working, and anything on localhost outside production:
+ * `dev:web` is a page on Vite's port proxied to wrangler's. No Origin at all
+ * is not a browser page — a script, a test's request context — and has no
+ * dad's cookie to borrow.
+ */
+function crossOrigin(request: Request, url: URL, production: boolean): boolean {
+  const origin = request.headers.get('Origin');
+  if (origin === null || origin === url.origin) return false;
+  if (!production && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return false;
+  const socket = url.pathname === '/ws' || url.pathname.startsWith('/ws/');
+  const write = request.method !== 'GET' && request.method !== 'HEAD';
+  return socket || (write && url.pathname.startsWith('/api/'));
 }
 
 async function handleApi(request: Request, env: Env, url: URL): Promise<Response> {
@@ -262,6 +285,9 @@ async function handleWs(
   // reach it. The cookie itself is stripped: the DO has no use for it.
   const headers = new Headers(request.headers);
   headers.delete('Cookie');
+  // Whatever the client sent under these names goes first: two of them are
+  // only set when the session has one, and the DO believes what it is told.
+  for (const name of Object.values(IDENTITY_HEADERS)) headers.delete(name);
   headers.set(IDENTITY_HEADERS.groupId, session.group.id);
   headers.set(IDENTITY_HEADERS.memberId, session.member.id);
   headers.set(IDENTITY_HEADERS.name, session.member.displayName);

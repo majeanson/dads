@@ -16,13 +16,23 @@ on:
     - cron: '0 7 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   e2e:
     # Only when the CI that triggered it actually passed. A scheduled or
     # manual run has no upstream conclusion, so it always goes.
+    #
+    # And only for a push to THIS repository: `branches: [main]` matches a
+    # branch's name, and a fork's pull request can come from a branch called
+    # main. This job checks out and runs whatever that commit is.
     if: >
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
+      github.event_name != 'workflow_run' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

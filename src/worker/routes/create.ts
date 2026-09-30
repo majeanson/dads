@@ -2,7 +2,7 @@ import { hashDeviceToken, hashInviteCode, inviteCodeLookup, randomToken } from '
 import type { Env } from '../env';
 import { sessionSecret } from '../env';
 import { identityCookie, newId, signIdentity } from '../identity';
-import { checkRoomLimit, recordRoomMade } from '../throttle';
+import { checkJoinThrottle, checkRoomLimit, recordJoinFailure, recordRoomMade } from '../throttle';
 import { MAX_NAME_LENGTH, type Session } from './auth';
 
 /**
@@ -93,6 +93,17 @@ export async function postRoom(
       { status: 429 },
     );
   }
+
+  // "Taken" tells a stranger some room has that word, so the word is a guess
+  // here as much as at the door: throttled and counted before it is looked up.
+  const guesses = await checkJoinThrottle(env, request, isProduction);
+  if (!guesses.allowed) {
+    return Response.json(
+      { error: 'too_many_attempts', retryAfterSeconds: guesses.retryAfterSeconds },
+      { status: 429, headers: { 'Retry-After': String(guesses.retryAfterSeconds) } },
+    );
+  }
+  await recordJoinFailure(env, request, isProduction);
 
   const secret = sessionSecret(env, isProduction);
   const lookup = await inviteCodeLookup(secret, code);

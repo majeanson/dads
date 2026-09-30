@@ -12,6 +12,7 @@ const WORD_ERRORS: Record<WordError, Key> = {
   code_too_long: 'set.word_long',
   code_taken: 'set.word_taken',
   not_yours: 'set.word_failed',
+  too_many_attempts: 'new.too_many_words',
   unknown: 'set.word_failed',
 };
 
