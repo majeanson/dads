@@ -136,10 +136,10 @@ On 2026-09-25 every screen was walked at 390×667 in English, French and dark
 by a headless phone and read off contact sheets — not a hand on a real one,
 but the pass that found the night sheet's wrapped answers and the creator's
 Settings running off the bottom. The afternoon's redesign was checked the same
-way. What a real thumb still owes: the splash and the glasses on a real
-screen, the voice note's length on an iPhone, and the new look — the speech
-bubble, the leaves, the segmented controls — in a hand rather than a
-headless browser.
+way. By 2026-09-30 a real thumb had been over what that pass could not
+answer: the splash and the glasses on a real screen, the voice note's length
+on an iPhone, and the new look — the speech bubble, the leaves, the
+segmented controls — in a hand rather than a headless browser.
 
 ## After the review, 2026-09-25
 
@@ -193,6 +193,45 @@ Tuesday. The rules are in CLAUDE.md, and the reasoning is in
   from "Your rooms". Gone is a mark, not a delete: his lines, marks and weeks
   stay under his name. The creator hands the room on before leaving it. Not
   yet tried on a real phone.
+
+## 2026-09-30
+
+**A security read of the public repo**, as a stranger would read it, found
+seven things. All are fixed, and the reasoning is in
+[docs/decisions.md](docs/decisions.md) under Identity model.
+
+1. **Opening a room answered "that word is taken"** after one lookup, with no
+   limit — a way to test guesses at any room's word for free. Every word
+   tried there now counts against the same ten-in-ten-minutes as the door.
+2. **Changing a room's word did the same**, and counts the same way now.
+3. **A successful join reset the guess limit**, so anybody with a room of
+   his own could guess nine times, let himself in, and start again. Nothing
+   resets it now; it runs out with its window.
+4. **Another site could write as a logged-in dad.** The cookie is sent from
+   every `*.marcportal.com`, jaffre included. A write or a socket from any
+   other origin is refused now.
+5. **A browser could forge the Worker's own headers** about the night and
+   the face, and a forged night could set off the room's reminders. The
+   Worker throws away every such header a browser sends before adding its
+   own.
+6. **The first table's code was the room's slug**, which any invite preview
+   gives away. It gets the same random ending a new table does.
+7. **A room name with a line break wrote extra lines into the calendar
+   file.** It is escaped now.
+
+The nightly e2e could also have been started by a fork's branch named
+`main`; it now wants a push to this repository, and both workflows can only
+read it.
+
+**Tooling.** Lint now catches a promise nobody waits for and the two classic
+hook mistakes. CI regenerates the Worker's generated types and fails if they
+have drifted. Dependabot opens one grouped PR a month for npm and one for
+GitHub Actions; CI decides whether a major can go. A tidy pass removed
+exports nothing read, and `prod/` and the Playwright configs are typechecked
+and linted with the rest.
+
+**Production.** 3 dads, 9 lines in all, 1 RSVP, and nothing since the week
+of 09-21. Too early to read anything into; look again in mid-October.
 
 ## The last review
 
