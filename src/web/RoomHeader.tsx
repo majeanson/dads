@@ -1,5 +1,6 @@
 import {
   CalendarClock,
+  CircleHelp,
   ChevronLeft,
   Menu as MenuIcon,
   Settings as SettingsIcon,
@@ -18,7 +19,8 @@ import { Button } from './ui/Button';
  *
  * On HOME it is the group's name and the head-count, and Settings in the
  * corner (2026-09-25) — the one thing a dad sets from home, and the way to
- * bring somebody in. Everything else is behind the conversation's Menu, and
+ * bring somebody in. Beside it, "what this is" (2026-09-30), for a man who
+ * was handed a link. Everything else is behind the conversation's Menu, and
  * the call is joined from there too.
  *
  * In the CONVERSATION it is the room's name (2026-09-23), with the faces of
@@ -46,6 +48,7 @@ export function RoomHeader({
   onNight,
   onMenu,
   onSettings,
+  onAbout,
   onJoinCall,
 }: {
   groupName: string;
@@ -66,6 +69,7 @@ export function RoomHeader({
   onNight: () => void;
   onMenu: () => void;
   onSettings: () => void;
+  onAbout: () => void;
   onJoinCall: () => void;
 }) {
   const { t } = useT();
@@ -222,6 +226,18 @@ export function RoomHeader({
           on a phone keeps it. */}
       {slim ? null : (
         <span className="head-actions">
+          {/* What this is, for a man who was handed a link and wonders. */}
+          <Button
+            size="icon"
+            look="quiet"
+            onClick={onAbout}
+            aria-label={t('about.open')}
+            className="rounded-full!"
+            data-testid="home-about"
+          >
+            <CircleHelp size={22} aria-hidden="true" />
+            <span className="sr-only">{t('about.open')}</span>
+          </Button>
           <Button
             size="icon"
             look="quiet"

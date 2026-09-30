@@ -1182,6 +1182,15 @@ secret, custom domain bound by the route in wrangler.toml.
 - e2e: `talk(page)` (`e2e/talk.ts`, and `prod/names.ts`) steps into the
   conversation and is idempotent, because these suites walk through screens
   and it must not matter which one the last step left him on.
+- **"What this is"** (2026-09-30). Before showing the app to people who have
+  never heard of it, the door's line ("somewhere to talk about it, and a table
+  to sit at while you do") said what it had, not what it was for, and a dad
+  who followed an invite link saw only "you've been asked in". The door now
+  says it in one line to everybody, the invited included: a few of us dads,
+  one night together, and a chat for the days in between. Home repeats it
+  behind a "?" beside Settings, with the one instruction that matters: say if
+  you're coming. It was asked for shorter, in a dad's words rather than a
+  product's; it is two lines on purpose, and home's one question is untouched.
 
 ## A room of your own
 

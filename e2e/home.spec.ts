@@ -61,6 +61,26 @@ test('the app opens on home, and the conversation is one tap away', async ({ bro
   await marc.context().close();
 });
 
+test('the door and home both say what this is', async ({ browser }) => {
+  // A man handed a link should not have to join to find out what he is
+  // joining, nor guess once he is in.
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('/');
+  await expect(page.getByTestId('door-lede')).toContainText('one night together');
+  await context.close();
+
+  const marc = await comeIn(browser, 'Curious');
+  await marc.getByRole('button', { name: 'What this is', exact: true }).click();
+  const about = marc.getByRole('dialog');
+  await expect(about).toContainText('one night together');
+  await expect(about).toContainText('Say if you’re coming');
+  await about.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(marc.getByTestId('home')).toBeVisible();
+
+  await marc.context().close();
+});
+
 test('home says when the night is, and takes his answer', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
 

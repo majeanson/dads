@@ -388,7 +388,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - **Home is the card, the door, and Settings in the corner**
   (`home-settings`). **The invite lives inside Settings** (`settings-invite`).
   Everything else is behind the conversation's Menu. There is no Dad night
-  row; the card IS the night (`dad-night`).
+  row; the card IS the night (`dad-night`). Beside Settings, "What this is"
+  (`home-about`): two lines, the door's own sentence and "say if you're
+  coming". Keep it that short.
 - e2e helpers (`e2e/talk.ts`, mirrored in `prod/names.ts`): `talk`, `home`,
   `menu`, `settings`, `invite`, `night` — idempotent.
 - The card is the one place with `--radius-card`/`--radius-control`, on

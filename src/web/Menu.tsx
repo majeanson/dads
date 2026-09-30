@@ -13,7 +13,16 @@ import { Button } from './ui/Button';
 
 /** What is open over the room, if anything. */
 export type SheetName =
-  'menu' | 'here' | 'prompts' | 'board' | 'night' | 'find' | 'invite' | 'rooms' | 'settings';
+  | 'menu'
+  | 'here'
+  | 'prompts'
+  | 'board'
+  | 'night'
+  | 'find'
+  | 'invite'
+  | 'rooms'
+  | 'settings'
+  | 'about';
 
 /**
  * One shape for every row in the menu.

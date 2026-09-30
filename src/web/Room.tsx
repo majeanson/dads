@@ -363,6 +363,7 @@ export function Room({
           onNight={() => setSheet('night')}
           onMenu={() => setSheet('menu')}
           onSettings={() => setSheet('settings')}
+          onAbout={() => setSheet('about')}
           onJoinCall={() => void call.join()}
         />
 

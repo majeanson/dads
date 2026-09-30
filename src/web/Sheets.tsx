@@ -274,6 +274,20 @@ export function Sheets({
     );
   }
 
+  // Two lines, in a dad's words, for a man who was handed a link and
+  // wonders what he has joined. Short on purpose: the app explains itself by
+  // being used, and the night is the thing to answer.
+  if (open === 'about') {
+    return (
+      <Sheet title={t('about.title')} onClose={close}>
+        <div className="grid gap-4 text-[1.0625rem]" data-testid="about">
+          <p className="m-0">{t('join.lede')}</p>
+          <p className="m-0">{t('about.main')}</p>
+        </div>
+      </Sheet>
+    );
+  }
+
   if (open === 'invite') {
     return (
       <Sheet title={t('inv.title')} pose={Send} onClose={close}>

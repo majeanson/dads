@@ -101,8 +101,11 @@ export function JoinScreen({
             <DoorMark />
             <h1 className="display m-0 text-5xl">dads</h1>
           </div>
-          <p className="mt-2 mb-8 text-[1.0625rem] text-muted">
-            {invite ? t('join.invited') : t('join.lede')}
+          {/* What this is, in one line, for everybody at the door: a man
+              who followed a link has been asked in, but not told to what. */}
+          <p className="mt-2 mb-8 text-[1.0625rem] text-muted" data-testid="door-lede">
+            {t('join.lede')}
+            {invite ? ` ${t('join.invited')}` : null}
           </p>
           {/* Said once, here: he was in a room a moment ago and now he is at
               the door, and the screen should not leave him guessing why. */}

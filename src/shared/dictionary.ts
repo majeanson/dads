@@ -5,7 +5,10 @@ export type Lang = 'en' | 'fr';
 
 const EN = {
   // ------------------------------------------------------------ the door
-  'join.lede': 'Somewhere to talk about it, and a table to sit at while you do.',
+  'join.lede': 'A few of us dads, one night together, and a chat for the days in between.',
+  'about.open': 'What this is',
+  'about.title': 'What this is',
+  'about.main': 'Say if you’re coming. That’s the main thing.',
   'join.out': 'You’re no longer in {room}.',
   'join.code': 'Code',
   'join.name': 'Your name',
@@ -462,7 +465,10 @@ export type Key = keyof typeof EN;
 
 const FR: Record<Key, string> = {
   // ------------------------------------------------------------ la porte
-  'join.lede': 'Une place pour en parler, et une table pour jouer pendant ce temps-là.',
+  'join.lede': 'Une gang de pères, une soirée ensemble, pis une place pour jaser entre les deux.',
+  'about.open': 'C’est quoi, ça',
+  'about.title': 'C’est quoi, ça?',
+  'about.main': 'Dis si tu viens. C’est ça, l’important.',
   'join.out': 'T’es plus dans {room}.',
   'join.code': 'Code',
   'join.name': 'Ton nom',
