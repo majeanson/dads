@@ -1186,11 +1186,13 @@ secret, custom domain bound by the route in wrangler.toml.
   never heard of it, the door's line ("somewhere to talk about it, and a table
   to sit at while you do") said what it had, not what it was for, and a dad
   who followed an invite link saw only "you've been asked in". The door now
-  says it in one line to everybody, the invited included: a few of us dads,
+  says it in one line to everybody, the invited included: a few dads,
   one night together, and a chat for the days in between. Home repeats it
   behind a "?" beside Settings, with the one instruction that matters: say if
   you're coming. It was asked for shorter, in a dad's words rather than a
   product's; it is two lines on purpose, and home's one question is untouched.
+  Not "a few of us dads": a stranger opening his own room read that as
+  somebody else's club. Still dads, on purpose; the app is about being one.
 
 ## A room of your own
 

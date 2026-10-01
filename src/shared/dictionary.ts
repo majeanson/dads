@@ -5,7 +5,7 @@ export type Lang = 'en' | 'fr';
 
 const EN = {
   // ------------------------------------------------------------ the door
-  'join.lede': 'A few of us dads, one night together, and a chat for the days in between.',
+  'join.lede': 'A few dads, one night together, and a chat for the days in between.',
   'about.open': 'What this is',
   'about.title': 'What this is',
   'about.main': 'Say if you’re coming. That’s the main thing.',
