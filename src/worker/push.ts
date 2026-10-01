@@ -262,6 +262,29 @@ export async function notifyGroup(env: Env, groupId: string, payload: PushPayloa
   );
 }
 
+/** Every dad in a group but the ones named: the man who started something
+ * does not need telling that he did. */
+export async function notifyGroupExcept(
+  env: Env,
+  groupId: string,
+  except: string[],
+  payload: PushPayload,
+): Promise<void> {
+  await notify(env, subscribersExcept(env, groupId, except), payload);
+}
+
+/** Exported for its test: the one place the exclusion is written. */
+export function subscribersExcept(
+  env: Env,
+  groupId: string,
+  except: string[],
+): D1PreparedStatement {
+  return env.DB.prepare(
+    `SELECT endpoint, p256dh, auth FROM push_subscriptions
+      WHERE group_id = ? AND member_id NOT IN (SELECT value FROM json_each(?))`,
+  ).bind(groupId, JSON.stringify(except));
+}
+
 /** One dad, every device he said yes on. For the things that are his alone. */
 export async function notifyMember(
   env: Env,

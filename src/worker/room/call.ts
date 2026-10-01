@@ -1,4 +1,5 @@
 import type { CallMember, ClientFrame } from '../../shared/protocol';
+import { tellTheOthers } from './live';
 import type { Room, SocketIdentity } from './room';
 
 /** Who has a microphone in the room, deduped by dad. The same exclusion as
@@ -34,12 +35,15 @@ export function hangUp(room: Room, who: SocketIdentity, except?: WebSocket): voi
 }
 
 /** He joined the call, left it, or muted. */
-export function onCall(
+export async function onCall(
   room: Room,
   ws: WebSocket,
   who: SocketIdentity,
   frame: Extract<ClientFrame, { t: 'call' }>,
-): void {
+): Promise<void> {
+  // Read before his own socket joins it: a mute is a call frame too, and so
+  // is picking up on a second phone while the first is already on.
+  const pickedUp = frame.join && who.inCall !== true && callRoster(room, ws).length === 0;
   // The attachment is the only record, so it must be rewritten whole.
   ws.serializeAttachment({
     ...who,
@@ -48,6 +52,14 @@ export function onCall(
   } satisfies SocketIdentity);
   broadcastCallRoster(room);
   if (!frame.join) hangUp(room, who, ws);
+  // A dad alone on the call is waiting for somebody: that is the moment.
+  if (pickedUp) {
+    await tellTheOthers(room, 'call', [who.memberId], {
+      title: 'dads',
+      body: `${who.name}’s on a call. Come talk.`,
+      tag: 'live-call',
+    });
+  }
 }
 
 /** Relayed verbatim to one dad, with the sender named by the room rather

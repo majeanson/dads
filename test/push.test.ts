@@ -1,6 +1,6 @@
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { dadNightReminder, RSVP_ACTIONS } from '../src/worker/push';
+import { dadNightReminder, RSVP_ACTIONS, subscribersExcept } from '../src/worker/push';
 import { acceptableEndpoint } from '../src/worker/routes/push';
 import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
 
@@ -99,6 +99,42 @@ describe('push', () => {
     expect(payload.actions?.map((a) => a.action)).toEqual([RSVP_ACTIONS.in, RSVP_ACTIONS.out]);
     // sw.js matches these two strings by hand; a rename here has to reach it.
     expect(RSVP_ACTIONS).toEqual({ in: 'rsvp-in', out: 'rsvp-out' });
+  });
+
+  it('tells everybody in the room but the man who started it', async () => {
+    await cookieFor('Marc');
+    await cookieFor('Sam');
+    await cookieFor('Luc');
+    const ids = new Map(
+      (
+        await env.DB.prepare('SELECT id, display_name FROM members WHERE group_id = ?')
+          .bind(group.id)
+          .all<{ id: string; display_name: string }>()
+      ).results.map((m) => [m.display_name, m.id]),
+    );
+    // Marc on two phones, Sam on one, Luc never said yes.
+    for (const [endpoint, who] of [
+      ['https://fcm.googleapis.com/fcm/send/marc-1', 'Marc'],
+      ['https://fcm.googleapis.com/fcm/send/marc-2', 'Marc'],
+      ['https://fcm.googleapis.com/fcm/send/sam-1', 'Sam'],
+    ] as const) {
+      await env.DB.prepare(
+        `INSERT INTO push_subscriptions (endpoint, group_id, member_id, p256dh, auth, created_at)
+         VALUES (?, ?, ?, 'k', 'a', 0)`,
+      )
+        .bind(endpoint, group.id, ids.get(who))
+        .run();
+    }
+    const endpoints = async (except: string[]) =>
+      (await subscribersExcept(env, group.id, except).all<{ endpoint: string }>()).results
+        .map((r) => r.endpoint)
+        .sort();
+
+    expect(await endpoints([ids.get('Marc')!])).toEqual([
+      'https://fcm.googleapis.com/fcm/send/sam-1',
+    ]);
+    expect(await endpoints([ids.get('Marc')!, ids.get('Sam')!])).toEqual([]);
+    expect(await endpoints([])).toHaveLength(3);
   });
 
   it('refuses an endpoint that is not a push service', async () => {

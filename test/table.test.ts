@@ -1,3 +1,4 @@
+import { runInDurableObject } from 'cloudflare:test';
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -472,5 +473,99 @@ describe('table events reaching the room', () => {
       .bind(group.id)
       .first<{ n: number }>();
     expect(rows?.n).toBe(0);
+  });
+});
+
+describe('telling the others something is on', () => {
+  /*
+   * A dad picking up the call, or sitting down at the table, pushes to the
+   * phones that took the night's reminders — the first one only, then
+   * nothing of that kind for half an hour. The tests have no VAPID keys, so
+   * nothing is sent; what they read is the stamp the room claims before it
+   * sends, which is the whole of the decision.
+   */
+  let group: SeededGroup;
+  const open: Dad[] = [];
+
+  beforeEach(async () => {
+    await resetTables();
+    group = await seedGroup();
+  });
+  afterEach(async () => {
+    open.splice(0).forEach((d) => d.close());
+    await settle();
+  });
+
+  const stub = () => env.ROOM.get(env.ROOM.idFromName(group.id));
+  const stamp = (kind: 'call' | 'table') =>
+    runInDurableObject(stub(), (_instance, state) =>
+      state.storage.sql
+        .exec<{ value: string }>('SELECT value FROM meta WHERE key = ?', `live_${kind}`)
+        .toArray()
+        .map((r) => Number(r.value)),
+    );
+  const forget = (kind: 'call' | 'table') =>
+    runInDurableObject(stub(), (_instance, state) => {
+      state.storage.sql.exec('DELETE FROM meta WHERE key = ?', `live_${kind}`);
+    });
+  let said = 0;
+  /** `sentinel`, but good more than once on one socket. */
+  const handled = async (dad: Dad) => {
+    const body = `handled-${String(++said).padStart(2, '0')}`;
+    dad.ws.send(JSON.stringify({ t: 'chat', body }));
+    await until(() => dad.lines().includes(body));
+  };
+  const call = (dad: Dad, join: boolean, muted = false) =>
+    dad.ws.send(JSON.stringify({ t: 'call', join, muted }));
+
+  it('speaks when a dad sits down, not when a stranger does, and once', async () => {
+    const marc = await enter(group, 'Marc');
+    const sam = await enter(group, 'Sam');
+    open.push(marc, sam);
+
+    // A guest at the table is nobody here.
+    marc.table({ v: 1, t: 'seated', name: 'Guest' });
+    await handled(marc);
+    expect(await stamp('table')).toEqual([]);
+
+    // Every framed dad relays the same arrival: one claim.
+    marc.table({ v: 1, t: 'seated', name: 'Sam' });
+    sam.table({ v: 1, t: 'seated', name: 'Sam' });
+    await handled(marc);
+    await handled(sam);
+    const [first] = await stamp('table');
+    expect(first).toBeGreaterThan(0);
+
+    // The next dad down inside the half hour is the same evening.
+    marc.table({ v: 1, t: 'seated', name: 'Marc' });
+    await handled(marc);
+    expect(await stamp('table')).toEqual([first]);
+  });
+
+  it('speaks when the call goes from nobody to somebody, and only then', async () => {
+    const marc = await enter(group, 'Marc');
+    const sam = await enter(group, 'Sam');
+    open.push(marc, sam);
+
+    call(marc, true);
+    await handled(marc);
+    expect(await stamp('call')).toHaveLength(1);
+    await forget('call');
+
+    // Joining a call somebody is already on, or muting, invites nobody.
+    call(sam, true);
+    call(marc, true, true);
+    await handled(sam);
+    await handled(marc);
+    expect(await stamp('call')).toEqual([]);
+
+    // Everybody off, and a dad picks it up again: that is a new call.
+    call(marc, false);
+    call(sam, false);
+    await handled(marc);
+    await handled(sam);
+    call(sam, true);
+    await handled(sam);
+    expect(await stamp('call')).toHaveLength(1);
   });
 });

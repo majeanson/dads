@@ -1736,6 +1736,26 @@ neither see nor scroll anything.
   "not now" is nagging; storage that refuses means never asking. Its e2e stubs
   `/api/push` and `Notification.permission`, since local has no VAPID keys and
   headless Chromium reports notifications `denied` whatever is granted.
+- **"Something's on" (2026-10-01).** A push used to reach a phone only for
+  the night (the day before, the start) and for his own turn at the table.
+  Nothing told a dad that the others were there right now, so a call or a game
+  started with one man in it and stayed that way. Pushes for every chat
+  line were offered and declined; what was chosen was the two moments a dad
+  could walk into: the first dad picking up the call (the call goes from
+  nobody to somebody — not a second dad joining, not a mute, not his second
+  phone) and a dad sitting down at the table (jaffre's `seated`, which it
+  sends only for a human arriving after the frame connected, never for the
+  table the frame found). It goes to the same subscription as the reminders —
+  no second switch on a Settings screen that already fills a 667px phone — so
+  the switch's words widened from "when it opens" to "when something's on".
+  Everybody subscribed hears it but the dad who started it; a guest nobody
+  here knows starts nothing. Then nothing of that kind for 30 minutes per
+  room, stamped in the object's `meta` before the first await: every framed
+  dad relays the same `seated`, and a call that drops and comes back is one
+  invitation. The stamp is storage rather than `room.memory` because an
+  eviction between two relays would otherwise push twice. The tests read the
+  stamp, since tests have no VAPID keys and send nothing; the exclusion is one
+  query (`subscribersExcept`) with a test of its own.
 
 ## Small things that turned out to matter
 

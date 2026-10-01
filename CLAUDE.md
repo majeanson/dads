@@ -576,6 +576,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - **Home offers the reminder once per phone** (`RemindOffer`), right after an
   answer that is not "Can't", in the place of the night's quiet row. Yes or
   "not now" sets `dads.remind.asked`; it is Settings' same subscription.
+- **"Something's on"** (`room/live.ts`): the first dad picking up the call
+  (nobody → somebody) and a dad sitting down at the table (`seated`) push to
+  that same subscription, everybody but him, then that kind is quiet for 30
+  minutes, stamped in the DO's `meta` before the first await.
 
 ## Small things that turned out to matter
 

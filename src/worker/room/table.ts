@@ -1,6 +1,7 @@
 import { tableName } from '../../shared/jaffre';
 import type { Champions, ClientFrame } from '../../shared/protocol';
 import { notifyMember } from '../push';
+import { tellTheOthers } from './live';
 import type { Room } from './room';
 
 /** A hand takes a minute or two; a nudge per hand is a nag. */
@@ -10,8 +11,8 @@ const TURN_NUDGE_EVERY_MS = 3 * 60_000;
 const CROWN_REPEAT_MS = 60_000;
 
 /**
- * A relayed table event. It still comes, and still does exactly one thing:
- * his turn has sat for twenty seconds, so his phone hears about it. What the
+ * A relayed table event. It still comes, and says nothing in the room: his
+ * turn has sat for twenty seconds, so his phone hears about it. What the
  * table is doing is on the table, which is on the screen beside this.
  */
 export async function onTable(
@@ -19,6 +20,8 @@ export async function onTable(
   frame: Extract<ClientFrame, { t: 'table' }>,
 ): Promise<void> {
   if (frame.event.t === 'turn') await nudgeTurn(room, frame.event.name);
+  // And (2026-10-01) a dad sitting down, while there are seats to fill.
+  if (frame.event.t === 'seated') await satDown(room, frame.event.name);
   // And one more (2026-09-24): a game that ends names who won it, and
   // they wear gold glasses until the next one does.
   if (frame.event.t === 'game-over' && frame.event.winners !== undefined) {
@@ -132,5 +135,34 @@ async function nudgeTurn(room: Room, name: string): Promise<void> {
     }
   } catch (err) {
     console.error('turn nudge failed', { name }, err);
+  }
+}
+
+/**
+ * A dad sat down at the table: tell the others while there are still seats.
+ *
+ * Jaffre says `seated` only for a human arriving after the frame connected,
+ * never for the table it found, so opening the table to look is not sitting
+ * down. A guest nobody here knows sends nobody anything; the dads who share
+ * his name are left out, since that is how the table knows him.
+ */
+async function satDown(room: Room, name: string): Promise<void> {
+  const groupId = room.groupId();
+  if (groupId === undefined) return;
+  try {
+    const { results } = await room.env.DB.prepare(
+      'SELECT id, display_name FROM members WHERE group_id = ? AND gone_at IS NULL',
+    )
+      .bind(groupId)
+      .all<{ id: string; display_name: string }>();
+    const him = results.filter((m) => tableName(m.display_name) === name).map((m) => m.id);
+    if (him.length === 0) return;
+    await tellTheOthers(room, 'table', him, {
+      title: 'dads',
+      body: `${name} sat down at the table.`,
+      tag: 'live-table',
+    });
+  } catch (err) {
+    console.error('table invitation failed', { name }, err);
   }
 }
