@@ -983,6 +983,30 @@ secret, custom domain bound by the route in wrangler.toml.
   in it, only their records.
 - `npx wrangler tail --format json` is how you find out what actually threw.
   The Worker's `[observability]` block is what makes those logs exist at all.
+- **The app reports its own failures (2026-10-01).** On 09-30 the room had
+  three dads, one of them opening it on a given day, and nobody to test with.
+  A room that small does not write in: a photo that never sent is a photo
+  sent by text instead. Workers Logs kept what the Worker threw for a few
+  days and nobody read them; nothing kept what a PHONE saw go wrong. So both
+  write to D1 `oops`, and `npm run oops` groups it by kind (`--all` for each
+  with its stack, `--days`, `--local`).
+  - Server: the Worker's `fetch` wraps everything (a bare 500 as before, now
+    written down); the DO's `noted()` wraps frames and the alarm and RETHROWS,
+    because a failed alarm is retried by the runtime and that is worth keeping.
+  - Phones: `window` errors and rejections, React's `onUncaughtError` /
+    `onCaughtError` (so a sheet that fails to load is heard), and by hand the
+    faults nothing threw for: the outbox giving up on a line, a refused frame
+    other than `gone`, a call pair going `failed`, a microphone that would not
+    open (NOT one he refused), an upload the server 500'd, `/api/me` failing.
+    Deduped per page, twenty per page.
+  - Open to the door, since a failed join is the report most worth having;
+    other origins are already refused. What stops a script is the hourly cap
+    (30 per dad, one bucket shared by everybody without a session), dropped
+    quietly. No foreign keys: a report must land even about a gone room.
+  - Never what a dad typed — no line, no name, no word. The user agent is
+    kept so an iPhone can be told from an Android.
+  - The Prove Room's own runs land here too; `npm run oops` prints the room's
+    name so they can be told apart.
 
 ## The call (voice and camera)
 

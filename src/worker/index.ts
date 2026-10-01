@@ -4,6 +4,7 @@ import { currentSession, join, leave, me } from './routes/auth';
 import { getBoard, putCheckIn, putCommitment, putCommitmentOutcome } from './routes/board';
 import { getNightIcs } from './routes/calendar';
 import { forget } from './routes/ops';
+import { described, postOops, recordOops } from './oops';
 import { getIce } from './routes/ice';
 import { createInvite } from './routes/invite';
 import { invitePage } from './routes/preview';
@@ -33,30 +34,52 @@ export { RoomDO } from './RoomDO';
  */
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
-
-    if (crossOrigin(request, url, isProduction(env))) {
-      return new Response('forbidden', { status: 403 });
+    try {
+      return await route(request, env, ctx);
+    } catch (err) {
+      // Anything a route did not see coming. The dad gets the same bare 500
+      // the runtime would have given him; the difference is that it is
+      // written down where somebody will read it.
+      const url = new URL(request.url);
+      ctx.waitUntil(
+        recordOops(env, {
+          side: 'worker',
+          what: `${request.method} ${url.pathname}`,
+          ...described(err),
+          agent: request.headers.get('User-Agent'),
+        }),
+      );
+      return url.pathname.startsWith('/api/')
+        ? Response.json({ error: 'internal' }, { status: 500 })
+        : new Response('internal error', { status: 500 });
     }
-
-    if (url.pathname.startsWith('/api/')) {
-      return handleApi(request, env, url);
-    }
-
-    if (url.pathname === '/ws' || url.pathname.startsWith('/ws/')) {
-      return handleWs(request, env, url, ctx);
-    }
-
-    // An invite link: the same page, with a preview a chat app can unfurl.
-    if (request.method === 'GET' && /^\/i\/[A-Za-z0-9_-]+$/.test(url.pathname)) {
-      return invitePage(request, env, url, isProduction(env));
-    }
-
-    // Headers for these come from public/_headers: the assets binding answers
-    // before this Worker runs, so they cannot be set here.
-    return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
+
+async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
+
+  if (crossOrigin(request, url, isProduction(env))) {
+    return new Response('forbidden', { status: 403 });
+  }
+
+  if (url.pathname.startsWith('/api/')) {
+    return handleApi(request, env, url);
+  }
+
+  if (url.pathname === '/ws' || url.pathname.startsWith('/ws/')) {
+    return handleWs(request, env, url, ctx);
+  }
+
+  // An invite link: the same page, with a preview a chat app can unfurl.
+  if (request.method === 'GET' && /^\/i\/[A-Za-z0-9_-]+$/.test(url.pathname)) {
+    return invitePage(request, env, url, isProduction(env));
+  }
+
+  // Headers for these come from public/_headers: the assets binding answers
+  // before this Worker runs, so they cannot be set here.
+  return env.ASSETS.fetch(request);
+}
 
 /**
  * Production is declared by a var in wrangler.toml, never inferred from the
@@ -131,6 +154,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'POST /api/leave':
       return leave(prod);
+
+    case 'POST /api/oops':
+      return postOops(request, env, prod);
 
     case 'POST /api/ops/forget':
       return forget(request, env);

@@ -1,4 +1,5 @@
 import type { Attachment } from '../shared/protocol';
+import { report } from './oops';
 
 /**
  * Getting a photo out of a pocket and into the room.
@@ -184,6 +185,7 @@ export async function upload(prepared: Prepared): Promise<UploadResult> {
   const res = await fetch('/api/media', { method: 'POST', headers, body: prepared.blob });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: 'too_large' | 'empty' };
+    if (body.error === undefined) report('web.upload', `HTTP ${res.status}`, prepared.blob.type);
     return { ok: false, error: body.error ?? 'unknown' };
   }
   const body = (await res.json()) as { media: Attachment; dropped: number };

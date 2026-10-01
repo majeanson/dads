@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchSession, leave as leaveApi, type Session } from './api';
+import { report } from './oops';
 
 type State =
   | { status: 'loading' }
@@ -18,6 +19,7 @@ export function useSession() {
         setState(session ? { status: 'in', session } : { status: 'out' });
       })
       .catch((err: unknown) => {
+        report('web.session', err);
         if (!cancelled) setState({ status: 'error', message: String(err) });
       });
     return () => {

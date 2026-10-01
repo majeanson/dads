@@ -20,6 +20,7 @@ import {
 import { IDENTITY_HEADERS, makeRoom, type Room, type SocketIdentity } from './room/room';
 import { rescheduleAlarm } from './room/schedule';
 import { initStorage } from './room/storage';
+import { described, recordOops } from './oops';
 import { champions, onTable } from './room/table';
 
 export { IDENTITY_HEADERS };
@@ -153,9 +154,17 @@ export class RoomDO extends DurableObject<Env> {
   // --------------------------------------------------------------- sockets
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
-    const room = this.room;
     const who = ws.deserializeAttachment() as SocketIdentity | null;
     if (!who) return;
+    return this.noted('room.frame', who.memberId, () => this.onFrame(ws, who, raw));
+  }
+
+  private async onFrame(
+    ws: WebSocket,
+    who: SocketIdentity,
+    raw: string | ArrayBuffer,
+  ): Promise<void> {
+    const room = this.room;
 
     const frame = parseClientFrame(raw);
     if (!frame) return room.sendTo(ws, { t: 'error', code: 'bad_frame' });
@@ -211,11 +220,41 @@ export class RoomDO extends DurableObject<Env> {
   // ----------------------------------------------------------------- alarm
 
   async alarm(): Promise<void> {
+    return this.noted('room.alarm', null, () => this.onAlarm());
+  }
+
+  private async onAlarm(): Promise<void> {
     const room = this.room;
     const now = Date.now();
     await leaveDue(room, now);
     await timersDue(room, now);
     ensureNightScheduled(room);
     await rescheduleAlarm(room);
+  }
+
+  // ------------------------------------------------------------- failures
+
+  /**
+   * Runs one event, and writes down what it threw before throwing it on. The
+   * throw still happens: an alarm that fails is retried by the runtime, and
+   * that is worth keeping. What changes is that somebody finds out.
+   */
+  private async noted(
+    what: string,
+    memberId: string | null,
+    run: () => Promise<void>,
+  ): Promise<void> {
+    try {
+      await run();
+    } catch (err) {
+      await recordOops(this.env, {
+        side: 'room',
+        what,
+        ...described(err),
+        groupId: this.room.groupId() ?? null,
+        memberId,
+      });
+      throw err;
+    }
   }
 }

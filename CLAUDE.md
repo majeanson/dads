@@ -364,6 +364,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - `npm run deploy` by hand; migrations first with `npm run migrate:remote`.
 - `npm run backup` writes every D1 table to `backups/` (not R2 blobs).
 - `npx wrangler tail --format json` shows what threw.
+- **The app reports its own failures** to D1 `oops` (0025); `npm run oops`
+  reads it. The Worker's top-level catch and the DO's `noted()` (records,
+  then rethrows) write `worker`/`room`; phones `POST /api/oops` (`report()` in
+  `src/web/oops.ts`), open to the door, 30 an hour per dad, 30 days kept.
+  **A report never carries what a dad typed.** Report a fault, not a choice
+  (a refused microphone, a `gone` echo, being offline are not reports).
 
 ## The call (voice and camera)
 

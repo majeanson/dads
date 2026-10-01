@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CallMember } from '../shared/protocol';
+import { report } from './oops';
 import { SpeakingWatch } from './speaking';
 import { useWakeLock } from './wakeLock';
 
@@ -193,6 +194,9 @@ export function useCall({
 
       pc.onconnectionstatechange = () => {
         if (pc.connectionState === 'failed') {
+          // Whether two kitchens ever hear each other is untested anywhere
+          // else; this is how a failed pair gets known about.
+          report('web.call', 'connection failed', `ice: ${pc.iceConnectionState}`);
           // A hiccup is not the end of the call. Restarting ICE fires
           // negotiationneeded again, so the pair re-forms itself; tearing the
           // connection down here would leave it dead for the rest of the
@@ -252,7 +256,9 @@ export function useCall({
     } catch (err) {
       // Refusing the microphone is a choice, not a fault; anything else is a
       // device that will not open.
-      setState((err as DOMException)?.name === 'NotAllowedError' ? 'denied' : 'failed');
+      const denied = (err as DOMException)?.name === 'NotAllowedError';
+      if (!denied) report('web.mic', err);
+      setState(denied ? 'denied' : 'failed');
       return;
     }
     setState('in');

@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { run } from './run';
+import { query } from './d1';
 
 /**
  * Everything in D1, in one file, on this machine.
@@ -36,49 +36,8 @@ const TABLES = [
   'reactions',
   'invites',
   'push_subscriptions',
+  'oops',
 ];
-
-interface D1Result {
-  results: Record<string, unknown>[];
-}
-
-/**
- * Three goes at each table. The first backup of 2026-09-16 failed outright
- * on a transient "account is not authorized [code: 7403]" from Cloudflare
- * and the second run succeeded; a cron that hits that once backs up nothing
- * that day and tells nobody.
- */
-function query(sql: string, remote: boolean): Record<string, unknown>[] {
-  let last: unknown;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      return queryOnce(sql, remote);
-    } catch (err) {
-      last = err;
-      console.error(`${sql}: attempt ${attempt + 1} failed, trying again`);
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
-    }
-  }
-  throw last;
-}
-
-function queryOnce(sql: string, remote: boolean): Record<string, unknown>[] {
-  const out = run('npx', [
-    'wrangler',
-    'd1',
-    'execute',
-    'dads',
-    remote ? '--remote' : '--local',
-    '--json',
-    '--command',
-    sql,
-  ]);
-  // wrangler prints the JSON array of statement results, sometimes after a
-  // banner. Take from the first bracket.
-  const json = out.slice(out.indexOf('['));
-  const parsed = JSON.parse(json) as D1Result[];
-  return parsed[0]?.results ?? [];
-}
 
 const remote = !process.argv.includes('--local');
 const day = new Date().toISOString().slice(0, 10);

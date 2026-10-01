@@ -3,6 +3,7 @@ import type { DadNight } from '../shared/dadNight';
 import type { CallMember, RoomsOpen } from '../shared/protocol';
 import type { TableEvent } from '../shared/jaffre';
 import type { Champions, RoomMessage, RosterEntry, ServerFrame } from '../shared/protocol';
+import { report } from './oops';
 
 export type Connection = 'connecting' | 'open' | 'reconnecting';
 
@@ -230,7 +231,13 @@ export function useRoom(
           if (stuck) {
             if (stuck.tries >= MAX_TRIES) {
               // The room is not going to take this one. Dropping it beats
-              // re-sending it for the rest of the evening.
+              // re-sending it for the rest of the evening. A line a dad wrote
+              // that never arrived is the fault most worth hearing about.
+              report(
+                'web.outbox',
+                `gave up after ${stuck.tries} tries`,
+                stuck.mediaId ? 'with media' : undefined,
+              );
               outbox.current = outbox.current.filter((l) => l !== stuck);
               setState((st) => ({ ...st, waiting: outbox.current.length }));
               return;
@@ -510,6 +517,9 @@ export function useRoom(
         }
         case 'error': {
           console.warn('room:', frame.code);
+          // `gone` is a repeat of a line since taken back: ordinary. The
+          // rest are things this client should never have sent.
+          if (frame.code !== 'gone') report('web.refused', frame.code);
           // A line the room will not take — empty, too long, a photo it cannot
           // find. It will never come back with its id, so holding it would
           // mean re-sending it all evening.
