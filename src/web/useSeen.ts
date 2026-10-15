@@ -199,5 +199,20 @@ export function useSeen({
     document.title = unseen > 0 ? `(${unseen}) ${groupName}` : groupName;
   }, [groupName, unseen]);
 
+  /**
+   * The same count on the home-screen icon, where the browser has one.
+   *
+   * Only while the app is running — a closed app is told by push, which is
+   * its own opt-in. Absent API, or a refusal, is not a fault.
+   */
+  useEffect(() => {
+    const nav = navigator as Navigator & {
+      setAppBadge?: (n?: number) => Promise<void>;
+      clearAppBadge?: () => Promise<void>;
+    };
+    const done = unseen > 0 ? nav.setAppBadge?.(unseen) : nav.clearAppBadge?.();
+    done?.catch(() => {});
+  }, [unseen]);
+
   return { unseen, since, pinned, onScroll, toBottom, unpin };
 }
