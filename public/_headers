@@ -5,5 +5,5 @@
 # before the Worker runs at all — a wrapper in the Worker would never fire.
 /*
   X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'self' https://marcportal.com https://*.marcportal.com
   Referrer-Policy: strict-origin-when-cross-origin

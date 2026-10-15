@@ -97,7 +97,11 @@ export async function invitePage(
   // What public/_headers gives every other page, which the assets binding
   // does not apply to a response the Worker hands back itself.
   headers.set('X-Content-Type-Options', 'nosniff');
-  headers.set('X-Frame-Options', 'DENY');
+  headers.set(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://marcportal.com https://*.marcportal.com",
+  );
+  headers.delete('X-Frame-Options');
   return new Response(page.body, { status: 200, headers });
 }
 

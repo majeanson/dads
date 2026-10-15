@@ -23,7 +23,10 @@ test('the headers are the ones public/_headers ships', async ({ request }) => {
   const res = await request.get('/');
   const headers = res.headers();
   expect(headers['x-content-type-options']).toBe('nosniff');
-  expect(headers['x-frame-options']).toBe('DENY');
+  expect(headers['x-frame-options']).toBeUndefined();
+  expect(headers['content-security-policy']).toBe(
+    "frame-ancestors 'self' https://marcportal.com https://*.marcportal.com",
+  );
   expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
 });
 

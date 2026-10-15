@@ -47,7 +47,10 @@ test('the shell carries the headers a page should carry', async ({ request }) =>
   const res = await request.get('/');
   const headers = res.headers();
   expect(headers['x-content-type-options']).toBe('nosniff');
-  // Nothing frames dads: we frame jaffre, not the other way round.
-  expect(headers['x-frame-options']).toBe('DENY');
+  // Only marcportal.com may frame dads (the door, in its portfolio).
+  expect(headers['x-frame-options']).toBeUndefined();
+  expect(headers['content-security-policy']).toBe(
+    "frame-ancestors 'self' https://marcportal.com https://*.marcportal.com",
+  );
   expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
 });
