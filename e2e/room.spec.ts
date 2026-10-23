@@ -177,6 +177,9 @@ test('a dad says it instead of typing it', async ({ browser }) => {
   const marc = await comeIn(browser, 'Hal');
   const sam = await comeIn(browser, 'Ike');
 
+  // The room already holds whatever the earlier tests said; count what is ADDED.
+  const before = await marc.getByTestId('voice-note').count();
+
   // With nothing typed, the composer offers the microphone rather than a send
   // button that would do nothing.
   await marc.getByTestId('record').click();
@@ -188,14 +191,16 @@ test('a dad says it instead of typing it', async ({ browser }) => {
 
   // It lands as something playable, for him and for the room — no caption, no
   // confirmation step.
-  await expect(marc.getByTestId('voice-note')).toHaveCount(1, { timeout: 15_000 });
-  await expect(sam.getByTestId('voice-note')).toHaveCount(1, { timeout: 15_000 });
+  await expect(marc.getByTestId('voice-note')).toHaveCount(before + 1, { timeout: 15_000 });
+  await expect(sam.getByTestId('voice-note')).toHaveCount(before + 1, { timeout: 15_000 });
 
   // And it says how long it is before anybody presses Play. Chrome's own
   // recording carries no length in its header — the browser reports it as
   // endless until it has played once — so the note had no length, a bar
   // that never filled, and a tap on it that went nowhere.
-  await expect(sam.getByTestId('voice-note')).toContainText(/^0:0[1-9]$/, { timeout: 10_000 });
+  await expect(sam.getByTestId('voice-note').last()).toContainText(/^0:0[1-9]$/, {
+    timeout: 10_000,
+  });
 
   // And the composer is back to normal.
   await expect(marc.getByTestId('recording')).toHaveCount(0);
