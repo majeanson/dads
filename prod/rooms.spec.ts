@@ -73,7 +73,7 @@ test('a dad opens a room on the real thing, and a second dad joins it', async ({
   await expect(maker.getByRole('heading', { name: ROOM })).toBeVisible();
 
   const guest = await atTheDoor(browser);
-  await guest.getByLabel('Code').fill(WORD);
+  await guest.getByLabel('The word').fill(WORD);
   await guest.getByLabel('Your name').fill(named('guest'));
   await guest.getByRole('button', { name: 'Come in' }).click();
   await expect(guest.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
@@ -114,7 +114,7 @@ test('the word it was opened with is taken, for everybody', async ({ browser }) 
 test('its creator owns the switches, and a guest does not', async ({ browser }) => {
   test.skip(!opened, 'no room was opened this run');
   const maker = await atTheDoor(browser);
-  await maker.getByLabel('Code').fill(WORD);
+  await maker.getByLabel('The word').fill(WORD);
   await maker.getByLabel('Your name').fill(named('maker'));
   await maker.getByRole('button', { name: 'Come in' }).click();
   await expect(maker.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
@@ -122,7 +122,7 @@ test('its creator owns the switches, and a guest does not', async ({ browser }) 
   // A fresh browser is a fresh dad, so this one is NOT the creator — the
   // same rule that makes every other prod spec invent its own names.
   const guest = await atTheDoor(browser);
-  await guest.getByLabel('Code').fill(WORD);
+  await guest.getByLabel('The word').fill(WORD);
   await guest.getByLabel('Your name').fill(named('guest2'));
   await guest.getByRole('button', { name: 'Come in' }).click();
   await expect(guest.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
@@ -143,7 +143,7 @@ test('its creator owns the switches, and a guest does not', async ({ browser }) 
 test('the calendar picks a night, and it can be called off again', async ({ browser }) => {
   test.skip(!opened, 'no room was opened this run');
   const page = await atTheDoor(browser);
-  await page.getByLabel('Code').fill(WORD);
+  await page.getByLabel('The word').fill(WORD);
   await page.getByLabel('Your name').fill(named('picker'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });

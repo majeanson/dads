@@ -8,7 +8,7 @@ test.describe.configure({ mode: 'serial' });
 async function comeIn(browser: import('@playwright/test').Browser, name: string): Promise<Page> {
   const page = await (await browser.newContext()).newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_POLL_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_POLL_GROUP.code);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);

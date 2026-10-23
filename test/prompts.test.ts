@@ -1,6 +1,6 @@
 import { env, exports as workerExports } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { hashKey, pickIndex } from '../src/shared/promptPick';
+import { hashKey, OPENERS, pickIndex } from '../src/shared/promptPick';
 import type { ServerFrame } from '../src/shared/protocol';
 import { todaysPrompt } from '../src/worker/prompts';
 import {
@@ -159,6 +159,25 @@ describe('todaysPrompt', () => {
     expect(morning?.day).toBe('2026-09-10');
   });
 
+  it('opens a new room with one of the lighter questions, whatever the room', async () => {
+    // The pick is a hash of the room, so one room proves little: eight of
+    // them cover the library's hard questions often enough to have caught it.
+    for (let i = 0; i < 8; i++) {
+      const fresh = await seedGroup();
+      expect(OPENERS.has((await todaysPrompt(env, fresh.id))!.prompt.id)).toBe(true);
+    }
+  });
+
+  it('draws on the whole library once the room has had a day', async () => {
+    await todaysPrompt(env, group.id, Date.parse('2026-09-09T16:00:00Z'));
+    const picked = new Set<string>();
+    for (let d = 10; d <= 28; d++) {
+      const when = Date.parse(`2026-09-${d}T16:00:00Z`);
+      picked.add((await todaysPrompt(env, group.id, when))!.prompt.id);
+    }
+    expect([...picked].some((id) => !OPENERS.has(id))).toBe(true);
+  });
+
   it('gives two groups different questions on the same day', async () => {
     const other = await seedGroup();
     const a = await todaysPrompt(env, group.id);
@@ -240,6 +259,68 @@ describe('answering', () => {
     const answered = async () =>
       ((await (await get('/api/prompt', marc.cookie)).json()) as { answered: boolean }).answered;
     await until(answered);
+  });
+});
+
+describe('another question', () => {
+  let group: SeededGroup;
+  const open: Dad[] = [];
+
+  beforeEach(async () => {
+    await resetTables();
+    group = await seedGroup();
+  });
+  afterEach(async () => {
+    open.splice(0).forEach((d) => d.close());
+    await settle();
+  });
+
+  const skip = (cookie: string) =>
+    worker.fetch('https://dads.test/api/prompt/another', {
+      method: 'POST',
+      headers: { Cookie: cookie },
+    });
+
+  it('refuses a stranger', async () => {
+    expect((await skip('')).status).toBe(401);
+  });
+
+  it('swaps today’s question for a different one and keeps it all day', async () => {
+    const cookie = await cookieFor(group);
+    const was = await todaysPrompt(env, group.id);
+
+    const res = await skip(cookie);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { prompt: { id: string }; answered: boolean };
+    expect(body.prompt.id).not.toBe(was!.prompt.id);
+    expect(body.answered).toBe(false);
+    // A room's first day: the swap is a light question as well.
+    expect(OPENERS.has(body.prompt.id)).toBe(true);
+
+    // Pinned: asking again, from anywhere, gives the swapped one.
+    expect((await todaysPrompt(env, group.id))?.prompt.id).toBe(body.prompt.id);
+    const history = await env.DB.prepare('SELECT prompt_id FROM prompt_days WHERE group_id = ?')
+      .bind(group.id)
+      .all<{ prompt_id: string }>();
+    expect(history.results.map((r) => r.prompt_id)).toEqual([body.prompt.id]);
+  });
+
+  it('will not swap a question somebody has answered', async () => {
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    const today = await todaysPrompt(env, group.id);
+    marc.answer('already said my piece');
+    await until(async () => {
+      const row = await env.DB.prepare('SELECT id FROM messages WHERE group_id = ? AND kind = ?')
+        .bind(group.id, 'prompt')
+        .first();
+      return row !== null;
+    });
+
+    const res = await skip(marc.cookie);
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe('answered');
+    expect((await todaysPrompt(env, group.id))?.prompt.id).toBe(today!.prompt.id);
   });
 });
 

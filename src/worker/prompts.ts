@@ -1,5 +1,5 @@
 import { civilDayIn } from '../shared/dadNight';
-import { pickIndex } from '../shared/promptPick';
+import { OPENERS, pickIndex } from '../shared/promptPick';
 import type { Env } from './env';
 
 /**
@@ -100,10 +100,12 @@ export async function todaysPrompt(
   )
     .bind(groupId)
     .all<{ id: string }>();
-  const index = pickIndex(groupId, day, results.length);
+  // A room's first day draws from the lighter questions only (see OPENERS).
+  const pool = (await isFirstDay(env, groupId, day)) ? openersOf(results) : results;
+  const index = pickIndex(groupId, day, pool.length);
   if (index === null) return null;
 
-  const chosen = results[index]!.id;
+  const chosen = pool[index]!.id;
   // INSERT OR REPLACE, not OR IGNORE: if the fall-through above fired, the
   // stale row must actually be replaced.
   await env.DB.prepare(
@@ -114,6 +116,87 @@ export async function todaysPrompt(
 
   const prompt = await promptById(env, groupId, chosen);
   return prompt ? { day, prompt } : null;
+}
+
+/** No day before this one has ever been asked. */
+async function isFirstDay(env: Env, groupId: string, day: string): Promise<boolean> {
+  const before = await env.DB.prepare(
+    'SELECT 1 AS one FROM prompt_days WHERE group_id = ? AND day <> ? LIMIT 1',
+  )
+    .bind(groupId, day)
+    .first();
+  return before === null;
+}
+
+/** The lighter questions among these — or all of them if the room has none of
+ * the lighter ones left, because a room is never left with nothing to ask. */
+function openersOf(ids: { id: string }[]): { id: string }[] {
+  const light = ids.filter((p) => OPENERS.has(p.id));
+  return light.length > 0 ? light : ids;
+}
+
+export type AnotherResult = TodaysPrompt | 'answered' | null;
+
+/**
+ * Skip today's question for a different one.
+ *
+ * Any dad may — a question is not a vote — but only while nobody has answered
+ * it: an answer is a line attached to the question it answered, and replacing
+ * the question under it would leave the line answering something else.
+ *
+ * Not a re-roll of the daily hash (that stays deterministic and pinned): the
+ * new one is drawn from what this room has not been asked, the lighter ones on
+ * a room's first day, and written over today's row. What was skipped never
+ * happened, so it stays in the pool and may come on another day.
+ */
+export async function anotherPrompt(
+  env: Env,
+  groupId: string,
+  now = Date.now(),
+): Promise<AnotherResult> {
+  const today = await todaysPrompt(env, groupId, now);
+  if (!today) return null;
+
+  const answered = await env.DB.prepare(
+    'SELECT 1 AS one FROM messages WHERE group_id = ? AND prompt_id = ? LIMIT 1',
+  )
+    .bind(groupId, today.prompt.id)
+    .first();
+  if (answered) return 'answered';
+
+  const { results } = await env.DB.prepare(
+    `SELECT id FROM prompts
+      WHERE active = 1 AND (group_id IS NULL OR group_id = ?) AND id <> ?
+      ORDER BY id`,
+  )
+    .bind(groupId, today.prompt.id)
+    .all<{ id: string }>();
+  if (results.length === 0) return today;
+
+  const { results: asked } = await env.DB.prepare(
+    'SELECT DISTINCT prompt_id FROM prompt_days WHERE group_id = ? AND day <> ?',
+  )
+    .bind(groupId, today.day)
+    .all<{ prompt_id: string }>();
+  const seen = new Set(asked.map((a) => a.prompt_id));
+  const fresh = results.filter((p) => !seen.has(p.id));
+  let pool = fresh.length > 0 ? fresh : results;
+  if (await isFirstDay(env, groupId, today.day)) pool = openersOf(pool);
+
+  const chosen = pool[randomBelow(pool.length)]!.id;
+  await env.DB.prepare(
+    'INSERT OR REPLACE INTO prompt_days (group_id, day, prompt_id) VALUES (?, ?, ?)',
+  )
+    .bind(groupId, today.day, chosen)
+    .run();
+  const prompt = await promptById(env, groupId, chosen);
+  return prompt ? { day: today.day, prompt } : today;
+}
+
+function randomBelow(max: number): number {
+  const buffer = new Uint32Array(1);
+  crypto.getRandomValues(buffer);
+  return buffer[0]! % max;
 }
 
 export interface PoolEntry extends Prompt {

@@ -230,6 +230,12 @@ export function TableColumn({
         </span>
       </div>
 
+      {/* What this is, for somebody who has only ever seen a menu row. The
+          lobby inside the frame is jaffre's own and says its own things. */}
+      <p className="table-what" data-testid="table-what">
+        {t('t.what')}
+      </p>
+
       {blocked ? (
         // If the frame will not load — an extension, a locked-down browser —
         // the column stops pretending and hands over a link that will.

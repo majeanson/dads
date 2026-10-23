@@ -175,6 +175,30 @@ export function Poll({
           calendar is a calendar and one line is enough. */}
       <p className="m-0 text-[1.0625rem] text-muted">{t('p.how')}</p>
 
+      {/* The three answers a tap cycles through, drawn the way the cells draw
+          them, and the mark on today. A stranger taps once and has to know
+          what he said without reading the tap count off a sentence. */}
+      <ul className="cal-key" aria-label={t('p.legend')} data-testid="poll-key">
+        <li>
+          <span className="cal-swatch" data-mine="in" aria-hidden="true" />
+          {t('p.legend_in')}
+        </li>
+        <li>
+          <span className="cal-swatch" data-mine="maybe" aria-hidden="true" />
+          {t('p.legend_maybe')}
+        </li>
+        <li>
+          <span className="cal-swatch" data-mine="out" aria-hidden="true">
+            <span className="cal-num">1</span>
+          </span>
+          {t('p.legend_out')}
+        </li>
+        <li>
+          <span className="cal-swatch" data-today="" aria-hidden="true" />
+          {t('p.legend_today')}
+        </li>
+      </ul>
+
       <div className="grid grid-cols-1 gap-2">
         <div className="flex items-center gap-2">
           <Button
@@ -227,6 +251,7 @@ export function Poll({
                   day={day}
                   tally={tallies.get(day)}
                   past={day < poll.today}
+                  today={day === poll.today}
                   busy={busy}
                   onPress={(answer) => void act(setVote(day, answer))}
                 />
@@ -336,12 +361,14 @@ function Day({
   day,
   tally,
   past,
+  today,
   busy,
   onPress,
 }: {
   day: string;
   tally: Tally | undefined;
   past: boolean;
+  today: boolean;
   busy: boolean;
   onPress: (answer: Answer | null) => void;
 }) {
@@ -355,14 +382,17 @@ function Day({
       className="cal-day"
       data-day={day}
       data-mine={mine ?? 'none'}
+      data-today={today ? '' : undefined}
       data-testid="poll-day"
       disabled={past || busy}
       aria-pressed={mine === 'in'}
-      aria-label={t('p.cell', {
-        day: dayName(lang, day),
-        tally: tallyWords(t, lang, tally),
-        yours: yoursWords(t, mine),
-      })}
+      aria-label={
+        t('p.cell', {
+          day: dayName(lang, day),
+          tally: tallyWords(t, lang, tally),
+          yours: yoursWords(t, mine),
+        }) + (today ? t('p.cell_today') : '')
+      }
       onClick={() => onPress(nextAnswer(mine))}
     >
       {/* No icon for his own answer: the cell itself is filled, ringed or

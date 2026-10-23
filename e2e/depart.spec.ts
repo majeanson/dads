@@ -34,7 +34,7 @@ async function openRoom(browser: Browser, name: string, word: string): Promise<P
 async function comeIn(browser: Browser, word: string, name: string): Promise<Page> {
   const page = await (await browser.newContext()).newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(word);
+  await page.getByLabel('The word').fill(word);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -64,10 +64,10 @@ test('the creator takes a dad out, and his screen goes to the door', async ({ br
 
   // Sam is at the door, told why, on the phone he was holding.
   await expect(sam.getByTestId('door-out')).toContainText(`Remove Room ${run}`);
-  await expect(sam.getByLabel('Code')).toBeVisible();
+  await expect(sam.getByLabel('The word')).toBeVisible();
   // And a reload does not put him back.
   await sam.reload();
-  await expect(sam.getByLabel('Code')).toBeVisible();
+  await expect(sam.getByLabel('The word')).toBeVisible();
 
   await expect(opener.getByTestId('connection')).toHaveText('1 here');
   await opener.context().close();
@@ -90,7 +90,7 @@ test('a dad leaves by himself; the creator hands it on first', async ({ browser 
   await expect(sam.getByTestId('rooms-leave-do')).toContainText(`Yes, leave Leave Room ${run}`);
   await sam.getByTestId('rooms-leave-do').click();
   // His only room: the door, and no "you're no longer in" — he knows.
-  await expect(sam.getByLabel('Code')).toBeVisible();
+  await expect(sam.getByLabel('The word')).toBeVisible();
   await expect(sam.getByTestId('door-out')).toHaveCount(0);
 
   await expect(opener.getByTestId('connection')).toHaveText('1 here');
@@ -117,7 +117,7 @@ test('a phone asleep when he was taken out finds the door when it wakes', async 
   });
   const sam = await context.newPage();
   await sam.goto('/');
-  await sam.getByLabel('Code').fill(word);
+  await sam.getByLabel('The word').fill(word);
   await sam.getByLabel('Your name').fill('Sam Asleep');
   await sam.getByRole('button', { name: 'Come in' }).click();
   await expect(opener.getByTestId('connection')).toHaveText('2 here');
@@ -160,7 +160,7 @@ test('leaving one of two rooms lands him in the other', async ({ browser }) => {
   // Not the door: the room he still has, as himself.
   await expect(homeOpener.getByTestId('connection')).toHaveText('2 here');
   await expect(sam.getByTestId('home')).toBeVisible();
-  await expect(sam.getByLabel('Code')).toHaveCount(0);
+  await expect(sam.getByLabel('The word')).toHaveCount(0);
   await expect(sam.getByText(`Home Room ${run}`).first()).toBeVisible();
   await expect(secondOpener.getByTestId('connection')).toHaveText('1 here');
 

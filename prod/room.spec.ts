@@ -201,7 +201,7 @@ test('a line typed with no signal is not lost', async ({ browser }) => {
 
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(CODE);
+  await page.getByLabel('The word').fill(CODE);
   await page.getByLabel('Your name').fill(named('tunnel'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });

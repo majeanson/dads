@@ -7,7 +7,7 @@ test('a dad sends a link, and the man who follows it never sees the code', async
   const marc = await first.newPage();
 
   await marc.goto('/');
-  await marc.getByLabel('Code').fill(E2E_INVITE_GROUP.code);
+  await marc.getByLabel('The word').fill(E2E_INVITE_GROUP.code);
   await marc.getByLabel('Your name').fill('Marc');
   await marc.getByRole('button', { name: 'Come in' }).click();
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
@@ -37,7 +37,7 @@ test('a dad sends a link, and the man who follows it never sees the code', async
   await sam.goto(link);
 
   await expect(sam.getByLabel('Your name')).toBeVisible();
-  await expect(sam.getByLabel('Code')).toHaveCount(0);
+  await expect(sam.getByLabel('The word')).toHaveCount(0);
   // And the token is off the address bar before he has typed anything: it is
   // a credential, and it has no business in a screenshot of the door.
   expect(new URL(sam.url()).pathname).toBe('/');
@@ -62,7 +62,7 @@ test('a link sent in French unfurls in French, and opens a French door', async (
   const luc = await first.newPage();
   await luc.goto('/');
   await luc.getByRole('button', { name: 'FR', exact: true }).click();
-  await luc.getByLabel('Code').fill(E2E_INVITE_GROUP.code);
+  await luc.getByLabel('Le mot').fill(E2E_INVITE_GROUP.code);
   await luc.getByLabel('Ton nom').fill('Luc Invite');
   await luc.getByRole('button', { name: 'Entre' }).click();
   await expect(luc.getByTestId('connection')).toBeVisible();

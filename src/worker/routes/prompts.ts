@@ -1,6 +1,13 @@
 import type { Env } from '../env';
 import { newId } from '../identity';
-import { answersFor, MAX_PROMPT_LENGTH, promptHistory, promptPool, todaysPrompt } from '../prompts';
+import {
+  anotherPrompt,
+  answersFor,
+  MAX_PROMPT_LENGTH,
+  promptHistory,
+  promptPool,
+  todaysPrompt,
+} from '../prompts';
 import { currentSession, type Session } from './auth';
 
 async function requireSession(
@@ -36,6 +43,25 @@ export async function getTodaysPrompt(
     .first<{ id: string }>();
 
   return Response.json({ ...today, answered: Boolean(mine) });
+}
+
+/**
+ * POST /api/prompt/another — skip today's question for a different one.
+ *
+ * Refused (409 `answered`) once anybody has answered it. See `anotherPrompt`.
+ */
+export async function postAnotherPrompt(
+  request: Request,
+  env: Env,
+  isProduction: boolean,
+): Promise<Response> {
+  const session = await requireSession(request, env, isProduction);
+  if (session instanceof Response) return session;
+
+  const next = await anotherPrompt(env, session.group.id);
+  if (next === 'answered') return Response.json({ error: 'answered' }, { status: 409 });
+  if (next === null) return Response.json({ prompt: null });
+  return Response.json({ ...next, answered: false });
 }
 
 /** GET /api/prompts — the whole library, what has been asked, and when. */

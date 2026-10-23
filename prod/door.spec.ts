@@ -52,7 +52,7 @@ test('a dad who comes back is the same dad, not a second one', async ({ browser 
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(CODE);
+  await page.getByLabel('The word').fill(CODE);
   await page.getByLabel('Your name').fill(named('returning'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
@@ -66,8 +66,8 @@ test('a dad who comes back is the same dad, not a second one', async ({ browser 
   // The cookie is gone; the device token in localStorage is what is left.
   await context.clearCookies();
   await page.reload();
-  await expect(page.getByLabel('Code')).toBeVisible();
-  await page.getByLabel('Code').fill(CODE);
+  await expect(page.getByLabel('The word')).toBeVisible();
+  await page.getByLabel('The word').fill(CODE);
   await page.getByLabel('Your name').fill(named('returning'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
@@ -86,7 +86,7 @@ test('a link opens the door, and a dead one is just a wrong code', async ({ brow
   const host = await browser.newContext();
   const page = await host.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(CODE);
+  await page.getByLabel('The word').fill(CODE);
   await page.getByLabel('Your name').fill(named('host'));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
@@ -101,7 +101,7 @@ test('a link opens the door, and a dead one is just a wrong code', async ({ brow
   const them = await guest.newPage();
   await them.goto(link);
   await expect(them.getByLabel('Your name')).toBeVisible();
-  await expect(them.getByLabel('Code')).toHaveCount(0);
+  await expect(them.getByLabel('The word')).toHaveCount(0);
   // The token is off the address bar before he has typed anything.
   expect(new URL(them.url()).pathname).toBe('/');
   await them.getByLabel('Your name').fill(named('guest'));

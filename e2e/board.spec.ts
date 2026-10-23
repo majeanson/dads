@@ -31,7 +31,7 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_BOARD_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_BOARD_GROUP.code);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -53,10 +53,10 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
     .click();
   await expect(marc.getByTestId('your-week')).toBeVisible();
 
-  // Sam starts blank on Marc's board — everyone gets a row either way.
-  // A dad with nothing down yet is named on one line, not given a row of his
-  // own saying so.
-  await expect(marc.getByTestId('board-waiting')).toContainText(/Nothing yet:.*Sam/);
+  // Nobody has posted, so there is nothing to read yet: no roll call of
+  // "nothing yet" with his own name in it, under a form he is looking at.
+  await expect(marc.getByTestId('board-waiting')).toHaveCount(0);
+  await expect(marc.getByTestId('board-row')).toHaveCount(0);
 
   await marc.getByRole('radio', { name: '2 — hard' }).check();
   await marc.getByLabel('One line about your week').fill('Shouted about shoes.');
@@ -64,6 +64,10 @@ test('a dad checks in and commits, and the others see both', async ({ browser })
   await expect(
     marc.getByTestId('board-row').filter({ hasText: 'Marc (you)' }).first(),
   ).toContainText('2/5');
+
+  // Now that somebody has, Sam (blank on Marc's board) is named on one line,
+  // not given a row of his own saying so.
+  await expect(marc.getByTestId('board-waiting')).toContainText(/Nothing yet:.*Sam/);
 
   // The commitment is the same form and the same button: one Save, and only
   // what actually changed is sent.

@@ -28,7 +28,7 @@ test.describe.configure({ mode: 'serial' });
 
 async function comeIn(page: Page, name: string) {
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_SAFARI_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_SAFARI_GROUP.code);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);

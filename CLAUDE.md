@@ -172,6 +172,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - **`stillToCome(night, now)` is the test, not `night === null`.** A passed
   one-off is never cleared; `nextStart` returns null and the card becomes the
   calendar.
+- **The day picker carries a legend** (can / might / can't / today) and marks
+  today with a dot (`data-today`).
 - **The calendar is the poll; there is no poll table** (`night_votes`). Open
   exactly when there is no night still to come. A tap cycles can → might →
   can't → nothing said. Locking a day in goes through `writeNight` and deletes
@@ -213,6 +215,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 
 ## Prompts (M4)
 
+- **A room's first question is a light one** (`OPENERS` in `promptPick.ts`, by
+  id). **"Another question"** (`POST /api/prompt/another`) overwrites today's
+  `prompt_days` row, only while nobody has answered it; it is not a re-roll of
+  the hash.
 - The curated 100 are in `migrations/0003_prompt_library.sql`. **Adding to
   the library means a new migration, never editing that one.**
 - The pick is `hash(groupId + day) % poolSize`, written to `prompt_days` and
@@ -237,6 +243,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   replace it with "day of year / 7".
 - One check-in and one commitment per dad per week (unique index, upsert).
   Changing a commitment resets its outcome.
+- **Nothing is listed until somebody has posted**: no "Nothing yet" roll call
+  and no "Everyone, this week" before the first line.
 - **Everything on the board is group-visible**, own row included. Dads with
   nothing down share ONE line of faces (stops at five, "+n", names sr-only).
 - `pending` scans back through the shown weeks. A dad closes only his own
@@ -246,6 +254,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 
 - Jaffre is framed cross-origin (no XFO, no CSP, no cookies; identity is an
   HMAC token in localStorage).
+- The menu row and the panel say what it is (cards for four); the lobby inside
+  the frame is jaffre's own, in another repo, and still shows its own code.
 - Embed URL is `/?name=…&from=dads#room/<code>`, **never** `/join/<code>`.
 - `groups.jaffre_room_code` is minted once, then read back, **never the
   bare slug** (the name is on every invite preview). **A new table is
@@ -461,6 +471,17 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
     (`leavingRoom()`).
   - **A socket refused before it opened asks `/api/me`**, and a 204 is
     `removed`: a phone asleep at the time never hears the frame.
+
+- **One name for the key: "the word"** (EN) / "le mot" (FR), on the door, in
+  Settings and in the new-room form. Never "code" in a string a dad reads
+  (jaffre's own lobby says its own thing). e2e labels are `The word` / `Le mot`.
+- **A new room is offered a generated word** (`shared/roomWord.ts`, two words
+  and three digits, a die beside the field for another). It is a default, not
+  a rule: the server floor (`MIN_CODE_LENGTH`, four) is unchanged, and words are
+  global — unique across every room, the door takes a word and nothing else.
+- **A room of one leads with inviting** (`home-invite`, opens the invite sheet,
+  gone when anybody else is in). It carries `mb-8` so the door's face, which
+  stands up out of the bubble, does not land on it.
 
 ## The three switches
 

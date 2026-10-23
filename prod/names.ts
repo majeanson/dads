@@ -64,7 +64,7 @@ export async function comeIn(browser: Browser, what: string): Promise<Page> {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(CODE);
+  await page.getByLabel('The word').fill(CODE);
   await page.getByLabel('Your name').fill(named(what));
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });

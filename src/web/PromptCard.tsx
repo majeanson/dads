@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { fetchTodaysPrompt, type TodaysPrompt } from './api';
-import { PenLine } from 'lucide-react';
+import { anotherPrompt, fetchTodaysPrompt, type TodaysPrompt } from './api';
+import { PenLine, Shuffle } from 'lucide-react';
 import { dadVar } from './dadColour';
 import { Face } from './Face';
 import { plural, promptText, useT } from './i18n';
@@ -30,6 +30,8 @@ export function PromptCard({
   const [today, setToday] = useState<TodaysPrompt | null | 'loading'>('loading');
   const [draft, setDraft] = useState('');
   const [open, setOpen] = useState(false);
+  const [swapping, setSwapping] = useState(false);
+  const [swapFailed, setSwapFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +50,20 @@ export function PromptCard({
   const answered = (today !== 'loading' && today?.answered) || false;
 
   if (today === 'loading' || !today) return null;
+
+  async function another() {
+    setSwapping(true);
+    setSwapFailed(false);
+    try {
+      const next = await anotherPrompt();
+      if (next) setToday(next);
+      else setSwapFailed(true);
+    } catch {
+      setSwapFailed(true);
+    } finally {
+      setSwapping(false);
+    }
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -148,6 +164,28 @@ export function PromptCard({
           {answered ? t('q.say_more') : t('q.answer')}
         </Button>
       )}
+
+      {/* A way out of a question that is the wrong one today. Only while
+          nobody has answered: an answer belongs to the question it answered. */}
+      {!open && !answered && answersToday.length === 0 ? (
+        <div className="mt-2 grid">
+          <Button
+            look="quiet"
+            size="lg"
+            disabled={swapping}
+            onClick={() => void another()}
+            data-testid="prompt-another"
+          >
+            <Shuffle size={18} aria-hidden="true" />
+            {t('q.another')}
+          </Button>
+          {swapFailed ? (
+            <p className="m-0 text-center text-sm text-danger" role="alert">
+              {t('q.another_failed')}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

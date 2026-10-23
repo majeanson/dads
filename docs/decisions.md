@@ -2149,3 +2149,29 @@ live only on this machine, and it writes into a real room.
   every call already has to survive storage refusing.
 - Anything that shells out goes through `scripts/run.ts`, which quotes
   arguments on Windows. `execFileSync` with `shell: true` does not.
+
+## 2026-10-23 — the stranger review
+
+A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
+
+- **"Go and t…"**: the unseen count sat beside the label and took 60px of the
+  160 it had. It is stacked under the words now and the font is capped by
+  `7vw`. On desktop the face stood out of the top edge of a column that
+  scrolls, and the scroller cut it; the actions block gets top padding there.
+- **Code / the word / code**: one name, "the word". Jaffre's lobby text is not
+  ours to change from here.
+- **Generated word**: ~27 bits (64 x 64 x 900) behind ten tries per ten minutes
+  per address. The floor was NOT raised: existing rooms keep what they have,
+  and raising it for new rooms is the owner's call.
+- **Invite on an empty home** says "Invite the others" and opens the link
+  sheet, because the app can never show the word (it is a hash) — the link is
+  what it can send.
+- **Light first question**: the library is honest about absent or harsh
+  fathers; a stranger's first day should not open with one. Skipping exists
+  because no first question will suit everybody.
+- **The week's roll call** put the reader's own name under "nothing yet"
+  while he was looking at the empty form. The scale labels are not doubled on
+  screen: the second set is the segments' accessible names, which the rule
+  above keeps.
+- The door already follows the phone's language (`preferredLang`); the review
+  browser was set to English.

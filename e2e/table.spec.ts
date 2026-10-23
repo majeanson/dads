@@ -59,7 +59,7 @@ async function comeIn(browser: Browser, name: string, body = STUB_TABLE): Promis
     route.fulfill({ status: 200, contentType: 'text/html', body }),
   );
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_TABLE_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_TABLE_GROUP.code);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -124,7 +124,7 @@ test('on a phone the table takes the room’s place, and gives it back', async (
     route.fulfill({ status: 200, contentType: 'text/html', body: STUB_TABLE }),
   );
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_TABLE_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_TABLE_GROUP.code);
   await page.getByLabel('Your name').fill('Phone');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);

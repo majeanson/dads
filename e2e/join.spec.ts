@@ -4,13 +4,13 @@ import { E2E_GROUP } from './global-setup';
 
 test('a stranger sees the door, not the room', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByLabel('Code')).toBeVisible();
+  await expect(page.getByLabel('The word')).toBeVisible();
   await expect(page.getByTestId('connection')).toHaveCount(0);
 });
 
 test('the wrong code is refused', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Code').fill('not the code');
+  await page.getByLabel('The word').fill('not the code');
   await page.getByLabel('Your name').fill('Stranger');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByRole('alert')).toContainText("doesn't open anything");
@@ -19,7 +19,7 @@ test('the wrong code is refused', async ({ page }) => {
 
 test('the right code lets a dad in, and he stays in on reload', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_GROUP.code.toUpperCase());
+  await page.getByLabel('The word').fill(E2E_GROUP.code.toUpperCase());
   await page.getByLabel('Your name').fill('Marc');
   await page.getByRole('button', { name: 'Come in' }).click();
 
@@ -35,7 +35,7 @@ test('the right code lets a dad in, and he stays in on reload', async ({ page })
 
 test('signing out returns to the door', async ({ page }) => {
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_GROUP.code);
   await page.getByLabel('Your name').fill('Marc');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toBeVisible();
@@ -43,8 +43,8 @@ test('signing out returns to the door', async ({ page }) => {
   await menu(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page.getByLabel('Code')).toBeVisible();
+  await expect(page.getByLabel('The word')).toBeVisible();
 
   await page.reload();
-  await expect(page.getByLabel('Code')).toBeVisible();
+  await expect(page.getByLabel('The word')).toBeVisible();
 });

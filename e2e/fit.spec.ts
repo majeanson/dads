@@ -29,7 +29,7 @@ const WINDOW = { width: 940, height: 540 };
 
 async function comeIn(page: Page, name: string) {
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_FIT_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_FIT_GROUP.code);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -169,7 +169,7 @@ async function narrow(browser: Browser, name: string) {
   const page = await context.newPage();
   await page.goto('/');
   await page.getByRole('button', { name: 'FR', exact: true }).click();
-  await page.getByLabel('Code').fill(E2E_FIT_GROUP.code);
+  await page.getByLabel('Le mot').fill(E2E_FIT_GROUP.code);
   await page.getByLabel('Ton nom').fill(name);
   await page.getByRole('button', { name: 'Entre' }).click();
   await expect(page.getByTestId('connection')).toBeVisible();
@@ -211,7 +211,7 @@ test('the questions fit a narrow phone in French, history and all', async ({ bro
   const page = await context.newPage();
   await page.goto('/');
   await page.getByRole('button', { name: 'FR', exact: true }).click();
-  await page.getByLabel('Code').fill(E2E_FIT_GROUP.code);
+  await page.getByLabel('Le mot').fill(E2E_FIT_GROUP.code);
   await page.getByLabel('Ton nom').fill('Fit Étroit');
   await page.getByRole('button', { name: 'Entre' }).click();
   await expect(page.getByTestId('connection')).toBeVisible();
@@ -436,7 +436,7 @@ test('home fits the small phone in French asking when the next one is', async ({
   const page = await context.newPage();
   await page.goto('/');
   await page.getByRole('button', { name: 'FR', exact: true }).click();
-  await page.getByLabel('Code').fill(E2E_FIT_GROUP.code);
+  await page.getByLabel('Le mot').fill(E2E_FIT_GROUP.code);
   await page.getByLabel('Ton nom').fill('Fit Prochaine');
   await page.getByRole('button', { name: 'Entre' }).click();
   await expect(page.getByTestId('connection')).toBeVisible();

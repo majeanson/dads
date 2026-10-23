@@ -19,7 +19,7 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -138,7 +138,7 @@ test('a line typed with no signal waits, and goes when the signal comes back', a
 
   const marc = await marcCtx.newPage();
   await marc.goto('/');
-  await marc.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await marc.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await marc.getByLabel('Your name').fill('Fitz');
   await marc.getByRole('button', { name: 'Come in' }).click();
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
@@ -393,7 +393,7 @@ test('a phone that drops out and comes back sees what happened to the lines it h
   });
   const sam = await context.newPage();
   await sam.goto('/');
-  await sam.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await sam.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await sam.getByLabel('Your name').fill('Sam Tunnel');
   await sam.getByRole('button', { name: 'Come in' }).click();
   await expect(sam.getByTestId('connection')).toHaveText(/here$/);
@@ -460,7 +460,7 @@ test('an edit the room took, whose answer was lost, is not reported as lost', as
   });
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await page.getByLabel('Your name').fill('Marc Lostanswer');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -510,7 +510,7 @@ test('a change that never reached the room leaves him holding his words', async 
 
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await page.getByLabel('Your name').fill('Marc Deadspot');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -566,7 +566,7 @@ test('the answer to an edit he walked away from does not touch the next one', as
   });
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await page.getByLabel('Your name').fill('Marc Twoedits');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -693,7 +693,7 @@ test('on a phone, one tap on a line puts the marks under it', async ({ browser }
   const context = await browser.newContext({ ...devices['iPhone 13'] });
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await page.getByLabel('Your name').fill('Tom Thumb');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -740,7 +740,7 @@ test('on a phone, the marks under the last line scroll into sight', async ({ bro
   const context = await browser.newContext({ ...devices['iPhone 13'] });
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await page.getByLabel('Your name').fill('Lars Last');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -804,7 +804,7 @@ test('on a phone, a long press on any line is the menu and a tap is its one thin
   });
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await page.getByLabel('Your name').fill('Pat Press');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -925,7 +925,7 @@ test('a line taken back from under an open menu does not eat the next tap', asyn
   const context = await browser.newContext({ ...devices['iPhone 13'] });
   const sam = await context.newPage();
   await sam.goto('/');
-  await sam.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await sam.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await sam.getByLabel('Your name').fill('Sam Pressing');
   await sam.getByRole('button', { name: 'Come in' }).click();
   await expect(sam.getByTestId('connection')).toHaveText(/here$/);
@@ -992,7 +992,7 @@ test('every mark is reachable wherever on the line he presses', async ({ browser
   const context = await browser.newContext({ viewport: { width: 430, height: 900 } });
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
   await page.getByLabel('Your name').fill('Otto Edge');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -1029,7 +1029,7 @@ test('a face sits beside a run, once, and the words below it line up', async ({ 
     const context = await browser.newContext({ viewport: { width, height: 900 } });
     const page = await context.newPage();
     await page.goto('/');
-    await page.getByLabel('Code').fill(E2E_ROOM_GROUP.code);
+    await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
     await page.getByLabel('Your name').fill(`Pat ${width}`);
     await page.getByRole('button', { name: 'Come in' }).click();
     await expect(page.getByTestId('connection')).toHaveText(/here$/);

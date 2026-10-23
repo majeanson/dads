@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { join, type JoinFailure, type Session } from './api';
 import { plural, useT, type Key, type T } from './i18n';
@@ -78,7 +78,7 @@ export function JoinScreen({
   }
 
   return (
-    <main className="relative mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5 py-10">
+    <main className="relative mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5 py-8">
       {/* The one thing a stranger at the door can change, in the corner where
           a language switch lives on every site he has ever used. The theme
           follows his phone and needs no asking; the language does. */}
@@ -103,14 +103,29 @@ export function JoinScreen({
           </div>
           {/* What this is, in one line, for everybody at the door: a man
               who followed a link has been asked in, but not told to what. */}
-          <p className="mt-2 mb-8 text-[1.0625rem] text-muted" data-testid="door-lede">
+          <p className="mt-2 mb-4 text-[1.0625rem] text-muted" data-testid="door-lede">
             {t('join.lede')}
             {invite ? ` ${t('join.invited')}` : null}
           </p>
+          {/* What is on the other side, for somebody who has not seen it: the
+              three things the app does, in the order a night goes. Without it
+              the door was a login form and the only way to learn what was
+              behind it was to open a room. */}
+          <ul
+            className="m-0 mb-6 grid list-none gap-1 p-0 text-[0.9375rem] text-muted"
+            data-testid="door-peek"
+          >
+            {(['join.peek_1', 'join.peek_2', 'join.peek_3'] as const).map((key) => (
+              <li key={key} className="flex gap-2">
+                <Check size={16} aria-hidden="true" className="mt-[3px] shrink-0 text-accent" />
+                <span>{t(key)}</span>
+              </li>
+            ))}
+          </ul>
           {/* Said once, here: he was in a room a moment ago and now he is at
               the door, and the screen should not leave him guessing why. */}
           {outOf ? (
-            <p className="-mt-4 mb-6 text-[1.0625rem]" role="status" data-testid="door-out">
+            <p className="mb-6 text-[1.0625rem]" role="status" data-testid="door-out">
               {t('join.out', { room: outOf })}
             </p>
           ) : null}

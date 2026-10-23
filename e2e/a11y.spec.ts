@@ -42,7 +42,7 @@ for (const theme of ['light', 'dark'] as const) {
     await page.goto('/');
     found.push(...(await faults(page, 'the door')));
 
-    await page.getByLabel('Code').fill(E2E_A11Y_GROUP.code);
+    await page.getByLabel('The word').fill(E2E_A11Y_GROUP.code);
     await page.getByLabel('Your name').fill(theme === 'light' ? 'Marc' : 'Sam');
     await page.getByRole('button', { name: 'Come in' }).click();
     await expect(page.getByTestId('connection')).toHaveText(/here$/);

@@ -377,8 +377,12 @@ export function Room({
           pollPulse={room.pollPulse}
           you={session.member.id}
           unseen={seen.unseen}
+          // Counted off the roster of members, which has not arrived yet while
+          // it is empty: "alone" is a fact the room has to have told us.
+          alone={room.members.filter((m) => !m.gone).length === 1}
           onGo={goTalk}
           onNight={() => setSheet('night')}
+          onInvite={() => setSheet('invite')}
         />
 
         <div className="stage">

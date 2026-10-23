@@ -125,6 +125,13 @@ export function Menu({
           <span className="min-w-0 truncate">
             {tableOpen ? t('menu.close_table') : t('menu.open_table')}
           </span>
+          {/* What the table IS, said where a stranger reads the menu: "Open
+              the table" alone sounded like dinner. */}
+          {tableOpen ? null : (
+            <span className="ml-auto min-w-0 truncate text-sm font-normal text-muted">
+              {t('menu.table_hint')}
+            </span>
+          )}
         </Button>
       ) : null}
 

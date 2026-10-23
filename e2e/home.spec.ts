@@ -17,7 +17,7 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_HOME_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_HOME_GROUP.code);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -379,7 +379,7 @@ test('home never says nobody has answered before it has asked', async ({ browser
   });
 
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_HOME_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_HOME_GROUP.code);
   await page.getByLabel('Your name').fill('Peregrine');
   await page.getByRole('button', { name: 'Come in' }).click();
 
@@ -438,10 +438,10 @@ test('the first frame comes down, at the door and in the room', async ({ browser
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto('/');
-  await expect(page.getByLabel('Code')).toBeVisible();
+  await expect(page.getByLabel('The word')).toBeVisible();
   await expect(page.locator('#shell')).toHaveCount(0);
 
-  await page.getByLabel('Code').fill(E2E_HOME_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_HOME_GROUP.code);
   await page.getByLabel('Your name').fill('Shell Watcher');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);

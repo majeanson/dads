@@ -1,8 +1,10 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Dices } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { createRoom, type CreateError, type Session } from './api';
 import { useT, type Key } from './i18n';
+import { cryptoRandom, roomWord } from '../shared/roomWord';
 import { Button } from './ui/Button';
+import { cn } from './ui/cn';
 import { FIELD } from './ui/field';
 import { useFreshBuild } from './useFreshBuild';
 
@@ -40,11 +42,13 @@ export function NewRoom({
 }) {
   const { t } = useT();
   const [name, setName] = useState('');
-  const [word, setWord] = useState('');
+  // Offered, not imposed: a word he made up himself is still his to type.
+  // What a man types into an empty box is what protects five men's talk.
+  const [word, setWord] = useState(() => roomWord(cryptoRandom));
   const [yourName, setYourName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  useFreshBuild(() => name !== '' || word !== '' || yourName !== '');
+  useFreshBuild(() => name !== '' || yourName !== '');
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -88,18 +92,31 @@ export function NewRoom({
           <label htmlFor="room-word" className="text-base text-muted">
             {t('new.word')}
           </label>
-          <input
-            id="room-word"
-            name="room-word"
-            value={word}
-            onChange={(e) => setWord(e.target.value)}
-            autoComplete="off"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            enterKeyHint="next"
-            className={FIELD}
-          />
+          <div className="flex gap-2">
+            <input
+              id="room-word"
+              name="room-word"
+              value={word}
+              onChange={(e) => setWord(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="next"
+              className={cn(FIELD, 'min-w-0 flex-1')}
+            />
+            <Button
+              type="button"
+              size="icon"
+              className="h-13 w-13 shrink-0"
+              onClick={() => setWord(roomWord(cryptoRandom))}
+              data-testid="word-another"
+              aria-label={t('new.word_another')}
+            >
+              <Dices size={20} aria-hidden="true" />
+              <span className="sr-only">{t('new.word_another')}</span>
+            </Button>
+          </div>
           {/* What the word DOES, said before he picks one rather than after
               he has sent it to four people. */}
           <p className="m-0 text-sm text-muted">{t('new.word_hint')}</p>

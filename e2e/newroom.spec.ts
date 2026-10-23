@@ -43,7 +43,7 @@ test('a room is opened, shared, and its switches belong to the man who opened it
 
   // The door asks the one question almost everybody comes to answer, and
   // making a room is the line underneath it.
-  await expect(maker.getByLabel('Code')).toBeVisible();
+  await expect(maker.getByLabel('The word')).toBeVisible();
   await maker.getByTestId('start-room').click();
 
   await maker.getByLabel('What to call it').fill(ROOM);
@@ -57,7 +57,7 @@ test('a room is opened, shared, and its switches belong to the man who opened it
 
   // Somebody he sent the word to, on a different device entirely.
   const guest = await atTheDoor(browser);
-  await guest.getByLabel('Code').fill(WORD);
+  await guest.getByLabel('The word').fill(WORD);
   await guest.getByLabel('Your name').fill('Sam Guest');
   await guest.getByRole('button', { name: 'Come in' }).click();
   await expect(guest.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
@@ -153,11 +153,11 @@ test('the creator changes the word, then hands the room on', async ({ browser })
 
   // The new one opens it; the old one opens nothing.
   const guest = await atTheDoor(browser);
-  await guest.getByLabel('Code').fill(first);
+  await guest.getByLabel('The word').fill(first);
   await guest.getByLabel('Your name').fill('Sam Handed');
   await guest.getByRole('button', { name: 'Come in' }).click();
   await expect(guest.getByRole('alert')).toBeVisible();
-  await guest.getByLabel('Code').fill(second);
+  await guest.getByLabel('The word').fill(second);
   await guest.getByRole('button', { name: 'Come in' }).click();
   await expect(guest.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
 
@@ -188,7 +188,7 @@ test('one phone, two rooms, and a way between them', async ({ browser }) => {
 
   // He is in the room this file opened at the top; now he opens another on
   // the same phone.
-  await page.getByLabel('Code').fill(WORD);
+  await page.getByLabel('The word').fill(WORD);
   await page.getByLabel('Your name').fill('Marc Two');
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByRole('heading', { name: ROOM })).toBeVisible({ timeout: 20_000 });

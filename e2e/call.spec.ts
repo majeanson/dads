@@ -18,7 +18,7 @@ async function comeIn(browser: Browser, name: string): Promise<Page> {
     route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><h1>table</h1>' }),
   );
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_CALL_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_CALL_GROUP.code);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);

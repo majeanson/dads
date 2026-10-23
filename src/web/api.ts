@@ -421,6 +421,15 @@ export async function fetchTodaysPrompt(): Promise<TodaysPrompt | null> {
   return body.prompt ? (body as TodaysPrompt) : null;
 }
 
+/** Skip today's question. `null` when it cannot be skipped: somebody has
+ * answered it already, or the call failed. */
+export async function anotherPrompt(): Promise<TodaysPrompt | null> {
+  const res = await fetch('/api/prompt/another', { method: 'POST' });
+  if (!res.ok) return null;
+  const body = (await res.json()) as Partial<TodaysPrompt>;
+  return body.prompt ? (body as TodaysPrompt) : null;
+}
+
 export async function fetchPrompts(): Promise<{
   today: { day: string; prompt: Prompt } | null;
   pool: PoolEntry[];

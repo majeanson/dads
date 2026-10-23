@@ -9,7 +9,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   const marcCtx = await browser.newContext();
   const marc = await marcCtx.newPage();
   await marc.goto('/');
-  await marc.getByLabel('Code').fill(E2E_NIGHT_GROUP.code);
+  await marc.getByLabel('The word').fill(E2E_NIGHT_GROUP.code);
   await marc.getByLabel('Your name').fill('Marc');
   await marc.getByRole('button', { name: 'Come in' }).click();
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
@@ -19,7 +19,7 @@ test('a dad sets the group’s night and everyone sees it', async ({ browser }) 
   const samCtx = await browser.newContext();
   const sam = await samCtx.newPage();
   await sam.goto('/');
-  await sam.getByLabel('Code').fill(E2E_NIGHT_GROUP.code);
+  await sam.getByLabel('The word').fill(E2E_NIGHT_GROUP.code);
   await sam.getByLabel('Your name').fill('Sam');
   await sam.getByRole('button', { name: 'Come in' }).click();
   await expect(sam.getByTestId('connection')).toHaveText(/here$/);

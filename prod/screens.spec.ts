@@ -125,7 +125,7 @@ for (const size of WIDTHS) {
     await page.getByRole('button', { name: 'FR', exact: true }).click();
     faults.push(...(await faultsIn(page, 'the door')));
 
-    await page.getByLabel('Code').fill(CODE);
+    await page.getByLabel('Le mot').fill(CODE);
     await page.getByLabel('Ton nom').fill(named('screens'));
     await page.getByRole('button', { name: 'Entre' }).click();
     await expect(page.getByTestId('connection')).toBeVisible({ timeout: 20_000 });

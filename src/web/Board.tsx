@@ -94,10 +94,15 @@ export function Board({
           {/* Your own row stays in the list, not just in the editor above it:
               the whole feature is group-visible by design, and you should be
               able to read your week in the same words everyone else reads it. */}
-          <section>
-            <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('b.everyone')}</h2>
-            <WeekRows rows={thisWeek?.rows ?? []} you={data.you} />
-          </section>
+          {/* Nothing to read until somebody has posted: a list of "nothing
+              yet" with HIS name in it, under a form he is looking at, was a
+              roll call. */}
+          {thisWeek?.rows.some((r) => r.checkIn ?? r.commitment) ? (
+            <section>
+              <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('b.everyone')}</h2>
+              <WeekRows rows={thisWeek.rows} you={data.you} />
+            </section>
+          ) : null}
         </TabPanel>
 
         <TabPanel value="before" className="grid gap-6">
@@ -142,7 +147,7 @@ function WeekRows({ rows, you, className }: { rows: BoardRow[]; you: string; cla
       {said.map((row) => (
         <BoardEntry key={row.memberId} row={row} isYou={row.memberId === you} />
       ))}
-      {quiet.length > 0 ? (
+      {quiet.length > 0 && said.length > 0 ? (
         // Their faces, not a list of names: the line used to grow a name per
         // dad and wrapped past the bottom of a small phone in a room of more
         // than five. The stack stops at five and says "+n"; every name is

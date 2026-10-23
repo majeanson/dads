@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState, type TouchEvent } from 'react';
 import {
   fetchNight,
@@ -65,8 +65,10 @@ export function Home({
   pollPulse,
   you,
   unseen,
+  alone,
   onGo,
   onNight,
+  onInvite,
 }: {
   night: DadNight | null;
   /**
@@ -85,8 +87,11 @@ export function Home({
   pollPulse: number;
   you: string;
   unseen: number;
+  /** He is the only man in the room (and the room has said so). */
+  alone: boolean;
   onGo: () => void;
   onNight: () => void;
+  onInvite: () => void;
 }) {
   const { t, lang } = useT();
   const [state, setState] = useState<NightState | null>(null);
@@ -436,6 +441,21 @@ export function Home({
           sat below it went behind the conversation's Menu and Settings went
           to the header's corner. So it is big — a door, not a row. */}
       <div className="home-actions">
+        {/* A room of one has nobody to talk to, so what it leads with is
+            getting them in. Same size as the quiet row it stands beside, so
+            home keeps its budget; gone the moment anybody else is in. */}
+        {alone ? (
+          <Button
+            look="plain"
+            size="lg"
+            className="home-invite mb-8 justify-start"
+            onClick={onInvite}
+            data-testid="home-invite"
+          >
+            <UserPlus size={20} aria-hidden="true" />
+            <span className="min-w-0 truncate">{t('home.invite')}</span>
+          </Button>
+        ) : null}
         {/* A speech bubble, because that is what the door is for: the face
             big on the left, sitting up out of the top edge, the words in
             the display face, and a tail at the bottom where a bubble points
@@ -444,7 +464,7 @@ export function Home({
           look="primary"
           className={cn(
             'home-go h-[clamp(4.5rem,11dvh,6.5rem)] w-full justify-start gap-3 mb-3 rounded-[2.25rem]! rounded-bl-[0.5rem]! pr-6 pl-[clamp(6rem,15dvh,8rem)]',
-            'text-[clamp(1.625rem,4.25dvh,2.25rem)]',
+            'text-[min(clamp(1.625rem,4.25dvh,2.25rem),7vw)]',
           )}
           onClick={onGo}
           data-testid="home-go"
@@ -452,17 +472,18 @@ export function Home({
           <span className="home-go-face" aria-hidden="true">
             <Logo size={96} hole="var(--accent)" motion={live ? 'live' : 'on'} />
           </span>
-          <span className="display min-w-0 truncate">{t('home.go')}</span>
-          {unseen > 0 ? (
-            <span className="home-new ml-auto font-normal" data-testid="home-new">
-              {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
-            </span>
-          ) : null}
-          <ArrowRight
-            size={30}
-            aria-hidden="true"
-            className={cn('shrink-0', unseen > 0 ? '' : 'ml-auto')}
-          />
+          {/* The count sits UNDER the words, not beside them: beside them it
+              took 60px out of a label that has 160 to start with, and "Go and
+              talk" became "Go and t…" on a 375px phone. */}
+          <span className="grid min-w-0 gap-0.5 text-left">
+            <span className="display min-w-0 truncate">{t('home.go')}</span>
+            {unseen > 0 ? (
+              <span className="home-new font-normal" data-testid="home-new">
+                {t(`home.new_${plural(lang, unseen)}`, { n: unseen })}
+              </span>
+            ) : null}
+          </span>
+          <ArrowRight size={30} aria-hidden="true" className="ml-auto shrink-0" />
         </Button>
       </div>
     </div>

@@ -7,7 +7,7 @@ test.describe.configure({ mode: 'serial' });
 
 async function comeIn(page: Page, name: string) {
   await page.goto('/');
-  await page.getByLabel('Code').fill(E2E_PREFS_GROUP.code);
+  await page.getByLabel('The word').fill(E2E_PREFS_GROUP.code);
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Come in' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
@@ -158,14 +158,14 @@ test('the day’s question is asked in the language it is read in', async ({ pag
 
 test('a francophone can say so at the door, before he is anybody', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByLabel('Code')).toBeVisible();
+  await expect(page.getByLabel('The word')).toBeVisible();
 
   await page.getByRole('button', { name: 'FR', exact: true }).click();
   await expect(page.getByLabel('Ton nom')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Entre' })).toBeVisible();
 
   // And the door remembers, so the room he walks into is already French.
-  await page.getByLabel('Code').fill(E2E_PREFS_GROUP.code);
+  await page.getByLabel('Le mot').fill(E2E_PREFS_GROUP.code);
   await page.getByLabel('Ton nom').fill('Luc');
   await page.getByRole('button', { name: 'Entre' }).click();
   await expect(page.getByTestId('connection')).toHaveText(/ici$/);
