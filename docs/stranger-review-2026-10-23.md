@@ -59,7 +59,7 @@ card and a truncated button.
    a hard one, with no « another question » button. Add « Skip / another one », and lead with a
    lighter question in a new room.
 4. **The week is a nice ritual (1–5, one line, one thing to try) but « Everyone, this week ·
-   Nothing yet: Claude (test) (you) »** lists *me* under « nothing yet » while I'm looking at the
+   Nothing yet: Claude (test) (you) »** lists _me_ under « nothing yet » while I'm looking at the
    empty form — it reads like a shaming roll call. Show it only after the first person posts.
 5. **The scale labels are doubled**: « 1 — rough … 5 — great » on the buttons, then « rough »
    and « great » again under the ends.
