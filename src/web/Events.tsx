@@ -1,5 +1,5 @@
 import { CalendarPlus, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   compareMonths,
   dayName,
@@ -85,6 +85,9 @@ export function Events({
   const [state, setState] = useState<EventsState | null>(null);
   const [month, setMonth] = useState<Month | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  // Bumped whenever a form is opened or pointed at something, so it can take
+  // focus and scroll into view without the keyboard coming up.
+  const [focusKey, setFocusKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -131,6 +134,7 @@ export function Events({
 
   function plan(day: string) {
     setError(null);
+    setFocusKey((k) => k + 1);
     // A day picked while a form is open moves the form, whatever is in it.
     setDraft((d) => (d ? { ...d, day } : { title: '', place: '', day, time: DEFAULT_TIME }));
   }
@@ -216,6 +220,7 @@ export function Events({
       {draft ? (
         <Form
           draft={draft}
+          focusKey={focusKey}
           today={today}
           busy={busy}
           onChange={setDraft}
@@ -259,15 +264,16 @@ export function Events({
                 you={you}
                 busy={busy}
                 onAnswer={(answer) => void act(answerEvent(event.id, answer))}
-                onEdit={() =>
+                onEdit={() => {
+                  setFocusKey((k) => k + 1);
                   setDraft({
                     id: event.id,
                     title: event.title,
                     place: event.place,
                     day: event.day,
                     time: event.time,
-                  })
-                }
+                  });
+                }}
                 onCancel={() => act(cancelEvent(event.id))}
               />
             ))}
@@ -331,6 +337,7 @@ function DayCell({
 /** Making one, or changing one. Every field has a visible label. */
 function Form({
   draft,
+  focusKey,
   today,
   busy,
   onChange,
@@ -338,6 +345,7 @@ function Form({
   onSave,
 }: {
   draft: Draft;
+  focusKey: number;
   today: string;
   busy: boolean;
   onChange: (draft: Draft) => void;
@@ -346,6 +354,15 @@ function Form({
 }) {
   const { t } = useT();
   const set = (patch: Partial<Draft>) => onChange({ ...draft, ...patch });
+  const card = useRef<HTMLFormElement>(null);
+
+  // The card takes focus, not the title: a field would bring the keyboard up
+  // over the very thing he just tapped. It is scrolled into view instead, so
+  // a form that opens below the fold is not opened out of sight.
+  useEffect(() => {
+    card.current?.focus({ preventScroll: true });
+    card.current?.scrollIntoView({ block: 'nearest' });
+  }, [focusKey]);
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -354,7 +371,9 @@ function Form({
 
   return (
     <form
-      className="grid grid-cols-1 gap-3 rounded-[var(--radius-card)] bg-[var(--bg-soft)] p-4"
+      ref={card}
+      tabIndex={-1}
+      className="grid grid-cols-1 gap-3 rounded-[var(--radius-card)] bg-[var(--bg-soft)] p-4 outline-none"
       onSubmit={submit}
       data-testid="ev-form"
     >
@@ -367,8 +386,6 @@ function Form({
           placeholder={t('ev.f_title_hint')}
           onChange={(e) => set({ title: e.target.value })}
           data-testid="ev-title"
-          // The one thing he came to type; the day he already tapped.
-          autoFocus
         />
       </label>
       <label className="grid gap-1.5 text-[1.0625rem]">
@@ -381,12 +398,15 @@ function Form({
           data-testid="ev-place"
         />
       </label>
-      <div className="grid grid-cols-2 gap-3">
+      {/* One under the other on a phone: two native pickers side by side are
+          wider than half a 390px sheet, in French especially, and ran into
+          each other. */}
+      <div className="grid grid-cols-1 gap-3 min-[30rem]:grid-cols-2">
         <label className="grid min-w-0 gap-1.5 text-[1.0625rem]">
           {t('ev.f_day')}
           <input
             type="date"
-            className={FIELD}
+            className={cn(FIELD, 'min-w-0')}
             value={draft.day}
             min={today}
             onChange={(e) => set({ day: e.target.value })}
@@ -397,7 +417,7 @@ function Form({
           {t('ev.f_time')}
           <input
             type="time"
-            className={FIELD}
+            className={cn(FIELD, 'min-w-0')}
             value={draft.time}
             onChange={(e) => set({ time: e.target.value })}
             data-testid="ev-time"

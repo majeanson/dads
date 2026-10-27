@@ -138,4 +138,16 @@ test('home points at what is coming and still fits a small phone', async ({ brow
 
   await line.click();
   await expect(page.getByTestId('events')).toBeVisible();
+
+  // Tapping a day opens the card and focuses IT, not the title: a field in
+  // focus would bring the keyboard up over what he just tapped.
+  await page.locator('[data-testid="ev-day"]:not([disabled])').last().click();
+  const form = page.getByTestId('ev-form');
+  await expect(form).toBeFocused();
+  await expect(page.getByTestId('ev-title')).not.toBeFocused();
+
+  // Day and hour sit one under the other, never over each other.
+  const day = await page.getByTestId('ev-day-field').boundingBox();
+  const time = await page.getByTestId('ev-time').boundingBox();
+  expect(day && time && day.y + day.height <= time.y + 1).toBe(true);
 });
