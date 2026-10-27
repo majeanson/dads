@@ -1774,6 +1774,37 @@
     color: var(--muted);
     text-decoration: line-through;
   }
+
+  /*
+   * The calendar that is not a poll: what is already on, not what a dad can
+   * do. Dad night is the RING (it is the standing thing, and the same accent
+   * the poll uses for "can"), and anything else planned is a DOT under the
+   * date — a cell can be both, and told apart at arm's length. The day
+   * being planned on is a heavier inset ring in the text colour.
+   */
+  .cal-day[data-night],
+  .cal-swatch[data-night] {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .cal-day[data-event]::after,
+  .cal-swatch[data-event]::after {
+    content: '';
+    position: absolute;
+    bottom: 0.3125rem;
+    left: 50%;
+    width: 0.3125rem;
+    height: 0.3125rem;
+    margin-left: -0.15625rem;
+    border-radius: 50%;
+    background: var(--text);
+  }
+
+  .cal-day[data-picked] {
+    border-color: var(--text);
+    box-shadow: inset 0 0 0 2px var(--text);
+  }
 }
 
 /* --- motion ----------------------------------------------------------------

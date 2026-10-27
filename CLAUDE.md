@@ -213,6 +213,33 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - The night sheet opens on a leaf (`NightLeaf`); who is coming is one line per
   answer, faces first (`rsvp-who` keeps the words specs read).
 
+## Other nights (events)
+
+- **An event is a one-off beside the dad night, never a kind of it.** `events`
+  and `event_rsvps` (0026) are their own tables; dad night, its RSVPs, its
+  poll and its `.ics` are untouched. Do not fold the two into one model.
+- **Date and time are the source, `starts_at` is derived.** A civil date, a
+  wall-clock time and the `tz` it was made in; `parseEventInput`
+  (`shared/events.ts`) is the only place the instant is computed. An edit
+  keeps the event's own zone.
+- **Any dad makes one; only its author edits or cancels** (the `member_id` in
+  the WHERE, as with night items). Cancelling is armed. Answers are the night's
+  three, and a departed dad's are not shown.
+- **Nothing is said in the room.** Writes send a `stir` with `what: 'events'`
+  (`eventsPulse`); a GET never does.
+- **One timer, `event_due`, for every event** in the shared `schedule` queue.
+  It is armed at the earliest unsent push and the DO reads D1 when it fires
+  (`room/events.ts`). `reminded_at`/`started_at` are stamped before sending.
+  An event made less than a day out is stamped reminded at birth.
+  `ensureNightScheduled` checks only the night's own kinds — it used to ask
+  whether _anything_ was armed.
+- **No answer buttons on an event's push**: `sw.js` files them as the NIGHT's
+  RSVP.
+- **Home gets one line, in the invite row's slot**, for the nearest event
+  within ten days (`home-event`); the invite row wins in a room of one. It is
+  a pointer to the calendar, not a second question.
+- The calendar is a menu row (`menu.events`), not a switch.
+
 ## Prompts (M4)
 
 - **A room's first question is a light one** (`OPENERS` in `promptPick.ts`, by

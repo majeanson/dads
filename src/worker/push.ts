@@ -213,6 +213,18 @@ export function dadNightReminder(): PushPayload {
   };
 }
 
+/** The evening before an event: what it is and when, no buttons. The answer
+ * buttons on the night's reminder file an RSVP for the NIGHT, and an event's
+ * answer is its own. */
+export function eventReminder(title: string, time: string): PushPayload {
+  return { title: 'dads', body: `Tomorrow ${time}: ${title}`, tag: 'event-soon' };
+}
+
+/** It is starting. */
+export function eventStarting(title: string): PushPayload {
+  return { title: 'dads', body: `Now: ${title}`, tag: 'event-now' };
+}
+
 /**
  * POST one encrypted notification to a push service. Returns false when the
  * subscription is dead (404/410) and should be dropped.

@@ -26,7 +26,11 @@ export function Answers({
   busy,
   onAnswer,
   ids,
+  label,
 }: {
+  /** What the group is answering, for its accessible name. Dad night by
+   * default; an event says its own. */
+  label?: string;
   mine: Answer | null;
   busy: boolean;
   onAnswer: (answer: Answer) => void;
@@ -38,7 +42,7 @@ export function Answers({
     <div
       className="home-answers"
       role="group"
-      aria-label={t('n.title')}
+      aria-label={label ?? t('n.title')}
       data-chosen={mine ?? 'none'}
     >
       {/* The one filled segment, sliding to whichever he chose. It is a

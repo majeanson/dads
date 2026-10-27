@@ -1,10 +1,12 @@
-import { ArrowRight, UserPlus } from 'lucide-react';
+import { ArrowRight, CalendarRange, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState, type TouchEvent } from 'react';
 import {
+  fetchEvents,
   fetchNight,
   fetchPoll,
   setRsvp,
   type Answer as AnswerKind,
+  type GroupEvent,
   type NightState,
   type PollState,
 } from './api';
@@ -20,6 +22,10 @@ import { buzz } from './buzz';
 import { Glasses, Logo } from './Logo';
 import { dayNameShort } from '../shared/calendarMonth';
 import { currentWindow, stillToCome, type DadNight } from '../shared/dadNight';
+
+/** How close an event has to be to get a line on home. Further off it is
+ * the calendar's business. */
+const EVENT_SOON_MS = 10 * 24 * 60 * 60 * 1000;
 
 /**
  * Four is a table of Jaffre, which is the number that turns a night of talk
@@ -63,12 +69,14 @@ export function Home({
   night,
   answered,
   pollPulse,
+  eventsPulse,
   you,
   unseen,
   alone,
   onGo,
   onNight,
   onInvite,
+  onEvents,
 }: {
   night: DadNight | null;
   /**
@@ -85,6 +93,8 @@ export function Home({
    * `answered`: the KIND of change that can move this screen, never every
    * line said in a chatty evening. */
   pollPulse: number;
+  /** Bumped when the room says an event changed. */
+  eventsPulse: number;
   you: string;
   unseen: number;
   /** He is the only man in the room (and the room has said so). */
@@ -92,11 +102,13 @@ export function Home({
   onGo: () => void;
   onNight: () => void;
   onInvite: () => void;
+  onEvents: () => void;
 }) {
   const { t, lang } = useT();
   const [state, setState] = useState<NightState | null>(null);
   const [poll, setPoll] = useState<PollState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [nextEvent, setNextEvent] = useState<GroupEvent | null>(null);
   const [now, setNow] = useState(() => Date.now());
   /** The full table's moment, playing right now. */
   const [cheer, setCheer] = useState(false);
@@ -184,6 +196,18 @@ export function Home({
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(timer);
   }, []);
+
+  // The next thing planned that is not the dad night. A failed read leaves
+  // what is there: no line is better than a wrong one.
+  useEffect(() => {
+    let cancelled = false;
+    fetchEvents()
+      .then((s) => !cancelled && setNextEvent(s.events[0] ?? null))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [eventsPulse, again]);
 
   /** The reminder offer, standing in for the night's quiet row. */
   const [offer, setOffer] = useState(false);
@@ -454,6 +478,22 @@ export function Home({
           >
             <UserPlus size={20} aria-hidden="true" />
             <span className="min-w-0 truncate">{t('home.invite')}</span>
+          </Button>
+        ) : nextEvent !== null && nextEvent.startsAt - now < EVENT_SOON_MS ? (
+          // The one other thing planned, in the invite row's place: home asks
+          // ONE question, and this is a pointer to the calendar, not a second
+          // question. Same size as the row it stands in for.
+          <Button
+            look="plain"
+            size="lg"
+            className="home-invite mb-8 justify-start"
+            onClick={onEvents}
+            data-testid="home-event"
+          >
+            <CalendarRange size={20} aria-hidden="true" />
+            <span className="min-w-0 truncate">
+              {nextEvent.title} · {dayNameShort(lang, nextEvent.day)} {nextEvent.time}
+            </span>
           </Button>
         ) : null}
         {/* A speech bubble, because that is what the door is for: the face

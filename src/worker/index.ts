@@ -11,6 +11,14 @@ import { invitePage } from './routes/preview';
 import { getTodo } from './routes/todo';
 import { getMedia, keepMediaRoute, listMedia, uploadMedia } from './routes/media';
 import { deleteFace, getFace, putFace, putGlasses, putGlassesFit, putName } from './routes/me';
+import {
+  deleteEvent,
+  getEventIcs,
+  getEvents,
+  postEvent,
+  putEvent,
+  putEventRsvp,
+} from './routes/events';
 import { setNight } from './routes/night';
 import { getPoll, pickDay, putVote } from './routes/poll';
 import { getPresence } from './routes/presence';
@@ -220,6 +228,24 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/night.ics':
       return getNightIcs(request, env, prod);
+
+    case 'GET /api/events':
+      return getEvents(request, env, prod);
+
+    case 'POST /api/events':
+      return postEvent(request, env, prod);
+
+    case 'PUT /api/events':
+      return putEvent(request, env, prod);
+
+    case 'DELETE /api/events':
+      return deleteEvent(request, env, url, prod);
+
+    case 'PUT /api/events/rsvp':
+      return putEventRsvp(request, env, prod);
+
+    case 'GET /api/event.ics':
+      return getEventIcs(request, env, url, prod);
 
     case 'GET /api/presence':
       return getPresence(request, env, prod);

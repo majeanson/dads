@@ -517,6 +517,39 @@ weakening `sessionSecret()`.
 - Setting a night mid-evening arms that evening's end, so it means something
   immediately instead of waiting a week.
 
+## Other nights (events)
+
+- **2026-10-27: the bowling, the barbecue, the game.** A dad asked for a way
+  to plan an evening other than the dad talk, and floated a calendar. Asked
+  how it should relate to dad night, he picked one-off outings beside it
+  rather than dad night as a kind of event; asked where it shows, a calendar
+  sheet plus one line on home; asked what a dad can do, RSVP, `.ics` and push.
+- **Why two models and not one.** Dad night carries a standing slot, a poll
+  for the next one, night items, an occurrence-keyed RSVP, a calendar file with
+  an RRULE and three timers. Making it "an event type" would have been a
+  rewrite of all of that for something that works, with migrations on a live
+  database. An event has none of it: a title, a place, a date, a time, answers.
+- **Why `starts_at` is stored at all** when dad night refuses to store an
+  instant: dad night's instant is computed on read because it repeats. An
+  event happens once, so the list needs something to sort on and the alarm
+  needs something to arm. It is derived from day, time and zone on every
+  write, and the three are the truth.
+- **Why one `event_due` timer.** The `schedule` table is one row per kind,
+  and a timer per event would need a key per event. One timer armed at the
+  earliest push owed, with the DO asking D1 what is due when it fires, keeps
+  the queue as it was and survives an eviction for free (D1 is the truth).
+- **A bug this fixed on the way:** `ensureNightScheduled` returned early if
+  _any_ row sat in `schedule`. With a second kind of timer in the queue an
+  event would have stopped the night arming. It now looks only at its own
+  three kinds.
+- **Why the home line shares the invite slot.** Home has ~10px spare at
+  390×667 and a rule that anything proposed for it displaces the night or the
+  door. A pointer in the slot a room of one uses for inviting costs no height;
+  `e2e/events.spec.ts` measures that home still does not scroll.
+- **Why no RSVP buttons on the push.** `sw.js` answers `rsvp-in`/`rsvp-out` by
+  PUTting `/api/rsvp`, which is the NIGHT's. A button on an event would answer
+  a different question.
+
 ## Prompts (M4)
 
 - The curated 100 live in `migrations/0003_prompt_library.sql` with

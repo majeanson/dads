@@ -3,6 +3,7 @@ import type { RoomsOpen } from '../../shared/protocol';
 import { noteChange } from './changes';
 import { forget } from './lines';
 import { departed, restamp } from './members';
+import { ensureEventsScheduled } from './events';
 import { applyNight } from './night';
 import type { Room } from './room';
 import { rescheduleAlarm } from './schedule';
@@ -43,11 +44,22 @@ export async function internalRoute(
     // A screen that reads over HTTP should look again. See the `stir` frame
     // in protocol.ts for why it exists.
     case '/stir': {
-      const { what } = (await request.json()) as { what: 'night' | 'todo' | 'table' };
-      if (what !== 'night' && what !== 'todo' && what !== 'table') {
+      const { what } = (await request.json()) as {
+        what: 'night' | 'todo' | 'table' | 'events';
+      };
+      if (what !== 'night' && what !== 'todo' && what !== 'table' && what !== 'events') {
         return new Response('bad stir', { status: 400 });
       }
       room.broadcast({ t: 'stir', what });
+      return done();
+    }
+
+    // An event was made, moved or cancelled: re-arm the push that comes next,
+    // and nudge open screens to look again. Nothing is said in the room.
+    case '/events': {
+      await ensureEventsScheduled(room);
+      room.broadcast({ t: 'stir', what: 'events' });
+      await rescheduleAlarm(room);
       return done();
     }
 

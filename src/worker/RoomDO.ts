@@ -7,6 +7,7 @@ import { currentRev, remembersSince, replaySince } from './room/changes';
 import { internalRoute } from './room/internal';
 import { backfill, edit, react, retract, say } from './room/lines';
 import { membersOfGroup } from './room/members';
+import { ensureEventsScheduled } from './room/events';
 import { applyNight, ensureNightScheduled, timersDue } from './room/night';
 import {
   broadcastRoster,
@@ -75,6 +76,7 @@ export class RoomDO extends DurableObject<Env> {
     // arms itself the first time someone shows up.
     const nightHeader = request.headers.get(IDENTITY_HEADERS.night);
     applyNight(room, nightHeader ? (JSON.parse(nightHeader) as DadNight) : null);
+    await ensureEventsScheduled(room);
     await rescheduleAlarm(room);
 
     const after = Number(url.searchParams.get('after') ?? '');
@@ -229,6 +231,7 @@ export class RoomDO extends DurableObject<Env> {
     await leaveDue(room, now);
     await timersDue(room, now);
     ensureNightScheduled(room);
+    await ensureEventsScheduled(room);
     await rescheduleAlarm(room);
   }
 

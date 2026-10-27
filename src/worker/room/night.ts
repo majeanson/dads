@@ -1,6 +1,7 @@
 import { currentWindow, isValidNight, nextStart, type DadNight } from '../../shared/dadNight';
 import { dadNightReminder, notifyGroup } from '../push';
 import type { Room } from './room';
+import { timersDueForEvents } from './events';
 import { arm } from './schedule';
 
 /** How long before the table opens the phones are told. The evening before,
@@ -48,7 +49,11 @@ export function ensureNightScheduled(room: Room, now = Date.now()): void {
     room.sql.exec(`DELETE FROM schedule WHERE kind IN ('night_start','night_end','night_remind')`);
     return;
   }
-  const armed = room.sql.exec('SELECT 1 FROM schedule').toArray().length;
+  // The night's own timers only: the queue is shared, and an event's timer
+  // sitting in it must not stop the night arming.
+  const armed = room.sql
+    .exec(`SELECT 1 FROM schedule WHERE kind IN ('night_start','night_end','night_remind')`)
+    .toArray().length;
   if (armed) return;
 
   // Setting a night mid-evening should not wait a week to mean anything: if
@@ -75,6 +80,7 @@ export async function timersDue(room: Room, now: number): Promise<void> {
     if (timer.kind === 'night_start') await openDadNight(room, now);
     else if (timer.kind === 'night_end') await closeDadNight(room, now);
     else if (timer.kind === 'night_remind') await remindOfDadNight(room);
+    else if (timer.kind === 'event_due') await timersDueForEvents(room, now);
   }
 }
 

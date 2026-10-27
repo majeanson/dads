@@ -1,4 +1,13 @@
-import { CalendarHeart, Coffee, DoorOpen, Search, Send, Settings2, Users } from 'lucide-react';
+import {
+  CalendarHeart,
+  CalendarRange,
+  Coffee,
+  DoorOpen,
+  Search,
+  Send,
+  Settings2,
+  Users,
+} from 'lucide-react';
 import type { CallMember, RoomMessage, RoomsOpen, RosterEntry } from '../shared/protocol';
 import type { DadNight } from '../shared/dadNight';
 import type { Todo } from './api';
@@ -22,6 +31,7 @@ import { Sheet } from './ui/Sheet';
  */
 const bodies = {
   Board: () => import('./Board'),
+  Events: () => import('./Events'),
   Find: () => import('./Find'),
   Here: () => import('./Here'),
   Invite: () => import('./Invite'),
@@ -31,6 +41,7 @@ const bodies = {
   Settings: () => import('./Settings'),
 };
 const Board = lazy(() => bodies.Board().then((m) => ({ default: m.Board })));
+const Events = lazy(() => bodies.Events().then((m) => ({ default: m.Events })));
 const Find = lazy(() => bodies.Find().then((m) => ({ default: m.Find })));
 const Here = lazy(() => bodies.Here().then((m) => ({ default: m.Here })));
 const Invite = lazy(() => bodies.Invite().then((m) => ({ default: m.Invite })));
@@ -118,6 +129,7 @@ export function Sheets({
   night,
   pollPulse,
   nightPulse,
+  eventsPulse,
   rooms,
   members,
   createdBy,
@@ -156,6 +168,8 @@ export function Sheets({
   pollPulse: number;
   /** And when somebody answers, or puts something up for the evening. */
   nightPulse: number;
+  /** And when somebody puts up, moves, cancels or answers an event. */
+  eventsPulse: number;
   rooms: RoomsOpen;
   todo: Todo;
   tableOpen: boolean;
@@ -241,6 +255,16 @@ export function Sheets({
       <Sheet title={t('n.title')} pose={CalendarHeart} onClose={close}>
         <Body>
           <Night night={night} you={you} pollPulse={pollPulse} nightPulse={nightPulse} />
+        </Body>
+      </Sheet>
+    );
+  }
+
+  if (open === 'events') {
+    return (
+      <Sheet title={t('ev.title')} pose={CalendarRange} onClose={close}>
+        <Body>
+          <Events night={night} you={you} pulse={eventsPulse} />
         </Body>
       </Sheet>
     );

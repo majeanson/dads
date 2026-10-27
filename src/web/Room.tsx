@@ -375,6 +375,7 @@ export function Room({
           night={room.night}
           answered={nightPulse}
           pollPulse={room.pollPulse}
+          eventsPulse={room.eventsPulse}
           you={session.member.id}
           unseen={seen.unseen}
           // Counted off the roster of members, which has not arrived yet while
@@ -383,6 +384,7 @@ export function Room({
           onGo={goTalk}
           onNight={() => setSheet('night')}
           onInvite={() => setSheet('invite')}
+          onEvents={() => setSheet('events')}
         />
 
         <div className="stage">
@@ -502,6 +504,7 @@ export function Room({
           night={room.night}
           pollPulse={room.pollPulse}
           nightPulse={nightPulse}
+          eventsPulse={room.eventsPulse}
           rooms={room.rooms}
           members={room.members}
           createdBy={room.createdBy}

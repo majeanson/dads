@@ -1,4 +1,5 @@
 import type { DadNight } from '../shared/dadNight';
+import type { EventInput, EventsState } from '../shared/events';
 import type { Found, GlassesFit, RoomsOpen } from '../shared/protocol';
 
 /** A night as the client sends it: the zone is omitted when the group already
@@ -664,3 +665,43 @@ export async function keepMedia(id: string, on: boolean): Promise<'ok' | 'full' 
     return 'failed';
   }
 }
+
+export type { EventAnswer, EventInput, EventsState, GroupEvent } from '../shared/events';
+
+/** Every write answers with the whole list, so the screen settles on what the
+ * server has rather than on what it hoped. A refusal throws the server's word
+ * for why. */
+async function eventsCall(
+  method: 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body?: unknown,
+): Promise<EventsState> {
+  const res = await fetch(path, {
+    method,
+    ...(body === undefined
+      ? {}
+      : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  });
+  if (!res.ok) {
+    const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(error ?? 'failed');
+  }
+  return (await res.json()) as EventsState;
+}
+
+export async function fetchEvents(): Promise<EventsState> {
+  const res = await fetch('/api/events');
+  if (!res.ok) throw new Error(`GET /api/events ${res.status}`);
+  return (await res.json()) as EventsState;
+}
+
+export const addEvent = (input: EventInput) => eventsCall('POST', '/api/events', input);
+
+export const editEvent = (id: string, input: EventInput) =>
+  eventsCall('PUT', '/api/events', { id, ...input });
+
+export const cancelEvent = (id: string) =>
+  eventsCall('DELETE', `/api/events?id=${encodeURIComponent(id)}`);
+
+export const answerEvent = (id: string, answer: Answer) =>
+  eventsCall('PUT', '/api/events/rsvp', { id, answer });

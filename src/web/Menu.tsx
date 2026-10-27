@@ -1,5 +1,6 @@
 import {
   CalendarCheck,
+  CalendarRange,
   DoorOpen,
   MessageCircleQuestion,
   Search,
@@ -18,6 +19,7 @@ export type SheetName =
   | 'prompts'
   | 'board'
   | 'night'
+  | 'events'
   | 'find'
   | 'invite'
   | 'rooms'
@@ -79,6 +81,13 @@ export function Menu({
 
   return (
     <nav className="menu" aria-label="Rooms">
+      {/* Every night but the dad one: the bowling, the barbecue. Not a switch —
+          the creator has no reason to hide the calendar. */}
+      <Button block look="quiet" className={ROW} onClick={() => onOpen('events')}>
+        <CalendarRange size={22} aria-hidden="true" className="shrink-0 text-muted" />
+        <span className="min-w-0 truncate">{t('menu.events')}</span>
+      </Button>
+
       {rooms.questions ? (
         <Button block look="quiet" className={ROW} onClick={() => onOpen('prompts')}>
           <MessageCircleQuestion size={22} aria-hidden="true" className="shrink-0 text-muted" />

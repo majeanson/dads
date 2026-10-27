@@ -91,7 +91,13 @@ export const E2E_SAFARI_GROUP = {
   name: 'The E2E Safari',
   code: 'harbor quill thistle moss',
 };
+export const E2E_EVENTS_GROUP = {
+  slug: 'e2e-events',
+  name: 'The E2E Events',
+  code: 'orchard basil tundra slate',
+};
 const GROUPS = [
+  E2E_EVENTS_GROUP,
   E2E_CALL_GROUP,
   E2E_GROUP,
   E2E_ROOM_GROUP,

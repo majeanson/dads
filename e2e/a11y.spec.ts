@@ -105,6 +105,25 @@ for (const theme of ['light', 'dark'] as const) {
       await close();
     }
 
+    // The calendar with something on it and the form open: the marks on the
+    // grid, an event's answers, and the fields that make one.
+    await page.evaluate(
+      (day) =>
+        fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Bowling', place: 'Le Strike', day, time: '19:00' }),
+        }),
+      new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    );
+    await menu();
+    await page.getByRole('button', { name: /^Calendar/ }).click();
+    await expect(page.getByTestId('event').first()).toBeVisible();
+    found.push(...(await faults(page, 'the calendar')));
+    await page.getByTestId('ev-plan').click();
+    found.push(...(await faults(page, 'planning something')));
+    await close();
+
     // The two screens behind those: what was asked before, and the weeks
     // behind this one.
     await menu();

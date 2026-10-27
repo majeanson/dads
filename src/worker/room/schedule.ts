@@ -1,7 +1,7 @@
 import type { Room } from './room';
 
 /** A timer in the `schedule` queue: one of each at most. */
-export type TimerKind = 'night_start' | 'night_end' | 'night_remind';
+export type TimerKind = 'night_start' | 'night_end' | 'night_remind' | 'event_due';
 
 export function arm(room: Room, kind: TimerKind, at: number): void {
   room.sql.exec('INSERT OR REPLACE INTO schedule (kind, due_at) VALUES (?, ?)', kind, at);
