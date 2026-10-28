@@ -6,7 +6,7 @@ import {
   type Page,
   type WebSocketRoute,
 } from '@playwright/test';
-import { talk } from './talk';
+import { menu, talk } from './talk';
 import { E2E_SAFARI_GROUP } from './global-setup';
 
 /*
@@ -241,5 +241,41 @@ test('a phone that drops out comes back to what changed', async ({ browser }) =>
   await expect(back.getByTestId('mark').filter({ hasText: '🙏' })).toContainText('1');
 
   await other.context().close();
+  await context.close();
+});
+
+test('planning something fits an iPhone, and a tap on a day keeps the keyboard down', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ ...devices['iPhone 13'] });
+  const phone = await context.newPage();
+  await comeIn(phone, 'Eve Safari');
+  await menu(phone);
+  await phone
+    .getByRole('navigation', { name: 'Rooms' })
+    .getByRole('button', { name: /^Calendar/ })
+    .tap();
+  await phone.locator('[data-testid="ev-day"]:not([disabled])').last().tap();
+
+  // The card took focus; the title did not, so no keyboard.
+  const form = phone.getByTestId('ev-form');
+  await expect(form).toBeFocused();
+  await expect(phone.getByTestId('ev-title')).not.toBeFocused();
+
+  // Every field is inside the card. Native date and time pickers have a width
+  // of their own on iOS, and a label with no column template takes it.
+  const card = (await form.boundingBox())!;
+  for (const id of ['ev-title', 'ev-place', 'ev-day-field', 'ev-time']) {
+    const box = (await phone.getByTestId(id).boundingBox())!;
+    expect(box.x, id).toBeGreaterThanOrEqual(card.x);
+    expect(box.x + box.width, id).toBeLessThanOrEqual(card.x + card.width + 0.5);
+  }
+  // And one under the other.
+  const day = (await phone.getByTestId('ev-day-field').boundingBox())!;
+  const time = (await phone.getByTestId('ev-time').boundingBox())!;
+  expect(day.y + day.height).toBeLessThanOrEqual(time.y + 1);
+
+  // A picture for a human to look at, when asked for.
+  if (process.env.EV_SHOT) await phone.screenshot({ path: process.env.EV_SHOT });
   await context.close();
 });

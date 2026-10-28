@@ -32,6 +32,21 @@ import { FIELD } from './ui/field';
 
 const DEFAULT_TIME = '19:00';
 
+/**
+ * A label and its field. `grid-cols-1` is `minmax(0, 1fr)`: a label with no
+ * column template gets an implicit `auto` one, which takes the width of
+ * whatever is inside it — and a native date or time picker on iOS has a width
+ * of its own.
+ */
+const LABEL = 'grid grid-cols-1 min-w-0 gap-1.5 text-[1.0625rem]';
+
+/**
+ * The native pickers. iOS draws them with its own intrinsic width and ignores
+ * `width: 100%` until the native look is switched off; they also centre their
+ * text there, so it is put back.
+ */
+const PICKER = cn(FIELD, 'block min-w-0 max-w-full appearance-none text-left');
+
 /** The server's word for why, as a sentence. */
 const REFUSED: Record<string, Key> = {
   empty: 'ev.err_empty',
@@ -377,7 +392,7 @@ function Form({
       onSubmit={submit}
       data-testid="ev-form"
     >
-      <label className="grid gap-1.5 text-[1.0625rem]">
+      <label className={LABEL}>
         {t('ev.f_title')}
         <input
           className={FIELD}
@@ -388,7 +403,7 @@ function Form({
           data-testid="ev-title"
         />
       </label>
-      <label className="grid gap-1.5 text-[1.0625rem]">
+      <label className={LABEL}>
         {t('ev.f_place')}
         <input
           className={FIELD}
@@ -402,22 +417,22 @@ function Form({
           wider than half a 390px sheet, in French especially, and ran into
           each other. */}
       <div className="grid grid-cols-1 gap-3 min-[30rem]:grid-cols-2">
-        <label className="grid min-w-0 gap-1.5 text-[1.0625rem]">
+        <label className={LABEL}>
           {t('ev.f_day')}
           <input
             type="date"
-            className={cn(FIELD, 'min-w-0')}
+            className={PICKER}
             value={draft.day}
             min={today}
             onChange={(e) => set({ day: e.target.value })}
             data-testid="ev-day-field"
           />
         </label>
-        <label className="grid min-w-0 gap-1.5 text-[1.0625rem]">
+        <label className={LABEL}>
           {t('ev.f_time')}
           <input
             type="time"
-            className={cn(FIELD, 'min-w-0')}
+            className={PICKER}
             value={draft.time}
             onChange={(e) => set({ time: e.target.value })}
             data-testid="ev-time"
