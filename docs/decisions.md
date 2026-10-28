@@ -2098,6 +2098,12 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   Not provable from CI. If it is STILL soft, the next step is to stop (it is the
   system's); do not add another offset.
 
+- **Bar colour** (2026-10-28): with the tag left out and the room fixed, the bar
+  turned light blue on the device (sampled from a fixed layer; painting the room
+  `--bg` did not change it). `apple-mobile-web-app-status-bar-style: default` is
+  back: system black/white bar, and the blur stays cured because it was the
+  layer, not the tag. Needs remove and re-add.
+
 ## Proving it in production
 
 `npm run prove` runs `prod/` against **dads.marcportal.com**. It is not in CI

@@ -766,8 +766,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - **`main.room` is `position: fixed`** (`--app-top` follows the visual
   viewport). iOS 26 softens the page's OWN content in the top band of a
   home-screen app, but not a fixed layer: a sheet's title was sharp on the same
-  screen as the room's soft one. With no status-bar-style tag the bar is opaque,
-  the top inset is 0 and `--scrim` is nothing; the build label in Settings
+  screen as the room's soft one. The status-bar-style tag is `default` (left out, the bar
+  was sampled from the fixed layer and went light blue): an opaque system bar,
+  the top inset 0, `--scrim` nothing; the build label in Settings
   shows both numbers.
 - A message on a phone is two rows; a run drops the repeated name and clock.
 

@@ -50,12 +50,13 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <!-- No apple-mobile-web-app-status-bar-style, on purpose (2026-10-28). iOS 26
-         blurs and fades the top of a home-screen app that has one ("default" and
-         "black-translucent" both did it here); WebKit's answer (bug 317153) is to
-         leave it out, and the system then draws an opaque bar in the page's own
-         colour with the page starting below it. iOS reads this when the app is
+    <!-- status-bar-style "default": an opaque bar in the system's own colour (black in dark, white in
+         light), the page starting below it. With the tag left out (2026-10-28) the
+         bar was sampled from whatever fixed layer sat at the top and went light
+         blue once the room became one. The blur is not the tag's business any more:
+         the room is a fixed layer (tokens.css). iOS reads this when the app is
          ADDED, so an app added earlier has to be removed and added again. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="dads" />
 
