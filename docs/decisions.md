@@ -2072,7 +2072,9 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   extra space above the header, the sheets, the door and the viewer — first only
   where `display-mode: standalone` / `navigator.standalone` said installed, and
   when that did not visibly change anything, as 40% of `env(safe-area-inset-top)`
-  so no detection is involved at all. It costs that much of the screen on an iPhone and
+  so no detection is involved at all. 40% (about 24pt) was on the phone, confirmed by
+  the build label (Settings), and the header title was STILL soft while a sheet
+  title about 12pt lower was sharp: so 70%. It costs that much of the screen on an iPhone and
   nothing anywhere else; tune it in tokens.css.
 - **A message on a phone is two rows, not three columns.** Who and when above,
   what he said across the full width. Three columns means a photograph wins and
