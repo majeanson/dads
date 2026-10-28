@@ -50,14 +50,12 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <!-- An opaque status bar, said out loud (2026-10-28). iOS 26 draws a blur
-         and a scrim over the top of a home-screen app whose bar is
-         translucent, and a page with no opinion got the translucent one: the
-         room's name sat inside it. "default" is the opaque bar — the page
-         starts below it — and nothing in the page can switch the scrim off
-         any other way. iOS reads this when the app is ADDED to the home
-         screen, so an app added before this needs removing and adding again. -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- No apple-mobile-web-app-status-bar-style, on purpose (2026-10-28). iOS 26
+         blurs and fades the top of a home-screen app that has one ("default" and
+         "black-translucent" both did it here); WebKit's answer (bug 317153) is to
+         leave it out, and the system then draws an opaque bar in the page's own
+         colour with the page starting below it. iOS reads this when the app is
+         ADDED, so an app added earlier has to be removed and added again. -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="dads" />
 

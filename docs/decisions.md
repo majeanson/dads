@@ -2061,7 +2061,7 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   That alone did not clear it: an installed app with no opinion about its status
   bar still got the translucent one, and iOS 26 blurs and darkens the top of
   the page under that (field reports put the scrim at about 40pt, and say no
-  CSS removes it). `apple-mobile-web-app-status-bar-style` is now `default`,
+  CSS removes it). `apple-mobile-web-app-status-bar-style` was set to `default`,
   the opaque bar, so the page starts below it. iOS reads it only when the app
   is added to the home screen: **remove it and add it again** to see the change.
   Not provable from the simulator or from CI.
@@ -2076,6 +2076,13 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   the build label (Settings), and the header title was STILL soft while a sheet
   title about 12pt lower was sharp: so 70%. It costs that much of the screen on an iPhone and
   nothing anywhere else; tune it in tokens.css.
+  Later the same day: 70% still left the header soft while a sheet title was sharp,
+  and the page itself (a document that can scroll) was suspected next, so it is
+  locked while the room is up (`html:has(main.room)` overflow hidden). Field
+  reports (WebKit bug 317153) say the tag should be LEFT OUT rather than set to
+  `default`, so it is gone from index.html; the app must be removed and added
+  again to take it, and the account carried across with the pairing code
+  (`/api/pair`) first, since a re-added app starts with empty storage.
 - **A message on a phone is two rows, not three columns.** Who and when above,
   what he said across the full width. Three columns means a photograph wins and
   the name and the clock are crushed: "Marc-antoine" became "M…". A run from
