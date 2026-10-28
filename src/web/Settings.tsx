@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight, LogOut, Send } from 'lucide-react';
 import { useState } from 'react';
 import { setRooms } from './api';
 import { useT } from './i18n';
+import { BuildLabel } from './BuildLabel';
 import { Remind } from './Remind';
 import { Toggles } from './Toggles';
 import { You } from './You';
@@ -159,7 +160,10 @@ export function Settings({
             once, it is about THIS device, and a row of its own was the pixels
             the invite above now spends — Settings fills a 667px phone. */}
         <div className="mb-1 flex items-baseline justify-between gap-3">
-          <h2 className="m-0 text-[1.0625rem] font-semibold text-muted">{t('set.yours')}</h2>
+          <h2 className="m-0 flex min-w-0 items-baseline gap-2 text-[1.0625rem] font-semibold text-muted">
+            {t('set.yours')}
+            <BuildLabel />
+          </h2>
           <button
             type="button"
             className="-my-2.5 flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 text-sm text-muted"
