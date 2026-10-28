@@ -13,7 +13,7 @@ import type { DadNight } from '../shared/dadNight';
 import type { Todo } from './api';
 import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { Menu, type SheetName } from './Menu';
-import { useT } from './i18n';
+import { useT, type Key } from './i18n';
 import { Logo } from './Logo';
 import { Button } from './ui/Button';
 import { Sheet } from './ui/Sheet';
@@ -105,6 +105,19 @@ function Reload() {
 }
 
 export type { SheetName } from './Menu';
+/** What the app does, one plain line each. "What this is" lists them all. */
+const ABOUT_FEATURES: Key[] = [
+  'about.f_night',
+  'about.f_poll',
+  'about.f_calendar',
+  'about.f_chat',
+  'about.f_call',
+  'about.f_questions',
+  'about.f_week',
+  'about.f_table',
+  'about.f_find',
+  'about.f_remind',
+];
 
 /**
  * Everything the app can do that is not the conversation or the call.
@@ -308,6 +321,11 @@ export function Sheets({
         <div className="grid gap-4 text-[1.0625rem]" data-testid="about">
           <p className="m-0">{t('join.lede')}</p>
           <p className="m-0">{t('about.main')}</p>
+          <ul className="m-0 grid list-disc gap-2 pl-5 text-base" data-testid="about-features">
+            {ABOUT_FEATURES.map((key) => (
+              <li key={key}>{t(key)}</li>
+            ))}
+          </ul>
         </div>
       </Sheet>
     );

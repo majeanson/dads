@@ -12,6 +12,16 @@ const EN = {
   'about.open': 'What this is',
   'about.title': 'What this is',
   'about.main': 'Say if you’re coming. That’s the main thing.',
+  'about.f_night': 'Dad night: say if you’re in, maybe or out, and add what you’re bringing.',
+  'about.f_poll': 'No night planned? Everyone marks the days they can, then one gets locked in.',
+  'about.f_calendar': 'Calendar: plan other nights too, like a game night or a barbecue.',
+  'about.f_chat': 'Chat: words, photos and voice notes. Reply, react, edit or take back a line.',
+  'about.f_call': 'Call: voice or camera, right in the room.',
+  'about.f_questions': 'Questions: one a day, everyone answers.',
+  'about.f_week': 'The week: say what you plan to do this week, then mark it done.',
+  'about.f_table': 'The table: cards for up to four.',
+  'about.f_find': 'Find: search what was said.',
+  'about.f_remind': 'Reminders on your phone, if you turn them on in Settings.',
   'join.out': 'You’re no longer in {room}.',
   'join.code': 'The word',
   'join.name': 'Your name',
@@ -524,6 +534,20 @@ const FR: Record<Key, string> = {
   'about.open': 'C’est quoi, ça',
   'about.title': 'C’est quoi, ça?',
   'about.main': 'Dis si tu viens. C’est ça, l’important.',
+  'about.f_night':
+    'Soirée de gars : dis si t’es in, peut-être ou out, pis ajoute ce que tu apportes.',
+  'about.f_poll':
+    'Pas de soirée de prévue? Tout le monde marque ses jours, pis une date est choisie.',
+  'about.f_calendar':
+    'Calendrier : planifie d’autres soirées aussi, comme une soirée de jeux ou un BBQ.',
+  'about.f_chat':
+    'Jasette : texte, photos et messages vocaux. Réponds, réagis, modifie ou retire une ligne.',
+  'about.f_call': 'Appel : voix ou caméra, direct dans le salon.',
+  'about.f_questions': 'Les questions : une par jour, tout le monde répond.',
+  'about.f_week': 'La semaine : dis ce que tu comptes faire, pis marque quand c’est fait.',
+  'about.f_table': 'La table : des cartes jusqu’à quatre.',
+  'about.f_find': 'Retrouve : cherche dans ce qui s’est dit.',
+  'about.f_remind': 'Rappels sur ton téléphone, si tu les actives dans Réglages.',
   'join.out': 'T’es plus dans {room}.',
   'join.code': 'Le mot',
   'join.name': 'Ton nom',
@@ -957,7 +981,7 @@ const FR: Record<Key, string> = {
   'n.once_only': 'Juste cette fois-là.',
 
   // ------------------------------------------ choisir la prochaine fois
-  'p.title': 'C’est quand la prochaine ?',
+  'p.title': 'C’est quand la prochaine rencontre ?',
   'p.pick_days': 'Choisis tes journées',
   'p.nobody': 'Personne a choisi de journée encore.',
   'p.how': 'Tape une journée : oui, peut-être, non.',
@@ -989,9 +1013,9 @@ const FR: Record<Key, string> = {
   // ------------------------------------------------- ce que la salle dit
   'sys.night_set': '{by} a mis la soirée de gars {when}.',
   'sys.night_picked': '{by} a réglé ça : le {when} à {time}.',
-  'sys.poll_open': 'La soirée est finie. C’est quand la prochaine ?',
+  'sys.poll_open': 'La soirée est finie. C’est quand la prochaine rencontre ?',
   'sys.night_cleared': '{by} a effacé la soirée de gars.',
-  'sys.night_off': '{by} a annulé {when}. C’est quand la prochaine?',
+  'sys.night_off': '{by} a annulé {when}. C’est quand la prochaine rencontre ?',
   'sys.word_changed': '{by} a changé le mot pour entrer. L’ancien marche plus.',
   'sys.room_handed': '{by} a passé le salon à {to}.',
   'sys.rsvp_in': '{name} est là.',
