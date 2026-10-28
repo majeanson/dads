@@ -455,3 +455,29 @@ test('he picks his colour, is told what it changes, and can go back to automatic
   await expect(page.getByTestId('colour-auto')).toHaveCount(0);
   await expect(page.getByTestId('colour-11')).toHaveAttribute('aria-pressed', 'false');
 });
+
+test('a new device asks with a code and comes in as the same dad', async ({ browser }) => {
+  const first = await (await browser.newContext()).newPage();
+  await comeIn(first, 'Pia Phone');
+
+  // The home-screen app: nothing stored, so it is a stranger at the door.
+  const second = await (await browser.newContext()).newPage();
+  await second.goto('/');
+  await second.getByTestId('pair-start').click();
+  await expect(second.getByTestId('pair-code')).toHaveText(/^[A-Z2-9]{8}$/);
+  const code = (await second.getByTestId('pair-code').textContent()) ?? '';
+
+  await menu(first);
+  await first.getByTestId('menu-link').click();
+  await first.getByTestId('pair-code-in').fill(code.toLowerCase());
+  await first.getByRole('button', { name: 'Let it in' }).click();
+  await expect(first.getByTestId('pair-done')).toBeVisible();
+
+  // And the second device is in, as him: his name, not a new dad's.
+  await expect(second.getByTestId('connection')).toHaveText(/here$/, { timeout: 15_000 });
+  await second.getByRole('button', { name: 'Settings' }).click();
+  await expect(second.getByTestId('my-name')).toHaveValue('Pia Phone');
+
+  await first.context().close();
+  await second.context().close();
+});

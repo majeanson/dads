@@ -7,6 +7,7 @@ import { NewRoom } from './NewRoom';
 import { LangToggle } from './Toggles';
 import { Button } from './ui/Button';
 import { useFreshBuild } from './useFreshBuild';
+import { PairDevice } from './PairDevice';
 import { FIELD } from './ui/field';
 
 // One message for a wrong code and for a code that belongs to no group: the
@@ -55,6 +56,8 @@ export function JoinScreen({
    * sent a link is never shown the second — he has already been let in by
    * whoever sent it, and a form for making his own would be an odd answer. */
   const [making, setMaking] = useState(false);
+  /** Already a dad here, on another device: ask to be let in as him. */
+  const [pairing, setPairing] = useState(false);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   // The door too, held back while he is typing into it.
@@ -90,7 +93,12 @@ export function JoinScreen({
           arrives. A stranger who has been handed a code should recognise where
           he has landed — and the first thing the app does should be a small
           welcome rather than a form. */}
-      {making ? (
+      {pairing ? (
+        <>
+          <DoorMark />
+          <PairDevice onJoined={onJoined} onBack={() => setPairing(false)} />
+        </>
+      ) : making ? (
         <>
           <DoorMark />
           <NewRoom onMade={onJoined} onBack={() => setMaking(false)} />
@@ -196,6 +204,15 @@ export function JoinScreen({
           nearly everybody who lands here was sent a word by a friend. A man
           who followed an invite link is not offered it at all — he is already
           being let into somebody's room. */}
+          <Button
+            look="quiet"
+            size="lg"
+            onClick={() => setPairing(true)}
+            className="mt-4 justify-center"
+            data-testid="pair-start"
+          >
+            {t('pair.start')}
+          </Button>
           {invite ? null : (
             <Button
               look="quiet"

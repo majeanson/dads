@@ -246,6 +246,19 @@ const EN = {
   'you.colour_what':
     'Changes the colour of your name, of your face when you have no photo, and of the quote when someone replies to you. Everyone sees it.',
   'you.colour_auto': 'Back to automatic',
+  'pair.start': 'I’m already in on another device',
+  'pair.title': 'Your code',
+  'pair.how':
+    'On the device where you are already in: Menu, then “Use on another device”, and type this code.',
+  'pair.waiting': 'Waiting for the other device…',
+  'pair.expired': 'That code ran out.',
+  'pair.new': 'Get a new code',
+  'pair.back': 'Back',
+  'pair.failed': 'Couldn’t get a code. Try again.',
+  'link.code': 'Code from the new device',
+  'link.code_do': 'Let it in',
+  'link.code_done': 'Done. That device is you now.',
+  'link.code_bad': 'No device is asking with that code.',
   'link.title': 'Use on another device',
   'link.what':
     'Open this link on your other phone or computer. It signs that device in as you, with your face, your answers and your week.',
@@ -819,6 +832,19 @@ const FR: Record<Key, string> = {
   'you.colour_what':
     'Change la couleur de ton nom, de ta face quand t’as pas de photo, pis de la citation quand quelqu’un te répond. Tout le monde la voit.',
   'you.colour_auto': 'Remets automatique',
+  'pair.start': 'Je suis déjà là sur un autre appareil',
+  'pair.title': 'Ton code',
+  'pair.how':
+    'Sur l’appareil où t’es déjà : Menu, puis « Sur un autre appareil », et tape ce code.',
+  'pair.waiting': 'J’attends l’autre appareil…',
+  'pair.expired': 'Ce code a expiré.',
+  'pair.new': 'Prends un nouveau code',
+  'pair.back': 'Retour',
+  'pair.failed': 'Pas pu avoir un code. Réessaie.',
+  'link.code': 'Code du nouvel appareil',
+  'link.code_do': 'Laisse-le entrer',
+  'link.code_done': 'C’est fait. Cet appareil, c’est toi.',
+  'link.code_bad': 'Aucun appareil ne demande avec ce code.',
   'link.title': 'Sur un autre appareil',
   'link.what':
     'Ouvre ce lien sur ton autre téléphone ou ordinateur. Il y entre en tant que toi, avec ta face, tes réponses et ta semaine.',

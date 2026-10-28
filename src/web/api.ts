@@ -659,6 +659,36 @@ export async function claimDeviceLink(token: string): Promise<boolean> {
   return true;
 }
 
+/** The new device asks to be let in as a dad that exists: a code to show. */
+export async function startPair(): Promise<{ code: string; poll: string; expiresAt: number }> {
+  const res = await fetch('/api/pair', { method: 'POST' });
+  if (!res.ok) throw new Error(`POST /api/pair ${res.status}`);
+  return (await res.json()) as { code: string; poll: string; expiresAt: number };
+}
+
+/** 'pending' until a device says yes, 'in' once this one is him, 'gone' if it ran out. */
+export async function pollPair(poll: string): Promise<'pending' | 'in' | 'gone'> {
+  const res = await fetch('/api/pair/poll', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ poll, deviceToken: readDeviceToken() }),
+  });
+  if (res.status === 202) return 'pending';
+  if (!res.ok) return 'gone';
+  writeDeviceToken(((await res.json()) as { deviceToken: string }).deviceToken);
+  return 'in';
+}
+
+/** From a device that is already him: the one showing this code is me. */
+export async function approvePair(code: string): Promise<boolean> {
+  const res = await fetch('/api/pair/approve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  return res.ok;
+}
+
 /** Where his glasses sit on his photo, or null for the default spot. */
 export async function setMyGlassesFit(fit: GlassesFit | null): Promise<void> {
   const res = await fetch('/api/me/glasses-fit', {

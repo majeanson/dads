@@ -30,7 +30,7 @@ import {
 import { setNight } from './routes/night';
 import { getPoll, pickDay, putVote } from './routes/poll';
 import { getPresence } from './routes/presence';
-import { claimLink, createLink } from './routes/link';
+import { approvePair, claimLink, createLink, pollPair, startPair } from './routes/link';
 import { getProfile } from './routes/profile';
 import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
 import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp';
@@ -194,6 +194,12 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'POST /api/link/claim':
       return claimLink(request, env, prod);
+    case 'POST /api/pair':
+      return startPair(request, env, prod);
+    case 'POST /api/pair/approve':
+      return approvePair(request, env, prod);
+    case 'POST /api/pair/poll':
+      return pollPair(request, env, prod);
 
     case 'POST /api/invite':
       return createInvite(request, env, prod);

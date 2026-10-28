@@ -66,7 +66,11 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   reaches an existing dad: it makes a second one, on purpose. The link is a
   `#link=` fragment, taken off the address bar before anything else, and its
   failures count against the join bucket. Every lookup by device hash checks
-  `member_devices` as well as `members.device_token_hash`.
+  `member_devices` as well as `members.device_token_hash`. **The other way
+  round is a code** (`POST /api/pair`, `/approve`, `/poll`; `device_pairs`, 0028):
+  a home-screen app cannot open a link made in Safari, so the NEW device shows
+  eight characters and a device that is already him types them in. Every ask
+  and every wrong code counts against the join bucket; ten minutes, one use.
 - `scripts/create-group.ts --rotate` UPDATEs hash and salt in place: members,
   archive and board must survive a passphrase change.
 - **An invite link carries its own secret, never the code** (the app does not
