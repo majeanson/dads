@@ -90,7 +90,7 @@ export function Questions({
            below, with its count on it, made this whole column wider than the
            sheet and carried the form above it off the right-hand edge.
            minmax(0, 1fr) is what stops a child widening its own container. */
-        <div className="grid grid-cols-1 gap-5">
+        <div className="grid grid-cols-1 gap-4">
           <PromptCard
             messages={messages}
             onAnswer={onAnswer}

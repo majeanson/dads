@@ -82,7 +82,7 @@ export async function putGlasses(request: Request, env: Env, prod: boolean): Pro
 }
 
 /**
- * PUT /api/me/colour — { colour: 1..6 | null }
+ * PUT /api/me/colour — { colour: 1..12 | null }
  *
  * The colour he is shown in: his name on a line, his face with no photo, his
  * quotes. Null goes back to the one his id hashes to.

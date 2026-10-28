@@ -386,8 +386,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
     `dragstart`.
   - Arrival is a face popping in with a ring (`face-arrive`); its timer is not
     tied to the effect's cleanup.
-  - Every dad has a colour (`dadColour.ts`: the one he picked in the glasses
-    popover, `members.colour`, else the hash of his id), six, audited as
+  - Every dad has a colour (`dadColour.ts`: one of twelve, the one he picked
+    beside his name in Settings (`ColourPicker`, `members.colour`), else one of
+    the first six by the hash of his id), audited as
     TEXT in both themes.
   - A full table (four) plays once per evening per phone
     (`dads.full.<occurrence>`) on a counter that never resets.
@@ -443,8 +444,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   Everything else is behind the conversation's Menu. There is no Dad night
   row; the card IS the night (`dad-night`). Beside Settings, "What this is"
   (`home-about`): the door's own sentence, "say if you're coming", then
-  one plain line per feature (`ABOUT_FEATURES`). Add a line when a feature
-  ships; no marketing words.
+  one plain line per feature (`ABOUT_FEATURES`), each with the icon the app
+  already uses for that thing. Add a line when a feature ships; no marketing
+  words.
 - e2e helpers (`e2e/talk.ts`, mirrored in `prod/names.ts`): `talk`, `home`,
   `menu`, `settings`, `invite`, `night` — idempotent.
 - The card is the one place with `--radius-card`/`--radius-control`, on
@@ -749,7 +751,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   the left, `flex-shrink: 0` on the actions, `main.room` `width: 100%` with
   `overflow-x: clip`. Icons below 48rem in every language — do not trust a
   breakpoint with this.
-- Safe areas on all four sides (`viewport-fit=cover`).
+- No `viewport-fit=cover`: iOS 26 blurs whatever is under the status bar of a
+  home-screen app. The system keeps the page clear of the clock and the home
+  indicator; `env(safe-area-inset-*)` padding stays for browsers that report one.
 - A message on a phone is two rows; a run drops the repeated name and clock.
 
 ## Proving it in production

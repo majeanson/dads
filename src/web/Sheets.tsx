@@ -1,13 +1,21 @@
 import {
+  Bell,
+  CalendarCheck,
   CalendarHeart,
   CalendarRange,
   Coffee,
   DoorOpen,
+  MessageCircle,
+  MessageCircleQuestion,
+  Palette,
+  Phone,
   Search,
   Send,
   Settings2,
   Smartphone,
+  Spade,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 import type { CallMember, RoomMessage, RoomsOpen, RosterEntry } from '../shared/protocol';
 import type { DadNight } from '../shared/dadNight';
@@ -109,17 +117,23 @@ function Reload() {
 
 export type { SheetName } from './Menu';
 /** What the app does, one plain line each. "What this is" lists them all. */
-const ABOUT_FEATURES: Key[] = [
-  'about.f_night',
-  'about.f_poll',
-  'about.f_calendar',
-  'about.f_chat',
-  'about.f_call',
-  'about.f_questions',
-  'about.f_week',
-  'about.f_table',
-  'about.f_find',
-  'about.f_remind',
+const ABOUT_FEATURES: { key: Key; icon: LucideIcon }[] = [
+  // Each one wears the icon the app already uses for it, so a line here is
+  // the same picture as the row, the sheet or the button it describes.
+  { key: 'about.f_night', icon: CalendarHeart },
+  { key: 'about.f_poll', icon: CalendarHeart },
+  { key: 'about.f_calendar', icon: CalendarRange },
+  { key: 'about.f_chat', icon: MessageCircle },
+  { key: 'about.f_call', icon: Phone },
+  { key: 'about.f_questions', icon: MessageCircleQuestion },
+  { key: 'about.f_week', icon: CalendarCheck },
+  { key: 'about.f_table', icon: Spade },
+  { key: 'about.f_people', icon: Users },
+  { key: 'about.f_find', icon: Search },
+  { key: 'about.f_remind', icon: Bell },
+  { key: 'about.f_you', icon: Palette },
+  { key: 'about.f_invite', icon: Send },
+  { key: 'about.f_device', icon: Smartphone },
 ];
 
 /**
@@ -330,9 +344,12 @@ export function Sheets({
         <div className="grid gap-4 text-[1.0625rem]" data-testid="about">
           <p className="m-0">{t('join.lede')}</p>
           <p className="m-0">{t('about.main')}</p>
-          <ul className="m-0 grid list-disc gap-2 pl-5 text-base" data-testid="about-features">
-            {ABOUT_FEATURES.map((key) => (
-              <li key={key}>{t(key)}</li>
+          <ul className="m-0 grid list-none gap-2.5 p-0 text-base" data-testid="about-features">
+            {ABOUT_FEATURES.map(({ key, icon: Icon }) => (
+              <li key={key} className="flex items-start gap-3">
+                <Icon size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-muted" />
+                <span className="min-w-0">{t(key)}</span>
+              </li>
             ))}
           </ul>
         </div>

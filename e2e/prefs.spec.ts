@@ -418,3 +418,36 @@ test('whoever won the last game wears gold, and the roster says so', async ({ pa
     'who won the last game',
   );
 });
+
+test('he picks his colour, is told what it changes, and can go back to automatic', async ({
+  page,
+}) => {
+  await comeIn(page, 'Colourful');
+  await home(page);
+  await page.getByTestId('home-settings').click();
+
+  // Its own control beside his name, and it says what it changes.
+  await page.getByTestId('colour-open').click();
+  await expect(page.getByTestId('colour-what')).toContainText('your name');
+  await expect(page.getByTestId('colour-what')).toContainText('quote');
+  await expect(page.getByTestId('colour-picker').getByRole('button')).toHaveCount(12);
+
+  // One of the new ones, and it is on the face at once.
+  await page.getByTestId('colour-11').click();
+  await expect(page.getByTestId('colour-11')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('you').locator('.face-blank, .face').first()).toHaveCSS(
+    '--dad',
+    // --dad-11 in the light palette, or in the dark one.
+    /#7a4e2d|#d9b08c/i,
+  );
+
+  // And it is his on a reload: it lives in the room, not the tab.
+  await page.reload();
+  await page.getByTestId('home-settings').click();
+  await page.getByTestId('colour-open').click();
+  await expect(page.getByTestId('colour-11')).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByTestId('colour-auto').click();
+  await expect(page.getByTestId('colour-auto')).toHaveCount(0);
+  await expect(page.getByTestId('colour-11')).toHaveAttribute('aria-pressed', 'false');
+});

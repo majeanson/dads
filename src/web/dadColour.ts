@@ -1,11 +1,11 @@
-import { DAD_COLOURS } from '../shared/protocol';
+import { DAD_COLOURS, HASHED_COLOURS } from '../shared/protocol';
 
 export { DAD_COLOURS };
 
 /**
- * A dad's colour: one of six.
+ * A dad's colour: one of twelve.
  *
- * Unless he picked one, the one his id hashes to — stable for ever, and
+ * Unless he picked one, one of the first six, by the hash of his id — stable for ever, and
  * needing nothing stored. Two of five men will sometimes share one; the
  * glasses, the photo or the name still tell them apart, and a dad who minds
  * can choose.
@@ -24,7 +24,7 @@ export function chooseColours(colours: ReadonlyMap<string, number>): void {
 export function hashedColour(memberId: string): number {
   let h = 0;
   for (let i = 0; i < memberId.length; i++) h = (h * 31 + memberId.charCodeAt(i)) >>> 0;
-  return (h % DAD_COLOURS) + 1;
+  return (h % HASHED_COLOURS) + 1;
 }
 
 export function dadColour(memberId: string): number {

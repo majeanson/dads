@@ -122,7 +122,7 @@ describe('PUT /api/me/colour', () => {
 
   it('refuses anything else', async () => {
     const cookie = cookieFrom(await worker.fetch(postJoin({ code: group.code, displayName: 'M' })));
-    for (const bad of [0, 7, 2.5, '3', {}]) expect((await put(cookie, bad)).status).toBe(400);
+    for (const bad of [0, 13, 2.5, '3', {}]) expect((await put(cookie, bad)).status).toBe(400);
     expect((await put('', 3)).status).toBe(401);
   });
 });

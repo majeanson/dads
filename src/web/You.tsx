@@ -1,3 +1,4 @@
+import { ColourPicker } from './ColourPicker';
 import { GlassesPicker } from './GlassesPicker';
 import { Check, Trash2, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -145,6 +146,10 @@ export function You({ memberId, name }: { memberId: string; name: string }) {
           onChange={(e) => setDraft(e.target.value)}
           data-testid="my-name"
         />
+        {/* His colour is the colour of this name, so the control for it sits
+            beside it — and not in the row of buttons below, which a 390px
+            phone has no room to add to. */}
+        <ColourPicker memberId={memberId} />
         {/* Only once there is something to save. A permanently greyed-out
             button beside a field he is not editing is a control that spends
             a row of the screen saying nothing. */}

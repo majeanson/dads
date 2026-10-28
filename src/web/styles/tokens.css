@@ -72,8 +72,8 @@
   --on-accent: #ffffff;
   --danger: #a72f22;
   /* One colour per dad, on his face's ring and his name in the conversation:
-     five men told apart at a glance. Chosen by a hash of his id, so it never
-     changes (dadColour.ts). Held to text contrast, in both themes, because a
+     five men told apart at a glance. Twelve to pick from; the first six are the
+     ones a hash of his id gives a dad who never chose (dadColour.ts). Held to text contrast, in both themes, because a
      name is text. */
   --dad-1: #a33a2b;
   --dad-2: #1f6b4a;
@@ -81,6 +81,12 @@
   --dad-4: #8a5a00;
   --dad-5: #1d5f8a;
   --dad-6: #a02d6b;
+  --dad-7: #0e6a6e;
+  --dad-8: #b0420f;
+  --dad-9: #4d6b12;
+  --dad-10: #3f4fb0;
+  --dad-11: #7a4e2d;
+  --dad-12: #556270;
   /* A champion's glasses: whoever won the last game at the table. */
   --gold: #9c6d00;
 
@@ -114,6 +120,12 @@
     --dad-4: #f0c46a;
     --dad-5: #8cc8f0;
     --dad-6: #f59ac8;
+    --dad-7: #6fd6d2;
+    --dad-8: #ffb070;
+    --dad-9: #c4dc7a;
+    --dad-10: #a9b4ff;
+    --dad-11: #d9b08c;
+    --dad-12: #b4c0ce;
     /* A champion's glasses: whoever won the last game at the table. */
     --gold: #f2c14e;
   }
@@ -139,6 +151,12 @@
   --dad-4: #8a5a00;
   --dad-5: #1d5f8a;
   --dad-6: #a02d6b;
+  --dad-7: #0e6a6e;
+  --dad-8: #b0420f;
+  --dad-9: #4d6b12;
+  --dad-10: #3f4fb0;
+  --dad-11: #7a4e2d;
+  --dad-12: #556270;
   /* A champion's glasses: whoever won the last game at the table. */
   --gold: #9c6d00;
 
@@ -161,6 +179,12 @@
   --dad-4: #f0c46a;
   --dad-5: #8cc8f0;
   --dad-6: #f59ac8;
+  --dad-7: #6fd6d2;
+  --dad-8: #ffb070;
+  --dad-9: #c4dc7a;
+  --dad-10: #a9b4ff;
+  --dad-11: #d9b08c;
+  --dad-12: #b4c0ce;
   /* A champion's glasses: whoever won the last game at the table. */
   --gold: #f2c14e;
 

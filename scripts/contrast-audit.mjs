@@ -45,6 +45,18 @@ const PAIRS = [
   ['dad-5', 'bg-soft', 4.5, "dad 5's name on a panel"],
   ['dad-6', 'bg', 4.5, "dad 6's name"],
   ['dad-6', 'bg-soft', 4.5, "dad 6's name on a panel"],
+  ['dad-7', 'bg', 4.5, "dad 7's name"],
+  ['dad-7', 'bg-soft', 4.5, "dad 7's name on a panel"],
+  ['dad-8', 'bg', 4.5, "dad 8's name"],
+  ['dad-8', 'bg-soft', 4.5, "dad 8's name on a panel"],
+  ['dad-9', 'bg', 4.5, "dad 9's name"],
+  ['dad-9', 'bg-soft', 4.5, "dad 9's name on a panel"],
+  ['dad-10', 'bg', 4.5, "dad 10's name"],
+  ['dad-10', 'bg-soft', 4.5, "dad 10's name on a panel"],
+  ['dad-11', 'bg', 4.5, "dad 11's name"],
+  ['dad-11', 'bg-soft', 4.5, "dad 11's name on a panel"],
+  ['dad-12', 'bg', 4.5, "dad 12's name"],
+  ['dad-12', 'bg-soft', 4.5, "dad 12's name on a panel"],
   ['border-strong', 'bg', 3.0, 'the border that makes a control findable'],
   ['border-strong', 'bg-soft', 3.0, 'that border on a panel'],
   ['accent', 'bg', 3.0, 'the focus ring'],
@@ -197,6 +209,12 @@ const COLOURS = [
   'dad-4',
   'dad-5',
   'dad-6',
+  'dad-7',
+  'dad-8',
+  'dad-9',
+  'dad-10',
+  'dad-11',
+  'dad-12',
   'gold',
 ];
 
@@ -244,7 +262,7 @@ for (const [name, tokens] of Object.entries(themes)) {
  * in light can go to mud in dark, where the colours are the pale ones.
  */
 const mix = faceMix(css);
-const FACES = [1, 2, 3, 4, 5, 6].map((n) => `dad-${n}`);
+const FACES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => `dad-${n}`);
 for (const [name, tokens] of Object.entries(themes)) {
   if (!process.argv.includes('--quiet')) {
     console.log(`\n${name.toUpperCase()} — faces with no photo (${Math.round(mix * 100)}% mix)`);

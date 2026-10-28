@@ -2048,9 +2048,14 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   and the guard was written at 26rem. The header's controls are icons below
   48rem in every language, and the structural rules above are what actually
   hold.
-- **Safe areas on all four sides.** `viewport-fit=cover` puts the page under
-  the notch and the home indicator; the padding pays it back. The top one is
-  not optional — without it the group's name sits under the clock.
+- **No `viewport-fit=cover` (2026-10-28).** It used to put the page under the
+  notch and the home indicator, paid back by safe-area padding. iOS 26 then
+  started drawing a blur and a scrim over anything under the status bar of an
+  installed app (a title at the top of the header, soft and darkened), which
+  the page cannot turn off. Left at the default, the system keeps the page
+  clear of the clock and the home indicator — the same space the padding gave
+  back — and the `env()` padding stays as a no-op for a browser that reports an
+  inset anyway. Android is unaffected.
 - **A message on a phone is two rows, not three columns.** Who and when above,
   what he said across the full width. Three columns means a photograph wins and
   the name and the clock are crushed: "Marc-antoine" became "M…". A run from
