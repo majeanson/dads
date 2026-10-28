@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { joinedSound, leftSound } from './callSound';
 import type { CallMember } from '../shared/protocol';
 import { report } from './oops';
 import { SpeakingWatch } from './speaking';
@@ -408,6 +409,22 @@ export function useCall({
   }, [linkTo, members, publish, state, teardown, you]);
 
   useEffect(() => stop, [stop]);
+
+  // Somebody sitting down or getting up is heard, not just seen. The roster
+  // is the truth; the first one after joining is who was already there.
+  const heard = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (state !== 'in' || you === null) {
+      heard.current = null;
+      return;
+    }
+    const now = new Set(members.filter((m) => m.memberId !== you).map((m) => m.memberId));
+    const before = heard.current;
+    heard.current = now;
+    if (before === null) return;
+    if ([...now].some((id) => !before.has(id))) joinedSound();
+    else if ([...before].some((id) => !now.has(id))) leftSound();
+  }, [members, state, you]);
 
   return {
     state,
