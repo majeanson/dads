@@ -420,6 +420,10 @@
        `--app-top` follows the visual viewport (useVisualViewport) so the
        keyboard does not leave it behind. */
     position: fixed;
+    /* Painted, so the system bar above takes the room's own colour from the
+       layer under it rather than a default of its own (it went light blue
+       when this was transparent). */
+    background: var(--bg);
     top: var(--app-top, 0px);
     left: 0;
     right: 0;
