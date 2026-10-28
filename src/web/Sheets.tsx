@@ -224,6 +224,9 @@ export function Sheets({
               name: m.name,
               you: m.memberId === you,
             }))}
+            everyone={members
+              .filter((m) => m.gone !== true)
+              .map((m) => ({ memberId: m.memberId, name: m.name, you: m.memberId === you }))}
             call={call}
           />
         </Body>

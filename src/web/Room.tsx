@@ -23,6 +23,7 @@ import { useCall } from './useCall';
 import { useFreshBuild } from './useFreshBuild';
 import { useRoom } from './useRoom';
 import { useSeen } from './useSeen';
+import { lastView, rememberView } from './viewMemory';
 
 /** Coarse enough to be free, fine enough that a countdown stays honest. */
 const TICK_MS = 15_000;
@@ -89,8 +90,25 @@ export function Room({
    *
    * A VIEW and not a route: the socket, the call and the table all live above
    * it, so switching costs nothing and a game in progress is untouched.
+   *
+   * Closed in the conversation and reopened soon after, it opens there again
+   * (`viewMemory`): home is the first thing a man hasn't seen, not a toll.
    */
-  const [view, setView] = useState<'home' | 'talk'>('home');
+  const [view, setView] = useState<'home' | 'talk'>(() => lastView(session.group.id));
+  useEffect(() => {
+    const groupId = session.group.id;
+    rememberView(groupId, view);
+    if (view !== 'talk') return;
+    // The mark carries WHEN, so it has to be fresh at the moment he leaves,
+    // not only at the moment he went in.
+    const stamp = () => rememberView(groupId, 'talk');
+    window.addEventListener('pagehide', stamp);
+    document.addEventListener('visibilitychange', stamp);
+    return () => {
+      window.removeEventListener('pagehide', stamp);
+      document.removeEventListener('visibilitychange', stamp);
+    };
+  }, [view, session.group.id]);
   /** The app opening through the glasses: once per load, never for a phone
    * that asked for less motion. */
   const [splash, setSplash] = useState(() => !wantsStill());
@@ -263,9 +281,11 @@ export function Room({
     .filter(([id]) => id !== session.member.id)
     .map(([, name]) => name);
 
-  // The conversation's menu holds the questions and nothing else that waits
-  // on him: the week is on home, where its own row says so in words.
-  const waiting = todo.prompt && room.rooms.questions;
+  // The Menu button wears its dot when ANY row inside it has something for him,
+  // and for no other reason: each row says which in words, and a switched-off
+  // room cannot be waiting. A dot with nothing behind it is the one thing a
+  // mark must never be.
+  const waiting = (todo.prompt && room.rooms.questions) || (todo.board && room.rooms.week);
   const soon = nightShort(t, lang, room.night, now);
 
   /** A member id as a name, for the marks. Everyone in the group, not who
@@ -356,6 +376,9 @@ export function Room({
           soon={soon}
           callState={call.state}
           callers={room.call.length}
+          tableEver={tableEver}
+          tableOpen={tableOpen}
+          onTable={() => setTableOpen((v) => !v)}
           onCall={() => {
             if (view === 'home') goTalk();
             else if (call.state === 'in') setSheet('here');

@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   Menu as MenuIcon,
   Phone,
+  Spade,
   Settings as SettingsIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -44,8 +45,11 @@ export function RoomHeader({
   soon,
   callState,
   callers,
+  tableEver,
+  tableOpen,
   waiting,
   onCall,
+  onTable,
   onHome,
   onWho,
   onNight,
@@ -78,6 +82,11 @@ export function RoomHeader({
   onJoinCall: () => void;
   /** The live-call chip: home goes to the conversation, which has the call. */
   onCall: () => void;
+  /** The table has been opened on this load, so a game may be running. */
+  tableEver: boolean;
+  tableOpen: boolean;
+  /** Minimise the table to the chat, or bring it back. */
+  onTable: () => void;
 }) {
   const { t } = useT();
   const slim = view === 'talk';
@@ -263,6 +272,25 @@ export function RoomHeader({
       {/* The call and the menu, in the conversation. */}
       {slim ? (
         <span className="head-actions">
+          {/* Once the table has been opened a game may be running behind the
+              chat, and this is the one place to minimise it or bring it
+              back: pressed means it is up. The game is never restarted by
+              either, because the frame stays mounted. */}
+          {tableEver ? (
+            <Button
+              size="icon"
+              look="quiet"
+              className={`rounded-full! ${tableOpen ? 'text-accent' : ''}`}
+              aria-pressed={tableOpen}
+              onClick={onTable}
+              data-testid="table-toggle"
+            >
+              <Spade size={22} aria-hidden="true" />
+              <span className="sr-only">
+                {tableOpen ? t('room.table_hide') : t('room.table_show')}
+              </span>
+            </Button>
+          ) : null}
           {/* A call going on is said up here, with the number, whether or not
               he is in it. Not in it, the chip IS the way in. */}
           {callers > 0 && callState !== 'in' && callState !== 'denied' && callState !== 'failed' ? (

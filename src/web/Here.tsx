@@ -5,6 +5,7 @@ import { fetchPresence, type PresenceEvent } from './api';
 import { Face } from './Face';
 import { useT } from './i18n';
 import { useChampions } from './members';
+import { Profile } from './Profile';
 
 /** Long enough to be free, short enough that a leave lands while you look. */
 const REFRESH_MS = 5_000;
@@ -37,6 +38,7 @@ function when(ts: number, locale: string): string {
  */
 export function Here({
   roster,
+  everyone,
   call,
 }: {
   roster: {
@@ -44,9 +46,12 @@ export function Here({
     name: string;
     you: boolean;
   }[];
+  /** Everyone in the room, present or not: a profile is for them all. */
+  everyone: { memberId: string; name: string; you: boolean }[];
   call: CallMember[];
 }) {
   const { t, lang } = useT();
+  const [profile, setProfile] = useState<string | null>(null);
   const locale = lang === 'fr' ? 'fr-CA' : 'en-CA';
   const [events, setEvents] = useState<PresenceEvent[] | null | 'loading'>('loading');
   const [showLog, setShowLog] = useState(false);
@@ -74,6 +79,18 @@ export function Here({
     };
   }, []);
 
+  if (profile !== null) {
+    return (
+      <Profile
+        memberId={profile}
+        you={everyone.some((m) => m.memberId === profile && m.you)}
+        onBack={() => setProfile(null)}
+      />
+    );
+  }
+
+  const away = everyone.filter((m) => !roster.some((r) => r.memberId === m.memberId));
+
   return (
     <div data-testid="here">
       {roster.length === 0 ? (
@@ -92,9 +109,16 @@ export function Here({
                 {/* His face, or his colour and his glasses. The dot went with it: a list
                     titled "Who's here" did not need a mark on every row
                     saying each of them was here. */}
-                <Face memberId={m.memberId} size={32} />
-                {m.name}
-                {m.you ? t('here.you') : ''}
+                <button
+                  type="button"
+                  className="inline-flex min-h-8 cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 text-inherit"
+                  onClick={() => setProfile(m.memberId)}
+                  data-testid="roster-profile"
+                >
+                  <Face memberId={m.memberId} size={32} />
+                  {m.name}
+                  {m.you ? t('here.you') : ''}
+                </button>
                 {/* The gold pair says it on the face; this says it to a
                     screen reader, for whom the face is decoration. */}
                 {crowned(m.memberId) ? <span className="sr-only">{t('here.champion')}</span> : null}
@@ -115,6 +139,30 @@ export function Here({
             );
           })}
         </ul>
+      )}
+
+      {away.length === 0 ? null : (
+        <>
+          <h2 className="mt-6 mb-2 text-[1.0625rem] font-semibold text-muted">
+            {t('here.others')}
+          </h2>
+          <ul className="m-0 flex list-none flex-wrap gap-2 p-0" data-testid="roster-away">
+            {away.map((m) => (
+              <li key={m.memberId}>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full border border-line bg-paper py-1.5 pr-4 pl-1.5 text-base text-inherit"
+                  onClick={() => setProfile(m.memberId)}
+                  data-testid="away-profile"
+                >
+                  <Face memberId={m.memberId} size={32} />
+                  {m.name}
+                  {m.you ? t('here.you') : ''}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <h2 className="mt-6 mb-2 text-[1.0625rem] font-semibold text-muted">

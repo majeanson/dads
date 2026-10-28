@@ -425,7 +425,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 ## Home
 
 - **The app opens on home, and home asks ONE question**: are you coming.
-  Anything proposed for home has to displace the night or the door.
+  Anything proposed for home has to displace the night or the door. The one
+  exception: closed in the conversation and reopened within 12 hours, it opens
+  in the conversation (`viewMemory.ts`, per device and room).
 - **With no evening to come, it asks "when's the next one?"** with the two
   best days as leaves (`NextDays.tsx`); the month grid stays in the sheet.
 - **Home is the card, the door, and Settings in the corner**
@@ -571,10 +573,14 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   the list must earn its row.
 - Everything else is behind the one Menu button; each is a `Sheet` that
   mounts on open. The Menu's mark is about YOU only, said in words
-  (`/api/todo`).
+  (`/api/todo`). Its button wears a dot when ANY row has something waiting (and
+  that room is switched on), never otherwise; each waiting row has its own dot.
 - The conversation's header: room name (display face), faces, `nightShort`.
   **`connection` is a button named "N here" laid OVER the faces**
   (`absolute -inset-2.5`); nothing in a face is part of its name.
+- **The header has a table button once the table has been opened**
+  (`table-toggle`, `aria-pressed`): minimise to the chat or bring it back; the
+  frame stays mounted either way.
 - The table stays mounted once opened (`data-table="open"`): half each above
   64rem (room widens to 74rem), the room's place below. The conversation
   keeps a 44rem measure.
@@ -588,6 +594,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - A result goes nowhere; a photo on a result has no `onOpen`.
 
 ## Who's here
+
+- **Anyone in the room has a profile** (`GET /api/profile?member=`, `Profile.tsx`),
+  opened from a name in "Who's here" (present or not). It only gathers what
+  the group already sees: his answer for the night, upcoming events he put up or
+  answered, his answers to the questions, his week. A switched-off room leaves
+  its part out; a dad who has left is 404.
 
 - Coming and going is `presence` in D1 (`notePresence`), never the tail. Read
   behind "N here": roster, then the log behind `comings`.

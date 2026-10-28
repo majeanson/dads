@@ -144,6 +144,17 @@ test('on a phone the table takes the room’s place, and gives it back', async (
   await expect(page.getByLabel('Say something')).toBeVisible();
   await expect(page.getByTestId('table').locator('iframe')).toBeHidden();
 
+  // The header keeps a way back: minimise and restore are one button, and the
+  // frame stays mounted so a game in progress is not restarted.
+  const toggle = page.getByTestId('table-toggle');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click();
+  await expect(page.getByTestId('table').locator('iframe')).toBeVisible();
+  await expect(page.getByLabel('Say something')).toBeHidden();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click();
+  await expect(page.getByLabel('Say something')).toBeVisible();
+
   await context.close();
 });
 

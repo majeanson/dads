@@ -22,6 +22,7 @@ import {
 import { setNight } from './routes/night';
 import { getPoll, pickDay, putVote } from './routes/poll';
 import { getPresence } from './routes/presence';
+import { getProfile } from './routes/profile';
 import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
 import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp';
 import { postRoom } from './routes/create';
@@ -247,6 +248,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/event.ics':
       return getEventIcs(request, env, url, prod);
+
+    case 'GET /api/profile':
+      return getProfile(request, env, url, prod);
 
     case 'GET /api/presence':
       return getPresence(request, env, prod);

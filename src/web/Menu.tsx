@@ -94,10 +94,11 @@ export function Menu({
           <span className="min-w-0 truncate">{t('menu.questions')}</span>
           {todo.prompt ? (
             <span
-              className="ml-auto min-w-0 truncate text-sm font-normal text-accent"
+              className="ml-auto flex min-w-0 items-center gap-2 text-sm font-normal text-accent"
               data-testid="mark-prompts"
             >
-              {t('menu.prompt_waiting')}
+              <span className="truncate">{t('menu.prompt_waiting')}</span>
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
             </span>
           ) : null}
         </Button>
@@ -109,10 +110,11 @@ export function Menu({
           <span className="min-w-0 truncate">{t('menu.week')}</span>
           {todo.board ? (
             <span
-              className="ml-auto min-w-0 truncate text-sm font-normal text-accent"
+              className="ml-auto flex min-w-0 items-center gap-2 text-sm font-normal text-accent"
               data-testid="mark-board"
             >
-              {t('menu.board_waiting')}
+              <span className="truncate">{t('menu.board_waiting')}</span>
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
             </span>
           ) : null}
         </Button>

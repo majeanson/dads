@@ -13,6 +13,7 @@
     "src/web/favourites.ts",
     "src/web/fresh.ts",
     "src/web/seen.ts",
+    "src/web/viewMemory.ts",
     "src/shared/**/*.ts",
     "src/worker/**/*.ts",
     "test/**/*.ts",

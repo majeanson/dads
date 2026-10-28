@@ -572,6 +572,15 @@ export interface PresenceEvent {
   at: number;
 }
 
+import type { Profile } from '../shared/profile';
+export type { Profile };
+
+export async function fetchProfile(memberId: string): Promise<Profile> {
+  const res = await fetch(`/api/profile?member=${encodeURIComponent(memberId)}`);
+  if (!res.ok) throw new Error(`GET /api/profile ${res.status}`);
+  return (await res.json()) as Profile;
+}
+
 export async function fetchPresence(): Promise<PresenceEvent[]> {
   const res = await fetch('/api/presence');
   if (!res.ok) throw new Error(`GET /api/presence ${res.status}`);
