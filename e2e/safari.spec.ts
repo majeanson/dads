@@ -137,6 +137,7 @@ test('a photo and a pair of glasses, on his face at once', async ({ page }) => {
   const face = page.getByTestId('you');
   // Cropped and shrunk in the browser (`prepareFace`): Safari decodes and
   // draws it its own way, and a face it cannot decode is one it cannot show.
+  await page.getByTestId('look-open').tap();
   await page.setInputFiles('#face', 'public/icon-192.png');
   await expect(face.locator('img')).toBeVisible();
   await page.getByTestId('glasses-open').tap();

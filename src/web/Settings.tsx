@@ -7,6 +7,7 @@ import { Remind } from './Remind';
 import { Toggles } from './Toggles';
 import { You } from './You';
 import { cn } from './ui/cn';
+import { Fold } from './ui/Fold';
 import { Switch } from './ui/Switch';
 import type { RoomsOpen, RosterEntry } from '../shared/protocol';
 import { TheRoom } from './TheRoom';
@@ -133,16 +134,18 @@ export function Settings({
             <span className="min-w-0 flex-1 truncate">{t('menu.invite')}</span>
             <ChevronRight size={20} aria-hidden="true" className="shrink-0 text-muted" />
           </button>
-          {rows.map((row) => (
-            <Switch
-              key={row.key}
-              label={row.label}
-              checked={shown[row.key]}
-              disabled={busy || !mine}
-              onChange={() => void toggle(row.key)}
-              testId={`room-${row.key}`}
-            />
-          ))}
+          <Fold label={t('set.features')} testId="features-open">
+            {rows.map((row) => (
+              <Switch
+                key={row.key}
+                label={row.label}
+                checked={shown[row.key]}
+                disabled={busy || !mine}
+                onChange={() => void toggle(row.key)}
+                testId={`room-${row.key}`}
+              />
+            ))}
+          </Fold>
         </div>
 
         {/* The rest of owning a room, and only for the man who does: the word
@@ -156,29 +159,28 @@ export function Settings({
       </section>
 
       <section>
-        {/* Signing out sits on this heading's row, quiet: a dad does it about
-            once, it is about THIS device, and a row of its own was the pixels
-            the invite above now spends — Settings fills a 667px phone. */}
-        <div className="mb-1 flex items-baseline justify-between gap-3">
-          <h2 className="m-0 flex min-w-0 items-baseline gap-2 text-[1.0625rem] font-semibold text-muted">
-            {t('set.yours')}
-            <BuildLabel />
-          </h2>
-          <button
-            type="button"
-            className="-my-2.5 flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 text-sm text-muted"
-            onClick={onSignOut}
-          >
-            <LogOut size={16} aria-hidden="true" />
-            {t('menu.sign_out')}
-          </button>
-        </div>
+        <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('set.yours')}</h2>
         {/* One list, one shape. Language, theme and the reminder are three
-            answers to three questions, and they now look like it. */}
+            answers to three questions, and they look like it. */}
         <div className="border-t border-line">
           <Toggles />
           <Remind />
+          {/* Signing out is about THIS device, and a dad does it about once:
+              the last row, quiet, with the build under it — which phone is
+              running which build is a question for the day something looks
+              wrong, not for every visit. */}
+          <button
+            type="button"
+            className="flex min-h-11 w-full cursor-pointer items-center gap-3 border-b border-line py-2 text-left text-[1.0625rem] text-muted"
+            onClick={onSignOut}
+          >
+            <LogOut size={18} aria-hidden="true" className="shrink-0" />
+            {t('menu.sign_out')}
+          </button>
         </div>
+        <p className="m-0 mt-2 text-right">
+          <BuildLabel />
+        </p>
       </section>
     </div>
   );

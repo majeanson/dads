@@ -371,6 +371,7 @@ test('the glasses fitter fits a narrow phone in French', async ({ browser }) => 
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: /^Réglages/ })
     .click();
+  await page.getByTestId('look-open').click();
   await page.setInputFiles('#face', 'public/icon-192.png');
   await page.getByTestId('glasses-open').click();
   await page.getByTestId('glasses-fit').click({ timeout: 15_000 });

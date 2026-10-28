@@ -9,6 +9,7 @@ import { useT } from './i18n';
 import { prepareFace } from './media';
 import { Button } from './ui/Button';
 import { FIELD } from './ui/field';
+import { Fold } from './ui/Fold';
 
 /**
  * Who a dad is here: the name he goes by, and his face.
@@ -161,7 +162,7 @@ export function You({ memberId, name }: { memberId: string; name: string }) {
         ) : null}
       </form>
 
-      <div>
+      <Fold label={t('set.look')} testId="look-open">
         <div className="flex flex-wrap gap-2">
           {/* A label, not a button wrapping an input: the file picker is the
               input, and a label with a real box is what a thumb presses. */}
@@ -202,7 +203,7 @@ export function You({ memberId, name }: { memberId: string; name: string }) {
             </Button>
           ) : null}
         </div>
-      </div>
+      </Fold>
 
       {error === null ? null : (
         <p className="text-[1.0625rem] text-danger" role="alert">

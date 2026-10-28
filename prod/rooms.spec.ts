@@ -134,6 +134,7 @@ test('its creator owns the switches, and a guest does not', async ({ browser }) 
     .getByRole('button', { name: /^Settings/ })
     .click();
   await expect(guest.getByTestId('rooms-owner')).toBeVisible();
+  await guest.getByTestId('features-open').click();
   await expect(guest.getByTestId('room-week')).toBeDisabled();
 
   await maker.context().close();

@@ -208,6 +208,7 @@ for (const theme of ['light', 'dark'] as const) {
     // of this walk never opens.
     await page.getByTestId('home-settings').click();
     await settled();
+    await page.getByTestId('look-open').click();
     await page.setInputFiles('#face', 'public/icon-192.png');
     await page.getByTestId('glasses-open').click();
     await expect(page.getByTestId('glasses-picker')).toBeVisible();

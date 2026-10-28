@@ -74,6 +74,7 @@ test('a room is opened, shared, and its switches belong to the man who opened it
   // The switches are the creator's: the line says so, and one answers him.
   await openSettings(maker);
   await expect(maker.getByTestId('rooms-owner')).toContainText('The word');
+  await maker.getByTestId('features-open').click();
   await maker.getByTestId('room-questions').click();
   await expect(maker.getByTestId('room-questions')).not.toBeChecked();
   await maker.getByRole('button', { name: 'Close', exact: true }).click();
@@ -81,6 +82,7 @@ test('a room is opened, shared, and its switches belong to the man who opened it
   // And not the guest's: the line names whose they are, and his cannot move.
   await openSettings(guest);
   await expect(guest.getByTestId('rooms-owner')).toContainText('Marc Founder');
+  await guest.getByTestId('features-open').click();
   await expect(guest.getByTestId('room-week')).toBeDisabled();
 
   await maker.context().close();
@@ -172,6 +174,7 @@ test('the creator changes the word, then hands the room on', async ({ browser })
   // screen altogether.
   await openSettings(guest);
   await expect(guest.getByTestId('rooms-owner')).toContainText('The word');
+  await guest.getByTestId('features-open').click();
   await guest.getByTestId('room-week').click();
   await expect(guest.getByTestId('room-week')).not.toBeChecked();
 

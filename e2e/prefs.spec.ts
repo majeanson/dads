@@ -246,6 +246,7 @@ test('a photo he has just added wears his glasses, and a new pair lands on it', 
   await page.getByRole('button', { name: 'Settings' }).click();
   const face = page.getByTestId('you');
 
+  await page.getByTestId('look-open').click();
   await page.setInputFiles('#face', 'public/icon-192.png');
   await expect(face.locator('img')).toBeVisible();
   await expect(face.locator('.face-shades')).toHaveAttribute('data-glasses', 'shades');
@@ -278,6 +279,7 @@ test('he fits his glasses to his photo, and every face of his wears them there',
   await page.getByRole('button', { name: 'Settings' }).click();
 
   // With no photo there is nothing to fit: a colour face is drawn to fit.
+  await page.getByTestId('look-open').click();
   await page.getByTestId('glasses-open').click();
   await expect(page.getByTestId('glasses-picker')).toBeVisible();
   await expect(page.getByTestId('glasses-fit')).toHaveCount(0);
@@ -334,6 +336,7 @@ test('a dad chooses his glasses, and they stay his', async ({ page }) => {
 
   // The app's shades until he chooses. One button beside his face opens the
   // six.
+  await page.getByTestId('look-open').click();
   await page.getByTestId('glasses-open').click();
   const picker = page.getByTestId('glasses-picker');
   await expect(picker.getByTestId('glasses-shades')).toHaveAttribute('aria-pressed', 'true');
@@ -366,6 +369,7 @@ test('a dad chooses his glasses, and they stay his', async ({ page }) => {
   await page.reload();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
   await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByTestId('look-open').click();
   await page.getByTestId('glasses-open').click();
   await expect(page.getByTestId('glasses-aviators')).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Close', exact: true }).click();
