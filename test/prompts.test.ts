@@ -324,6 +324,88 @@ describe('another question', () => {
   });
 });
 
+describe('choosing the question', () => {
+  let group: SeededGroup;
+  const open: Dad[] = [];
+
+  beforeEach(async () => {
+    await resetTables();
+    group = await seedGroup();
+  });
+  afterEach(async () => {
+    open.splice(0).forEach((d) => d.close());
+    await settle();
+  });
+
+  const choose = (cookie: string, promptId: unknown) =>
+    worker.fetch('https://dads.test/api/prompt/choose', {
+      method: 'POST',
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ promptId }),
+    });
+
+  const otherThan = async (id: string) =>
+    (await env.DB.prepare(
+      'SELECT id FROM prompts WHERE group_id IS NULL AND active = 1 AND id <> ? LIMIT 1',
+    )
+      .bind(id)
+      .first<{ id: string }>())!.id;
+
+  it('puts the chosen question in today’s place and keeps it', async () => {
+    const cookie = await cookieFor(group);
+    const was = await todaysPrompt(env, group.id);
+    const wanted = await otherThan(was!.prompt.id);
+
+    const res = await choose(cookie, wanted);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { prompt: { id: string } }).prompt.id).toBe(wanted);
+    expect((await todaysPrompt(env, group.id))?.prompt.id).toBe(wanted);
+  });
+
+  it('refuses an id that is not a question this room can be asked', async () => {
+    const cookie = await cookieFor(group);
+    expect((await choose(cookie, 'nope')).status).toBe(404);
+    expect((await choose(cookie, 42)).status).toBe(400);
+  });
+
+  it('is the creator’s alone', async () => {
+    const marc = await enter(group, 'Marc');
+    const other = await enter(group, 'Luc');
+    open.push(marc, other);
+    await env.DB.prepare('UPDATE groups SET created_by = ? WHERE id = ?')
+      .bind(
+        (await env.DB.prepare('SELECT id FROM members WHERE group_id = ? AND display_name = ?')
+          .bind(group.id, 'Marc')
+          .first<{ id: string }>())!.id,
+        group.id,
+      )
+      .run();
+    const was = await todaysPrompt(env, group.id);
+    const wanted = await otherThan(was!.prompt.id);
+
+    expect((await choose(other.cookie, wanted)).status).toBe(403);
+    expect((await todaysPrompt(env, group.id))?.prompt.id).toBe(was!.prompt.id);
+    expect((await choose(marc.cookie, wanted)).status).toBe(200);
+  });
+
+  it('will not change a question somebody has answered', async () => {
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    const today = await todaysPrompt(env, group.id);
+    const wanted = await otherThan(today!.prompt.id);
+    marc.answer('already said my piece');
+    await until(async () => {
+      const row = await env.DB.prepare('SELECT id FROM messages WHERE group_id = ? AND kind = ?')
+        .bind(group.id, 'prompt')
+        .first();
+      return row !== null;
+    });
+
+    expect((await choose(marc.cookie, wanted)).status).toBe(409);
+    expect((await todaysPrompt(env, group.id))?.prompt.id).toBe(today!.prompt.id);
+  });
+});
+
 describe('the list', () => {
   let group: SeededGroup;
   beforeEach(async () => {

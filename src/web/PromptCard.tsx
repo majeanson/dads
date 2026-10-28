@@ -1,6 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { anotherPrompt, fetchTodaysPrompt, type TodaysPrompt } from './api';
-import { PenLine, Shuffle } from 'lucide-react';
+import {
+  anotherPrompt,
+  choosePrompt,
+  fetchTodaysPrompt,
+  type PoolEntry,
+  type TodaysPrompt,
+} from './api';
+import { ListChecks, PenLine, Shuffle } from 'lucide-react';
 import { dadVar } from './dadColour';
 import { Face } from './Face';
 import { plural, promptText, useT } from './i18n';
@@ -21,10 +27,16 @@ export function PromptCard({
   messages,
   onAnswer,
   canAnswer,
+  host,
+  pool,
 }: {
   messages: RoomMessage[];
   onAnswer: (body: string) => boolean;
   canAnswer: boolean;
+  /** The creator, or anybody in a room with none: may pick the question. */
+  host: boolean;
+  /** Everything the room can be asked, for the host's picker. */
+  pool: PoolEntry[];
 }) {
   const { t, lang } = useT();
   const [today, setToday] = useState<TodaysPrompt | null | 'loading'>('loading');
@@ -32,6 +44,7 @@ export function PromptCard({
   const [open, setOpen] = useState(false);
   const [swapping, setSwapping] = useState(false);
   const [swapFailed, setSwapFailed] = useState(false);
+  const [choosing, setChoosing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +71,22 @@ export function PromptCard({
       const next = await anotherPrompt();
       if (next) setToday(next);
       else setSwapFailed(true);
+    } catch {
+      setSwapFailed(true);
+    } finally {
+      setSwapping(false);
+    }
+  }
+
+  async function choose(id: string) {
+    setSwapping(true);
+    setSwapFailed(false);
+    try {
+      const next = await choosePrompt(id);
+      if (next) {
+        setToday(next);
+        setChoosing(false);
+      } else setSwapFailed(true);
     } catch {
       setSwapFailed(true);
     } finally {
@@ -179,6 +208,42 @@ export function PromptCard({
             <Shuffle size={18} aria-hidden="true" />
             {t('q.another')}
           </Button>
+          {host ? (
+            <>
+              <Button
+                look="quiet"
+                size="lg"
+                onClick={() => setChoosing((c) => !c)}
+                aria-expanded={choosing}
+                data-testid="prompt-choose"
+              >
+                <ListChecks size={18} aria-hidden="true" />
+                {choosing ? t('q.choose_close') : t('q.choose')}
+              </Button>
+              {choosing ? (
+                <ul
+                  className="m-0 mt-1 grid max-h-[40dvh] list-none gap-1 overflow-y-auto overscroll-contain p-0"
+                  data-testid="prompt-choices"
+                >
+                  {pool
+                    .filter((p) => p.id !== today.prompt.id)
+                    .map((p) => (
+                      <li key={p.id}>
+                        <Button
+                          block
+                          disabled={swapping}
+                          className="h-auto min-h-11 justify-start py-2 text-left text-base font-normal whitespace-normal"
+                          onClick={() => void choose(p.id)}
+                          data-testid="prompt-choice"
+                        >
+                          {promptText(lang, p)}
+                        </Button>
+                      </li>
+                    ))}
+                </ul>
+              ) : null}
+            </>
+          ) : null}
           {swapFailed ? (
             <p className="m-0 text-center text-sm text-danger" role="alert">
               {t('q.another_failed')}

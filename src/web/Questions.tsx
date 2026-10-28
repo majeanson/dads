@@ -27,11 +27,13 @@ export function Questions({
   messages,
   onAnswer,
   canAnswer,
+  host,
   onClose,
 }: {
   messages: RoomMessage[];
   onAnswer: (body: string) => boolean;
   canAnswer: boolean;
+  host: boolean;
   onClose: () => void;
 }) {
   const { t, lang } = useT();
@@ -39,7 +41,7 @@ export function Questions({
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'error' }
-    | { status: 'ready'; mine: PoolEntry[]; history: HistoryEntry[] }
+    | { status: 'ready'; mine: PoolEntry[]; pool: PoolEntry[]; history: HistoryEntry[] }
   >({ status: 'loading' });
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export function Questions({
           // A dad's own questions are the ones with a group behind them; the
           // curated hundred carry no group and are a pool, not reading material.
           mine: data.pool.filter((p) => p.groupId !== null),
+          pool: data.pool,
           // Today's is the card. Printing it again under "before" is the same
           // question twice on one small screen.
           history: data.history.filter((h) => h.promptId !== data.today?.prompt.id),
@@ -69,7 +72,9 @@ export function Questions({
   const [justAdded, setJustAdded] = useState(false);
 
   function added(entry: PoolEntry) {
-    setState((s) => (s.status === 'ready' ? { ...s, mine: [entry, ...s.mine] } : s));
+    setState((s) =>
+      s.status === 'ready' ? { ...s, mine: [entry, ...s.mine], pool: [entry, ...s.pool] } : s,
+    );
     setJustAdded(true);
   }
 
@@ -86,7 +91,13 @@ export function Questions({
            sheet and carried the form above it off the right-hand edge.
            minmax(0, 1fr) is what stops a child widening its own container. */
         <div className="grid grid-cols-1 gap-5">
-          <PromptCard messages={messages} onAnswer={onAnswer} canAnswer={canAnswer} />
+          <PromptCard
+            messages={messages}
+            onAnswer={onAnswer}
+            canAnswer={canAnswer}
+            host={host}
+            pool={state.status === 'ready' ? state.pool : []}
+          />
           {/* A heading, because the box does NOT say what it is.
               
               Answering today's question is behind a button, so the only field

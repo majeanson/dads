@@ -431,6 +431,19 @@ export async function anotherPrompt(): Promise<TodaysPrompt | null> {
   return body.prompt ? (body as TodaysPrompt) : null;
 }
 
+/** The host picks today's question. `null` when it cannot be changed:
+ * somebody has answered, or it is not his to choose. */
+export async function choosePrompt(promptId: string): Promise<TodaysPrompt | null> {
+  const res = await fetch('/api/prompt/choose', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ promptId }),
+  });
+  if (!res.ok) return null;
+  const body = (await res.json()) as Partial<TodaysPrompt>;
+  return body.prompt ? (body as TodaysPrompt) : null;
+}
+
 export async function fetchPrompts(): Promise<{
   today: { day: string; prompt: Prompt } | null;
   pool: PoolEntry[];

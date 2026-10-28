@@ -233,6 +233,7 @@ export function Sheets({
             messages={messages}
             onAnswer={onAnswerPrompt}
             canAnswer={canAnswer}
+            host={createdBy == null || createdBy === you}
             onClose={close}
           />
         </Suspense>

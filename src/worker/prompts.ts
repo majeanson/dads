@@ -193,6 +193,46 @@ export async function anotherPrompt(
   return prompt ? { day: today.day, prompt } : today;
 }
 
+export type ChooseResult = TodaysPrompt | 'answered' | 'unknown' | null;
+
+/**
+ * Put a particular question in today's place. The host's version of
+ * `anotherPrompt`, with the same condition for the same reason: only while
+ * nobody has answered, because an answer belongs to the question it answered.
+ *
+ * Scoped like `promptById`: an id from another room is simply unknown.
+ */
+export async function choosePrompt(
+  env: Env,
+  groupId: string,
+  promptId: string,
+  now = Date.now(),
+): Promise<ChooseResult> {
+  const today = await todaysPrompt(env, groupId, now);
+  if (!today) return null;
+  if (today.prompt.id === promptId) return today;
+
+  const answered = await env.DB.prepare(
+    'SELECT 1 AS one FROM messages WHERE group_id = ? AND prompt_id = ? LIMIT 1',
+  )
+    .bind(groupId, today.prompt.id)
+    .first();
+  if (answered) return 'answered';
+
+  const live = await env.DB.prepare('SELECT 1 AS one FROM prompts WHERE id = ? AND active = 1')
+    .bind(promptId)
+    .first();
+  const prompt = live ? await promptById(env, groupId, promptId) : null;
+  if (!prompt) return 'unknown';
+
+  await env.DB.prepare(
+    'INSERT OR REPLACE INTO prompt_days (group_id, day, prompt_id) VALUES (?, ?, ?)',
+  )
+    .bind(groupId, today.day, promptId)
+    .run();
+  return { day: today.day, prompt };
+}
+
 function randomBelow(max: number): number {
   const buffer = new Uint32Array(1);
   crypto.getRandomValues(buffer);

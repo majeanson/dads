@@ -35,6 +35,7 @@ import {
   getTodaysPrompt,
   listPrompts,
   postAnotherPrompt,
+  postChoosePrompt,
 } from './routes/prompts';
 
 export { RoomDO } from './RoomDO';
@@ -309,6 +310,8 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'POST /api/prompt/another':
       return postAnotherPrompt(request, env, prod);
+    case 'POST /api/prompt/choose':
+      return postChoosePrompt(request, env, prod);
 
     case 'GET /api/prompt-answers':
       return getPromptAnswers(request, env, url, prod);

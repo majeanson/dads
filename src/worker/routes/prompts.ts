@@ -3,6 +3,7 @@ import { newId } from '../identity';
 import {
   anotherPrompt,
   answersFor,
+  choosePrompt,
   MAX_PROMPT_LENGTH,
   promptHistory,
   promptPool,
@@ -60,6 +61,41 @@ export async function postAnotherPrompt(
 
   const next = await anotherPrompt(env, session.group.id);
   if (next === 'answered') return Response.json({ error: 'answered' }, { status: 409 });
+  if (next === null) return Response.json({ prompt: null });
+  return Response.json({ ...next, answered: false });
+}
+
+/**
+ * POST /api/prompt/choose — { promptId }: the host picks today's question.
+ *
+ * The host is the creator, as with the switches; a room with no creator keeps
+ * it everybody's. Same 409 `answered` as "another".
+ */
+export async function postChoosePrompt(
+  request: Request,
+  env: Env,
+  isProduction: boolean,
+): Promise<Response> {
+  const session = await requireSession(request, env, isProduction);
+  if (session instanceof Response) return session;
+
+  if (session.group.createdBy !== null && session.group.createdBy !== session.member.id) {
+    return Response.json({ error: 'not_yours' }, { status: 403 });
+  }
+
+  let payload: { promptId?: unknown };
+  try {
+    payload = await request.json();
+  } catch {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+  if (typeof payload.promptId !== 'string' || payload.promptId === '') {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+
+  const next = await choosePrompt(env, session.group.id, payload.promptId);
+  if (next === 'answered') return Response.json({ error: 'answered' }, { status: 409 });
+  if (next === 'unknown') return Response.json({ error: 'unknown' }, { status: 404 });
   if (next === null) return Response.json({ prompt: null });
   return Response.json({ ...next, answered: false });
 }
