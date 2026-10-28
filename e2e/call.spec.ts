@@ -62,6 +62,25 @@ test('two dads join the call and actually connect', async ({ browser }) => {
   await sam.context().close();
 });
 
+test('a call that is on shows in the header, with how many, on home too', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Marc');
+  const sam = await comeIn(browser, 'Sam');
+  await expect(sam.getByTestId('call-live')).toHaveCount(0);
+
+  await marc.getByRole('button', { name: 'Join the call' }).click();
+  await expect(sam.getByTestId('call-live')).toContainText('1');
+
+  // And from home, where nothing else would say so.
+  await sam.getByTestId('go-home').click();
+  await expect(sam.getByTestId('call-live')).toContainText('1');
+
+  await marc.getByRole('button', { name: 'Leave' }).click();
+  await expect(sam.getByTestId('call-live')).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
 test('the call survives a reload without stranding anyone', async ({ browser }) => {
   const marc = await comeIn(browser, 'Marc');
   await marc.getByRole('button', { name: 'Join the call' }).click();

@@ -355,6 +355,12 @@ export function Room({
           typing={[...room.typing.keys()].filter((id) => id !== session.member.id)}
           soon={soon}
           callState={call.state}
+          callers={room.call.length}
+          onCall={() => {
+            if (view === 'home') goTalk();
+            else if (call.state === 'in') setSheet('here');
+            else void call.join();
+          }}
           // On the conversation's Menu button, which is where the questions
           // live now that home holds only the night and the way in.
           waiting={waiting}

@@ -3,6 +3,7 @@ import {
   CircleHelp,
   ChevronLeft,
   Menu as MenuIcon,
+  Phone,
   Settings as SettingsIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -42,7 +43,9 @@ export function RoomHeader({
   typing,
   soon,
   callState,
+  callers,
   waiting,
+  onCall,
   onHome,
   onWho,
   onNight,
@@ -62,6 +65,8 @@ export function RoomHeader({
   /** The night, short: "Thu 21:00", a countdown when close, null with none. */
   soon: string | null;
   callState: CallState;
+  /** How many the room says are on the call, this dad included. */
+  callers: number;
   /** A question is waiting for him: the one thing in this menu that can. */
   waiting: boolean;
   onHome: () => void;
@@ -71,6 +76,8 @@ export function RoomHeader({
   onSettings: () => void;
   onAbout: () => void;
   onJoinCall: () => void;
+  /** The live-call chip: home goes to the conversation, which has the call. */
+  onCall: () => void;
 }) {
   const { t } = useT();
   const slim = view === 'talk';
@@ -226,6 +233,7 @@ export function RoomHeader({
           on a phone keeps it. */}
       {slim ? null : (
         <span className="head-actions">
+          {callers > 0 ? <LiveCall n={callers} onClick={onCall} /> : null}
           {/* What this is, for a man who was handed a link and wonders. */}
           <Button
             size="icon"
@@ -255,7 +263,15 @@ export function RoomHeader({
       {/* The call and the menu, in the conversation. */}
       {slim ? (
         <span className="head-actions">
-          <JoinCall state={callState} onJoin={onJoinCall} />
+          {/* A call going on is said up here, with the number, whether or not
+              he is in it. Not in it, the chip IS the way in. */}
+          {callers > 0 && callState !== 'in' && callState !== 'denied' && callState !== 'failed' ? (
+            <LiveCall n={callers} onClick={onCall} joining={callState === 'joining'} join />
+          ) : callers > 0 && callState === 'in' ? (
+            <LiveCall n={callers} onClick={onCall} />
+          ) : (
+            <JoinCall state={callState} onJoin={onJoinCall} />
+          )}
           <Button
             size="icon"
             look="quiet"
@@ -279,5 +295,40 @@ export function RoomHeader({
         </span>
       ) : null}
     </header>
+  );
+}
+
+/**
+ * "A call is on", and how many are on it. Accent, because it is the one thing
+ * in the bar that is happening right now. With `join` it is also the way in.
+ */
+function LiveCall({
+  n,
+  onClick,
+  join = false,
+  joining = false,
+}: {
+  n: number;
+  onClick: () => void;
+  join?: boolean;
+  joining?: boolean;
+}) {
+  const { t } = useT();
+  return (
+    <Button
+      size="md"
+      look="quiet"
+      className="shrink-0 gap-1 rounded-full! px-3 text-accent"
+      onClick={onClick}
+      disabled={joining}
+      data-testid="call-live"
+    >
+      <Phone size={18} aria-hidden="true" />
+      <span aria-hidden="true">{n}</span>
+      <span className="sr-only">
+        {join ? `${t(joining ? 'call.opening' : 'call.join')} — ` : ''}
+        {t('call.count', { n })}
+      </span>
+    </Button>
   );
 }
