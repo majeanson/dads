@@ -2056,6 +2056,13 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   clear of the clock and the home indicator — the same space the padding gave
   back — and the `env()` padding stays as a no-op for a browser that reports an
   inset anyway. Android is unaffected.
+  That alone did not clear it: an installed app with no opinion about its status
+  bar still got the translucent one, and iOS 26 blurs and darkens the top of
+  the page under that (field reports put the scrim at about 40pt, and say no
+  CSS removes it). `apple-mobile-web-app-status-bar-style` is now `default`,
+  the opaque bar, so the page starts below it. iOS reads it only when the app
+  is added to the home screen: **remove it and add it again** to see the change.
+  Not provable from the simulator or from CI.
 - **A message on a phone is two rows, not three columns.** Who and when above,
   what he said across the full width. Three columns means a photograph wins and
   the name and the clock are crushed: "Marc-antoine" became "M…". A run from

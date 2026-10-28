@@ -751,8 +751,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   the left, `flex-shrink: 0` on the actions, `main.room` `width: 100%` with
   `overflow-x: clip`. Icons below 48rem in every language — do not trust a
   breakpoint with this.
-- No `viewport-fit=cover`: iOS 26 blurs whatever is under the status bar of a
-  home-screen app. The system keeps the page clear of the clock and the home
+- No `viewport-fit=cover`, and `apple-mobile-web-app-status-bar-style` is
+  `default` (opaque): iOS 26 blurs whatever is under a translucent status bar
+  of a home-screen app, and only re-adding the app to the home screen picks the
+  meta up. The system keeps the page clear of the clock and the home
   indicator; `env(safe-area-inset-*)` padding stays for browsers that report one.
 - A message on a phone is two rows; a run drops the repeated name and clock.
 
