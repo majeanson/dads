@@ -752,9 +752,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   `overflow-x: clip`. Icons below 48rem in every language — do not trust a
   breakpoint with this.
 - **iOS 26 fades the top ~80pt of an installed app and nothing in the page
-  turns it off** (no `viewport-fit=cover` and a `default` status bar style were
-  tried and changed nothing). So the top of every full-screen surface is pushed
-  below it by `--scrim` (tokens.css, installed WebKit only): `main.room`,
+  turns it off** (dropping `viewport-fit=cover` and a `default` status bar style were
+  tried and changed nothing; the first also broke the small-phone fit). So the top of every full-screen surface is pushed
+  below it by `--scrim` (tokens.css; `html[data-standalone]` from
+  `navigator.standalone`, or the standalone media query on WebKit): `main.room`,
   `Sheet`, the door, the viewer. A new full-screen surface that pays back
   `env(safe-area-inset-top)` adds it too. The system keeps the page clear of the clock and the home
   indicator; `env(safe-area-inset-*)` padding stays for browsers that report one.

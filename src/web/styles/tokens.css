@@ -390,6 +390,11 @@
       }
     }
   }
+  /* The same, by the flag iOS sets itself (index.html's pre-paint script), for
+     an installed app the media query does not recognise. */
+  :root[data-standalone] {
+    --scrim: 1.25rem;
+  }
 
   /* -------------------------------------------------------------------- room */
 
