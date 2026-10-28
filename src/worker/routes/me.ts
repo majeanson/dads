@@ -1,4 +1,4 @@
-import { isGlasses, parseFit } from '../../shared/protocol';
+import { isDadColour, isGlasses, parseFit } from '../../shared/protocol';
 import type { Env } from '../env';
 import { currentSession, MAX_NAME_LENGTH } from './auth';
 
@@ -79,6 +79,39 @@ export async function putGlasses(request: Request, env: Env, prod: boolean): Pro
     face: session.member.avatarAt ?? null,
   });
   return Response.json({ ok: true, glasses: body.glasses });
+}
+
+/**
+ * PUT /api/me/colour — { colour: 1..6 | null }
+ *
+ * The colour he is shown in: his name on a line, his face with no photo, his
+ * quotes. Null goes back to the one his id hashes to.
+ */
+export async function putColour(request: Request, env: Env, prod: boolean): Promise<Response> {
+  const session = await currentSession(request, env, prod);
+  if (!session) return new Response('no', { status: 401 });
+
+  let body: { colour?: unknown };
+  try {
+    body = (await request.json()) as { colour?: unknown };
+  } catch {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+  const colour = body.colour === null ? null : body.colour;
+  if (colour !== null && !isDadColour(colour)) {
+    return Response.json({ error: 'bad_colour' }, { status: 400 });
+  }
+
+  await env.DB.prepare('UPDATE members SET colour = ? WHERE id = ?')
+    .bind(colour, session.member.id)
+    .run();
+
+  await tellTheRoom(env, session.group.id, {
+    memberId: session.member.id,
+    name: session.member.displayName,
+    face: session.member.avatarAt ?? null,
+  });
+  return Response.json({ ok: true, colour });
 }
 
 /**

@@ -34,7 +34,7 @@ export function Sheet({
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] motion-fade" />
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 motion-fade" />
         <Dialog.Content
           className={[
             'motion-sheet fixed z-50 flex flex-col bg-paper text-ink shadow-2xl',

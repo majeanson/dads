@@ -242,6 +242,16 @@ export function Room({
 
   useEffect(refreshTodo, [refreshTodo, todoPulse]);
 
+  // An answer to the question files itself as a line, not as a write the
+  // server stirs the room about, so "a question for you" used to stay on
+  // after he had answered it. His own answers coming or going (taking one
+  // back brings the question back) is the thing to look again at — keyed on
+  // how many he has in the room, not on every line anybody says.
+  const myAnswers = room.messages.filter(
+    (m) => m.kind === 'prompt' && m.memberId === session.member.id,
+  ).length;
+  useEffect(refreshTodo, [refreshTodo, myAnswers]);
+
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), TICK_MS);
     return () => clearInterval(timer);
@@ -539,6 +549,7 @@ export function Room({
           createdBy={room.createdBy}
           // From `members` and not the roster: the man who opened the room is
           // very often not the one sitting in it tonight.
+          roomName={session.group.name}
           ownerName={room.members.find((m) => m.memberId === session.group.createdBy)?.name ?? ''}
           todo={todo}
           tableOpen={tableOpen}

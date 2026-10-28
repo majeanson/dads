@@ -209,7 +209,9 @@ export async function join(request: Request, env: Env, isProduction: boolean): P
   const now = Date.now();
 
   const existing = await env.DB.prepare(
-    'SELECT id FROM members WHERE group_id = ? AND device_token_hash = ? AND gone_at IS NULL',
+    `SELECT id FROM members WHERE group_id = ?1 AND gone_at IS NULL AND
+            (device_token_hash = ?2
+             OR id IN (SELECT member_id FROM member_devices WHERE token_hash = ?2))`,
   )
     .bind(group.id, deviceHash)
     .first<{ id: string }>();

@@ -159,7 +159,9 @@ test('leaving one of two rooms lands him in the other', async ({ browser }) => {
 
   // Not the door: the room he still has, as himself.
   await expect(homeOpener.getByTestId('connection')).toHaveText('2 here');
-  await expect(sam.getByTestId('home')).toBeVisible();
+  // Home or the conversation, wherever he last was in it: the room reopens
+  // where he left it. What matters is that he is in it, as himself.
+  await expect(sam.getByTestId('connection')).toBeVisible();
   await expect(sam.getByLabel('The word')).toHaveCount(0);
   await expect(sam.getByText(`Home Room ${run}`).first()).toBeVisible();
   await expect(secondOpener.getByTestId('connection')).toHaveText('1 here');

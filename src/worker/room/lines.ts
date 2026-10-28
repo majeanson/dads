@@ -463,6 +463,11 @@ async function post(
   // his own line appear.
   room.broadcast(cid === undefined ? { t: 'msg', message } : { t: 'msg', message, cid });
   await archive(room, message);
+  // An answer is the one line that changes what is waiting for somebody ("a
+  // question for you"), and what is waiting is read from D1 — so it is said
+  // after the archive write, never before, or the screen asks too early and
+  // is told the question is still open.
+  if (message.kind === 'prompt') room.broadcast({ t: 'stir', what: 'todo' });
 }
 
 async function archive(room: Room, message: RoomMessage): Promise<void> {

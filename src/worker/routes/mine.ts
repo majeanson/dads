@@ -35,7 +35,9 @@ async function roomsFor(env: Env, token: string, isProduction: boolean): Promise
   const { results } = await env.DB.prepare(
     `SELECT g.id, g.name, g.slug, m.id AS member_id, m.display_name, m.last_seen
        FROM members m JOIN groups g ON g.id = m.group_id
-      WHERE m.device_token_hash = ? AND m.gone_at IS NULL
+      WHERE m.gone_at IS NULL AND
+            (m.device_token_hash = ?1
+             OR m.id IN (SELECT member_id FROM member_devices WHERE token_hash = ?1))
       ORDER BY m.last_seen DESC`,
   )
     .bind(hash)

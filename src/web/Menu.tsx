@@ -5,6 +5,7 @@ import {
   MessageCircleQuestion,
   Search,
   Settings as SettingsIcon,
+  Smartphone,
   Spade,
 } from 'lucide-react';
 import type { RoomsOpen } from '../shared/protocol';
@@ -22,6 +23,7 @@ export type SheetName =
   | 'events'
   | 'find'
   | 'invite'
+  | 'link'
   | 'rooms'
   | 'settings'
   | 'about';
@@ -170,6 +172,19 @@ export function Menu({
         {mine > 1 ? (
           <span className="ml-auto shrink-0 text-sm font-normal text-muted">{mine}</span>
         ) : null}
+      </Button>
+
+      {/* Carrying himself to another phone or computer: the only way a
+          second device becomes HIM rather than a second dad. */}
+      <Button
+        block
+        look="quiet"
+        className={ROW}
+        onClick={() => onOpen('link')}
+        data-testid="menu-link"
+      >
+        <Smartphone size={22} aria-hidden="true" className="shrink-0 text-muted" />
+        <span className="min-w-0 truncate">{t('link.title')}</span>
       </Button>
 
       <Button block look="quiet" className={ROW} onClick={() => onOpen('settings')}>

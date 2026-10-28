@@ -6,6 +6,7 @@ import {
   Search,
   Send,
   Settings2,
+  Smartphone,
   Users,
 } from 'lucide-react';
 import type { CallMember, RoomMessage, RoomsOpen, RosterEntry } from '../shared/protocol';
@@ -35,6 +36,7 @@ const bodies = {
   Find: () => import('./Find'),
   Here: () => import('./Here'),
   Invite: () => import('./Invite'),
+  LinkDevice: () => import('./LinkDevice'),
   MyRooms: () => import('./MyRooms'),
   Night: () => import('./Night'),
   Questions: () => import('./Questions'),
@@ -45,6 +47,7 @@ const Events = lazy(() => bodies.Events().then((m) => ({ default: m.Events })));
 const Find = lazy(() => bodies.Find().then((m) => ({ default: m.Find })));
 const Here = lazy(() => bodies.Here().then((m) => ({ default: m.Here })));
 const Invite = lazy(() => bodies.Invite().then((m) => ({ default: m.Invite })));
+const LinkDevice = lazy(() => bodies.LinkDevice().then((m) => ({ default: m.LinkDevice })));
 const MyRooms = lazy(() => bodies.MyRooms().then((m) => ({ default: m.MyRooms })));
 const Night = lazy(() => bodies.Night().then((m) => ({ default: m.Night })));
 const Questions = lazy(() => bodies.Questions().then((m) => ({ default: m.Questions })));
@@ -147,6 +150,7 @@ export function Sheets({
   members,
   createdBy,
   ownerName,
+  roomName,
   todo,
   tableOpen,
   mine,
@@ -168,6 +172,8 @@ export function Sheets({
   createdBy?: string | null;
   /** That man's name, for the line above the switches. */
   ownerName?: string;
+  /** The room's name: the title of its "who is in it" sheet. */
+  roomName?: string;
   /** The reader's own member id. */
   you: string;
   youName: string;
@@ -216,7 +222,7 @@ export function Sheets({
 
   if (open === 'here') {
     return (
-      <Sheet title={t('here.title')} pose={Users} onClose={close}>
+      <Sheet title={roomName ?? t('here.title')} pose={Users} onClose={close}>
         <Body>
           <Here
             roster={roster.map((m) => ({
@@ -330,6 +336,16 @@ export function Sheets({
             ))}
           </ul>
         </div>
+      </Sheet>
+    );
+  }
+
+  if (open === 'link') {
+    return (
+      <Sheet title={t('link.title')} pose={Smartphone} onClose={close}>
+        <Body>
+          <LinkDevice />
+        </Body>
       </Sheet>
     );
   }

@@ -151,7 +151,7 @@ export function Here({
               <li key={m.memberId}>
                 <button
                   type="button"
-                  className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full border border-line bg-paper py-1.5 pr-4 pl-1.5 text-base text-inherit"
+                  className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full border border-line bg-paper py-1.5 pr-4 pl-1.5 text-base text-inherit opacity-60"
                   onClick={() => setProfile(m.memberId)}
                   data-testid="away-profile"
                 >

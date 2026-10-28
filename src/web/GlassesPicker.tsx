@@ -1,7 +1,8 @@
 import * as Popover from '@radix-ui/react-popover';
 import { useState } from 'react';
-import { GLASSES, type GlassesKind } from '../shared/protocol';
-import { setMyGlasses } from './api';
+import { DAD_COLOURS, GLASSES, type GlassesKind } from '../shared/protocol';
+import { setMyColour, setMyGlasses } from './api';
+import { hashedColour } from './dadColour';
 import { useT } from './i18n';
 import { Face } from './Face';
 import { GlassesFitter } from './GlassesFitter';
@@ -48,6 +49,20 @@ export function GlassesPicker({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const current = worn ?? 'shades';
+  const colour = me?.colour ?? hashedColour(memberId);
+
+  async function paint(next: number) {
+    if (busy) return;
+    setBusy(true);
+    setError(false);
+    try {
+      await setMyColour(next);
+    } catch {
+      setError(true);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function wear(kind: GlassesKind) {
     if (busy) return;
@@ -131,6 +146,37 @@ export function GlassesPicker({
                     )}
                   >
                     <Face memberId={memberId} photo={photo} tryOn={kind} size={44} />
+                  </button>
+                ))}
+              </div>
+              {/* The colour his name and his face wear. The popover stays
+                  open: a colour is tried by looking at it. */}
+              <div
+                role="group"
+                aria-label={t('you.colour')}
+                className="mt-2 flex justify-between gap-1"
+                data-testid="colour-picker"
+              >
+                {Array.from({ length: DAD_COLOURS }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-pressed={colour === n}
+                    aria-label={t(`colour.${n}` as 'colour.1')}
+                    title={t(`colour.${n}` as 'colour.1')}
+                    aria-disabled={busy}
+                    onClick={() => void paint(n)}
+                    data-testid={`colour-${n}`}
+                    className={cn(
+                      'grid h-11 w-11 cursor-pointer place-items-center rounded-full border-2 bg-transparent',
+                      colour === n ? 'border-ink' : 'border-transparent',
+                    )}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="h-7 w-7 rounded-full"
+                      style={{ background: `var(--dad-${n})` }}
+                    />
                   </button>
                 ))}
               </div>

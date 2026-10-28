@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchSession, leave as leaveApi, type Session } from './api';
+import { claimDeviceLink, fetchSession, leave as leaveApi, type Session } from './api';
 import { report } from './oops';
 
 type State =
@@ -13,7 +13,13 @@ export function useSession() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchSession()
+    // A link from another of his devices, taken once and taken OFF the
+    // address bar: it is a credential. Spent before the session is asked for,
+    // so a phone that follows it lands inside as him.
+    const link = /^#link=([A-Za-z0-9_-]{32,})$/.exec(location.hash)?.[1];
+    if (link !== undefined) history.replaceState(null, '', location.pathname + location.search);
+    (link === undefined ? Promise.resolve(false) : claimDeviceLink(link).catch(() => false))
+      .then(() => fetchSession())
       .then((session) => {
         if (cancelled) return;
         setState(session ? { status: 'in', session } : { status: 'out' });

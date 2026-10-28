@@ -60,6 +60,13 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   `index.ts`): SameSite=Lax trusts every `*.marcportal.com`. No Origin is
   allowed (scripts, tests); localhost outside production. The Worker deletes
   every `X-Dads-*` the client sent before setting its own.
+- **A second device is only ever added by a link from the first**
+  (`POST /api/link`, ten minutes, one use, HMAC'd; `POST /api/link/claim`;
+  `member_devices` holds the extra device hashes). Joining by name NEVER
+  reaches an existing dad: it makes a second one, on purpose. The link is a
+  `#link=` fragment, taken off the address bar before anything else, and its
+  failures count against the join bucket. Every lookup by device hash checks
+  `member_devices` as well as `members.device_token_hash`.
 - `scripts/create-group.ts --rotate` UPDATEs hash and salt in place: members,
   archive and board must survive a passphrase change.
 - **An invite link carries its own secret, never the code** (the app does not
@@ -379,7 +386,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
     `dragstart`.
   - Arrival is a face popping in with a ring (`face-arrive`); its timer is not
     tied to the effect's cleanup.
-  - Every dad has a colour (`dadColour.ts`, hash of his id), six, audited as
+  - Every dad has a colour (`dadColour.ts`: the one he picked in the glasses
+    popover, `members.colour`, else the hash of his id), six, audited as
     TEXT in both themes.
   - A full table (four) plays once per evening per phone
     (`dads.full.<occurrence>`) on a counter that never resets.
@@ -578,6 +586,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - The conversation's header: room name (display face), faces, `nightShort`.
   **`connection` is a button named "N here" laid OVER the faces**
   (`absolute -inset-2.5`); nothing in a face is part of its name.
+- **The room's name in the header is a button** (`room-title`) into "who is in
+  it": online dads full, the others dimmed, each opening a profile.
+- **A sheet's backdrop dims and does not blur** — a blurred header behind it
+  read as a rendering fault.
 - **The header has a table button once the table has been opened**
   (`table-toggle`, `aria-pressed`): minimise to the chat or bring it back; the
   frame stays mounted either way.

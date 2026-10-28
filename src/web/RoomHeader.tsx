@@ -141,7 +141,9 @@ export function RoomHeader({
               the faces (who is here) and the night go under it, small, so a
               name like "Throwback daddies" is not cut on a 390px phone. */}
           <div className="min-w-0 flex-1">
-            <h1 className="display truncate text-lg leading-tight text-ink">{groupName}</h1>
+            <h1 className="display text-lg leading-tight text-ink">
+              <RoomTitle name={groupName} onClick={onWho} />
+            </h1>
             <div className="flex min-w-0 items-center gap-2.5">
               {/* The faces ARE the head-count here. The control is laid over them,
                   the full size of them and a thumb's margin more, and it is still
@@ -195,7 +197,9 @@ export function RoomHeader({
         </>
       ) : (
         <div className="min-w-0">
-          <h1 className="display truncate text-xl text-ink">{groupName}</h1>
+          <h1 className="display text-xl text-ink">
+            <RoomTitle name={groupName} onClick={onWho} />
+          </h1>
           <p className="flex min-w-0 items-center gap-2 text-[1.0625rem] text-ink">
             {/* The faces are the count, drawn: the words beside them are the
               control and the thing a test and a screen reader read. Outside the
@@ -358,5 +362,23 @@ function LiveCall({
         {t('call.count', { n })}
       </span>
     </Button>
+  );
+}
+
+/**
+ * The room's name, which is also the way into the room: who is in it, who is
+ * about, and each of them. A button inside the heading, so the heading keeps
+ * its name and its level.
+ */
+function RoomTitle({ name, onClick }: { name: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid="room-title"
+      className="block max-w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left text-inherit"
+    >
+      {name}
+    </button>
   );
 }

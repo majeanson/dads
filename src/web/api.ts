@@ -629,6 +629,36 @@ export async function setMyGlasses(glasses: string): Promise<void> {
   if (!res.ok) throw new Error(`PUT /api/me/glasses ${res.status}`);
 }
 
+/** The colour he is shown in, 1 to six, or null for the one his id gives. */
+export async function setMyColour(colour: number | null): Promise<void> {
+  const res = await fetch('/api/me/colour', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ colour }),
+  });
+  if (!res.ok) throw new Error(`PUT /api/me/colour ${res.status}`);
+}
+
+/** A link that brings another of his devices in as him. Good for ten minutes. */
+export async function createDeviceLink(): Promise<{ url: string; expiresAt: number }> {
+  const res = await fetch('/api/link', { method: 'POST' });
+  if (!res.ok) throw new Error(`POST /api/link ${res.status}`);
+  const body = (await res.json()) as { token: string; expiresAt: number };
+  return { url: `${location.origin}/#link=${body.token}`, expiresAt: body.expiresAt };
+}
+
+/** Spend a link from another device. True: this device is him now. */
+export async function claimDeviceLink(token: string): Promise<boolean> {
+  const res = await fetch('/api/link/claim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, deviceToken: readDeviceToken() }),
+  });
+  if (!res.ok) return false;
+  writeDeviceToken(((await res.json()) as { deviceToken: string }).deviceToken);
+  return true;
+}
+
 /** Where his glasses sit on his photo, or null for the default spot. */
 export async function setMyGlassesFit(fit: GlassesFit | null): Promise<void> {
   const res = await fetch('/api/me/glasses-fit', {

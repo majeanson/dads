@@ -168,6 +168,14 @@ export interface RoomsOpen {
 export const GLASSES = ['shades', 'aviators', 'round', 'square', '3d', 'goggles'] as const;
 export type GlassesKind = (typeof GLASSES)[number];
 
+/** How many colours a dad can be (`--dad-1` … `--dad-6` in tokens.css). */
+export const DAD_COLOURS = 6;
+
+/** A colour a dad picked: 1 to six, a whole number. */
+export function isDadColour(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= DAD_COLOURS;
+}
+
 export function isGlasses(value: unknown): value is GlassesKind {
   return typeof value === 'string' && (GLASSES as readonly string[]).includes(value);
 }
@@ -229,6 +237,8 @@ export interface RosterEntry {
   name: string;
   /** The pair he wears, when he has chosen one. Absent is the app's shades. */
   glasses?: GlassesKind;
+  /** The colour he picked, 1 to six. Absent: the one his id hashes to. */
+  colour?: number;
   /** Where they sit on his photo, when he has moved them. */
   fit?: GlassesFit;
   /**

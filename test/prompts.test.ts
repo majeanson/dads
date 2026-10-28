@@ -512,3 +512,26 @@ describe('the list', () => {
     await settle();
   });
 });
+
+describe('what is waiting after an answer', () => {
+  let group: SeededGroup;
+  beforeEach(async () => {
+    await resetTables();
+    group = await seedGroup();
+  });
+
+  it('nudges the room once the answer is saved, and the question stops waiting', async () => {
+    const marc = await enter(group, 'Marc');
+    const todo = async () =>
+      ((await (await get('/api/todo', marc.cookie)).json()) as { prompt: boolean }).prompt;
+    expect(await todo()).toBe(true);
+
+    marc.answer('Camping with my brother');
+    await until(() => marc.frames.some((f) => f.t === 'stir' && f.what === 'todo'));
+
+    // The nudge came after the archive write: asking now is already true.
+    expect(await todo()).toBe(false);
+    marc.close();
+    await settle();
+  });
+});

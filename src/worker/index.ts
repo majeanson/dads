@@ -10,7 +10,15 @@ import { createInvite } from './routes/invite';
 import { invitePage } from './routes/preview';
 import { getTodo } from './routes/todo';
 import { getMedia, keepMediaRoute, listMedia, uploadMedia } from './routes/media';
-import { deleteFace, getFace, putFace, putGlasses, putGlassesFit, putName } from './routes/me';
+import {
+  deleteFace,
+  getFace,
+  putColour,
+  putFace,
+  putGlasses,
+  putGlassesFit,
+  putName,
+} from './routes/me';
 import {
   deleteEvent,
   getEventIcs,
@@ -22,6 +30,7 @@ import {
 import { setNight } from './routes/night';
 import { getPoll, pickDay, putVote } from './routes/poll';
 import { getPresence } from './routes/presence';
+import { claimLink, createLink } from './routes/link';
 import { getProfile } from './routes/profile';
 import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
 import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp';
@@ -156,6 +165,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
     case 'PUT /api/me/glasses':
       return putGlasses(request, env, prod);
 
+    case 'PUT /api/me/colour':
+      return putColour(request, env, prod);
+
     case 'PUT /api/me/glasses-fit':
       return putGlassesFit(request, env, prod);
 
@@ -176,6 +188,12 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'POST /api/ops/forget':
       return forget(request, env);
+
+    case 'POST /api/link':
+      return createLink(request, env, prod);
+
+    case 'POST /api/link/claim':
+      return claimLink(request, env, prod);
 
     case 'POST /api/invite':
       return createInvite(request, env, prod);

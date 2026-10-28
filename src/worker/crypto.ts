@@ -132,6 +132,10 @@ export async function hashDeviceToken(secret: string, token: string): Promise<st
  * reach for PBKDF2 here. What reaches the database is worth nothing on its
  * own.
  */
+export async function hashLinkToken(secret: string, token: string): Promise<string> {
+  return hmac(secret, `link:${token}`);
+}
+
 export async function hashInviteToken(secret: string, token: string): Promise<string> {
   return hmac(secret, `invite:${token}`);
 }

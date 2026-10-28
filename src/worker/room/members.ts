@@ -1,4 +1,4 @@
-import { isGlasses, type RosterEntry } from '../../shared/protocol';
+import { isDadColour, isGlasses, type RosterEntry } from '../../shared/protocol';
 import { broadcastCallRoster, hangUp } from './call';
 import { broadcastRoster, cancelLeave, notePresence } from './presence';
 import type { Room, SocketIdentity } from './room';
@@ -22,7 +22,7 @@ export async function membersOfGroup(room: Room): Promise<RosterEntry[]> {
   if (groupId === undefined) return [];
   try {
     const { results } = await room.env.DB.prepare(
-      'SELECT id, display_name, avatar_at, glasses, glasses_fit, gone_at FROM members WHERE group_id = ?',
+      'SELECT id, display_name, avatar_at, glasses, glasses_fit, colour, gone_at FROM members WHERE group_id = ?',
     )
       .bind(groupId)
       .all<{
@@ -31,6 +31,7 @@ export async function membersOfGroup(room: Room): Promise<RosterEntry[]> {
         avatar_at: number | null;
         glasses: string | null;
         glasses_fit: string | null;
+        colour: number | null;
         gone_at: number | null;
       }>();
     return results.map((r) => {
@@ -40,6 +41,7 @@ export async function membersOfGroup(room: Room): Promise<RosterEntry[]> {
         name: r.display_name,
         face: r.avatar_at ?? undefined,
         ...(isGlasses(r.glasses) ? { glasses: r.glasses } : {}),
+        ...(isDadColour(r.colour) ? { colour: r.colour } : {}),
         ...(fit ? { fit } : {}),
         ...(r.gone_at !== null ? { gone: true } : {}),
       };
@@ -80,9 +82,11 @@ export async function restamp(
   // he wears is read here rather than carried in: a change of name or
   // face does not know it, and a frame without it would take his glasses
   // off every screen. Where they sit on his photo, the same.
-  const worn = await room.env.DB.prepare('SELECT glasses, glasses_fit FROM members WHERE id = ?')
+  const worn = await room.env.DB.prepare(
+    'SELECT glasses, glasses_fit, colour FROM members WHERE id = ?',
+  )
     .bind(memberId)
-    .first<{ glasses: string | null; glasses_fit: string | null }>()
+    .first<{ glasses: string | null; glasses_fit: string | null; colour: number | null }>()
     .catch(() => null);
   const fit = storedFit(worn?.glasses_fit);
   room.broadcast({
@@ -92,6 +96,7 @@ export async function restamp(
       name,
       face: face ?? undefined,
       ...(isGlasses(worn?.glasses) ? { glasses: worn.glasses } : {}),
+      ...(isDadColour(worn?.colour) ? { colour: worn.colour } : {}),
       ...(fit ? { fit } : {}),
     },
   });

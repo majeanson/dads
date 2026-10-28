@@ -36,6 +36,8 @@ export async function depart(
 
   await env.DB.batch([
     env.DB.prepare('DELETE FROM push_subscriptions WHERE member_id = ?').bind(memberId),
+    env.DB.prepare('DELETE FROM member_devices WHERE member_id = ?').bind(memberId),
+    env.DB.prepare('DELETE FROM device_links WHERE member_id = ?').bind(memberId),
     env.DB.prepare(
       'DELETE FROM rsvps WHERE group_id = ? AND member_id = ? AND occurrence > ?',
     ).bind(groupId, memberId, now),

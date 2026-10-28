@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { isChampion, type Champions, type RosterEntry } from '../shared/protocol';
+import { chooseColours } from './dadColour';
 
 /**
  * Everyone in the group, for any face that needs to know what he looks like.
@@ -28,7 +29,15 @@ export function MembersProvider({
   champions?: Champions | null;
   children: ReactNode;
 }) {
-  const byId = useMemo(() => new Map(members.map((m) => [m.memberId, m])), [members]);
+  const byId = useMemo(() => {
+    const map = new Map(members.map((m) => [m.memberId, m]));
+    // Before the children render, so every name drawn below is drawn in the
+    // colour he chose and not the one he had a moment ago.
+    chooseColours(
+      new Map(members.flatMap((m) => (m.colour === undefined ? [] : [[m.memberId, m.colour]]))),
+    );
+    return map;
+  }, [members]);
   return (
     <Members.Provider value={byId}>
       <Crowned.Provider value={champions}>{children}</Crowned.Provider>

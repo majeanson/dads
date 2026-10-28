@@ -145,6 +145,7 @@ export class RoomDO extends DurableObject<Env> {
           name,
           ...(face ? { face } : {}),
           ...(own?.glasses ? { glasses: own.glasses } : {}),
+          ...(own?.colour ? { colour: own.colour } : {}),
           ...(own?.fit ? { fit: own.fit } : {}),
         },
       });
