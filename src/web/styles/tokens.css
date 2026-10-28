@@ -254,6 +254,29 @@
     overflow: hidden;
   }
 
+  /* Safari 26 tints its bars from what it finds fixed at the top and bottom
+     edge. The room is a fixed layer now, and the bars went light blue with it
+     (seen on the device, in a tab too); a hair of the page's own colour at
+     each edge, above the room and under the splash, tells it what the colour
+     is. It catches nothing. */
+  body::before,
+  body::after {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--bg);
+    z-index: 1;
+    pointer-events: none;
+  }
+  body::before {
+    top: 0;
+  }
+  body::after {
+    bottom: 0;
+  }
+
   body {
     margin: 0;
     min-height: 100dvh;
