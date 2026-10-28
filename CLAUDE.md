@@ -763,6 +763,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   `Sheet`, the door, the viewer. A new full-screen surface that pays back
   `env(safe-area-inset-top)` adds it too. The system keeps the page clear of the clock and the home
   indicator; `env(safe-area-inset-*)` padding stays for browsers that report one.
+- **`main.room` is `position: fixed`** (`--app-top` follows the visual
+  viewport). iOS 26 softens the page's OWN content in the top band of a
+  home-screen app, but not a fixed layer: a sheet's title was sharp on the same
+  screen as the room's soft one. With no status-bar-style tag the bar is opaque,
+  the top inset is 0 and `--scrim` is nothing; the build label in Settings
+  shows both numbers.
 - A message on a phone is two rows; a run drops the repeated name and clock.
 
 ## Proving it in production

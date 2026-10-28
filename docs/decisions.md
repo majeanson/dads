@@ -2088,6 +2088,16 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   the name and the clock are crushed: "Marc-antoine" became "M…". A run from
   the same dad drops the repeated clock as well as the repeated name.
 
+- **The room is a fixed layer** (2026-10-28, from device screenshots after the
+  status-bar tag was removed: bar opaque, inset and scrim 0, label `42e3add · 0/0`).
+  The room's title was STILL soft on home and in the conversation, and a sheet's
+  title, a few points lower, was sharp. What differs is not position but layer:
+  a sheet is fixed, the room was the page's own content, and iOS 26 applies its
+  top edge softening to the latter. So `main.room` is `position: fixed`, its
+  top following `visualViewport.offsetTop` so the keyboard does not strand it.
+  Not provable from CI. If it is STILL soft, the next step is to stop (it is the
+  system's); do not add another offset.
+
 ## Proving it in production
 
 `npm run prove` runs `prod/` against **dads.marcportal.com**. It is not in CI

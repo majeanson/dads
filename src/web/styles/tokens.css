@@ -411,6 +411,18 @@
        included, is half off the right-hand side and the room scrolls sideways
        for the rest of the evening. */
     width: 100%;
+    /* A fixed layer, not part of the page. iOS 26 softens whatever of the
+       page's own content sits in the top band of a home-screen app — the
+       room's name, on home and in the conversation — while a sheet's title,
+       in a fixed layer, was sharp on the same screen (device screenshots,
+       2026-10-28, with the opaque bar already in and the scrim at 0). `main`'s
+       auto margins centre it between left and right, as they did in flow;
+       `--app-top` follows the visual viewport (useVisualViewport) so the
+       keyboard does not leave it behind. */
+    position: fixed;
+    top: var(--app-top, 0px);
+    left: 0;
+    right: 0;
     /* As tall as what he can see, not as tall as the screen: with the
        keyboard up the two differ by a third, and it is the conversation that
        should give up the space, not the composer. See useVisualViewport. */

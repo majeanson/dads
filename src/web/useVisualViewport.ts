@@ -36,6 +36,9 @@ export function useVisualViewport(onResize?: () => void): void {
       // this fires. There is nothing up there to see; put it back. Not while
       // zoomed: the page is legitimately scrolled to where he is looking.
       if (!zoomed && window.scrollY !== 0) window.scrollTo(0, 0);
+      // The room is a fixed layer, which stays where the LAYOUT viewport is;
+      // when iOS slides the visual one down to keep a field in view, follow it.
+      root.style.setProperty('--app-top', zoomed ? '0px' : `${Math.round(vv.offsetTop)}px`);
       // Nothing changed is nothing to do. Without this, `onResize` scrolls
       // the list into view, which pans a zoomed viewport, which fires
       // `scroll`, which comes back here — the flashing.
@@ -52,6 +55,7 @@ export function useVisualViewport(onResize?: () => void): void {
       vv.removeEventListener('resize', fit);
       vv.removeEventListener('scroll', fit);
       root.style.removeProperty('--app-h');
+      root.style.removeProperty('--app-top');
     };
   }, [onResize]);
 }
