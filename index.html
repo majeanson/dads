@@ -66,10 +66,6 @@
       // Before the first paint, not after React mounts: a dad who asked for
       // dark should never get a white flash on his way into the room, and the
       // language belongs on <html> for anything reading the page aloud.
-      // Installed on an iPhone: `navigator.standalone` is the one flag iOS has
-      // always set for that, and the display-mode query is a second opinion.
-      // tokens.css pushes the top of the screen below iOS 26's fade (--scrim).
-      if (navigator.standalone === true) document.documentElement.dataset.standalone = '';
       try {
         var theme = localStorage.getItem('dads.theme');
         if (theme === 'light' || theme === 'dark') {

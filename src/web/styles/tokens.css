@@ -383,17 +383,12 @@
      pays the top safe area back adds it (`main.room`, `Sheet`, the door, the
      photograph viewer). Measured on a device screenshot, 2026-10-28; tune
      here. */
-  @media (display-mode: standalone) {
-    @supports (-webkit-touch-callout: none) {
-      :root {
-        --scrim: 1.25rem;
-      }
-    }
-  }
-  /* The same, by the flag iOS sets itself (index.html's pre-paint script), for
-     an installed app the media query does not recognise. */
-  :root[data-standalone] {
-    --scrim: 1.25rem;
+  /* No detection to get wrong: it is a share of the top safe area itself. A
+     notched iPhone reports about 59pt there in an installed app (and nothing in
+     a browser tab, where there is no fade), so it gives about 24pt; a phone
+     that reports none gets none. */
+  :root {
+    --scrim: calc(env(safe-area-inset-top, 0px) * 0.4);
   }
 
   /* -------------------------------------------------------------------- room */

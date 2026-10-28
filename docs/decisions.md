@@ -2069,8 +2069,10 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   the page still started at the safe-area line and the fade, about 80pt from the
   top of the screen, still sat over the room's name, while the icons just below
   it were sharp). The fix that follows the evidence is `--scrim`: 1.25rem of
-  extra space above the header, the sheets, the door and the viewer, only in an
-  installed app on WebKit. It costs that much of the screen on an iPhone and
+  extra space above the header, the sheets, the door and the viewer — first only
+  where `display-mode: standalone` / `navigator.standalone` said installed, and
+  when that did not visibly change anything, as 40% of `env(safe-area-inset-top)`
+  so no detection is involved at all. It costs that much of the screen on an iPhone and
   nothing anywhere else; tune it in tokens.css.
 - **A message on a phone is two rows, not three columns.** Who and when above,
   what he said across the full width. Three columns means a photograph wins and
