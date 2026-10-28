@@ -22,12 +22,26 @@ export function useVisualViewport(onResize?: () => void): void {
     if (!vv) return;
     const root = document.documentElement;
 
+    let last = -1;
+
     function fit() {
       if (!vv) return;
-      root.style.setProperty('--app-h', `${Math.round(vv.height)}px`);
+      // A pinch-zoomed viewport reports a height divided by the zoom. That is
+      // a different question from "how much did the keyboard cover": measure
+      // it back in layout pixels, so zooming (and panning, which fires
+      // `scroll`) leaves the room the size it was.
+      const zoomed = vv.scale > 1.01;
+      const height = Math.round(vv.height * vv.scale);
       // iOS has sometimes already scrolled the layout viewport by the time
-      // this fires. There is nothing up there to see; put it back.
-      if (window.scrollY !== 0) window.scrollTo(0, 0);
+      // this fires. There is nothing up there to see; put it back. Not while
+      // zoomed: the page is legitimately scrolled to where he is looking.
+      if (!zoomed && window.scrollY !== 0) window.scrollTo(0, 0);
+      // Nothing changed is nothing to do. Without this, `onResize` scrolls
+      // the list into view, which pans a zoomed viewport, which fires
+      // `scroll`, which comes back here — the flashing.
+      if (height === last) return;
+      last = height;
+      root.style.setProperty('--app-h', `${height}px`);
       onResize?.();
     }
 
