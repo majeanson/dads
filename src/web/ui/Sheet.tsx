@@ -40,7 +40,7 @@ export function Sheet({
             'motion-sheet fixed z-50 flex flex-col bg-paper text-ink shadow-2xl',
             // Phone: the whole screen, with room for the notch and the home
             // indicator. Laptop: a panel, centred, never taller than the room.
-            'inset-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]',
+            'inset-0 pt-[calc(env(safe-area-inset-top)+var(--scrim,0px))] pb-[env(safe-area-inset-bottom)]',
             'sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2',
             'sm:h-auto sm:max-h-[85dvh] sm:w-[min(34rem,calc(100vw-2rem))]',
             // The same radius home's card uses, so the two surfaces a dad

@@ -751,10 +751,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   the left, `flex-shrink: 0` on the actions, `main.room` `width: 100%` with
   `overflow-x: clip`. Icons below 48rem in every language — do not trust a
   breakpoint with this.
-- No `viewport-fit=cover`, and `apple-mobile-web-app-status-bar-style` is
-  `default` (opaque): iOS 26 blurs whatever is under a translucent status bar
-  of a home-screen app, and only re-adding the app to the home screen picks the
-  meta up. The system keeps the page clear of the clock and the home
+- **iOS 26 fades the top ~80pt of an installed app and nothing in the page
+  turns it off** (no `viewport-fit=cover` and a `default` status bar style were
+  tried and changed nothing). So the top of every full-screen surface is pushed
+  below it by `--scrim` (tokens.css, installed WebKit only): `main.room`,
+  `Sheet`, the door, the viewer. A new full-screen surface that pays back
+  `env(safe-area-inset-top)` adds it too. The system keeps the page clear of the clock and the home
   indicator; `env(safe-area-inset-*)` padding stays for browsers that report one.
 - A message on a phone is two rows; a run drops the repeated name and clock.
 

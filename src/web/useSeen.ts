@@ -137,6 +137,55 @@ export function useSeen({
     bottom.current?.scrollIntoView({ block: 'end' });
   }, [view, bottom]);
 
+  /**
+   * At the bottom stays at the bottom, whatever grows.
+   *
+   * The scroll above happens when a line ARRIVES, and a line is not finished
+   * arriving: its reactions are drawn under it, a photograph loads into the
+   * space it was given, a quote settles. Each of those makes the list taller
+   * after he was already scrolled to the end, so he landed a few lines short
+   * with the newest line's reactions off the bottom of the screen — and
+   * scrolling by hand "fixed" it. Watching the rows' own sizes, and pictures
+   * loading, keeps a dad who is at the bottom there. A dad who has scrolled
+   * up is not pinned and is never moved.
+   */
+  useEffect(() => {
+    const list = lines.current;
+    if (!watching || list === null || typeof ResizeObserver === 'undefined') return;
+    // Was he at the end BEFORE this growth? Measured against how far the list
+    // could scroll last time, not now: a row that has just got taller has
+    // already moved the end away from him. Read from the scroll position itself
+    // rather than from `pinned`, which catches up a render later — a dad who
+    // scrolled up in the same frame a row grew must not be taken back down.
+    let before = list.scrollHeight - list.clientHeight;
+    const stick = () => {
+      const wasAtEnd = list.scrollTop >= before - NEAR_BOTTOM_PX;
+      if (pinnedNow.current && wasAtEnd) list.scrollTop = list.scrollHeight;
+      before = list.scrollHeight - list.clientHeight;
+    };
+    const sizes = new ResizeObserver(stick);
+    const rows = (parent: ParentNode) => parent.querySelectorAll(':scope > li');
+    // The border box: anything that makes a row taller counts, padding included.
+    const watch = (row: Element) => sizes.observe(row, { box: 'border-box' });
+    rows(list).forEach(watch);
+    const arrivals = new MutationObserver((records) => {
+      for (const record of records) {
+        record.addedNodes.forEach((node) => {
+          if (node instanceof HTMLLIElement) watch(node);
+        });
+      }
+    });
+    arrivals.observe(list, { childList: true });
+    // `load` does not bubble, but it can be caught on the way down.
+    list.addEventListener('load', stick, true);
+    stick();
+    return () => {
+      sizes.disconnect();
+      arrivals.disconnect();
+      list.removeEventListener('load', stick, true);
+    };
+  }, [watching, lines]);
+
   /** A dad who has scrolled up, or looked away, has not seen it. */
   const atBottom = useCallback(() => {
     const el = lines.current;

@@ -82,7 +82,7 @@ export function JoinScreen({
       {/* The one thing a stranger at the door can change, in the corner where
           a language switch lives on every site he has ever used. The theme
           follows his phone and needs no asking; the language does. */}
-      <div className="absolute top-[max(1rem,env(safe-area-inset-top))] right-5">
+      <div className="absolute top-[calc(max(1rem,env(safe-area-inset-top))+var(--scrim,0px))] right-5">
         <LangToggle compact />
       </div>
 

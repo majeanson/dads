@@ -375,6 +375,22 @@
     color: var(--muted);
   }
 
+  /* The system's own fade over the top of an installed iPhone app (iOS 26.1+).
+     Nothing in the page switches it off — a different status bar style and
+     viewport-fit were both tried and changed nothing — so what sits at the top
+     of the screen is pushed below it instead, by this much, only there:
+     installed (`standalone`) and WebKit on a touch device. Everything that
+     pays the top safe area back adds it (`main.room`, `Sheet`, the door, the
+     photograph viewer). Measured on a device screenshot, 2026-10-28; tune
+     here. */
+  @media (display-mode: standalone) {
+    @supports (-webkit-touch-callout: none) {
+      :root {
+        --scrim: 1.25rem;
+      }
+    }
+  }
+
   /* -------------------------------------------------------------------- room */
 
   main.room {
@@ -399,7 +415,10 @@
        bottom, the clock and the notch at the top. Without the top one the
        group's name sits underneath the time.  */
     padding: 1rem;
-    padding-top: max(1rem, env(safe-area-inset-top));
+    /* And `--scrim` on top of the clock's room, for the installed iPhone app:
+       iOS 26 fades the top of the screen, about 80pt of it, and a title in
+       that band reads as blurred while the icons just under it stay sharp. */
+    padding-top: calc(max(1rem, env(safe-area-inset-top)) + var(--scrim, 0px));
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
     padding-left: max(1rem, env(safe-area-inset-left));
     padding-right: max(1rem, env(safe-area-inset-right));
@@ -455,8 +474,9 @@
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 0.5rem;
-    padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right))
-      max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+    padding: calc(max(0.5rem, env(safe-area-inset-top)) + var(--scrim, 0px))
+      max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom))
+      max(0.5rem, env(safe-area-inset-left));
     color: #ffffff;
   }
 

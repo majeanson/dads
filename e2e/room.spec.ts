@@ -1150,3 +1150,44 @@ test('a photo can be made to stay, and the other dad sees that it has', async ({
   await marc.context().close();
   await sam.context().close();
 });
+
+test('a dad at the bottom stays at the bottom when the last line grows', async ({ browser }) => {
+  // Reactions and photographs make a line taller AFTER it arrived. He used to
+  // be left a few lines short, the newest line's reactions off the screen.
+  const page = await comeIn(browser, 'Bottom');
+  for (let i = 0; i < 25; i++) {
+    await page.getByLabel('Say something').fill(`grow ${String(i).padStart(2, '0')}`);
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+  }
+  await expect(page.getByTestId('line').filter({ hasText: 'grow 24' })).toBeVisible();
+
+  const gap = () =>
+    page.evaluate(() => {
+      const list = document.querySelector('ol.lines')!;
+      return Math.round(list.scrollHeight - list.scrollTop - list.clientHeight);
+    });
+  await expect.poll(gap).toBeLessThan(4);
+
+  // The newest line gets taller, the way a row of reactions makes it.
+  await page.evaluate(() => {
+    const rows = document.querySelectorAll('ol.lines > li');
+    const last = [...rows].reverse().find((r) => (r as HTMLElement).offsetHeight > 0)!;
+    (last as HTMLElement).style.paddingBottom = '90px';
+  });
+  await expect.poll(gap).toBeLessThan(4);
+
+  // But a dad who has scrolled up is left where he is.
+  await page.evaluate(() => {
+    document.querySelector('ol.lines')!.scrollTop = 0;
+  });
+  await expect.poll(gap).toBeGreaterThan(200);
+  await page.evaluate(() => {
+    const rows = document.querySelectorAll('ol.lines > li');
+    const last = [...rows].reverse().find((r) => (r as HTMLElement).offsetHeight > 0)!;
+    (last as HTMLElement).style.paddingBottom = '180px';
+  });
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => document.querySelector('ol.lines')!.scrollTop)).toBeLessThan(5);
+
+  await page.context().close();
+});
