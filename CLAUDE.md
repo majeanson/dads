@@ -862,6 +862,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   it for ten minutes, and a spec that deliberately fails a join can make the
   specs after it unable to come in at all (429). Give that attempt an address
   of its own (`setExtraHTTPHeaders`), as `openRoom` does.
+- **A NEW file under `src/worker/` is not audited locally** until `test/sql-audit.test.ts`
+  changes: its `import.meta.glob` is expanded once and the transform is cached, so
+  the file list goes stale (edits to a file that was already there ARE seen). CI is
+  a clean checkout and sees everything, which is how a new route's unscoped
+  `members` read passed here and failed there. After adding a Worker file, touch
+  the test (add and remove a blank line) before trusting a green local run.
 - **A fixed `settle()` before an assertion is a race.** Use `until`
   (`test/helpers.ts`), counted in tries. Prove a negative with a sentinel
   frame. `enter()` waits for `hello`. `tick()` spins forever where `Date` is
