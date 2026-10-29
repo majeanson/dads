@@ -467,8 +467,10 @@ test('a new device asks with a code and comes in as the same dad', async ({ brow
   await expect(second.getByTestId('pair-code')).toHaveText(/^[A-Z2-9]{8}$/);
   const code = (await second.getByTestId('pair-code').textContent()) ?? '';
 
-  await menu(first);
-  await first.getByTestId('menu-link').click();
+  // From Settings, beside the other things about a phone.
+  await home(first);
+  await first.getByTestId('home-settings').click();
+  await first.getByTestId('settings-link').click();
   await first.getByTestId('pair-code-in').fill(code.toLowerCase());
   await first.getByRole('button', { name: 'Let it in' }).click();
   await expect(first.getByTestId('pair-done')).toBeVisible();

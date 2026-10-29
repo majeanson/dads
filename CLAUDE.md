@@ -567,7 +567,7 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   before a count does.
 - A sheet's chrome gives way first; content scrolls. Questions keep only today
   on the first screen; the week puts past weeks on a tab; Settings folds the
-  creator's controls behind `room-owning`. Settings is three sections (you; this room; this device): face and glasses sit behind `look-open`, the three switches behind `features-open` (`Fold`; children mount only when open), sign out is the last row, the build label the last line. Settings fills a 667px phone to
+  creator's controls behind `room-owning`. Settings is three sections (you; this room; this device): face and glasses sit behind `look-open`, the three switches behind `features-open` (`Fold`; children mount only when open), the device section ends with "Use on another device" (`settings-link`, also still in the Menu), then one quiet line: sign out beside the build label. Settings fills a 667px phone to
   the pixel — measure as a joined dad AND as the creator, in both languages.
 
 ## The conversation is what a dad typed

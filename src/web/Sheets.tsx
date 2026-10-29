@@ -388,6 +388,7 @@ export function Sheets({
           mine={createdBy == null || createdBy === you}
           ownerName={createdBy == null ? '' : (ownerName ?? '')}
           onInvite={() => onOpen('invite')}
+          onLink={() => onOpen('link')}
           onSignOut={onSignOut}
         />
       </Body>

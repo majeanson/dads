@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, LogOut, Send } from 'lucide-react';
+import { ChevronDown, ChevronRight, LogOut, Send, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import { setRooms } from './api';
 import { useT } from './i18n';
@@ -26,6 +26,7 @@ export function Settings({
   ownerName,
   members,
   onInvite,
+  onLink,
   onSignOut,
 }: {
   rooms: RoomsOpen;
@@ -40,6 +41,8 @@ export function Settings({
   members: RosterEntry[];
   /** Opens the invite sheet. */
   onInvite: () => void;
+  /** Opens "Use on another device". */
+  onLink: () => void;
   onSignOut: () => void;
 }) {
   const { t } = useT();
@@ -165,22 +168,36 @@ export function Settings({
         <div className="border-t border-line">
           <Toggles />
           <Remind />
-          {/* Signing out is about THIS device, and a dad does it about once:
-              the last row, quiet, with the build under it — which phone is
-              running which build is a question for the day something looks
-              wrong, not for every visit. */}
+          {/* Being him on another phone is about HIM and this device both, and
+              it is what a dad looks for the day he gets a new phone or adds
+              the home-screen app: here, beside the other things about this
+              phone, and still in the Menu where it always was. */}
           <button
             type="button"
-            className="flex min-h-11 w-full cursor-pointer items-center gap-3 border-b border-line py-2 text-left text-[1.0625rem] text-muted"
+            className="flex min-h-[clamp(2.75rem,6dvh,4rem)] w-full cursor-pointer items-center gap-3 border-b border-line py-2.5 text-left text-[1.125rem] text-ink"
+            onClick={onLink}
+            data-testid="settings-link"
+          >
+            <Smartphone size={20} aria-hidden="true" className="shrink-0 text-muted" />
+            <span className="min-w-0 flex-1 truncate">{t('link.title')}</span>
+            <ChevronRight size={20} aria-hidden="true" className="shrink-0 text-muted" />
+          </button>
+        </div>
+        {/* Signing out is about THIS device, and a dad does it about once: one
+            quiet line, with the build beside it — which phone is running which
+            build is a question for the day something looks wrong, not for
+            every visit. */}
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            className="flex min-h-11 cursor-pointer items-center gap-2 text-left text-[1.0625rem] text-muted"
             onClick={onSignOut}
           >
             <LogOut size={18} aria-hidden="true" className="shrink-0" />
             {t('menu.sign_out')}
           </button>
-        </div>
-        <p className="m-0 mt-2 text-right">
           <BuildLabel />
-        </p>
+        </div>
       </section>
     </div>
   );
