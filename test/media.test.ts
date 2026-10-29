@@ -5,6 +5,7 @@ import {
   KEPT_PER_GROUP,
   MEDIA_PER_GROUP,
   MAX_UPLOAD_BYTES,
+  pruneMedia,
   VOICE_PER_GROUP,
 } from '../src/worker/media';
 import {
@@ -770,5 +771,32 @@ describe('keeping a photograph', () => {
       body: JSON.stringify({ id: 'whatever', on: true }),
     });
     expect(res.status).toBe(401);
+  });
+});
+
+describe('pruning a shelf far past its cap', () => {
+  beforeEach(resetTables);
+
+  // D1 takes about a hundred bound parameters. A cap that is lowered, or a
+  // backlog, leaves more than that to remove at once; the blobs are already
+  // gone by then, so a refused DELETE would strand the records for good.
+  it('removes every record over the cap, however many', async () => {
+    const group = await seedGroup();
+    const total = MEDIA_PER_GROUP + 150;
+    const rows = Array.from({ length: total }, (_, i) =>
+      env.DB.prepare(
+        `INSERT INTO media (id, group_id, r2_key, name, content_type, size, created_at)
+         VALUES (?, ?, ?, 'p.png', 'image/png', 1, ?)`,
+      ).bind(`med_${String(i).padStart(4, '0')}`, group.id, `k/${i}`, 1_000 + i),
+    );
+    await env.DB.batch(rows);
+
+    const gone = await pruneMedia(env, group.id);
+
+    expect(gone).toHaveLength(150);
+    const left = await env.DB.prepare('SELECT COUNT(*) AS n FROM media WHERE group_id = ?')
+      .bind(group.id)
+      .first<{ n: number }>();
+    expect(left?.n).toBe(MEDIA_PER_GROUP);
   });
 });

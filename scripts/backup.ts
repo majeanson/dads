@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { BACKUP_TABLES } from '../src/shared/backupTables';
 import { query } from './d1';
 
 /**
@@ -20,24 +21,7 @@ import { query } from './d1';
  * what is missing), but the blobs are megabytes each and belong in
  * `wrangler r2 object get`, not in a JSON file. The cap is ten to a room.
  */
-const TABLES = [
-  'groups',
-  'members',
-  'messages',
-  'media',
-  'prompts',
-  'prompt_days',
-  'check_ins',
-  'commitments',
-  'presence',
-  'rsvps',
-  'night_items',
-  'night_votes',
-  'reactions',
-  'invites',
-  'push_subscriptions',
-  'oops',
-];
+const TABLES = BACKUP_TABLES;
 
 const remote = !process.argv.includes('--local');
 const day = new Date().toISOString().slice(0, 10);

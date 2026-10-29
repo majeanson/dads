@@ -1,3 +1,4 @@
+import { chunks } from '../shared/chunks';
 import type { Env } from './env';
 
 /**
@@ -187,10 +188,14 @@ async function pruneShelf(
     ),
   );
 
-  const placeholders = results.map(() => '?').join(', ');
-  await env.DB.prepare(`DELETE FROM media WHERE id IN (${placeholders})`)
-    .bind(...results.map((r) => r.id))
-    .run();
+  // Chunked: the blobs are already gone, so a statement D1 refuses for too
+  // many parameters would leave records pointing at nothing, for ever. It
+  // takes more than a hundred past the cap only when a cap is lowered.
+  for (const slice of chunks(results.map((r) => r.id))) {
+    await env.DB.prepare(`DELETE FROM media WHERE id IN (${slice.map(() => '?').join(', ')})`)
+      .bind(...slice)
+      .run();
+  }
 
   return results.map((r) => r.id);
 }
