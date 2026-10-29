@@ -41,6 +41,12 @@ for (const theme of ['light', 'dark'] as const) {
 
     await page.goto('/');
     found.push(...(await faults(page, 'the door')));
+    // The example of a room, which a stranger can open before he has a word.
+    await page.getByTestId('door-example').click();
+    await expect(page.getByTestId('example')).toBeVisible();
+    found.push(...(await faults(page, 'the example')));
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(page.getByTestId('example')).toHaveCount(0);
 
     await page.getByLabel('The word').fill(E2E_A11Y_GROUP.code);
     await page.getByLabel('Your name').fill(theme === 'light' ? 'Marc' : 'Sam');

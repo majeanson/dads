@@ -1,5 +1,5 @@
-import { ArrowRight, Check } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { ArrowRight, Check, Eye } from 'lucide-react';
+import { lazy, Suspense, useMemo, useState, type FormEvent } from 'react';
 import { join, type JoinFailure, type Session } from './api';
 import { plural, useT, type Key, type T } from './i18n';
 import { Logo } from './Logo';
@@ -10,6 +10,9 @@ import { useFreshBuild } from './useFreshBuild';
 import { PairDevice } from './PairDevice';
 import { standalone } from './push';
 import { FIELD } from './ui/field';
+
+// Loaded when first wanted: a stranger who never asks for it never pays for it.
+const Example = lazy(() => import('./Example').then((m) => ({ default: m.Example })));
 
 // One message for a wrong code and for a code that belongs to no group: the
 // door must not tell a stranger whether he is close.
@@ -59,6 +62,8 @@ export function JoinScreen({
   const [making, setMaking] = useState(false);
   /** Already a dad here, on another device: ask to be let in as him. */
   const [pairing, setPairing] = useState(false);
+  /** The example room is open. */
+  const [example, setExample] = useState(false);
   const inApp = useMemo(() => standalone(), []);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -132,6 +137,22 @@ export function JoinScreen({
               </li>
             ))}
           </ul>
+          {/* An example, for the man who wants to see before he types: invented
+              dads, text in the page, nothing fetched. */}
+          <Button
+            look="quiet"
+            className="-mt-4 mb-4 justify-start px-0"
+            onClick={() => setExample(true)}
+            data-testid="door-example"
+          >
+            <Eye size={18} aria-hidden="true" />
+            {t('ex.link')}
+          </Button>
+          {example ? (
+            <Suspense fallback={null}>
+              <Example onClose={() => setExample(false)} />
+            </Suspense>
+          ) : null}
           {/* Said once, here: he was in a room a moment ago and now he is at
               the door, and the screen should not leave him guessing why. */}
           {outOf ? (

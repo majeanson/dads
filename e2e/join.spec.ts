@@ -48,3 +48,28 @@ test('signing out returns to the door', async ({ page }) => {
   await page.reload();
   await expect(page.getByLabel('The word')).toBeVisible();
 });
+
+test('a stranger can look at an example room before he has a word, and nothing in it is real', async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  page.on('request', (r) => {
+    if (new URL(r.url()).pathname.startsWith('/api/')) requests.push(r.url());
+  });
+  await page.goto('/');
+  await expect(page.getByLabel('The word')).toBeVisible();
+  const before = requests.length;
+
+  await page.getByTestId('door-example').click();
+  const example = page.getByTestId('example');
+  await expect(example).toBeVisible();
+  await expect(example).toContainText('Nothing here is real');
+  await expect(example).toContainText('Thursday, 9:00 pm');
+  await expect(example.getByText('I’ll bring the cards.')).toBeVisible();
+  // Text in the page: opening it asks the server for nothing.
+  expect(requests.length).toBe(before);
+
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(example).toHaveCount(0);
+  await expect(page.getByLabel('The word')).toBeVisible();
+});

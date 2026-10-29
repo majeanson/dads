@@ -749,6 +749,11 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - `theme-color` is the real `--bg`; `theme.ts` keeps an explicit choice in
   step.
 - The door carries the language toggle (`LangToggle compact`).
+- **The door offers an example of a room** (`door-example`, `Example.tsx`, lazy):
+  four invented dads, a night and four lines, all text in the page. There is NO
+  demo room — nothing is fetched and no real room's name or line is ever shown
+  to a stranger (an e2e pins that opening it makes no `/api` call). The dads'
+  names are constants, not dictionary strings.
 - An `.ics` `SUMMARY` goes through `icsText`: anybody names a room.
 
 ## From the home screen
