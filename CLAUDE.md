@@ -540,6 +540,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   gone when anybody else is in). It carries `mb-8` so the door's face, which
   stands up out of the bubble, does not land on it.
 
+- **A room can be deleted, by its creator, by its name** (`POST /api/rooms/delete`,
+  `deleteRoom`): R2 `faces/<group>/` and `<group>/` FIRST, then `DELETE FROM groups`
+  (everything cascades; `oops` by hand), then the DO's `/dissolve`. Blobs first so a
+  failure leaves a retryable room, not orphaned pictures. A new table with a
+  `group_id` must cascade or be added there.
+
 ## The three switches
 
 - **The switches are the CREATOR's.** A room with no creator (`created_by`

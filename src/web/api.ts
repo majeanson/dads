@@ -191,6 +191,22 @@ export async function removeMember(memberId: string): Promise<void> {
   if (!res.ok) throw new Error(`POST /api/rooms/remove ${res.status}`);
 }
 
+/** End the room with everything in it. The creator's; the name has to match.
+ * Like leaving, the page is on its way to the door, so the room closing his
+ * socket is expected. */
+export async function deleteRoom(name: string): Promise<'deleted' | 'wrong_name' | 'failed'> {
+  leaving = true;
+  const res = await fetch('/api/rooms/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  }).catch(() => null);
+  if (res?.ok) return 'deleted';
+  leaving = false;
+  const body = (await res?.json().catch(() => ({}))) as { error?: string } | undefined;
+  return body?.error === 'wrong_name' ? 'wrong_name' : 'failed';
+}
+
 /** Walk out of this room. A creator with others still in it is asked to hand
  * it on first. */
 export async function leaveRoom(): Promise<'left' | 'hand_over_first' | 'failed'> {

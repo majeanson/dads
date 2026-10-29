@@ -2272,3 +2272,22 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   above keeps.
 - The door already follows the phone's language (`preferredLang`); the review
   browser was set to English.
+
+## Deleting a room (2026-10-29)
+
+- **Why it exists.** The stranger review asked "can I remove my kids' pictures?"
+  and nothing deleted a group: faces and photographs are R2 objects, and no row
+  cascades into a bucket. Until this the only answer was wrangler.
+- **Order is the design.** Blobs first (`faces/<group>/` and `<group>/`, paged
+  by 1000), then D1, then the DO. A failure in the blobs leaves the room whole
+  and retryable; the other order would leave pictures of children nobody can
+  find again. D1 is one `DELETE FROM groups` — every group table cascades —
+  plus `oops`, the one that does not. The DO is told last (`/dissolve`):
+  `removed` to every socket, then `deleteAlarm` and `deleteAll`.
+- **Armed and by name.** The creator's only (a room with no creator is
+  deletable by nobody, as with taking a dad out). The route wants the room's
+  name, compared after trim, whitespace squash, NFC and lower case, so a stray
+  or replayed request does not end a room. The form sits inside the owning
+  fold, which keeps Settings' pixel budget untouched.
+- **The other dads hear `removed`.** It is the true word — they are no longer
+  in it — and reuses the door they already land on.

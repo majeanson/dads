@@ -36,7 +36,7 @@ import { getPushKey, subscribePush, unsubscribePush } from './routes/push';
 import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp';
 import { postRoom } from './routes/create';
 import { listMine, switchRoom } from './routes/mine';
-import { postLeave, postRemove, putOwner, putRooms, putWord } from './routes/rooms';
+import { postDelete, postLeave, postRemove, putOwner, putRooms, putWord } from './routes/rooms';
 import { search } from './routes/search';
 import { getTable, postNewTable } from './routes/table';
 import {
@@ -224,6 +224,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'POST /api/rooms/remove':
       return postRemove(request, env, prod);
+
+    case 'POST /api/rooms/delete':
+      return postDelete(request, env, prod);
 
     case 'POST /api/rooms/leave':
       return postLeave(request, env, prod);

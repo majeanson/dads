@@ -170,3 +170,44 @@ test('leaving one of two rooms lands him in the other', async ({ browser }) => {
   await secondOpener.context().close();
   await sam.context().close();
 });
+
+test('the creator deletes the room by its name, and nobody can get back in', async ({
+  browser,
+}) => {
+  const word = `depart delete ${run}`;
+  const name = `Delete Room ${run}`;
+  const opener = await openRoom(browser, name, word);
+  const sam = await comeIn(browser, word, 'Sam Deleted');
+
+  await settings(opener);
+  await opener.getByTestId('room-owning').click();
+  // Nothing to press until the name has been typed.
+  await expect(opener.getByTestId('delete-do')).toBeDisabled();
+
+  // The wrong name is refused, and nothing is lost.
+  await opener.getByTestId('delete-name').fill('some other room');
+  await opener.getByTestId('delete-do').click();
+  await opener.getByTestId('delete-do').click();
+  await expect(opener.getByRole('alert')).toContainText('isn’t the room’s name');
+  await expect(opener.getByTestId('delete-name')).toBeVisible();
+
+  // The right one, armed: the first press says what it will do.
+  await opener.getByTestId('delete-name').fill(name.toLowerCase());
+  await opener.getByTestId('delete-do').click();
+  await expect(opener.getByTestId('delete-do')).toContainText(`delete ${name} for good`);
+  await opener.getByTestId('delete-do').click();
+
+  // He is at the door; Sam is too, told he is no longer in it.
+  await expect(opener.getByLabel('The word')).toBeVisible({ timeout: 20_000 });
+  await expect(sam.getByTestId('door-out')).toContainText(name);
+
+  // And the word opens nothing now.
+  await sam.getByLabel('The word').fill(word);
+  await sam.getByLabel('Your name').fill('Sam Deleted');
+  await sam.getByRole('button', { name: 'Come in' }).click();
+  await expect(sam.getByTestId('connection')).toHaveCount(0);
+  await expect(sam.getByLabel('The word')).toBeVisible();
+
+  await opener.context().close();
+  await sam.context().close();
+});

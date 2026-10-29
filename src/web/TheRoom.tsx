@@ -1,6 +1,14 @@
-import { KeyRound, UserCheck, UserMinus } from 'lucide-react';
+import { KeyRound, Trash2, UserCheck, UserMinus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { handRoom, removeMember, setRoomWord, type WordError } from './api';
+import {
+  deleteRoom,
+  fetchMyRooms,
+  handRoom,
+  removeMember,
+  setRoomWord,
+  switchRoom,
+  type WordError,
+} from './api';
 import { useT, type Key } from './i18n';
 import type { RosterEntry } from '../shared/protocol';
 import { Button } from './ui/Button';
@@ -24,7 +32,15 @@ const WORD_ERRORS: Record<WordError, Key> = {
  * room, and a creator who drifted away left the switches frozen for the
  * other four for ever.
  */
-export function TheRoom({ members, you }: { members: RosterEntry[]; you: string }) {
+export function TheRoom({
+  members,
+  you,
+  roomName,
+}: {
+  members: RosterEntry[];
+  you: string;
+  roomName: string;
+}) {
   const { t } = useT();
 
   // Everybody else still in the room: a dad who has left is nobody to hand
@@ -39,6 +55,7 @@ export function TheRoom({ members, you }: { members: RosterEntry[]; you: string 
       <Word />
       <HandOver members={others} />
       <Remove members={others} />
+      <Delete roomName={roomName} />
       <p className="sr-only">{t('set.rooms')}</p>
     </div>
   );
@@ -263,6 +280,78 @@ function Remove({ members }: { members: RosterEntry[] }) {
       {error ? (
         <p className="error m-0 text-sm" role="alert">
           {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Ending the room.
+ *
+ * Last in the creator's fold, armed AND by name: the button does nothing
+ * until the room's name has been typed back, and then wants a second press.
+ * What it takes with it is every dad's — the pictures of their children are
+ * the reason it exists — so it is the one thing here that asks more than a
+ * tap. He lands in another room of his if he has one, or at the door.
+ */
+function Delete({ roomName }: { roomName: string }) {
+  const { t } = useT();
+  const [typed, setTyped] = useState('');
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<Key | null>(null);
+
+  async function go() {
+    setBusy(true);
+    setError(null);
+    const result = await deleteRoom(typed);
+    if (result !== 'deleted') {
+      setBusy(false);
+      setArmed(false);
+      setError(result === 'wrong_name' ? 'set.delete_wrong' : 'set.delete_failed');
+      return;
+    }
+    // His own rows went with the room, so the list is what is left of him.
+    const next = (await fetchMyRooms().catch(() => []))[0];
+    if (next !== undefined) await switchRoom(next.id).catch(() => false);
+    location.reload();
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-1.5">
+      <label htmlFor="delete-name" className="text-[1.0625rem] font-semibold text-muted">
+        {t('set.delete')}
+      </label>
+      <p className="m-0 text-sm text-muted">{t('set.delete_hint')}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          id="delete-name"
+          value={typed}
+          onChange={(e) => {
+            setTyped(e.target.value);
+            setArmed(false);
+          }}
+          placeholder={t('set.delete_name')}
+          autoComplete="off"
+          className={cn(FIELD, 'min-w-0 flex-1')}
+          data-testid="delete-name"
+        />
+        <Button
+          look={armed ? 'danger' : 'plain'}
+          disabled={busy || typed.trim() === ''}
+          onClick={() => (armed ? void go() : setArmed(true))}
+          data-testid="delete-do"
+        >
+          <Trash2 size={18} aria-hidden="true" />
+          <span className="min-w-0 truncate">
+            {armed ? t('set.delete_sure', { room: roomName }) : t('set.delete_do')}
+          </span>
+        </Button>
+      </div>
+      {error ? (
+        <p className="error m-0 text-sm" role="alert">
+          {t(error)}
         </p>
       ) : null}
     </div>

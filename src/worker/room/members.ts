@@ -139,3 +139,27 @@ export async function departed(room: Room, memberId: string): Promise<void> {
   }
   room.broadcast({ t: 'departed', memberId });
 }
+
+/**
+ * The room itself has been deleted; D1 and R2 already say so.
+ *
+ * Every socket is told `removed` — the same door a dad taken out lands on,
+ * which is true: he is no longer in it — and closed with its attachment
+ * cleared, so nothing here counts it as somebody dropping off the wifi. Then
+ * the alarm and the storage go. There is no one to tell afterwards, and the
+ * object holds the last of the room's lines, the call's state and its
+ * schedule, none of which has a row to cascade from.
+ */
+export async function dissolved(room: Room): Promise<void> {
+  for (const ws of room.ctx.getWebSockets()) {
+    room.sendTo(ws, { t: 'removed' });
+    ws.serializeAttachment(null);
+    try {
+      ws.close(4001, 'gone');
+    } catch {
+      // Already closing.
+    }
+  }
+  await room.ctx.storage.deleteAlarm();
+  await room.ctx.storage.deleteAll();
+}

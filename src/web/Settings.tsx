@@ -24,6 +24,7 @@ export function Settings({
   you,
   mine,
   ownerName,
+  roomName,
   members,
   onInvite,
   onLink,
@@ -37,6 +38,8 @@ export function Settings({
   mine: boolean;
   /** Who did open it, when it was not him. Empty if the room has no creator. */
   ownerName: string;
+  /** This room's name, which deleting it asks to have typed back. */
+  roomName: string;
   /** Everyone in the group, for handing the room to one of them. */
   members: RosterEntry[];
   /** Opens the invite sheet. */
@@ -156,7 +159,7 @@ export function Settings({
             neither, because there is nobody they would belong to. */}
         {mine && ownerName !== '' && owning ? (
           <div className="mt-3">
-            <TheRoom members={members} you={you.memberId} />
+            <TheRoom members={members} you={you.memberId} roomName={roomName} />
           </div>
         ) : null}
       </section>

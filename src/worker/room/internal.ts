@@ -2,7 +2,7 @@ import type { DadNight } from '../../shared/dadNight';
 import type { RoomsOpen } from '../../shared/protocol';
 import { noteChange } from './changes';
 import { forget } from './lines';
-import { departed, restamp } from './members';
+import { departed, dissolved, restamp } from './members';
 import { ensureEventsScheduled } from './events';
 import { applyNight } from './night';
 import type { Room } from './room';
@@ -127,6 +127,12 @@ export async function internalRoute(
       };
       room.learnGroup(groupId);
       await departed(room, memberId);
+      return done();
+    }
+
+    // The room was deleted; see `dissolved`.
+    case '/dissolve': {
+      await dissolved(room);
       return done();
     }
 

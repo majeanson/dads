@@ -3,6 +3,7 @@ import type { Env } from '../env';
 import { sessionSecret } from '../env';
 import type { RoomsOpen } from '../../shared/protocol';
 import { hashInviteCode, inviteCodeLookup, randomToken } from '../crypto';
+import { deleteRoom } from '../deleteRoom';
 import { depart } from '../depart';
 import { clearedIdentityCookie } from '../identity';
 import { currentSession, type Session } from './auth';
@@ -310,6 +311,50 @@ export async function postLeave(
   }
 
   await depart(env, session.group.id, session.member.id);
+  return new Response(null, {
+    status: 204,
+    headers: { 'Set-Cookie': clearedIdentityCookie(isProduction) },
+  });
+}
+
+/** A name as a man types it twice: the case, the spaces and the accents' form
+ * are not what he is being asked to get right. */
+const sameName = (a: string, b: string) => squash(a) === squash(b);
+const squash = (s: string) => s.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * POST /api/rooms/delete — end the room, with everything in it.
+ *
+ * The creator's, and only the creator's: a room with no creator can be
+ * deleted by nobody, for the reason `postRemove` gives — a switch turned the
+ * wrong way can be turned back, and this cannot. Armed in the client, and
+ * here it asks for the room's NAME as well, so a replayed request or a stray
+ * tap does not end four friends' history. Whatever else is in the room goes
+ * with it, other dads included (they hear `removed`): the pictures of their
+ * children are exactly what this is for.
+ */
+export async function postDelete(
+  request: Request,
+  env: Env,
+  isProduction: boolean,
+): Promise<Response> {
+  const session = await currentSession(request, env, isProduction);
+  if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 });
+  if (session.group.createdBy !== session.member.id) {
+    return Response.json({ error: 'not_yours' }, { status: 403 });
+  }
+
+  let body: { name?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: 'bad_request' }, { status: 400 });
+  }
+  if (typeof body.name !== 'string' || !sameName(body.name, session.group.name)) {
+    return Response.json({ error: 'wrong_name' }, { status: 400 });
+  }
+
+  await deleteRoom(env, session.group.id);
   return new Response(null, {
     status: 204,
     headers: { 'Set-Cookie': clearedIdentityCookie(isProduction) },
