@@ -2070,11 +2070,7 @@
     z-index: 101;
     display: grid;
     place-items: center;
-    /* An IMAGE, not a background-colour: Safari tints its bars from the colour of
-       a fixed element at the edge, took this one's on every reload (the app is
-       cached, so the shell is up when it looks) and kept it after the shell was
-       gone — light blue bars. An image it does not read as a colour. */
-    background-image: linear-gradient(var(--accent), var(--accent));
+    background: var(--accent);
     pointer-events: none;
     transition: opacity 180ms ease-out;
   }

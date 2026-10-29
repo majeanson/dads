@@ -208,6 +208,7 @@ export function Splash({
       <svg
         width={vw + 2 * BLEED}
         height={vh + 2 * BLEED}
+        style={{ position: 'absolute', left: -BLEED, top: -BLEED }}
         viewBox={`${-BLEED} ${-BLEED} ${vw + 2 * BLEED} ${vh + 2 * BLEED}`}
       >
         <defs>
