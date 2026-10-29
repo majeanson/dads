@@ -201,7 +201,10 @@ test('the creator deletes the room by its name, and nobody can get back in', asy
   await expect(opener.getByLabel('The word')).toBeVisible({ timeout: 20_000 });
   await expect(sam.getByTestId('door-out')).toContainText(name);
 
-  // And the word opens nothing now.
+  // And the word opens nothing now. A refused word counts against the door's
+  // bucket for its address, and the whole suite shares one; this one is spent
+  // from an address of its own so it cannot lock out the specs that follow.
+  await sam.context().setExtraHTTPHeaders({ 'CF-Connecting-IP': '10.9.9.200' });
   await sam.getByLabel('The word').fill(word);
   await sam.getByLabel('Your name').fill('Sam Deleted');
   await sam.getByRole('button', { name: 'Come in' }).click();

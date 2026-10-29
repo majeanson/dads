@@ -833,6 +833,11 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   needle ending in a digit.
 - Two browsers: Chromium for everything, `webkit-iphone` only for
   `e2e/safari.spec.ts` in its own room. No codec questions on WebKit.
+- **An e2e that tries a wrong word spends the suite's one bucket.** Every
+  context without a `CF-Connecting-IP` is the address `local`, ten failures lock
+  it for ten minutes, and a spec that deliberately fails a join can make the
+  specs after it unable to come in at all (429). Give that attempt an address
+  of its own (`setExtraHTTPHeaders`), as `openRoom` does.
 - **A fixed `settle()` before an assertion is a race.** Use `until`
   (`test/helpers.ts`), counted in tries. Prove a negative with a sentinel
   frame. `enter()` waits for `hello`. `tick()` spins forever where `Date` is
