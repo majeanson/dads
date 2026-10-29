@@ -2104,6 +2104,15 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   back: system black/white bar, and the blur stays cured because it was the
   layer, not the tag. Needs remove and re-add.
 
+- **The blue bars were the first frame** (2026-10-28, solved on the device).
+  Safari 26 (and the home-screen app) tint the bars from a fixed element at the
+  edge, read once at load. `#shell` was fixed, full-screen, accent: a reload (cached,
+  so the shell is up when Safari looks) kept it blue; a slow first visit often
+  escaped. Tried and useless: painting the room, 3px edge strips, dropping
+  `accent-color`, the shell as a background-image. What worked: `#shell` is
+  `position: absolute`. The `default` status-bar tag stays. The splash's ground bleeds
+  40px past each edge (a white line showed in light mode) and is placed by its corner.
+
 ## Proving it in production
 
 `npm run prove` runs `prod/` against **dads.marcportal.com**. It is not in CI

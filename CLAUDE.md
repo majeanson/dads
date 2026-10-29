@@ -770,6 +770,11 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   was sampled from the fixed layer and went light blue): an opaque system bar,
   the top inset 0, `--scrim` nothing; the build label in Settings
   shows both numbers.
+- **No fixed or sticky layer with a colour of its own may sit at a screen
+  edge while the page loads.** Safari 26 tints its bars from a fixed element
+  there (`theme-color` is ignored), reads it at load, and keeps it: `#shell`,
+  accent and fixed, made the bars light blue on every reload. `#shell` is
+  `position: absolute`; the room is fixed but painted `--bg`.
 - A message on a phone is two rows; a run drops the repeated name and clock.
 
 ## Proving it in production
