@@ -22,12 +22,12 @@ export interface QuietState {
   snoozedUntil: number | null;
 }
 
-async function read(env: Env, memberId: string, now: number): Promise<QuietState> {
+async function read(env: Env, groupId: string, memberId: string, now: number): Promise<QuietState> {
   const row = await env.DB.prepare(
     `SELECT quiet_from, quiet_to, quiet_tz, snoozed_until FROM members
-      WHERE id = ? AND gone_at IS NULL`,
+      WHERE id = ? AND group_id = ? AND gone_at IS NULL`,
   )
-    .bind(memberId)
+    .bind(memberId, groupId)
     .first<{
       quiet_from: string | null;
       quiet_to: string | null;
@@ -50,7 +50,7 @@ export async function getQuiet(
 ): Promise<Response> {
   const session = await currentSession(request, env, isProduction);
   if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 });
-  return Response.json(await read(env, session.member.id, Date.now()), {
+  return Response.json(await read(env, session.group.id, session.member.id, Date.now()), {
     headers: { 'Cache-Control': 'private, no-store' },
   });
 }
@@ -113,5 +113,5 @@ export async function putQuiet(
     .bind(...values, memberId, session.group.id)
     .run();
 
-  return Response.json(await read(env, memberId, now));
+  return Response.json(await read(env, session.group.id, memberId, now));
 }
