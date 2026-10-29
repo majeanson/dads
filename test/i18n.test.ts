@@ -56,7 +56,8 @@ describe('the dictionary', () => {
           : key.endsWith('_one')
             ? key.replace(/_one$/, '_other')
             : null;
-        if (twin) expect({ lang, key, twin, has: keys.includes(twin) }).toMatchObject({ has: true });
+        if (twin)
+          expect({ lang, key, twin, has: keys.includes(twin) }).toMatchObject({ has: true });
       }
     }
   });
