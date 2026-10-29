@@ -260,8 +260,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   the hash.
 - The curated 100 are in `migrations/0003_prompt_library.sql`. **Adding to
   the library means a new migration, never editing that one.**
-- The pick is `hash(groupId + day) % poolSize`, written to `prompt_days` and
-  never recomputed. The day turns at the **group's** midnight.
+- **A question lasts a WEEK** (changed from daily, 2026-10-29). The pick is
+  `hash(groupId + monday) % poolSize`, written to `prompt_days` with the
+  week's Monday as `day` (`mondayOfDay`) and never recomputed. The week turns
+  at the **group's** Monday midnight. `todaysPrompt` keeps its old name.
 - An answer is a `messages` row of kind `prompt` with `prompt_id`; the DO
   resolves today's prompt itself.
 - **Every new DO tail column needs a `PRAGMA table_info` check** in

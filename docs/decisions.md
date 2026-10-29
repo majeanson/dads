@@ -2355,3 +2355,18 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   typescript-eslint's peer range (`>=4.8.4 <6.1.0`, checked today).
   `npm audit --omit=dev` is clean. The shared `cn-*.js` chunk is minified
   past reading without a bundle visualiser; the budget guards its growth.
+
+## A question lasts a week (2026-10-29)
+
+- Marc asked for questions to be weekly, not daily. This reverses PLAN.md's
+  "daily prompt" (M4), at his word; PLAN.md keeps its history.
+- The smallest change: `prompt_days.day` now holds the week's MONDAY
+  (`mondayOfDay`, group's zone). Pick, pinning, "another", "choose", the
+  openers-first rule and history all key on `day`, so none of them moved.
+  Nothing was migrated: old daily rows stay and read as history.
+- Why not a `week` column: a second key beside `day` would let the two
+  disagree, and every query would have to pick one.
+- On deploy, a room whose pinned question was for a Wednesday gets a new
+  one (no Monday row yet). Answers hang on `prompt_id`, so none are lost.
+- The names `todaysPrompt` / `TodaysPrompt` and the `q.*` keys were left
+  alone; only the strings a dad reads changed ("This week's question").

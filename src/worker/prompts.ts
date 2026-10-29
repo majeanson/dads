@@ -1,5 +1,6 @@
 import { civilDayIn } from '../shared/dadNight';
 import { OPENERS, pickIndex } from '../shared/promptPick';
+import { mondayOfDay } from '../shared/week';
 import type { Env } from './env';
 
 /**
@@ -8,8 +9,9 @@ import type { Env } from './env';
  */
 
 export const MAX_PROMPT_LENGTH = 240;
-/** How far back the list view shows. Long enough to see a habit, short enough
- * to stay one screen of scrolling. */
+/** How far back the list view shows (rows: a week each now, a day each before
+ * 2026-10-29). Long enough to see a habit, short enough to stay one screen of
+ * scrolling. */
 const HISTORY_DAYS = 60;
 
 export interface Prompt {
@@ -68,18 +70,21 @@ async function promptById(env: Env, groupId: string, id: string): Promise<Prompt
 }
 
 /**
- * The group's question for the day `now` falls on, in the group's own zone.
+ * The group's question for the WEEK `now` falls on, in the group's own zone.
+ * (The name is older than the cadence: it was a daily question until
+ * 2026-10-29.) `day` is the week's Monday, so every column and caller that
+ * keyed on a day keys on the week without knowing.
  *
  * Written to prompt_days the first time it is asked for and never recomputed:
  * the pick is deterministic, but the pool it picks from is not fixed, so a dad
- * adding a prompt this afternoon must not change this morning's question.
+ * adding a prompt on Wednesday must not change Monday's question.
  */
 export async function todaysPrompt(
   env: Env,
   groupId: string,
   now = Date.now(),
 ): Promise<TodaysPrompt | null> {
-  const day = civilDayIn(now, await groupTimeZone(env, groupId));
+  const day = mondayOfDay(civilDayIn(now, await groupTimeZone(env, groupId)));
 
   const pinned = await env.DB.prepare(
     'SELECT prompt_id FROM prompt_days WHERE group_id = ? AND day = ?',

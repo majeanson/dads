@@ -97,7 +97,7 @@ test('what the group was asked before is readable, and a dad can add one', async
   // Not the curated hundred: they are a pool to draw from, not reading
   // material. This group has only ever been asked today's question, so
   // "before" says so in words rather than listing nothing.
-  await expect(marc.getByText('Nothing before today.')).toBeVisible();
+  await expect(marc.getByText('Nothing before this week.')).toBeVisible();
 
   // Today's question is printed once, on the card, and is NOT repeated here.
   await marc.getByTestId('prompt-today').click();

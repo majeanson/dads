@@ -426,9 +426,9 @@ const EN = {
   'q.history_title': 'Asked before',
   'q.history_count_one': '1 asked',
   'q.history_count_other': '{n} asked',
-  'q.back_today': 'Today’s question',
-  'q.none_before': 'Nothing before today.',
-  'q.added': 'Added. It goes into the pool the day’s question is picked from.',
+  'q.back_today': 'This week’s question',
+  'q.none_before': 'Nothing before this week.',
+  'q.added': 'Added. It goes into the pool the week’s question is picked from.',
 
   // ---------------------------------------------------------- the week
   'b.title': 'The week',
@@ -1064,9 +1064,9 @@ const FR: Record<Key, string> = {
   'q.history_title': 'Demandées avant',
   'q.history_count_one': '1 posée',
   'q.history_count_other': '{n} posées',
-  'q.back_today': 'La question du jour',
-  'q.none_before': 'Rien avant aujourd’hui.',
-  'q.added': 'Ajoutée. Elle est dans la pile où la question du jour est pigée.',
+  'q.back_today': 'La question de la semaine',
+  'q.none_before': 'Rien avant cette semaine.',
+  'q.added': 'Ajoutée. Elle est dans la pile où la question de la semaine est pigée.',
 
   // ------------------------------------------------------------ la semaine
   'b.title': 'La semaine',

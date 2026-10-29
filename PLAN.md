@@ -82,7 +82,7 @@ post-night summary line. Email/notification is out of scope — the countdown + 
 slot is the mechanism we chose.
 
 **M4 — Prompts**
-Curated ~100-prompt JSON seeded into `prompts` as global. Deterministic daily pick per group
+Curated ~100-prompt JSON seeded into `prompts` as global. Deterministic pick per group (weekly since 2026-10-29)
 (hash of date+group_id over the active pool), pinned via `prompt_days`. Answer inline; answers
 render as a distinct message kind. "Add a prompt" form feeds the group's pool.
 

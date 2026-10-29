@@ -2,11 +2,21 @@ import { describe, expect, it } from 'vitest';
 import {
   isoWeekIn,
   isoWeekOfDay,
+  mondayOfDay,
   parseWeek,
   previousWeek,
   recentWeeks,
   weekLabel,
 } from '../src/shared/week';
+
+describe('mondayOfDay', () => {
+  it('is the Monday of the week, across month and year edges', () => {
+    expect(mondayOfDay('2026-09-14')).toBe('2026-09-14');
+    expect(mondayOfDay('2026-09-20')).toBe('2026-09-14');
+    expect(mondayOfDay('2026-10-01')).toBe('2026-09-28');
+    expect(mondayOfDay('2027-01-01')).toBe('2026-12-28');
+  });
+});
 
 describe('isoWeekOfDay', () => {
   it('numbers an ordinary week', () => {

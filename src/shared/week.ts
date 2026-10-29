@@ -50,6 +50,16 @@ export function isoWeekOfDay(day: string): string {
   return format(isoYear, week);
 }
 
+/** The Monday of the week a civil date falls in, as "YYYY-MM-DD". */
+export function mondayOfDay(day: string): string {
+  const [year, month, date] = day.split('-').map(Number) as [number, number, number];
+  const utcMidnight = Date.UTC(year, month - 1, date);
+  const monday = new Date(utcMidnight - isoDayIndex(utcMidnight) * DAY);
+  return `${monday.getUTCFullYear()}-${String(monday.getUTCMonth() + 1).padStart(2, '0')}-${String(
+    monday.getUTCDate(),
+  ).padStart(2, '0')}`;
+}
+
 /** The ISO week an instant falls in, according to the group's clock. */
 export function isoWeekIn(ts: number, tz: string): string {
   return isoWeekOfDay(civilDayIn(ts, tz));

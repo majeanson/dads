@@ -140,23 +140,25 @@ describe('todaysPrompt', () => {
     expect((await todaysPrompt(env, group.id))?.prompt.id).toBe(today!.prompt.id);
   });
 
-  it('turns over at the group’s own midnight, not UTC’s', async () => {
-    // Montreal is UTC-4 in September, so 02:30 UTC on the 10th is still
-    // 22:30 on the 9th at the kitchen table — the same evening, the same
-    // question. (04:30 UTC would genuinely be the next day locally.)
-    const beforeUtcMidnight = Date.parse('2026-09-09T23:30:00Z');
-    const afterUtcMidnight = Date.parse('2026-09-10T02:30:00Z');
+  it('is one question a week, and the week turns at the group’s Monday midnight, not UTC’s', async () => {
+    // Montreal is UTC-4 in September. Sunday 13 Sep 23:30 local is Monday
+    // 03:30 UTC: still last week's question at the kitchen table.
+    const sundayNight = Date.parse('2026-09-14T03:30:00Z');
+    const mondayMorning = Date.parse('2026-09-14T14:00:00Z');
+    const thursday = Date.parse('2026-09-17T16:00:00Z');
 
-    const evening = await todaysPrompt(env, group.id, beforeUtcMidnight);
-    const laterThatNight = await todaysPrompt(env, group.id, afterUtcMidnight);
+    const lastWeek = await todaysPrompt(env, group.id, sundayNight);
+    const monday = await todaysPrompt(env, group.id, mondayMorning);
+    const midweek = await todaysPrompt(env, group.id, thursday);
 
-    expect(evening?.day).toBe('2026-09-09');
-    expect(laterThatNight?.day).toBe('2026-09-09');
-    expect(laterThatNight?.prompt.id).toBe(evening!.prompt.id);
-
-    // The next local morning is a new question.
-    const morning = await todaysPrompt(env, group.id, Date.parse('2026-09-10T14:00:00Z'));
-    expect(morning?.day).toBe('2026-09-10');
+    expect(lastWeek?.day).toBe('2026-09-07');
+    expect(monday?.day).toBe('2026-09-14');
+    // Monday to Sunday is one question.
+    expect(midweek?.day).toBe('2026-09-14');
+    expect(midweek?.prompt.id).toBe(monday!.prompt.id);
+    expect((await todaysPrompt(env, group.id, Date.parse('2026-09-20T20:00:00Z')))?.prompt.id).toBe(
+      monday!.prompt.id,
+    );
   });
 
   it('opens a new room with one of the lighter questions, whatever the room', async () => {
@@ -171,8 +173,8 @@ describe('todaysPrompt', () => {
   it('draws on the whole library once the room has had a day', async () => {
     await todaysPrompt(env, group.id, Date.parse('2026-09-09T16:00:00Z'));
     const picked = new Set<string>();
-    for (let d = 10; d <= 28; d++) {
-      const when = Date.parse(`2026-09-${d}T16:00:00Z`);
+    for (let w = 1; w <= 40; w++) {
+      const when = Date.parse('2026-09-09T16:00:00Z') + w * 7 * 86_400_000;
       picked.add((await todaysPrompt(env, group.id, when))!.prompt.id);
     }
     expect([...picked].some((id) => !OPENERS.has(id))).toBe(true);
