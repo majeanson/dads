@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarRange, UserPlus } from 'lucide-react';
+import { ArrowRight, CalendarRange, Check, MessageCircle, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState, type TouchEvent } from 'react';
 import {
   fetchEvents,
@@ -21,6 +21,7 @@ import { cn } from './ui/cn';
 import { buzz } from './buzz';
 import { Glasses, Logo } from './Logo';
 import { dayNameShort } from '../shared/calendarMonth';
+import { startSteps, type StartStep } from '../shared/startSteps';
 import { currentWindow, stillToCome, type DadNight } from '../shared/dadNight';
 
 /** How close an event has to be to get a line on home. Further off it is
@@ -65,6 +66,12 @@ function celebrateOnce(occurrence: number): boolean {
  * The socket is already open behind this — the room hook lives above both
  * screens — so going in is instant rather than a reconnect.
  */
+const STEP_ICON = {
+  invite: UserPlus,
+  days: CalendarRange,
+  hi: MessageCircle,
+} as const satisfies Record<StartStep, unknown>;
+
 export function Home({
   night,
   answered,
@@ -73,6 +80,7 @@ export function Home({
   you,
   unseen,
   alone,
+  said,
   onGo,
   onNight,
   onInvite,
@@ -99,6 +107,8 @@ export function Home({
   unseen: number;
   /** He is the only man in the room (and the room has said so). */
   alone: boolean;
+  /** He has typed at least one line in this room. */
+  said: boolean;
   onGo: () => void;
   onNight: () => void;
   onInvite: () => void;
@@ -466,19 +476,37 @@ export function Home({
           to the header's corner. So it is big — a door, not a row. */}
       <div className="home-actions">
         {/* A room of one has nobody to talk to, so what it leads with is
-            getting them in. Same size as the quiet row it stands beside, so
-            home keeps its budget; gone the moment anybody else is in. */}
+            getting them in — and, in the same row, the other two things a new
+            room is for, ticked off from facts the app already has (the others
+            are here, a night is still to come, he has said something). One
+            row where the lone invite button was, so home keeps its budget;
+            gone the moment anybody else is in. */}
         {alone ? (
-          <Button
-            look="plain"
-            size="lg"
-            className="home-invite mb-8 justify-start"
-            onClick={onInvite}
-            data-testid="home-invite"
+          <div
+            role="group"
+            aria-label={t('start.title')}
+            className="home-invite mb-8 grid grid-cols-3 gap-2"
+            data-testid="home-start"
           >
-            <UserPlus size={20} aria-hidden="true" />
-            <span className="min-w-0 truncate">{t('home.invite')}</span>
-          </Button>
+            {startSteps({ alone, night, said, now }).map(({ step, done }) => {
+              const Icon = done ? Check : STEP_ICON[step];
+              return (
+                <Button
+                  key={step}
+                  look="plain"
+                  size="lg"
+                  className={cn('min-w-0 justify-center gap-1.5 px-2', done && 'text-muted')}
+                  onClick={step === 'invite' ? onInvite : step === 'days' ? onNight : onGo}
+                  data-testid={step === 'invite' ? 'home-invite' : `home-start-${step}`}
+                  data-done={done ? 'yes' : 'no'}
+                >
+                  <Icon size={18} aria-hidden="true" className="shrink-0" />
+                  <span className="min-w-0 truncate text-[0.9375rem]">{t(`start.${step}`)}</span>
+                  {done ? <span className="sr-only">{t('start.done')}</span> : null}
+                </Button>
+              );
+            })}
+          </div>
         ) : nextEvent !== null && nextEvent.startsAt - now < EVENT_SOON_MS ? (
           // The one other thing planned, in the invite row's place: home asks
           // ONE question, and this is a pointer to the calendar, not a second

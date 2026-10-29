@@ -420,6 +420,9 @@ export function Room({
           // Counted off the roster of members, which has not arrived yet while
           // it is empty: "alone" is a fact the room has to have told us.
           alone={room.members.filter((m) => !m.gone).length === 1}
+          said={room.messages.some(
+            (m) => m.memberId === session.member.id && (m.kind === 'chat' || m.kind === 'prompt'),
+          )}
           onGo={goTalk}
           onNight={() => setSheet('night')}
           onInvite={() => setSheet('invite')}

@@ -1,5 +1,11 @@
-import { expect, test, type Browser, type Page } from '@playwright/test';
-import { menu, settings } from './talk';
+import {
+  expect,
+  test,
+  type Browser,
+  type BrowserContextOptions,
+  type Page,
+} from '@playwright/test';
+import { home, menu, settings, talk } from './talk';
 
 /**
  * Leaving a room, and being taken out of one.
@@ -15,10 +21,16 @@ const run = Date.now().toString(36);
 /** Each room from an address of its own: three a day is the door's limit. */
 let opened = 0;
 
-async function openRoom(browser: Browser, name: string, word: string): Promise<Page> {
+async function openRoom(
+  browser: Browser,
+  name: string,
+  word: string,
+  options: BrowserContextOptions = {},
+): Promise<Page> {
   opened += 1;
   const context = await browser.newContext({
     extraHTTPHeaders: { 'CF-Connecting-IP': `10.9.9.${20 + opened}` },
+    ...options,
   });
   const page = await context.newPage();
   await page.goto('/');
@@ -214,3 +226,49 @@ test('the creator deletes the room by its name, and nobody can get back in', asy
   await opener.context().close();
   await sam.context().close();
 });
+
+for (const [label, lang] of [
+  ['English', 'en'],
+  ['French', 'fr'],
+] as const) {
+  test(`a room of one leads with a three-step checklist that fits the small phone (${label})`, async ({
+    browser,
+  }) => {
+    const opener = await openRoom(browser, `Start ${lang} ${run}`, `depart start ${lang} ${run}`, {
+      viewport: { width: 390, height: 667 },
+    });
+    if (lang === 'fr') {
+      await opener.evaluate(() => localStorage.setItem('dads.lang', 'fr'));
+      await opener.reload();
+    }
+    await home(opener);
+    const row = opener.getByTestId('home-start');
+    await expect(row).toBeVisible();
+    // Nothing is done in a room just opened: nobody else, no night, no line.
+    for (const step of ['home-invite', 'home-start-days', 'home-start-hi']) {
+      await expect(opener.getByTestId(step)).toHaveAttribute('data-done', 'no');
+    }
+
+    // It fits: the home screen does not scroll, and no step hangs off either edge.
+    const fits = await opener.evaluate(() => {
+      const home = document.querySelector('.home') as HTMLElement;
+      const edge = window.innerWidth;
+      const off = [...document.querySelectorAll('[data-testid="home-start"] button')]
+        .map((b) => b.getBoundingClientRect())
+        .filter((r) => r.left < -1 || r.right > edge + 1 || r.height < 44).length;
+      return { scroll: home.scrollHeight - home.clientHeight, off };
+    });
+    expect(fits).toEqual({ scroll: 0, off: 0 });
+
+    // Saying something ticks the third step; it is read off the room, not stored.
+    await talk(opener);
+    await opener.getByLabel(lang === 'fr' ? /Dis quelque chose/ : 'Say something').fill('hi');
+    await opener.keyboard.press('Enter');
+    await expect(opener.getByTestId('line').filter({ hasText: 'hi' })).toBeVisible();
+    await home(opener);
+    await expect(opener.getByTestId('home-start-hi')).toHaveAttribute('data-done', 'yes');
+    await expect(opener.getByTestId('home-start-days')).toHaveAttribute('data-done', 'no');
+
+    await opener.context().close();
+  });
+}

@@ -538,9 +538,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   and three digits, a die beside the field for another). It is a default, not
   a rule: the server floor (`MIN_CODE_LENGTH`, four) is unchanged, and words are
   global — unique across every room, the door takes a word and nothing else.
-- **A room of one leads with inviting** (`home-invite`, opens the invite sheet,
-  gone when anybody else is in). It carries `mb-8` so the door's face, which
-  stands up out of the bubble, does not land on it.
+- **A room of one leads with a three-step row** (`home-start`: invite · days ·
+  say hi, `startSteps` in `shared/`), in the one slot the lone invite button had,
+  gone when anybody else is in. Nothing is stored: each tick is read off a fact
+  (others here, a night still to come, a line of his). `home-invite` is still the
+  first button and opens the invite sheet. The row carries `mb-8` so the door's
+  face, which stands up out of the bubble, does not land on it.
 
 - **A room can be deleted, by its creator, by its name** (`POST /api/rooms/delete`,
   `deleteRoom`): R2 `faces/<group>/` and `<group>/` FIRST, then `DELETE FROM groups`
