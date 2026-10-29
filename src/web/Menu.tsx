@@ -2,6 +2,7 @@ import {
   CalendarCheck,
   CalendarRange,
   DoorOpen,
+  Images,
   MessageCircleQuestion,
   Search,
   Settings as SettingsIcon,
@@ -22,6 +23,7 @@ export type SheetName =
   | 'night'
   | 'events'
   | 'find'
+  | 'album'
   | 'invite'
   | 'link'
   | 'rooms'
@@ -154,6 +156,19 @@ export function Menu({
       <Button block look="quiet" className={ROW} onClick={() => onOpen('find')}>
         <Search size={22} aria-hidden="true" className="shrink-0 text-muted" />
         <span className="min-w-0 truncate">{t('menu.find')}</span>
+      </Button>
+
+      {/* Every picture the room still holds, kept ones marked: the shelf is
+          the one thing in the conversation a dad cannot scroll back to. */}
+      <Button
+        block
+        look="quiet"
+        className={ROW}
+        onClick={() => onOpen('album')}
+        data-testid="menu-album"
+      >
+        <Images size={22} aria-hidden="true" className="shrink-0 text-muted" />
+        <span className="min-w-0 truncate">{t('menu.album')}</span>
       </Button>
 
       {/* Present with one room, because this is also the only way to get

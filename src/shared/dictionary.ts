@@ -21,6 +21,7 @@ const EN = {
   'about.f_week': 'The week: say what you plan to do this week, then mark it done.',
   'about.f_table': 'The table: cards for up to four.',
   'about.f_find': 'Find: search what was said.',
+  'about.f_album': 'Pictures: every photo the room still has.',
   'about.f_remind': 'Reminders on your phone, if you turn them on in Settings.',
   'about.f_people': 'Tap the room’s name: who’s in, who’s online, and each dad’s profile.',
   'about.f_you': 'Settings: your name, face, glasses and colour.',
@@ -158,6 +159,7 @@ const EN = {
   'menu.table_hint': 'cards · 4 seats',
   'menu.close_table': 'Close the table',
   'menu.find': 'Find something',
+  'menu.album': 'Pictures',
   'menu.invite': 'Invite a dad',
   'menu.sign_out': 'Sign out',
   'menu.settings': 'Settings',
@@ -331,6 +333,11 @@ const EN = {
   'here.muted': 'muted',
 
   // -------------------------------------------------------- finding a line
+  'album.title': 'Pictures',
+  'album.empty': 'No pictures yet. Send one in the conversation.',
+  'album.failed': 'Couldn’t load the pictures.',
+  'album.of': 'A photo from {name}, {when}',
+  'album.lede': 'What the room still has. The oldest go when it’s full, unless one is kept.',
   'find.title': 'Find something',
   'find.field': 'Find something said',
   'find.lede': 'A word or two from the line you’re after.',
@@ -606,6 +613,7 @@ const FR: Record<Key, string> = {
   'about.f_week': 'La semaine : dis ce que tu comptes faire, pis marque quand c’est fait.',
   'about.f_table': 'La table : des cartes jusqu’à quatre.',
   'about.f_find': 'Retrouve : cherche dans ce qui s’est dit.',
+  'about.f_album': 'Photos : toutes celles que la salle a encore.',
   'about.f_remind': 'Rappels sur ton téléphone, si tu les actives dans Réglages.',
   'about.f_people':
     'Touche le nom du salon : qui est là, qui est en ligne, pis le profil de chacun.',
@@ -744,6 +752,7 @@ const FR: Record<Key, string> = {
   'menu.table_hint': 'cartes · 4 places',
   'menu.close_table': 'Ferme la table',
   'menu.find': 'Retrouve quelque chose',
+  'menu.album': 'Photos',
   'menu.invite': 'Invite un chum',
   'menu.sign_out': 'Déconnexion',
   'menu.settings': 'Réglages',
@@ -917,6 +926,12 @@ const FR: Record<Key, string> = {
   'here.muted': 'micro fermé',
 
   // ------------------------------------------------------ retrouver un mot
+  'album.title': 'Photos',
+  'album.empty': 'Pas encore de photos. Envoie-en une dans la conversation.',
+  'album.failed': 'Les photos n’ont pas pu se charger.',
+  'album.of': 'Une photo de {name}, {when}',
+  'album.lede':
+    'Ce que la salle a encore. Les plus vieilles partent quand c’est plein, sauf si on en garde une.',
   'find.title': 'Retrouve quelque chose',
   'find.field': 'Retrouve ce qui s’est dit',
   'find.lede': 'Un mot ou deux de la ligne que tu cherches.',

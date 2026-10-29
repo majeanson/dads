@@ -1191,3 +1191,32 @@ test('a dad at the bottom stays at the bottom when the last line grows', async (
 
   await page.context().close();
 });
+
+test('the album shows what the shelf holds, and a tap opens the viewer on it', async ({
+  browser,
+}) => {
+  const marc = await comeIn(browser, 'Alma Album');
+  const png =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  await marc.setInputFiles('#attach', {
+    name: 'album-one.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(png, 'base64'),
+  });
+  await marc.getByLabel('Say something').fill('for the album');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  await expect(marc.getByTestId('line').filter({ hasText: 'for the album' })).toBeVisible();
+
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await marc.getByTestId('menu-album').click();
+  const album = marc.getByTestId('album');
+  await expect(album).toBeVisible();
+  // His picture is on the shelf, under his name.
+  await expect(
+    album.getByRole('button', { name: /A photo from Alma Album/ }).first(),
+  ).toBeVisible();
+
+  await album.getByTestId('album-shot').first().click();
+  await expect(marc.getByTestId('viewer')).toBeVisible();
+  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', /\.png$/);
+});

@@ -5,6 +5,7 @@ import {
   CalendarRange,
   Coffee,
   DoorOpen,
+  Images,
   MessageCircle,
   MessageCircleQuestion,
   Palette,
@@ -39,6 +40,7 @@ import { Sheet } from './ui/Sheet';
  * has.
  */
 const bodies = {
+  Album: () => import('./Album'),
   Board: () => import('./Board'),
   Events: () => import('./Events'),
   Find: () => import('./Find'),
@@ -50,6 +52,7 @@ const bodies = {
   Questions: () => import('./Questions'),
   Settings: () => import('./Settings'),
 };
+const Album = lazy(() => bodies.Album().then((m) => ({ default: m.Album })));
 const Board = lazy(() => bodies.Board().then((m) => ({ default: m.Board })));
 const Events = lazy(() => bodies.Events().then((m) => ({ default: m.Events })));
 const Find = lazy(() => bodies.Find().then((m) => ({ default: m.Find })));
@@ -130,6 +133,7 @@ const ABOUT_FEATURES: { key: Key; icon: LucideIcon }[] = [
   { key: 'about.f_table', icon: Spade },
   { key: 'about.f_people', icon: Users },
   { key: 'about.f_find', icon: Search },
+  { key: 'about.f_album', icon: Images },
   { key: 'about.f_remind', icon: Bell },
   { key: 'about.f_you', icon: Palette },
   { key: 'about.f_invite', icon: Send },
@@ -302,6 +306,16 @@ export function Sheets({
       <Sheet title={t('ev.title')} pose={CalendarRange} onClose={close}>
         <Body>
           <Events night={night} you={you} pulse={eventsPulse} />
+        </Body>
+      </Sheet>
+    );
+  }
+
+  if (open === 'album') {
+    return (
+      <Sheet title={t('album.title')} pose={Images} onClose={close}>
+        <Body>
+          <Album />
         </Body>
       </Sheet>
     );

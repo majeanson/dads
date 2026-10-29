@@ -566,6 +566,26 @@ export async function fetchTodo(): Promise<Todo> {
   return (await res.json()) as Todo;
 }
 
+/** One thing the room still holds, newest first (`GET /api/media-list`). */
+export interface Held {
+  id: string;
+  name: string;
+  contentType: string;
+  width: number | null;
+  height: number | null;
+  memberId: string | null;
+  createdAt: number;
+  kept: boolean;
+}
+
+/** Every picture on the shelf: the album. Voice notes and the like are left out. */
+export async function fetchAlbum(): Promise<Held[]> {
+  const res = await fetch('/api/media-list');
+  if (!res.ok) throw new Error(`GET /api/media-list ${res.status}`);
+  const { media } = (await res.json()) as { media: Held[] };
+  return media.filter((m) => m.contentType.startsWith('image/'));
+}
+
 export interface PresenceEvent {
   name: string;
   kind: 'in' | 'out';

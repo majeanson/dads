@@ -17,8 +17,10 @@ import type { Env } from './env';
  * three. A shelf each, and neither can push the other off.
  */
 
-/** How many pictures a room holds. The cap is the feature, not a limitation. */
-export const MEDIA_PER_GROUP = 10;
+/** How many pictures a room holds. The cap is the feature, not a limitation:
+ * forty shrunk photographs is about twelve megabytes, a season of a room. It
+ * was ten (about three) until 2026-10-29. */
+export const MEDIA_PER_GROUP = 40;
 
 /** And how many voice notes. Higher because they are small, and because what
  * they are worth is being able to scroll back through the evening. */
@@ -30,11 +32,11 @@ export const VOICE_PER_GROUP = 30;
  * The cap is the feature, and a photograph of somebody's child falling off it
  * is the one thing in here nobody would ever expect to be thrown away. Keeping
  * one is the answer to that, and this is the answer to keeping everything:
- * twice the picture shelf, counted across both kinds, so a group cannot keep
+ * a hundred, counted across both kinds, so a group cannot keep
  * its way to an unbounded bucket. Past it, keeping another says so rather than
  * quietly doing nothing.
  */
-export const KEPT_PER_GROUP = 20;
+export const KEPT_PER_GROUP = 100;
 
 /** Anything larger is refused outright. Images are shrunk in the browser long
  * before they get here; this is the backstop for everything else. */

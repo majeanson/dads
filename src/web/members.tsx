@@ -63,6 +63,12 @@ export function useMemberNamed(name: string): RosterEntry | undefined {
   return undefined;
 }
 
+/** Names by id, for a list of pictures: a hook per tile would be a hook in a loop. */
+export function useNameOf(): (memberId: string | null) => string {
+  const byId = useContext(Members);
+  return (memberId) => (memberId === null ? '' : (byId.get(memberId)?.name ?? ''));
+}
+
 /** One dad, or undefined for an id the room has not told us about. */
 export function useMember(memberId: string): RosterEntry | undefined {
   return useContext(Members).get(memberId);

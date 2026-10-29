@@ -682,6 +682,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   deliberately not.** **`image/svg+xml` is never inline**; anything off the
   list is `octet-stream`, `nosniff`, `attachment`. Do not widen it.
 - Cap 25 MB.
+- **The album** (`Album.tsx`, Menu row `menu-album`) is the shelf as a grid from
+  `GET /api/media-list`, pictures only, kept ones pinned; a tap opens the same
+  `Viewer`. It has no controls: keeping is done where the picture is.
 - `getUserMedia` asks for echo cancellation, noise suppression, gain by name.
 - **A photograph opens IN the app** (`Viewer.tsx`, Radix Dialog), holding the
   conversation's photos from `room.messages`. Save tries the share sheet
@@ -689,10 +692,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   voice are not in the viewer.
 - **A man may only attach what he uploaded, and a picture belongs to ONE
   line** (sender compared on the way in).
-- **Two shelves**: ten pictures, thirty voice notes, partitioned by stored
+- **Two shelves**: forty pictures, thirty voice notes (ten until 2026-10-29), partitioned by stored
   content type; the oldest of that kind goes, blob and record.
 - **A photograph can be kept** (`media.kept`, exempt from pruner and count,
-  `KEPT_PER_GROUP` 20 → 409). Any dad may keep any picture. **Not
+  `KEPT_PER_GROUP` 100 → 409). Any dad may keep any picture. **Not
   optimistic**; the pin appears on the `kept` frame. Letting go puts it back
   on the shelf as the oldest. "Stays" is not "Save".
 - Images shrink in the browser (1600, JPEG 0.82), falling back to the

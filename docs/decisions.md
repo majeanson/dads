@@ -2113,6 +2113,13 @@ exist: `.col-talk` is a flex column and `.lines` takes `flex: 1`.
   `position: absolute`. The `default` status-bar tag stays. The splash's ground bleeds
   40px past each edge (a white line showed in light mode) and is placed by its corner.
 
+- **The shelf grew, and got a screen** (2026-10-29). Ten pictures was a
+  deliberate cap ("the cap is the feature": a conversation, not an archive), not a
+  cost one: ten shrunk photographs is about three megabytes. Forty is a season of
+  a room (about twelve); kept goes to a hundred so keeping is still a real answer to
+  the shelf. Voice notes stay at thirty. The album is the only way to see what is
+  about to fall off: before it, the shelf was only the conversation.
+
 ## Proving it in production
 
 `npm run prove` runs `prod/` against **dads.marcportal.com**. It is not in CI
