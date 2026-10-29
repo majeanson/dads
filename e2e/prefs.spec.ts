@@ -508,3 +508,96 @@ test('the home-screen app leads with the way in as himself', async ({ browser })
   await app.context().close();
   await tab.context().close();
 });
+
+/**
+ * Quiet hours and a pause (2026-10-29).
+ *
+ * The reminder switch only exists where a browser can subscribe to push,
+ * which headless Chromium cannot do against a real push service, so the page
+ * is told it already has a subscription and the server is told it knows it.
+ * What is proved is the screen and the route behind it; whether a phone
+ * really stays quiet is `test/quiet-route.test.ts`, on the real rows.
+ */
+async function withReminderOn(page: Page) {
+  await page.addInitScript(() => {
+    // Headless Chromium reports notifications as denied, which the app rightly
+    // reads as "blocked" and offers nothing; granting it by the context does not
+    // change what the page reads.
+    Object.defineProperty(Notification, 'permission', { get: () => 'granted' });
+    PushManager.prototype.getSubscription = async () =>
+      ({ endpoint: 'https://fcm.googleapis.com/fcm/send/e2e-quiet' }) as PushSubscription;
+  });
+  await page.route('**/api/push?*', (route) =>
+    route.fulfill({ json: { key: 'e2e', known: true } }),
+  );
+}
+
+test('a dad pauses his notifications, sets quiet hours, and both are still there after a reload', async ({
+  page,
+}) => {
+  await withReminderOn(page);
+  await comeIn(page, 'Quiet Marc');
+  await home(page);
+  await page.getByTestId('home-settings').click();
+
+  // Offered only once the reminder is on, and folded: its label says what is
+  // in force, so he need not open it to know.
+  const fold = page.getByTestId('quiet-open');
+  await expect(fold).toHaveText('Quiet hours and pause');
+  await fold.click();
+
+  // A pause: one tap, and the label and the sheet both say until when.
+  await page.getByTestId('quiet-pause-8h').click();
+  await expect(page.getByTestId('quiet-paused')).toContainText('Paused until');
+  await expect(fold).toContainText('Paused until');
+  await expect(page.getByTestId('quiet-pause-1h')).toHaveCount(0);
+
+  // It survives a reload: it is the server's, not the page's.
+  await page.reload();
+  await page.getByTestId('home-settings').click();
+  await expect(page.getByTestId('quiet-open')).toContainText('Paused until');
+
+  // Resume, and the three pauses are back.
+  await page.getByTestId('quiet-open').click();
+  await page.getByTestId('quiet-resume').click();
+  await expect(page.getByTestId('quiet-pause-1h')).toBeVisible();
+  await expect(page.getByTestId('quiet-open')).toHaveText('Quiet hours and pause');
+
+  // Quiet hours: a night's sleep to start from, then his own times.
+  await page.getByTestId('quiet-window').click();
+  await expect(page.getByTestId('quiet-from')).toHaveValue('22:00');
+  await expect(page.getByTestId('quiet-to')).toHaveValue('07:00');
+  await page.getByTestId('quiet-from').fill('23:30');
+  await expect(page.getByTestId('quiet-open')).toContainText('Quiet 23:30–07:00');
+
+  // The server holds what the screen shows, in his own zone.
+  const saved = await page.evaluate(() => fetch('/api/quiet').then((r) => r.json()));
+  expect(saved).toMatchObject({ from: '23:30', to: '07:00' });
+  expect(typeof saved.tz).toBe('string');
+
+  // And turning it off clears it.
+  await page.getByTestId('quiet-window').click();
+  await expect(page.getByTestId('quiet-from')).toHaveCount(0);
+  await expect(page.getByTestId('quiet-open')).toHaveText('Quiet hours and pause');
+});
+
+test('quiet hours are not offered until the reminder is on, and read in French', async ({
+  page,
+  browser,
+}) => {
+  await comeIn(page, 'Quiet Off');
+  await home(page);
+  await page.getByTestId('home-settings').click();
+  await expect(page.getByTestId('quiet-open')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+
+  // A dad of his own: a page in this context would already be Quiet Off.
+  const fr = await (await browser.newContext()).newPage();
+  await withReminderOn(fr);
+  await comeIn(fr, 'Quiet Fr');
+  await fr.evaluate(() => localStorage.setItem('dads.lang', 'fr'));
+  await fr.reload();
+  await home(fr);
+  await fr.getByTestId('home-settings').click();
+  await expect(fr.getByTestId('quiet-open')).toHaveText('Heures calmes et pause');
+});

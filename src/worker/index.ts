@@ -38,6 +38,7 @@ import { postRoom } from './routes/create';
 import { listMine, switchRoom } from './routes/mine';
 import { postDelete, postLeave, postRemove, putOwner, putRooms, putWord } from './routes/rooms';
 import { getExport } from './routes/export';
+import { getQuiet, putQuiet } from './routes/quiet';
 import { search } from './routes/search';
 import { getTable, postNewTable } from './routes/table';
 import {
@@ -282,6 +283,12 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/presence':
       return getPresence(request, env, prod);
+
+    case 'GET /api/quiet':
+      return getQuiet(request, env, prod);
+
+    case 'PUT /api/quiet':
+      return putQuiet(request, env, prod);
 
     case 'GET /api/export':
       return getExport(request, env, prod);

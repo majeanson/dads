@@ -17,11 +17,44 @@
  */
 
 import type { Env } from './env';
+import { isQuiet } from '../shared/quiet';
 
 export interface PushSubscriptionRow {
   endpoint: string;
   p256dh: string;
   auth: string;
+}
+
+/** A subscription and what its dad has said about being left alone (0030). */
+export interface PushTarget extends PushSubscriptionRow {
+  quiet_from: string | null;
+  quiet_to: string | null;
+  quiet_tz: string | null;
+  snoozed_until: number | null;
+}
+
+/**
+ * Every query below reads the dad with the subscription: his quiet hours and
+ * his pause live on `members`, and a dad who has left is nobody to push to.
+ */
+const TARGET = `SELECT s.endpoint, s.p256dh, s.auth,
+          m.quiet_from, m.quiet_to, m.quiet_tz, m.snoozed_until
+     FROM push_subscriptions s
+     JOIN members m ON m.id = s.member_id
+    WHERE m.gone_at IS NULL`;
+
+/**
+ * Who a push is actually sent to: everybody who is not quiet right now. A
+ * silenced push is dropped, never held for later (see `shared/quiet.ts`).
+ */
+export function sendable(targets: PushTarget[], now: number): PushTarget[] {
+  return targets.filter(
+    (t) =>
+      !isQuiet(
+        { from: t.quiet_from, to: t.quiet_to, tz: t.quiet_tz, snoozedUntil: t.snoozed_until },
+        now,
+      ),
+  );
 }
 
 export function pushEnabled(env: Env): boolean {
@@ -265,13 +298,7 @@ async function sendWebPush(
  * else ever tells us.
  */
 export async function notifyGroup(env: Env, groupId: string, payload: PushPayload): Promise<void> {
-  await notify(
-    env,
-    env.DB.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE group_id = ?').bind(
-      groupId,
-    ),
-    payload,
-  );
+  await notify(env, env.DB.prepare(`${TARGET} AND s.group_id = ?`).bind(groupId), payload);
 }
 
 /** Every dad in a group but the ones named: the man who started something
@@ -292,8 +319,9 @@ export function subscribersExcept(
   except: string[],
 ): D1PreparedStatement {
   return env.DB.prepare(
-    `SELECT endpoint, p256dh, auth FROM push_subscriptions
-      WHERE group_id = ? AND member_id NOT IN (SELECT value FROM json_each(?))`,
+    `${TARGET}
+      AND s.group_id = ?
+      AND s.member_id NOT IN (SELECT value FROM json_each(?))`,
   ).bind(groupId, JSON.stringify(except));
 }
 
@@ -303,21 +331,15 @@ export async function notifyMember(
   memberId: string,
   payload: PushPayload,
 ): Promise<void> {
-  await notify(
-    env,
-    env.DB.prepare(
-      'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE member_id = ?',
-    ).bind(memberId),
-    payload,
-  );
+  await notify(env, env.DB.prepare(`${TARGET} AND s.member_id = ?`).bind(memberId), payload);
 }
 
 async function notify(env: Env, query: D1PreparedStatement, payload: PushPayload): Promise<void> {
   if (!pushEnabled(env)) return;
   try {
-    const { results } = await query.all<PushSubscriptionRow>();
+    const { results } = await query.all<PushTarget>();
 
-    for (const sub of results) {
+    for (const sub of sendable(results, Date.now())) {
       const alive = await sendWebPush(env, sub, payload).catch((err) => {
         console.error('push send threw', err);
         return true;

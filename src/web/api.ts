@@ -826,3 +826,33 @@ export const cancelEvent = (id: string) =>
 
 export const answerEvent = (id: string, answer: Answer) =>
   eventsCall('PUT', '/api/events/rsvp', { id, answer });
+
+/** What is in force for this dad: a daily window and/or a pause. */
+export interface QuietState {
+  from: string | null;
+  to: string | null;
+  tz: string | null;
+  snoozedUntil: number | null;
+}
+
+/** A change names only what it changes. */
+export type QuietPatch = {
+  window?: { from: string; to: string; tz: string } | null;
+  snooze?: '1h' | '8h' | '24h' | null;
+};
+
+export async function fetchQuiet(): Promise<QuietState> {
+  const res = await fetch('/api/quiet');
+  if (!res.ok) throw new Error(`GET /api/quiet ${res.status}`);
+  return (await res.json()) as QuietState;
+}
+
+export async function saveQuiet(patch: QuietPatch): Promise<QuietState> {
+  const res = await fetch('/api/quiet', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error(`PUT /api/quiet ${res.status}`);
+  return (await res.json()) as QuietState;
+}

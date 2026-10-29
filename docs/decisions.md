@@ -2308,3 +2308,31 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   (two groups: the real one and the proving room); no stray members or media.
 - The room's own Durable Object storage is not visible from outside, so that
   part rests on `deleteAll()` and the unit test, not on a production probe.
+
+## Quiet hours and a pause (2026-10-29)
+
+- **Asked for by the push channel's own risk**: the only notifications that can
+  wake a dad are `night_start`, "something's on" and an event's start, and
+  the usual reason people switch push off altogether is that there is no
+  in-between. So: an in-between.
+- **Modelled on Google Chat (Hangouts Chat before it).** Its snooze (30
+  minutes to 8 hours, across all devices) became our pause (1, 8 or 24 hours);
+  its scheduled Do Not Disturb (recurring windows) became one daily window;
+  its per-conversation mute is the reminder switch itself, since a room has one
+  conversation. Not copied: a "moon" status visible to others. A dad going
+  quiet is not news, and "Sam has muted us" is what this must not become.
+- **Per dad, not per device**, because a snooze follows the man. That is the
+  opposite of the subscription (per device) and the cost is one join in
+  `notify()`.
+- **Dropped, not deferred.** A reminder that lands at seven in the morning for
+  a night that was last evening is worse than none, and deferring needs a
+  queue the alarm does not have. The hint under the controls says it.
+- **The window is read in his zone, not the room's** (the zone his phone
+  reported when he set it). Equal ends mean no window; `to` is excluded; a
+  window across midnight is the normal case; daylight saving moves the clock
+  and not the window. Pinned in `test/quiet.test.ts`.
+- **Fails open.** An unreadable zone must not mute a dad for ever.
+- **Settings scrolls with push on**, by about 70px: the reminder switch itself
+  was already ~25px over a 667px phone and nothing measures it, because
+  headless Chromium cannot hold a subscription. The measured state (push off)
+  still fits exactly.

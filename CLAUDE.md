@@ -673,6 +673,16 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 ## Dad-night reminders (push)
 
 - Optional: no VAPID secrets → `/api/push` 503 and no toggle. `npm run vapid`.
+- **Quiet hours and a pause are the dad's, across every phone** (`members.quiet_*`,
+  `snoozed_until`, 0030; `GET/PUT /api/quiet`; `shared/quiet.ts`). Modelled on Google
+  Chat: a pause of 1/8/24 hours and a daily window in HIS OWN zone (the one his phone
+  reported, never the room's). **Enforced in one place, `notify()`** through
+  `sendable()`; every push query goes through the `TARGET` select, which also holds
+  `gone_at IS NULL`. **A quiet push is dropped, never held back and replayed.** A
+  half-set or unreadable window fails OPEN (not quiet). Nothing is said in the room
+  and nobody else can read it. The UI is a fold under the reminder switch, only once
+  it is on; its label says what is in force. E2E fakes the subscription
+  (`withReminderOn` in `prefs.spec.ts`).
 - `src/worker/push.ts` is ported from jaffre (VAPID ES256, RFC 8291 on
   WebCrypto) — `web-push` cannot run on Workers.
 - Per device, per dad, never on by default (`push_subscriptions`, keyed on

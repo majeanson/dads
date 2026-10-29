@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useT } from './i18n';
 import { disablePush, enablePush, pushShape, type PushShape } from './push';
 import { Button } from './ui/Button';
+import { Quiet } from './Quiet';
 import { Switch } from './ui/Switch';
 
 /**
@@ -141,6 +142,8 @@ export function Remind() {
         onChange={() => void toggle()}
         testId="remind"
       />
+      {/* Only once there is something to quiet. */}
+      {shape.on ? <Quiet /> : null}
     </div>
   );
 }
