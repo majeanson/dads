@@ -2336,3 +2336,22 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   was already ~25px over a 667px phone and nothing measures it, because
   headless Chromium cannot hold a subscription. The measured state (push off)
   still fits exactly.
+
+## The two flaky tests, and upkeep (2026-10-29)
+
+- **Glasses fit (`prefs.spec`)** was a real bug, not noise: 3 of 8 sequential
+  runs failed locally. The socket log showed the right `member` frame
+  arriving in every failing run, a few ms BEFORE the upload's response; the
+  effect that clears `You`'s preview ran, and then `pick()` set the preview
+  anyway, for good. Fixed in `You.tsx`; pinned by a test that holds the
+  response back. (`--repeat-each` against one group shares a dad's name and
+  trips other assertions: read only the line that was failing.)
+- **Questions sheet 23px over (`fit.spec`)** did not reproduce. All 100
+  English questions fit; the group id, and so the pick, is random per run but
+  length is not it. The measurement now writes the sheet's blocks, heights and
+  text into the failure, so the next occurrence explains itself.
+- **Upkeep**: nothing to bump. `@types/node` stays on 22 because CI runs
+  Node 22 (26 would admit APIs CI lacks); TypeScript 7 waits on
+  typescript-eslint's peer range (`>=4.8.4 <6.1.0`, checked today).
+  `npm audit --omit=dev` is clean. The shared `cn-*.js` chunk is minified
+  past reading without a bundle visualiser; the budget guards its growth.

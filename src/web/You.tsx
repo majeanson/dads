@@ -40,6 +40,9 @@ export function You({ memberId, name }: { memberId: string; name: string }) {
    */
   const [preview, setPreview] = useState<string | false | null>(null);
   const roomFace = me?.face;
+  // What the room says NOW, for a request that finishes after it has spoken.
+  const roomFaceNow = useRef(roomFace);
+  roomFaceNow.current = roomFace;
   useEffect(() => {
     setPreview((was) => {
       if (typeof was === 'string') URL.revokeObjectURL(was);
@@ -87,7 +90,13 @@ export function You({ memberId, name }: { memberId: string; name: string }) {
     }
     setBusy(true);
     try {
+      const before = roomFaceNow.current;
       await setMyFace(square);
+      // The room's frame can beat the response by a few milliseconds. If it
+      // already has the new face, there is nothing left to preview: holding the
+      // picture anyway kept it for good (nothing changes the room's face again
+      // to clear it), and a preview is drawn WITHOUT his fit.
+      if (roomFaceNow.current !== before) return;
       // The handle before it goes, or every face he tries leaks a 320-square
       // JPEG for the life of the page — the same thing the composer's own
       // preview already takes care of.

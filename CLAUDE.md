@@ -385,6 +385,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
     pair is `members.glasses` (NULL = shades), allowlisted by `GLASSES`, read
     from D1 whenever a `member` frame is sent. The app's own mark always wears
     shades.
+  - **The room's frame can beat the HTTP response** by a few milliseconds. `You`'s
+    `pick()` once set its preview AFTER the room had already announced the new face,
+    so the preview was never cleared and his own face never wore its fit (a preview
+    is drawn without one). It now skips the preview when the room's face changed
+    while it waited; `prefs.spec` delays the response to pin it. Any "await the
+    request, then set local state the room's frame also sets" has this shape.
   - **Fit** (`members.glasses_fit`, `GlassesFitter`): `{x, y, s}` clamped by
     `parseFit`, only over a photo, cleared when the photo changes, applied
     with CSS `translate`/`scale` (never `transform`). The fit area refuses

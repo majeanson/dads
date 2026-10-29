@@ -155,7 +155,24 @@ test('every sheet fits the small phone without scrolling', async ({ browser }) =
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.waitForTimeout(300);
     const px = await overflow(page, content);
-    if (px > 0) over.push(`${scene}: ${px}px past the bottom`);
+    if (px > 0) {
+      // Say what was on the sheet, so a failure that will not reproduce (one
+      // question in a hundred is the day's, and CI draws it at random) is
+      // explained by its own message: the blocks, tallest last, and the text.
+      const what = await page.evaluate((sel) => {
+        const el = document.querySelector(sel) as HTMLElement;
+        const blocks = [...el.querySelectorAll('section, p, h2, h3, ul, button')]
+          .map((b) => ({
+            tag: b.tagName.toLowerCase(),
+            id: b.getAttribute('data-testid') ?? '',
+            h: Math.round(b.getBoundingClientRect().height),
+            text: (b.textContent ?? '').trim().slice(0, 70),
+          }))
+          .filter((b) => b.h > 0);
+        return JSON.stringify({ client: el.clientHeight, scroll: el.scrollHeight, blocks });
+      }, content);
+      over.push(`${scene}: ${px}px past the bottom ${what}`);
+    }
     await close();
     await expect(page.getByRole('dialog')).toHaveCount(0);
   }

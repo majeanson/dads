@@ -601,3 +601,37 @@ test('quiet hours are not offered until the reminder is on, and read in French',
   await fr.getByTestId('home-settings').click();
   await expect(fr.getByTestId('quiet-open')).toHaveText('Heures calmes et pause');
 });
+
+test('his own face wears the fit even when the room answers before the upload does', async ({
+  page,
+}) => {
+  // The room's `member` frame often beats the upload's own response by a few
+  // milliseconds; held back here so it always does. The picture he just chose
+  // used to be kept as a preview after the room had caught up, and a preview
+  // is drawn WITHOUT his fit, so his face in Settings never wore it.
+  await page.route('**/api/me/face', async (route) => {
+    if (route.request().method() !== 'PUT') return route.continue();
+    const response = await route.fetch();
+    await new Promise((r) => setTimeout(r, 800));
+    await route.fulfill({ response });
+  });
+  await comeIn(page, 'Vic Late');
+  await home(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByTestId('look-open').click();
+  await page.setInputFiles('#face', 'public/icon-192.png');
+  const face = page.getByTestId('you');
+  await expect(face.locator('img')).toBeVisible();
+  // Let the delayed response land: `busy` is off once the upload has settled.
+  await expect(page.getByTestId('glasses-open')).toBeEnabled();
+  await page.waitForTimeout(1200);
+
+  await page.getByTestId('glasses-open').click();
+  await page.getByTestId('glasses-fit').click();
+  const fitter = page.getByTestId('glasses-fitter');
+  await fitter.getByTestId('fit-size').fill('1.3');
+  await fitter.getByTestId('fit-save').click();
+  await expect(fitter).toHaveCount(0);
+
+  await expect(face.locator('.face-shades')).toHaveCSS('scale', '1.3');
+});
