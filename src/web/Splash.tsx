@@ -21,6 +21,9 @@ type Lens = typeof LEFT_LENS;
  * when the zoom starts and for how long, when the smoked glass starts to lift
  * and for how long, and when the whole thing takes itself away.
  */
+/** How far the ground runs past each edge of the screen, in px. */
+const BLEED = 40;
+
 const PACE = {
   open: {
     lens: LEFT_LENS,
@@ -199,10 +202,30 @@ export function Splash({
 
   return (
     <div className="splash" aria-hidden="true" data-testid="splash">
-      <svg width={vw} height={vh} viewBox={`0 0 ${vw} ${vh}`}>
+      {/* Bled past the screen on every side: the fixed box is a little larger
+          than innerHeight under Safari's bars, and the gap showed as a white
+          line at the top and bottom edge. The middle stays the middle. */}
+      <svg
+        width={vw + 2 * BLEED}
+        height={vh + 2 * BLEED}
+        viewBox={`${-BLEED} ${-BLEED} ${vw + 2 * BLEED} ${vh + 2 * BLEED}`}
+      >
         <defs>
-          <mask id={mask} maskUnits="userSpaceOnUse" x="0" y="0" width={vw} height={vh}>
-            <rect width={vw} height={vh} fill="white" />
+          <mask
+            id={mask}
+            maskUnits="userSpaceOnUse"
+            x={-BLEED}
+            y={-BLEED}
+            width={vw + 2 * BLEED}
+            height={vh + 2 * BLEED}
+          >
+            <rect
+              x={-BLEED}
+              y={-BLEED}
+              width={vw + 2 * BLEED}
+              height={vh + 2 * BLEED}
+              fill="white"
+            />
             <g ref={zoomer(0)}>
               <g transform={place}>
                 <g ref={dropper(0)} fill="black">
@@ -213,7 +236,13 @@ export function Splash({
           </mask>
         </defs>
         <g mask={`url(#${mask})`}>
-          <rect width={vw} height={vh} fill="var(--accent)" />
+          <rect
+            x={-BLEED}
+            y={-BLEED}
+            width={vw + 2 * BLEED}
+            height={vh + 2 * BLEED}
+            fill="var(--accent)"
+          />
           <g ref={zoomer(1)}>
             <g transform={place}>
               <circle
