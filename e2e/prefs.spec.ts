@@ -483,3 +483,28 @@ test('a new device asks with a code and comes in as the same dad', async ({ brow
   await first.context().close();
   await second.context().close();
 });
+
+test('the home-screen app leads with the way in as himself', async ({ browser }) => {
+  // A phone that has added the app: Safari's own flag, which is the one that
+  // is true on an iPhone.
+  const app = await (await browser.newContext()).newPage();
+  await app.addInitScript(() => {
+    Object.defineProperty(navigator, 'standalone', { value: true });
+  });
+  await app.goto('/');
+  const nudge = app.getByTestId('pair-nudge');
+  await expect(nudge).toBeVisible();
+  // The one button, and it asks for a code rather than making a second dad.
+  await expect(app.getByTestId('pair-start')).toHaveCount(1);
+  await nudge.getByTestId('pair-start').click();
+  await expect(app.getByTestId('pair-code')).toHaveText(/^[A-Z2-9]{8}$/);
+
+  // In a browser tab nothing leads: the form is the door, the button is quiet.
+  const tab = await (await browser.newContext()).newPage();
+  await tab.goto('/');
+  await expect(tab.getByTestId('pair-nudge')).toHaveCount(0);
+  await expect(tab.getByTestId('pair-start')).toHaveCount(1);
+
+  await app.context().close();
+  await tab.context().close();
+});

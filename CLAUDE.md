@@ -69,7 +69,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   `member_devices` as well as `members.device_token_hash`. **The other way
   round is a code** (`POST /api/pair`, `/approve`, `/poll`; `device_pairs`, 0028):
   a home-screen app cannot open a link made in Safari, so the NEW device shows
-  eight characters and a device that is already him types them in. Every ask
+  eight characters and a device that is already him types them in. In the installed app (`standalone()`) the way in as himself
+  LEADS the door (`pair-nudge`); in a tab it is the quiet button. Every ask
   and every wrong code counts against the join bucket; ten minutes, one use.
 - `scripts/create-group.ts --rotate` UPDATEs hash and salt in place: members,
   archive and board must survive a passphrase change.

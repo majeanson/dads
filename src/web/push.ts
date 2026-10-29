@@ -20,7 +20,8 @@ export type PushShape =
   | { kind: 'blocked' }
   | { kind: 'ready'; on: boolean };
 
-function standalone(): boolean {
+/** Whether this is the installed home-screen app, not a browser tab. */
+export function standalone(): boolean {
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
     // Safari's own, older flag. Still the only one that is true on an iPhone.

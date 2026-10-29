@@ -249,6 +249,8 @@ const EN = {
     'Changes the colour of your name, of your face when you have no photo, and of the quote when someone replies to you. Everyone sees it.',
   'you.colour_auto': 'Back to automatic',
   'pair.start': 'I’m already in on another device',
+  'pair.nudge':
+    'Added this to your home screen? If you’re already in on another device, come in as yourself with a code.',
   'pair.title': 'Your code',
   'pair.how':
     'On the device where you are already in: Menu, then “Use on another device”, and type this code.',
@@ -842,6 +844,8 @@ const FR: Record<Key, string> = {
     'Change la couleur de ton nom, de ta face quand t’as pas de photo, pis de la citation quand quelqu’un te répond. Tout le monde la voit.',
   'you.colour_auto': 'Remets automatique',
   'pair.start': 'Je suis déjà là sur un autre appareil',
+  'pair.nudge':
+    'T’as ajouté ça à ton écran d’accueil ? Si t’es déjà là sur un autre appareil, entre en tant que toi avec un code.',
   'pair.title': 'Ton code',
   'pair.how':
     'Sur l’appareil où t’es déjà : Menu, puis « Sur un autre appareil », et tape ce code.',

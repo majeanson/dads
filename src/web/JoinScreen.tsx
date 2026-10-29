@@ -1,5 +1,5 @@
 import { ArrowRight, Check } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { join, type JoinFailure, type Session } from './api';
 import { plural, useT, type Key, type T } from './i18n';
 import { Logo } from './Logo';
@@ -8,6 +8,7 @@ import { LangToggle } from './Toggles';
 import { Button } from './ui/Button';
 import { useFreshBuild } from './useFreshBuild';
 import { PairDevice } from './PairDevice';
+import { standalone } from './push';
 import { FIELD } from './ui/field';
 
 // One message for a wrong code and for a code that belongs to no group: the
@@ -58,6 +59,7 @@ export function JoinScreen({
   const [making, setMaking] = useState(false);
   /** Already a dad here, on another device: ask to be let in as him. */
   const [pairing, setPairing] = useState(false);
+  const inApp = useMemo(() => standalone(), []);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   // The door too, held back while he is typing into it.
@@ -138,6 +140,28 @@ export function JoinScreen({
             </p>
           ) : null}
 
+          {/* The home-screen app starts as a stranger: whoever added it to his
+              phone is almost always a dad who is already in, in Safari. The way
+              in as himself is the first thing on the screen, not a quiet button
+              under a form that makes a SECOND dad of him. */}
+          {inApp && !invite ? (
+            <div
+              className="mb-6 grid gap-3 rounded-[var(--radius-card)] border border-edge p-4"
+              data-testid="pair-nudge"
+            >
+              <p className="m-0 text-base">{t('pair.nudge')}</p>
+              <Button
+                look="primary"
+                size="lg"
+                onClick={() => setPairing(true)}
+                className="justify-center"
+                data-testid="pair-start"
+              >
+                {t('pair.start')}
+              </Button>
+            </div>
+          ) : null}
+
           <form onSubmit={submit} className="grid grid-cols-1 gap-4">
             {/* A dad who followed a link has already been let in by whoever sent
             it. Asking him for the passphrase as well would be asking him to
@@ -204,15 +228,17 @@ export function JoinScreen({
           nearly everybody who lands here was sent a word by a friend. A man
           who followed an invite link is not offered it at all — he is already
           being let into somebody's room. */}
-          <Button
-            look="quiet"
-            size="lg"
-            onClick={() => setPairing(true)}
-            className="mt-4 justify-center"
-            data-testid="pair-start"
-          >
-            {t('pair.start')}
-          </Button>
+          {inApp && !invite ? null : (
+            <Button
+              look="quiet"
+              size="lg"
+              onClick={() => setPairing(true)}
+              className="mt-4 justify-center"
+              data-testid="pair-start"
+            >
+              {t('pair.start')}
+            </Button>
+          )}
           {invite ? null : (
             <Button
               look="quiet"
