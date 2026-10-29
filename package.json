@@ -23,6 +23,7 @@
     "icons": "node scripts/icons.mjs",
     "vapid": "node scripts/vapid.mjs",
     "backup": "tsx scripts/backup.ts",
+    "backup:r2": "tsx scripts/backup-r2.ts",
     "backup:verify": "tsx scripts/backup-verify.ts",
     "oops": "tsx scripts/oops.ts",
     "prove": "playwright test --config playwright.prod.config.ts"

@@ -413,7 +413,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   agreement for any crypto parameter. Changing the count invalidates every
   invite hash.
 - `npm run deploy` by hand; migrations first with `npm run migrate:remote`.
-- `npm run backup` writes every D1 table to `backups/` (not R2 blobs). **The
+- `npm run backup` writes every D1 table to `backups/` (not R2 blobs);
+  `npm run backup:r2` copies the two kinds that cannot be taken again — faces
+  and kept pictures, keys from D1 — into `backups/r2/`. **The
   list is `src/shared/backupTables.ts`; a migration that adds a table fails
   `test/backup.test.ts` until it is listed there or excluded with a reason.**
   `npm run backup:verify` restores a backup into an in-memory SQLite built from

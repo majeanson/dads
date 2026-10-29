@@ -18,8 +18,9 @@ import { query } from './d1';
  * thing you already have is a backup you find out about too late.
  *
  * What is NOT in here is R2 — the photographs. Their records are (so you know
- * what is missing), but the blobs are megabytes each and belong in
- * `wrangler r2 object get`, not in a JSON file. The cap is ten to a room.
+ * what is missing), but the blobs are megabytes each and do not belong in a
+ * JSON file. The ones that cannot be taken again — faces and kept pictures —
+ * are `npm run backup:r2`; the rest sit on a shelf that prunes itself.
  */
 const TABLES = BACKUP_TABLES;
 
