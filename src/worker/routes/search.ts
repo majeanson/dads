@@ -69,6 +69,12 @@ export async function search(
 
   const q = (url.searchParams.get('q') ?? '').trim().slice(0, MAX_QUERY);
   if (q.length < MIN_SEARCH) return Response.json({ results: [] });
+  // Narrowing, never widening: both are further conditions on the same rows.
+  // Anything but these two words is everybody's, so a stale client or a
+  // guess cannot turn a filter into an error.
+  const only = url.searchParams.get('only');
+  const mine = only === 'mine' ? session.member.id : null;
+  const photos = only === 'photos' ? 1 : 0;
 
   const rows = await env.DB.prepare(
     `SELECT m.id, m.member_id, m.kind, m.body, m.created_at,
@@ -81,10 +87,12 @@ export async function search(
       WHERE m.group_id = ?1
         AND m.kind IN ('chat', 'prompt')
         AND m.body LIKE ?2 ESCAPE '\\'
+        AND (?4 IS NULL OR m.member_id = ?4)
+        AND (?5 = 0 OR m.media_id IS NOT NULL)
       ORDER BY m.created_at DESC, m.id DESC
       LIMIT ?3`,
   )
-    .bind(session.group.id, pattern(q), LIMIT)
+    .bind(session.group.id, pattern(q), LIMIT, mine, photos)
     .all<Row>();
 
   const results: Found[] = (rows.results ?? []).map((r) => ({

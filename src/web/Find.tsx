@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import { MIN_SEARCH, type Found } from '../shared/protocol';
 import { highlight } from '../shared/highlight';
-import { findLines } from './api';
+import { findLines, type FindOnly } from './api';
 import { Attachment } from './Attachment';
 import { Face } from './Face';
 import { useT } from './i18n';
+import { segment, TRACK } from './Toggles';
 import { FIELD } from './ui/field';
 
 /** Long enough that a thumb finishes a word, short enough to feel live. */
@@ -52,6 +53,7 @@ export function Find() {
   const { t, lang } = useT();
   const locale = lang === 'fr' ? 'fr-CA' : 'en-CA';
   const [q, setQ] = useState('');
+  const [only, setOnly] = useState<FindOnly>('all');
   const [state, setState] = useState<State>({ status: 'idle' });
   const field = useRef<HTMLInputElement>(null);
 
@@ -72,7 +74,7 @@ export function Find() {
     const stop = new AbortController();
     const timer = setTimeout(() => {
       setState({ status: 'looking' });
-      findLines(needle, stop.signal)
+      findLines(needle, only, stop.signal)
         .then((results) => setState({ status: 'ready', q: needle, results }))
         .catch((err: unknown) => {
           if (stop.signal.aborted) return;
@@ -85,7 +87,7 @@ export function Find() {
       clearTimeout(timer);
       stop.abort();
     };
-  }, [needle]);
+  }, [needle, only]);
 
   return (
     <div data-testid="find">
@@ -111,6 +113,20 @@ export function Find() {
           // form to submit: the results are already there.
           enterKeyHint="search"
         />
+      </div>
+
+      <div className={`${TRACK} mt-3 w-full`} role="group" aria-label={t('find.only')}>
+        {(['all', 'mine', 'photos'] as const).map((id) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={only === id}
+            onClick={() => setOnly(id)}
+            className={segment(only === id, 'flex-1 text-base font-semibold')}
+          >
+            {t(`find.only_${id}`)}
+          </button>
+        ))}
       </div>
 
       <div aria-live="polite" className="mt-4">

@@ -173,6 +173,49 @@ test('a line typed with no signal waits, and goes when the signal comes back', a
   await sam.context().close();
 });
 
+test('several lines typed in a dead spot arrive in order, once each', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const context = await browser.newContext();
+  let swallow = false;
+  await context.routeWebSocket('**/ws*', (ws) => {
+    const server = ws.connectToServer();
+    ws.onMessage((m) => {
+      if (!swallow) server.send(m);
+    });
+    server.onMessage((m) => ws.send(m));
+  });
+  const marc = await context.newPage();
+  await marc.goto('/');
+  await marc.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
+  await marc.getByLabel('Your name').fill('Tunnel Tom');
+  await marc.getByRole('button', { name: 'Come in' }).click();
+  await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await talk(marc);
+  const sam = await comeIn(browser, 'Tunnel Watcher');
+
+  swallow = true;
+  const said = ['tunnel one', 'tunnel two', 'tunnel three'];
+  for (const line of said) {
+    await marc.getByLabel('Say something').fill(line);
+    await marc.getByRole('button', { name: 'Send' }).click();
+    await expect(marc.getByLabel('Say something')).toHaveValue('');
+  }
+  await expect(sam.getByTestId('line').filter({ hasText: 'tunnel' })).toHaveCount(0);
+
+  swallow = false;
+  const heard = sam.getByTestId('line').filter({ hasText: 'tunnel ' });
+  await expect(heard).toHaveCount(3, { timeout: 45_000 });
+  // In the order he typed them, and nothing doubled once the dust settles.
+  await expect(heard.nth(0)).toContainText('tunnel one');
+  await expect(heard.nth(1)).toContainText('tunnel two');
+  await expect(heard.nth(2)).toContainText('tunnel three');
+  await expect(marc.getByText(/waiting for a signal/)).toHaveCount(0);
+  await expect(heard).toHaveCount(3);
+
+  await context.close();
+  await sam.context().close();
+});
+
 test('a dad says it instead of typing it', async ({ browser }) => {
   const marc = await comeIn(browser, 'Hal');
   const sam = await comeIn(browser, 'Ike');

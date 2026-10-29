@@ -616,8 +616,11 @@ export type { Found } from '../shared/protocol';
  * screen is the last five hundred lines, and the whole point of looking
  * something up is that it is older than that.
  */
-export async function findLines(q: string, signal?: AbortSignal): Promise<Found[]> {
-  const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal });
+export type FindOnly = 'all' | 'mine' | 'photos';
+
+export async function findLines(q: string, only: FindOnly, signal?: AbortSignal): Promise<Found[]> {
+  const narrow = only === 'all' ? '' : `&only=${only}`;
+  const res = await fetch(`/api/search?q=${encodeURIComponent(q)}${narrow}`, { signal });
   if (!res.ok) throw new Error(`GET /api/search ${res.status}`);
   return ((await res.json()) as { results: Found[] }).results;
 }

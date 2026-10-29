@@ -110,3 +110,40 @@ test('setting the night leaves nothing in the conversation to find', async ({ br
 
   await marc.context().close();
 });
+
+test('Mine and Photos narrow a search, and Everyone brings the rest back', async ({ browser }) => {
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  const marc = await comeIn(browser, 'Marc Narrow');
+  const sam = await comeIn(browser, 'Sam Narrow');
+  await talk(sam);
+  await say(sam, 'sandwiches were his idea');
+  await talk(marc);
+  await say(marc, 'sandwiches for the hike');
+  await marc.setInputFiles('#attach', { name: 'hike.png', mimeType: 'image/png', buffer: png });
+  await say(marc, 'sandwiches at the top');
+
+  await openFind(marc);
+  await marc.getByLabel('Find something said').fill('sandwiches');
+  const found = marc.getByTestId('found');
+  await expect(found).toHaveCount(3);
+
+  const choose = (name: string) =>
+    marc.getByRole('group', { name: 'Show' }).getByRole('button', { name, exact: true });
+
+  await choose('Mine').click();
+  await expect(found).toHaveCount(2);
+  await expect(found.filter({ hasText: 'his idea' })).toHaveCount(0);
+
+  await choose('Photos').click();
+  await expect(found).toHaveCount(1);
+  await expect(found.first()).toContainText('at the top');
+
+  await choose('Everyone').click();
+  await expect(found).toHaveCount(3);
+
+  await marc.context().close();
+  await sam.context().close();
+});

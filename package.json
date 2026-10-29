@@ -19,6 +19,7 @@
     "types": "wrangler types --strict-vars=false --env-file .types.env && prettier --write --log-level warn worker-configuration.d.ts",
     "group:create": "tsx scripts/create-group.ts",
     "audit:contrast": "node scripts/contrast-audit.mjs",
+    "audit:bundle": "node scripts/bundle-budget.mjs",
     "icons": "node scripts/icons.mjs",
     "vapid": "node scripts/vapid.mjs",
     "backup": "tsx scripts/backup.ts",

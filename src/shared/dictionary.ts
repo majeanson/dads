@@ -346,6 +346,10 @@ const EN = {
   'find.looking': 'Looking…',
   'find.failed': 'That didn’t load.',
   'find.nothing': 'Nothing with “{q}” in it.',
+  'find.only': 'Show',
+  'find.only_all': 'Everyone',
+  'find.only_mine': 'Mine',
+  'find.only_photos': 'Photos',
 
   // -------------------------------------------------------- the questions
   'q.title': 'Questions',
@@ -942,6 +946,10 @@ const FR: Record<Key, string> = {
   'find.looking': 'Je cherche…',
   'find.failed': 'Ça n’a pas chargé.',
   'find.nothing': 'Rien avec « {q} » dedans.',
+  'find.only': 'Montrer',
+  'find.only_all': 'Tout le monde',
+  'find.only_mine': 'Les miennes',
+  'find.only_photos': 'Les photos',
 
   // -------------------------------------------------------- les questions
   'q.title': 'Les questions',

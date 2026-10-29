@@ -71,9 +71,9 @@ export function LangToggle({ compact = false }: { compact?: boolean }) {
  * loose square buttons with an outline for the chosen one, which made
  * Settings the one screen where picking one of three looked different.
  */
-const TRACK =
+export const TRACK =
   'inline-flex gap-0.5 rounded-[var(--radius-control)] border border-edge bg-paper p-0.5';
-function segment(on: boolean, extra = ''): string {
+export function segment(on: boolean, extra = ''): string {
   return cn(
     'grid h-11 min-w-11 cursor-pointer place-items-center rounded-[calc(var(--radius-control)-0.25rem)] px-2.5',
     'transition-colors duration-150',

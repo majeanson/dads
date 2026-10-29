@@ -43,10 +43,14 @@ async function said(
   return id;
 }
 
-async function find(cookie: string, q: string): Promise<Found[]> {
-  const res = await worker.fetch(`https://dads.test/api/search?q=${encodeURIComponent(q)}`, {
-    headers: { Cookie: cookie },
-  });
+async function find(cookie: string, q: string, only?: string): Promise<Found[]> {
+  const narrow = only === undefined ? '' : `&only=${only}`;
+  const res = await worker.fetch(
+    `https://dads.test/api/search?q=${encodeURIComponent(q)}${narrow}`,
+    {
+      headers: { Cookie: cookie },
+    },
+  );
   expect(res.status).toBe(200);
   return ((await res.json()) as { results: Found[] }).results;
 }
@@ -154,5 +158,44 @@ describe('finding a line again', () => {
     const [found] = await find(cookie, 'before he left');
     expect(found!.memberId).toBeNull();
     expect(found!.name).toBe('');
+  });
+
+  describe('narrowed', () => {
+    let sam: string;
+    beforeEach(async () => {
+      await comeIn(group, 'Sam');
+      const row = await env.DB.prepare(
+        'SELECT id FROM members WHERE group_id = ? AND display_name = ?',
+      )
+        .bind(group.id, 'Sam')
+        .first<{ id: string }>();
+      sam = row!.id;
+      await env.DB.prepare(
+        `INSERT INTO media (id, group_id, member_id, r2_key, name, content_type, size, created_at)
+         VALUES ('med_n', ?, ?, 'k', 'p.jpg', 'image/jpeg', 1, ?)`,
+      )
+        .bind(group.id, sam, at)
+        .run();
+      await said(group.id, marc, 'bedtime from marc');
+      await said(group.id, sam, 'bedtime from sam');
+      await said(group.id, sam, 'bedtime with a picture', 'chat', 'med_n');
+    });
+
+    it('to his own lines', async () => {
+      expect((await find(cookie, 'bedtime', 'mine')).map((r) => r.body)).toEqual([
+        'bedtime from marc',
+      ]);
+    });
+
+    it('to lines with a picture, whoever sent them', async () => {
+      expect((await find(cookie, 'bedtime', 'photos')).map((r) => r.body)).toEqual([
+        'bedtime with a picture',
+      ]);
+    });
+
+    it('and to nothing narrower for a word it does not know', async () => {
+      expect(await find(cookie, 'bedtime', 'all')).toHaveLength(3);
+      expect(await find(cookie, 'bedtime', "x' OR 1=1 --")).toHaveLength(3);
+    });
   });
 });

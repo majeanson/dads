@@ -832,4 +832,111 @@ describe('RoomDO', () => {
       expect(results).toEqual([]);
     });
   });
+
+  describe('under abuse', () => {
+    it('shrugs off frames that are not frames, and keeps taking lines', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      await marc.next('hello');
+
+      const junk: unknown[] = [
+        'not json at all',
+        '{"t":',
+        'null',
+        '[]',
+        '42',
+        '{}',
+        '{"t":"nonsense"}',
+        '{"t":"chat"}',
+        '{"t":"chat","body":42}',
+        '{"t":"chat","body":["a"]}',
+        '{"t":"react","id":null,"emoji":"💪","on":true}',
+        '{"t":"retract","id":{}}',
+        '{"t":"edit","id":"x","body":null}',
+        '{"t":"chat","body":"hi","replyTo":{"__proto__":{"x":1}}}',
+        'x'.repeat(200_000),
+      ];
+      for (const j of junk) marc.ws.send(typeof j === 'string' ? j : JSON.stringify(j));
+
+      marc.say('still here');
+      const line = await marc.next('msg', (f) => f.message.body === 'still here');
+      expect(line.message.name).toBe('Marc');
+      // The only junk that was a line is the one with a bogus replyTo: it posts
+      // as plain words, and the bogus part quotes nothing.
+      const heard = marc.frames.flatMap((f) => (f.t === 'msg' ? [f.message] : []));
+      expect(bodies(heard)).toEqual(['hi', 'still here']);
+      expect(heard[0]?.reply ?? null).toBeNull();
+    });
+
+    it('keeps a burst of lines in order, each archived once', async () => {
+      const marc = await enter(group, 'Marc');
+      const sam = await enter(group, 'Sam');
+      open.push(marc, sam);
+      await sam.next('hello');
+
+      const N = 30;
+      const want = Array.from({ length: N }, (_, i) => `burst ${String(i).padStart(2, '0')}`);
+      want.forEach((b, i) => marc.say(b, `cid-${i}`));
+      await sam.next('msg', (f) => f.message.body === want[N - 1]);
+
+      const heard = sam.frames.flatMap((f) => (f.t === 'msg' ? [f.message] : []));
+      expect(bodies(heard)).toEqual(want);
+      const seqs = heard.map((m) => m.seq);
+      expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
+      expect(new Set(seqs).size).toBe(N);
+
+      await until(async () => {
+        const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM messages WHERE group_id = ?')
+          .bind(group.id)
+          .first<{ n: number }>();
+        return row?.n === N;
+      });
+    });
+
+    it('survives a reconnect storm: one dad, one place on the roster, one delivery', async () => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      await marc.next('hello');
+
+      let sam = await enter(group, 'Sam');
+      await sam.next('hello');
+      for (let i = 0; i < 8; i++) {
+        const next = await enter(group, 'Sam', sam.cookie);
+        sam.close();
+        sam = next;
+      }
+      open.push(sam);
+      const hello = await sam.next('hello');
+      expect(hello.roster.map((r) => r.name).sort()).toEqual(['Marc', 'Sam']);
+
+      marc.say('after the storm');
+      await sam.next('msg', (f) => f.message.body === 'after the storm');
+      await new Promise((r) => setTimeout(r, 50));
+      expect(
+        sam.frames.filter((f) => f.t === 'msg' && f.message.body === 'after the storm'),
+      ).toHaveLength(1);
+    });
+
+    it.each([
+      ['a resume from the future', '?after=999999&rev=999999'],
+      ['a negative position', '?after=-5&rev=-1'],
+      ['words for numbers', '?after=abc&rev=def'],
+      ['nothing after the equals', '?after=&rev='],
+      ['an absurd number', '?after=1e999&rev=99999999999999999999'],
+    ])('answers %s with a hello, not a hang', async (_label, query) => {
+      const marc = await enter(group, 'Marc');
+      open.push(marc);
+      marc.say('something to resume past');
+      await marc.next('msg', (f) => f.message.body === 'something to resume past');
+
+      const res = await worker.fetch(`https://dads.test/ws${query}`, {
+        headers: { Upgrade: 'websocket', Cookie: marc.cookie },
+      });
+      expect(res.status).toBe(101);
+      const again = new Dad(res.webSocket!, marc.cookie);
+      open.push(again);
+      const hello = await again.next('hello');
+      expect(hello.you.name).toBe('Marc');
+    });
+  });
 });

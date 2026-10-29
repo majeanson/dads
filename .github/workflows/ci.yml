@@ -37,6 +37,8 @@ jobs:
       # apply fails the suite.
       - run: npm test
       - run: npm run build
+      # Gzipped entry, stylesheet and total against scripts/bundle-budget.json.
+      - run: npm run audit:bundle
 
   # Every green push to main goes live (decided 2026-09-11; until then deploys
   # were by hand on purpose). The order is the one the hand-run always had:

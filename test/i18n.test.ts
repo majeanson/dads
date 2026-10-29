@@ -45,4 +45,32 @@ describe('the dictionary', () => {
     );
     expect(suspicious).toEqual([]);
   });
+
+  it('has a singular for every plural, and the other way round', () => {
+    // plural() picks the suffix; a lone _other is a count that reads "1 answers".
+    for (const lang of ['en', 'fr'] as const) {
+      const keys = Object.keys(TABLES[lang]);
+      for (const key of keys) {
+        const twin = key.endsWith('_other')
+          ? key.replace(/_other$/, '_one')
+          : key.endsWith('_one')
+            ? key.replace(/_one$/, '_other')
+            : null;
+        if (twin) expect({ lang, key, twin, has: keys.includes(twin) }).toMatchObject({ has: true });
+      }
+    }
+  });
+
+  it('calls the room’s key “the word”, never “code”', () => {
+    // CLAUDE.md: one name for the key. The pairing code and the link code are
+    // different things — an eight-character code between two of his own
+    // devices — and keep the word.
+    const DEVICE_CODES = /^(pair|link)\./;
+    const said = EN_KEYS.filter(
+      (key) =>
+        !DEVICE_CODES.test(key) &&
+        (/\bcodes?\b/i.test(TABLES.en[key]) || /\bcodes?\b/i.test(TABLES.fr[key])),
+    );
+    expect(said).toEqual([]);
+  });
 });
