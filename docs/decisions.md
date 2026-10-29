@@ -2291,3 +2291,20 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   fold, which keeps Settings' pixel budget untouched.
 - **The other dads hear `removed`.** It is the true word — they are no longer
   in it — and reuses the door they already land on.
+
+## Checking the delete against production (2026-10-29)
+
+- Made a throwaway room on dads.marcportal.com, gave it a face and a kept
+  picture, then deleted it through `POST /api/rooms/delete`. A wrong name was
+  refused (400) and changed nothing; the right one, typed in lower case, gave 204. After: no `groups`, `members`, `media`, `presence` or `oops` row, both R2
+  objects gone, the old cookie got 204 from `/api/me`, and the word got
+  `bad_code`. Local agreement was not taken for production's: foreign keys and
+  the cascade run on the real D1 too.
+- **`wrangler r2 object get` on a key that is not there exits 1 but leaves an
+  EMPTY file.** `backup:r2` once counted that as a copy, and on the next run
+  would have left it alone as "already on disk". It now treats only a non-empty
+  file as a backup and removes the empty one.
+- The stranger review's `test-claude` room was not in production any more
+  (two groups: the real one and the proving room); no stray members or media.
+- The room's own Durable Object storage is not visible from outside, so that
+  part rests on `deleteAll()` and the unit test, not on a production probe.

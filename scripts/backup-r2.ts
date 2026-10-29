@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { query } from './d1';
 import { run } from './run';
@@ -36,6 +36,11 @@ const kept = query('SELECT r2_key AS key FROM media WHERE kept = 1', remote).map
 );
 console.log(`${faces.length} faces, ${kept.length} kept pictures`);
 
+/** Wrangler creates the file before it knows the key exists: a key that is not
+ * there (a picture pruned since D1 was read) leaves an EMPTY file and exit 1.
+ * That file must never pass for a backup, now or on the next run. */
+const onDisk = (file: string) => existsSync(file) && statSync(file).size > 0;
+
 function fetchOne(key: string): boolean {
   // A key is `faces/<group>/<member>` or `<group>/<id>`: ids, never a path a
   // dad chose. Refuse anything else rather than write outside backups/.
@@ -57,12 +62,13 @@ function fetchOne(key: string): boolean {
         file,
         remote ? '--remote' : '--local',
       ]);
-      return true;
+      if (onDisk(file)) return true;
     } catch {
       console.error(`${key}: attempt ${attempt + 1} failed`);
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
     }
   }
+  rmSync(file, { force: true });
   return false;
 }
 
@@ -71,11 +77,11 @@ const failed: string[] = [];
 for (const key of [...faces, ...kept]) {
   const file = join(root, ...key.split('/'));
   const isFace = key.startsWith('faces/');
-  if (!isFace && existsSync(file)) {
+  if (!isFace && onDisk(file)) {
     copied.push({ key, bytes: statSync(file).size });
     continue;
   }
-  if (fetchOne(key) && existsSync(file)) copied.push({ key, bytes: statSync(file).size });
+  if (fetchOne(key) && onDisk(file)) copied.push({ key, bytes: statSync(file).size });
   else failed.push(key);
 }
 
