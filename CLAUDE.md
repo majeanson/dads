@@ -546,6 +546,13 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   failure leaves a retryable room, not orphaned pictures. A new table with a
   `group_id` must cascade or be added there.
 
+- **Two logs prune themselves on the write**, as `oops` does: `presence` keeps
+  90 days (the log reads sixty rows), `join_attempts` drops any bucket whose
+  window began over a day ago (0029 indexes it). Do not add a sweeper.
+- **A dad can download his own words** (`GET /api/export`, from HIS profile only):
+  his lines, answers with their questions, check-ins and commitments. Never
+  anybody else's; `attachment`, `no-store`.
+
 ## The three switches
 
 - **The switches are the CREATOR's.** A room with no creator (`created_by`

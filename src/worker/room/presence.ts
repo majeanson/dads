@@ -74,6 +74,9 @@ export async function leaveDue(room: Room, now: number): Promise<void> {
   }
 }
 
+/** How long the comings and goings are kept. */
+const PRESENCE_KEEP_MS = 90 * 24 * 60 * 60 * 1000;
+
 /**
  * Somebody arrived, or gave up waiting for the wifi.
  *
@@ -92,12 +95,20 @@ export async function notePresence(
   const groupId = room.groupId();
   if (!groupId) return;
   try {
-    await room.env.DB.prepare(
-      `INSERT INTO presence (id, group_id, member_id, name, kind, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    )
-      .bind(newId('pres'), groupId, memberId, name, kind, Date.now())
-      .run();
+    const now = Date.now();
+    await room.env.DB.batch([
+      room.env.DB.prepare(
+        `INSERT INTO presence (id, group_id, member_id, name, kind, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).bind(newId('pres'), groupId, memberId, name, kind, now),
+      // The log shows the last sixty; ninety days is far more than a room
+      // ever reads and keeps the table from growing for ever. Rides on the
+      // write, as `oops` does.
+      room.env.DB.prepare('DELETE FROM presence WHERE group_id = ? AND created_at < ?').bind(
+        groupId,
+        now - PRESENCE_KEEP_MS,
+      ),
+    ]);
   } catch (err) {
     // The man, or the whole group, is gone from D1 while this object still
     // had his leave armed: prove's teardown sweeps the members it invented,

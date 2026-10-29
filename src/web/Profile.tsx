@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchProfile, type Profile as ProfileData } from './api';
 import { Face } from './Face';
@@ -153,6 +153,19 @@ export function Profile({
               )}
             </section>
           )}
+          {you ? (
+            <section className="grid gap-1" data-testid="profile-export">
+              <a
+                href="/api/export"
+                download
+                className="inline-flex min-h-11 items-center gap-2 text-[1.0625rem] text-accent underline"
+              >
+                <Download size={18} aria-hidden="true" />
+                {t('pr.export')}
+              </a>
+              <p className="m-0 text-sm text-muted">{t('pr.export_hint')}</p>
+            </section>
+          ) : null}
         </>
       )}
     </div>

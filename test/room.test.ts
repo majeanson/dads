@@ -105,6 +105,25 @@ describe('RoomDO', () => {
     open.splice(0).forEach((d) => d.close());
   });
 
+  it('forgets comings and goings older than ninety days, and only those', async () => {
+    const day = 24 * 60 * 60 * 1000;
+    for (const [id, name, age] of [
+      ['pres_old', 'Ghost', 100],
+      ['pres_new', 'Recent', 10],
+    ] as const) {
+      await env.DB.prepare(
+        `INSERT INTO presence (id, group_id, member_id, name, kind, created_at)
+         VALUES (?, ?, NULL, ?, 'in', ?)`,
+      )
+        .bind(id, group.id, name, Date.now() - age * day)
+        .run();
+    }
+    const marc = await enter(group, 'Marc');
+    open.push(marc);
+    await marc.next('hello');
+    expect(await presence(group.id)).toEqual(['Recent in', 'Marc in']);
+  });
+
   it('welcomes a dad with himself on the roster, and records his arrival', async () => {
     const marc = await enter(group, 'Marc');
     open.push(marc);

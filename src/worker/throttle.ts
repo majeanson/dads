@@ -7,6 +7,15 @@ import { sessionSecret } from './env';
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_FAILURES = 10;
 
+/**
+ * Rows that can no longer count against anybody. Every window here is a day
+ * at most, so one that started longer ago than that is a row of nothing —
+ * and since the bucket is an HMAC per address, the table would otherwise
+ * grow by one for every address that ever mistyped. Rides on the write.
+ */
+const stale = (env: Env, now: number) =>
+  env.DB.prepare('DELETE FROM join_attempts WHERE window_start < ?').bind(now - DAY_MS);
+
 export interface ThrottleState {
   allowed: boolean;
   retryAfterSeconds: number;
@@ -68,17 +77,18 @@ export async function recordRoomMade(
   now = Date.now(),
 ): Promise<void> {
   const bucket = await bucketFor(env, request, isProduction, 'new');
-  await env.DB.prepare(
-    `INSERT INTO join_attempts (bucket, failures, window_start)
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO join_attempts (bucket, failures, window_start)
      VALUES (?1, 1, ?2)
      ON CONFLICT(bucket) DO UPDATE SET
        failures = CASE WHEN ?2 - join_attempts.window_start >= ?3
                        THEN 1 ELSE join_attempts.failures + 1 END,
        window_start = CASE WHEN ?2 - join_attempts.window_start >= ?3
                           THEN ?2 ELSE join_attempts.window_start END`,
-  )
-    .bind(bucket, now, DAY_MS)
-    .run();
+    ).bind(bucket, now, DAY_MS),
+    stale(env, now),
+  ]);
 }
 
 export async function checkJoinThrottle(
@@ -120,15 +130,16 @@ export async function recordJoinFailure(
   const bucket = await bucketFor(env, request, isProduction);
   // One statement, so two simultaneous wrong guesses cannot both read 4 and
   // both write 5. The window resets in the same statement once it has expired.
-  await env.DB.prepare(
-    `INSERT INTO join_attempts (bucket, failures, window_start)
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO join_attempts (bucket, failures, window_start)
      VALUES (?1, 1, ?2)
      ON CONFLICT(bucket) DO UPDATE SET
        failures = CASE WHEN ?2 - join_attempts.window_start >= ?3
                        THEN 1 ELSE join_attempts.failures + 1 END,
        window_start = CASE WHEN ?2 - join_attempts.window_start >= ?3
                           THEN ?2 ELSE join_attempts.window_start END`,
-  )
-    .bind(bucket, now, WINDOW_MS)
-    .run();
+    ).bind(bucket, now, WINDOW_MS),
+    stale(env, now),
+  ]);
 }

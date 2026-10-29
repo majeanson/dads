@@ -1263,3 +1263,35 @@ test('the album shows what the shelf holds, and a tap opens the viewer on it', a
   await expect(marc.getByTestId('viewer')).toBeVisible();
   await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', /\.png$/);
 });
+
+test('a dad can download what he has written, and only his own profile offers it', async ({
+  browser,
+}) => {
+  const marc = await comeIn(browser, 'Export Marc');
+  const sam = await comeIn(browser, 'Export Sam');
+  await marc.getByLabel('Say something').fill('for the file, from Marc');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  await sam.getByLabel('Say something').fill('not for Marc’s file');
+  await sam.getByRole('button', { name: 'Send' }).click();
+  await expect(marc.getByTestId('line').filter({ hasText: 'not for Marc’s file' })).toBeVisible();
+
+  await marc.getByTestId('connection').click();
+  // Sam's profile has no download; his own does.
+  await marc.getByTestId('roster-profile').filter({ hasText: 'Export Sam' }).click();
+  await expect(marc.getByTestId('profile-name')).toContainText('Export Sam');
+  await expect(marc.getByTestId('profile-export')).toHaveCount(0);
+  await marc.getByRole('button', { name: 'Everyone', exact: true }).click();
+  await marc.getByTestId('roster-profile').filter({ hasText: 'Export Marc' }).click();
+
+  const [download] = await Promise.all([
+    marc.waitForEvent('download'),
+    marc.getByTestId('profile-export').getByRole('link').click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^dads-.*-export-marc\.json$/);
+  const file = readFileSync((await download.path())!, 'utf8');
+  expect(file).toContain('for the file, from Marc');
+  expect(file).not.toContain('not for Marc’s file');
+
+  await marc.context().close();
+  await sam.context().close();
+});

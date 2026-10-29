@@ -37,6 +37,7 @@ import { addNightItem, getRsvps, putRsvp, removeNightItem } from './routes/rsvp'
 import { postRoom } from './routes/create';
 import { listMine, switchRoom } from './routes/mine';
 import { postDelete, postLeave, postRemove, putOwner, putRooms, putWord } from './routes/rooms';
+import { getExport } from './routes/export';
 import { search } from './routes/search';
 import { getTable, postNewTable } from './routes/table';
 import {
@@ -281,6 +282,9 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/presence':
       return getPresence(request, env, prod);
+
+    case 'GET /api/export':
+      return getExport(request, env, prod);
 
     case 'GET /api/search':
       return search(request, env, url, prod);

@@ -7,6 +7,7 @@ import {
   timingSafeEqual,
 } from '../src/worker/crypto';
 import { identityCookie, signIdentity, verifyIdentity } from '../src/worker/identity';
+import { recordJoinFailure } from '../src/worker/throttle';
 import { cookieFrom, postJoin, resetTables, seedGroup, type SeededGroup } from './helpers';
 
 const worker = workerExports.default;
@@ -236,5 +237,39 @@ describe('GET /api/me and POST /api/leave', () => {
     const res = await worker.fetch('https://dads.test/api/leave', { method: 'POST' });
     expect(res.status).toBe(204);
     expect(res.headers.get('Set-Cookie')).toMatch(/^dads_id=; .*Max-Age=0/);
+  });
+});
+
+describe('the throttle table does not grow for ever', () => {
+  beforeEach(async () => {
+    await resetTables();
+  });
+
+  it('drops buckets older than a day on the next write, and keeps the rest', async () => {
+    const day = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    for (const [bucket, age] of [
+      ['old', 2 * day],
+      ['fresh', 60 * 1000],
+    ] as const) {
+      await env.DB.prepare(
+        'INSERT INTO join_attempts (bucket, failures, window_start) VALUES (?, 3, ?)',
+      )
+        .bind(bucket, now - age)
+        .run();
+    }
+    await recordJoinFailure(
+      env,
+      new Request('https://dads.test/api/join', { headers: { 'CF-Connecting-IP': '10.1.1.1' } }),
+      false,
+      now,
+    );
+    const { results } = await env.DB.prepare('SELECT bucket FROM join_attempts').all<{
+      bucket: string;
+    }>();
+    const buckets = results.map((r) => r.bucket);
+    expect(buckets).toContain('fresh');
+    expect(buckets).not.toContain('old');
+    expect(buckets).toHaveLength(2);
   });
 });
