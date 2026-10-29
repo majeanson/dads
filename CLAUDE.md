@@ -413,7 +413,19 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   agreement for any crypto parameter. Changing the count invalidates every
   invite hash.
 - `npm run deploy` by hand; migrations first with `npm run migrate:remote`.
-- `npm run backup` writes every D1 table to `backups/` (not R2 blobs).
+- `npm run backup` writes every D1 table to `backups/` (not R2 blobs). **The
+  list is `src/shared/backupTables.ts`; a migration that adds a table fails
+  `test/backup.test.ts` until it is listed there or excluded with a reason.**
+  `npm run backup:verify` restores a backup into an in-memory SQLite built from
+  `migrations/` and compares row counts.
+- **`test/sql-audit.test.ts` reads the Worker's source.** Every variable `IN (…)`
+  goes through `chunks()` (`shared/chunks.ts`), every statement over a group's
+  table names `group_id`, every read of `members` mentions `gone_at`. An
+  exception is an allowlist entry with its reason beside it, never a loosened
+  test.
+- **`npm run audit:bundle`** holds the gzipped entry, stylesheet and total to
+  `scripts/bundle-budget.json` (CI, after the build). Raising it is a visible
+  line in a diff; `-- --update` re-baselines at +10%.
 - `npx wrangler tail --format json` shows what threw.
 - **The app reports its own failures** to D1 `oops` (0025); `npm run oops`
   reads it. The Worker's top-level catch and the DO's `noted()` (records,
@@ -609,6 +621,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 
 - `GET /api/search?q=` reads D1, only `chat` and `prompt`. **LIKE, not FTS5**;
   `%` and `_` are escaped (a test pins it).
+- **Narrowing is one segmented control** (`find.only`: Everyone / Mine /
+  Photos, `?only=`). It only adds conditions to the same rows; anything else is
+  everybody's.
 - `src/shared/highlight.ts` splits, never substitutes.
 - A result goes nowhere; a photo on a result has no `onOpen`.
 
