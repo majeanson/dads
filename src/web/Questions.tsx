@@ -1,4 +1,4 @@
-import { ArrowLeft, History, MessageCircleQuestion } from 'lucide-react';
+import { ArrowLeft, History, MessageCircleQuestion, PenLine } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchPrompts, type HistoryEntry, type PoolEntry } from './api';
 import { plural, useT } from './i18n';
@@ -70,6 +70,7 @@ export function Questions({
   // written on Tuesday that the daily pick has not reached is not "1 asked".
   const count = state.status === 'ready' ? state.history.length : 0;
   const [justAdded, setJustAdded] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   function added(entry: PoolEntry) {
     setState((s) =>
@@ -98,15 +99,24 @@ export function Questions({
             host={host}
             pool={state.status === 'ready' ? state.pool : []}
           />
-          {/* A heading, because the box does NOT say what it is.
-              
-              Answering today's question is behind a button, so the only field
-              on this screen was the one that adds a question to the group's
-              pool — and an empty box under a question reads as the place to
-              answer it. A man's answer became next week's question. */}
-          <section data-testid="prompt-add" className="grid gap-2">
-            <h3 className="m-0 text-[1.0625rem] font-semibold text-muted">{t('q.add_heading')}</h3>
-            <AddPromptForm onAdded={added} />
+          {/* A question of your own is behind a row, like what was asked
+              before: the form on the first screen, heading and all, was a
+              third of a small phone under a question that could already fill
+              half of one, and a long question pushed the sheet past the
+              bottom. The row says what it is, so an empty box under a
+              question is never mistaken for the place to answer it. */}
+          <section data-testid="prompt-add" className="grid grid-cols-1 gap-2">
+            <Button
+              block
+              className={ITEM}
+              onClick={() => setAdding((a) => !a)}
+              aria-expanded={adding}
+              data-testid="prompt-add-open"
+            >
+              <PenLine size={22} aria-hidden="true" className="shrink-0 text-muted" />
+              <span className="min-w-0 truncate">{t('q.add_heading')}</span>
+            </Button>
+            {adding ? <AddPromptForm onAdded={added} /> : null}
             {/* The field clearing is the only other sign it worked, and a dad
                 who missed it adds the same question again and is refused. */}
             {justAdded ? (

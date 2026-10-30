@@ -2402,3 +2402,20 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   is the app repeating itself. The first link only, as every chat does.
 - Not done: a card in the composer while typing, a card on a search result,
   a creator's switch. None was asked for; each is a row to earn.
+
+## The questions sheet, decluttered (2026-10-30)
+
+- The nightly's "23px over" (`fit.spec`) finally explained itself: a question
+  that wraps to four lines at `text-2xl` (132px) over the card's three
+  buttons, with the add-your-own form (heading, field, button: 111px) and the
+  history row under it. Not a flake: one question in a hundred, and the
+  group's pick is random per run.
+- Marc: "declutter a bit for the rest". The form is now behind a row like
+  the history row (`prompt-add-open`, `PenLine`), mounted only when opened.
+  The heading that was added so the field was not mistaken for the answer
+  box is the row's own label, so that mistake stays impossible — the box is
+  not on the screen at all until he asks for it.
+- The first screen is the question card and two rows; a five-line question
+  still fits a 667px phone with room to spare. The swap buttons ("Another
+  question", "Choose the question") were left as they are: side by side they
+  do not fit in French at 390px.

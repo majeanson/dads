@@ -79,6 +79,9 @@ test('what the group was asked before is readable, and a dad can add one', async
   // — on a phone it was a scroll past the one question that matters — and
   // the row carries no count while there is nothing behind it.
   await expect(marc.getByTestId('prompt-list')).toHaveCount(0);
+  // Behind a row, like what was asked before.
+  await expect(marc.getByLabel('A question for the group')).toHaveCount(0);
+  await marc.getByTestId('prompt-add-open').click();
   await expect(marc.getByLabel('A question for the group')).toBeVisible();
 
   // A dad adds one of his own, from today's screen.
