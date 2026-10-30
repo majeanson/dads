@@ -1465,6 +1465,59 @@
     white-space: nowrap;
   }
 
+  /* What the page at a link says about itself: picture, site, title, a line
+     of description, on the same soft ground as a quote. It is the link again,
+     so it is not underlined like the words were — the card is the cue. */
+  .line .body a.link-card {
+    display: flex;
+    align-items: stretch;
+    gap: 0.6rem;
+    margin: 0.4rem 0 0.15rem;
+    max-width: 22rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: var(--bg-soft);
+    color: var(--text);
+    text-decoration: none;
+    overflow: hidden;
+  }
+  .link-card-image {
+    flex: none;
+    width: 5.5rem;
+    min-height: 5.5rem;
+    object-fit: cover;
+    background: var(--border);
+  }
+  .link-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.875rem;
+    line-height: 1.3;
+  }
+  .link-card-site {
+    color: var(--muted);
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .link-card-title,
+  .link-card-desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .link-card-title {
+    font-weight: 600;
+  }
+  .link-card-desc {
+    color: var(--muted);
+  }
+
   /* One word after the words, not a badge. */
   .line .edited {
     margin-left: 0.35rem;

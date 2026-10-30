@@ -24,7 +24,8 @@ const EN = {
   'about.f_night': 'Dad night: say if you’re in, maybe or out, and add what you’re bringing.',
   'about.f_poll': 'No night planned? Everyone marks the days they can, then one gets locked in.',
   'about.f_calendar': 'Calendar: plan other nights too, like a game night or a barbecue.',
-  'about.f_chat': 'Chat: words, photos and voice notes. Reply, react, edit or take back a line.',
+  'about.f_chat':
+    'Chat: words, photos, voice notes and links with a preview. Reply, react, edit or take back a line.',
   'about.f_call': 'Call: voice or camera, right in the room.',
   'about.f_questions': 'Questions: one a day, everyone answers.',
   'about.f_week': 'The week: say what you plan to do this week, then mark it done.',
@@ -660,7 +661,7 @@ const FR: Record<Key, string> = {
   'about.f_calendar':
     'Calendrier : planifie d’autres soirées aussi, comme une soirée de jeux ou un BBQ.',
   'about.f_chat':
-    'Jasette : texte, photos et messages vocaux. Réponds, réagis, modifie ou retire une ligne.',
+    'Jasette : texte, photos, vocaux et liens avec un aperçu. Réponds, réagis, modifie ou retire une ligne.',
   'about.f_call': 'Appel : voix ou caméra, direct dans le salon.',
   'about.f_questions': 'Les questions : une par jour, tout le monde répond.',
   'about.f_week': 'La semaine : dis ce que tu comptes faire, pis marque quand c’est fait.',

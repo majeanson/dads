@@ -4,6 +4,7 @@ import { parts, shortLink } from '../shared/linkify';
 import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
 import { Face } from './Face';
+import { LinkPreviewCard } from './LinkCard';
 import { dadVar } from './dadColour';
 import { useT } from './i18n';
 import { Logo } from './Logo';
@@ -11,6 +12,12 @@ import { useMemberNamed } from './members';
 import { MarkRow, Marks, marksOf, QuickMark } from './Marks';
 import type { Row } from './messageGroups';
 import { LineMenu, menuOpen, notATap } from './ui/LineMenu';
+
+/** The first link in a line, which is the one that gets a card. */
+function firstLink(body: string): string | null {
+  const found = parts(body).find((part) => part.link);
+  return found !== undefined && found.link ? found.href : null;
+}
 
 function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -246,6 +253,11 @@ export function Lines({
                   <span className="edited" data-testid="edited">
                     {t('line.edited')}
                   </span>
+                ) : null}
+                {/* What the page at the first link says about itself, once
+                    the room has asked it. One card, like every chat draws. */}
+                {firstLink(row.message.body) !== null ? (
+                  <LinkPreviewCard href={firstLink(row.message.body)!} />
                 ) : null}
                 {row.message.media ? (
                   <Attachment

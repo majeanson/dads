@@ -40,6 +40,7 @@ import { postDelete, postLeave, postRemove, putOwner, putRooms, putWord } from '
 import { getExport } from './routes/export';
 import { getQuiet, putQuiet } from './routes/quiet';
 import { search } from './routes/search';
+import { getUnfurl, getUnfurlImage } from './routes/unfurl';
 import { getTable, postNewTable } from './routes/table';
 import {
   addPrompt,
@@ -295,6 +296,12 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/search':
       return search(request, env, url, prod);
+
+    case 'GET /api/unfurl':
+      return getUnfurl(request, env, url, prod);
+
+    case 'GET /api/unfurl/image':
+      return getUnfurlImage(request, env, url, prod);
 
     case 'GET /api/push':
       return getPushKey(request, env, url, prod);

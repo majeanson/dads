@@ -2370,3 +2370,35 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   one (no Monday row yet). Answers hang on `prompt_id`, so none are lost.
 - The names `todaysPrompt` / `TodaysPrompt` and the `q.*` keys were left
   alone; only the strings a dad reads changed ("This week's question").
+
+## A link gets a card (2026-10-30)
+
+- Marc asked that a shared link show its preview ("l'aperçu"), YouTube first
+  of all. Every chat app draws one; a bare underlined address was the odd
+  one out.
+- **The Worker asks, not the phone.** A card drawn from the site directly
+  would have every phone in the room fetch from every site anybody pasted,
+  which tells that site who looked and when. One fetch from Cloudflare's
+  address serves the room for a week; the picture comes through the Worker
+  on the same reasoning (`/api/unfurl/image`), streamed, not stored — the
+  site holds it and the browser keeps its copy a day.
+- **Only a link that is in one of the room's lines.** A session is a dad,
+  but a route that fetched any address on his say-so is a fetch-anything
+  from the Worker's address. `instr(body, …)` over the group's typed lines,
+  with and without the trailing slash a browser adds.
+- **The cache is global, not a room's**, and not backed up: a page says the
+  same thing to everyone, and a row is re-fetched when it expires. The key
+  is a SHA-256 of the address, which is also what the image proxy takes —
+  so the proxy can only fetch a picture a preview named.
+- **YouTube through oEmbed**, falling back to the watch page's tags: a small
+  JSON with the title, the channel and the thumbnail, against half a
+  megabyte of HTML that a bot UA may or may not be given.
+- **A regex over `<meta>`, not HTMLRewriter**, so the parser is pure and the
+  worker pool tests it against hand-written pages; the head is read up to
+  `</head>` or 512 KB.
+- **Nothing on the line.** The card is asked for when the line is drawn,
+  once per address per page load (`cardFor`), and a page with no title gets
+  no card — a card saying only "example.com" under a link that says the same
+  is the app repeating itself. The first link only, as every chat does.
+- Not done: a card in the composer while typing, a card on a search result,
+  a creator's switch. None was asked for; each is a row to earn.

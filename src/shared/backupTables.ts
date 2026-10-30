@@ -35,4 +35,6 @@ export const NOT_BACKED_UP: Record<string, string> = {
   device_pairs: 'ten-minute one-use pairing codes',
   // Throttle buckets keyed on an HMAC of an address; nothing to preserve.
   join_attempts: 'throttle buckets, expire in minutes',
+  // What links say about themselves; a page is asked again when its row expires.
+  link_previews: 'link preview cache, fetched again on demand',
 };

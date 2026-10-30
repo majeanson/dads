@@ -720,6 +720,13 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - The tab title carries the unseen count.
 - **Links are split, never substituted** (`linkify.ts`, http(s) only);
   `shortLink` never cuts the host; links are underlined.
+- **A link gets a card** (`LinkCard.tsx`, `GET /api/unfurl?url=`): the page's
+  own tags (og, twitter, `<title>`; a YouTube video through oEmbed), read in
+  `shared/unfurl.ts`, fetched by the WORKER, never the phone, and cached a
+  week in `link_previews` (global, not a room's; "nothing there" a day).
+  Only an address in one of the room's lines (404 otherwise); the picture is
+  proxied by `/api/unfurl/image?key=` (raster types only, 5 MB). First link
+  only, typed lines only; no title, no card. Nothing is stored on the line.
 - A photo in the list is capped at 16rem tall, 20rem wide.
 - The screen stays awake on a call (`useWakeLock`, retaken on return).
 - Speaking is worked out locally (`speaking.ts`), merged into `peers` late.
