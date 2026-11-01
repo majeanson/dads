@@ -1267,6 +1267,14 @@ test('a dad at the bottom stays at the bottom when the last line grows', async (
   await page.waitForTimeout(300);
   expect(await page.evaluate(() => document.querySelector('ol.lines')!.scrollTop)).toBeLessThan(5);
 
+  // Unless he sends something: his own line is what he wants to see next
+  // (Marc, 2026-11-01), so sending takes him to the bottom from wherever he
+  // was reading, and the line that comes back lands where he can see it.
+  await page.getByLabel('Say something').fill('sent from the top');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(page.getByTestId('line').filter({ hasText: 'sent from the top' })).toBeVisible();
+  await expect.poll(gap).toBeLessThan(4);
+
   await page.context().close();
 });
 

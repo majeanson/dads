@@ -721,6 +721,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 ## Small things that turned out to matter
 
 - New lines follow him down only if he was at the bottom (`counted` is a ref).
+  **Sending takes him to the bottom from wherever he was** (`seen.sent()`,
+  instant, pins) so his own line lands in sight.
 - "New since you were here" is ONE divider (`toRows` with `since`), never at
   the very top; the mark is per device, nothing sent.
 - The tab title carries the unseen count.

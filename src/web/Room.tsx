@@ -512,6 +512,8 @@ export function Room({
               onSend={(body, mediaId) => {
                 room.send(body, mediaId, replyTo?.id);
                 setReplyTo(null);
+                // Sending is going to the bottom, wherever he was reading.
+                seen.sent();
               }}
               onTyping={room.sendTyping}
               replyTo={replyTo === null ? null : { name: replyTo.name, body: replyTo.body }}

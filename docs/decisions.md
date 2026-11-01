@@ -2462,3 +2462,16 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
 - A finger that moves ten pixels is scrolling; the hold is let go. Focus
   stays on the mark (`onOpenAutoFocus` prevented); Escape or a tap elsewhere
   closes it. Not a dialog, no title: the list IS the answer.
+
+## Sending takes him to the bottom (2026-11-01)
+
+- Marc: "when we type and send we should be at the bottom of the
+  conversation". A line arriving follows a dad only if he was already at the
+  bottom — right for somebody else's line while he reads back through last
+  Thursday, wrong for his own: he typed it, he wants to see it land.
+- `seen.sent()` in `useSeen`, called from the composer's `onSend` in `Room`:
+  an instant scroll to the end and `pinned` on, so the echo follows when it
+  comes back. Not the smooth `toBottom` the "N new" button uses: a smooth
+  scroll passes through positions `onScroll` reads as "he scrolled up", which
+  would unpin him before his line arrived (the same lesson as the tap-marks
+  row). Edits do not go to the bottom; an edit is not a new line.

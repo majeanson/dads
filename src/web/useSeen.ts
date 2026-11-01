@@ -20,6 +20,8 @@ export interface Seen {
   onScroll: () => void;
   /** Down to the newest line, which is also reading everything above it. */
   toBottom: () => void;
+  /** He sent a line: straight to the bottom, and pinned so it lands in sight. */
+  sent: () => void;
   /** Not pinned any more — he is reading from somewhere else in the list. */
   unpin: () => void;
 }
@@ -200,6 +202,18 @@ export function useSeen({
     setPinned(true);
   }, [bottom]);
 
+  /**
+   * He sent something: wherever he was reading, his own line is what he wants
+   * to see next (Marc, 2026-11-01). Straight down, not smoothly — a smooth
+   * scroll passes through spots the list reads as "he scrolled up" and the
+   * line that comes back would then wait below the fold — and pinned, so the
+   * echo follows when it lands.
+   */
+  const sent = useCallback(() => {
+    bottom.current?.scrollIntoView({ block: 'end' });
+    setPinned(true);
+  }, [bottom]);
+
   const onScroll = useCallback(() => setPinned(atBottom()), [atBottom]);
   const unpin = useCallback(() => setPinned(false), []);
 
@@ -263,5 +277,5 @@ export function useSeen({
     done?.catch(() => {});
   }, [unseen]);
 
-  return { unseen, since, pinned, onScroll, toBottom, unpin };
+  return { unseen, since, pinned, onScroll, toBottom, sent, unpin };
 }
