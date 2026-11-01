@@ -514,6 +514,7 @@ export function Room({
             <Composer
               ref={composer}
               busy={composing}
+              groupId={session.group.id}
               me={session.member.id}
               onSend={(body, mediaId) => {
                 room.send(body, mediaId, replyTo?.id);

@@ -66,6 +66,17 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByTestId('line').filter({ hasText: `a ${theme} line` })).toBeVisible();
     found.push(...(await faults(page, 'the room')));
 
+    // Tagging a dad: the field points at a listbox while the picks show.
+    // The picker lists everybody but him, so the light run (the room's first
+    // dad) has nobody to offer and the scene is the dark run's. React has
+    // drawn the list by the time `fill` returns, so a missing list is an
+    // empty room, not a slow one.
+    await page.getByLabel('Say something').fill('@');
+    if (await page.getByTestId('tag-picks').isVisible()) {
+      found.push(...(await faults(page, 'tagging a dad')));
+    }
+    await page.getByLabel('Say something').fill('');
+
     // And a photograph, which is a line with a control on it and a screen of
     // its own behind that.
     await page.setInputFiles('#attach', 'public/icon-192.png');

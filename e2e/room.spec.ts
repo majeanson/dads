@@ -1311,11 +1311,136 @@ test('an @ tags a dad by his name, and the line shows him in his colour', async 
   await expect(field).toHaveValue('@Tag Sam ');
   await field.fill('@tag s');
   await expect(picks).toBeVisible();
+  // The field says which row the keys are on, by id, and never that it is
+  // "expanded": a textarea is a textbox, not a combobox.
+  const on = await picks.getByRole('option', { selected: true }).getAttribute('id');
+  await expect(field).toHaveAttribute('aria-activedescendant', on!);
+  await expect(field).not.toHaveAttribute('aria-expanded', /.*/);
   await field.press('Escape');
   await expect(picks).toHaveCount(0);
 
   await marc.context().close();
   await sam.context().close();
+});
+
+test('a line can be more than one line', async ({ browser }) => {
+  // Marc chose it, 2026-11-01: the field grows, Shift+Enter is a new line,
+  // Enter still sends.
+  const marc = await comeIn(browser, 'Lines Marc');
+  const sam = await comeIn(browser, 'Lines Sam');
+  const field = marc.getByLabel('Say something');
+  const height = async () => (await field.boundingBox())!.height;
+  const one = await height();
+
+  await field.click();
+  await field.pressSequentially('multi first line');
+  await field.press('Shift+Enter');
+  await field.pressSequentially('multi second line');
+  await expect(field).toHaveValue('multi first line\nmulti second line');
+  expect(await height()).toBeGreaterThan(one);
+  await field.press('Enter');
+
+  // The break he typed is the break both of them read.
+  for (const page of [marc, sam]) {
+    const body = page.getByTestId('line').filter({ hasText: 'multi second line' }).locator('.body');
+    await expect(body).toBeVisible();
+    expect(await body.evaluate((el) => (el as HTMLElement).innerText)).toContain(
+      'multi first line\nmulti second line',
+    );
+  }
+  await expect(field).toHaveValue('');
+  await expect.poll(height).toBe(one);
+  await expect(field).toBeFocused();
+
+  // Five lines and no more: past that the field scrolls rather than taking
+  // the conversation's screen.
+  await field.fill('one\ntwo\nthree\nfour\nfive');
+  const five = await height();
+  expect(five).toBeGreaterThan(one * 2);
+  await field.fill('one\ntwo\nthree\nfour\nfive\nsix\nseven\neight');
+  await expect.poll(height).toBe(five);
+  await field.fill('');
+  await expect.poll(height).toBe(one);
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
+test('a keyboard can see the composer', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Ring Marc');
+  const field = marc.getByLabel('Say something');
+  const ring = () =>
+    marc.locator('form.composer').evaluate((el) => getComputedStyle(el).outlineStyle);
+
+  await field.blur();
+  await expect.poll(ring).toBe('none');
+  // From the attach control, one Tab: the way a keyboard arrives.
+  await marc.locator('#attach').focus();
+  await marc.keyboard.press('Tab');
+  await expect(field).toBeFocused();
+  await expect.poll(ring).toBe('solid');
+  await marc.context().close();
+
+  // A thumb tapping into the field on a phone gets no ring.
+  const context = await browser.newContext({ ...devices['iPhone 13'] });
+  const phone = await context.newPage();
+  await phone.goto('/');
+  await phone.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
+  await phone.getByLabel('Your name').fill('Ring Sam');
+  await phone.getByRole('button', { name: 'Come in' }).click();
+  await expect(phone.getByTestId('connection')).toHaveText(/here$/);
+  await talk(phone);
+  await phone.getByLabel('Say something').tap();
+  await expect(phone.getByLabel('Say something')).toBeFocused();
+  expect(
+    await phone.locator('form.composer').evaluate((el) => getComputedStyle(el).outlineStyle),
+  ).toBe('none');
+  await context.close();
+});
+
+test('a half-typed line is still there after a reload', async ({ browser }) => {
+  // Marc chose it, 2026-11-01: the draft is his, per room, on this phone.
+  const marc = await comeIn(browser, 'Draft Marc');
+  const field = marc.getByLabel('Say something');
+  const kept = () =>
+    marc.evaluate(() =>
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('dads.draft.'))
+        .map((k) => localStorage.getItem(k)),
+    );
+
+  await field.fill('half a line');
+  await expect.poll(kept).toEqual(['half a line']);
+  await marc.reload();
+  await talk(marc);
+  await expect(field).toHaveValue('half a line');
+
+  // Changing a line borrows the field and gives the draft back after.
+  await field.fill('draft line to change');
+  await field.press('Enter');
+  const his = marc.getByTestId('line').filter({ hasText: 'draft line to change' });
+  await expect(his).toBeVisible();
+  await expect.poll(kept).toEqual([]);
+  await field.fill('kept under the edit');
+  await expect.poll(kept).toEqual(['kept under the edit']);
+  await his.click({ button: 'right' });
+  await marc.getByTestId('line-edit').click();
+  await expect(field).toHaveValue('draft line to change');
+  await field.fill('draft line to change, changed');
+  await marc.getByTestId('context-clear').click();
+  await expect(field).toHaveValue('kept under the edit');
+  expect(await kept()).toEqual(['kept under the edit']);
+
+  // Sent, it is gone, reload or no reload.
+  await field.press('Enter');
+  await expect(marc.getByTestId('line').filter({ hasText: 'kept under the edit' })).toBeVisible();
+  await expect(field).toHaveValue('');
+  await marc.reload();
+  await talk(marc);
+  await expect(marc.getByTestId('line').filter({ hasText: 'kept under the edit' })).toBeVisible();
+  await expect(field).toHaveValue('');
+
+  await marc.context().close();
 });
 
 test('on a phone, a swipe to the right on a line is a reply', async ({ browser }) => {
