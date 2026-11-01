@@ -2419,3 +2419,28 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   still fits a 667px phone with room to spare. The swap buttons ("Another
   question", "Choose the question") were left as they are: side by side they
   do not fit in French at 390px.
+
+## Back closes the picture, not the app (2026-11-01)
+
+- Marc, on Android: a photo open full screen, the phone's back button, and
+  the app closed instead of going back to the chat. The app was one page and
+  one history entry — nothing in `src/web` had ever touched `history` beyond
+  the two `replaceState`s that strip a link off the address bar — so back had
+  nowhere to go but out. The same was true of every sheet.
+- `backStack.ts` is the pure half (a fake history drives it in
+  `test/backStack.test.ts`), `useBackCloses` binds it to `window.history`.
+  Each layer pushes one entry stamped with the number of layers open; a
+  popstate closes every layer above that depth, top first, so back over a
+  viewer in the album takes the viewer and then the album. Closing by X or
+  Escape travels back over the layer's own entry, so from the room one back
+  is still the one that leaves, and the stamp lets a reload with a sheet open
+  (a fresh build waking a home-screen app) travel back to the base at once.
+- The position is tracked where we ASK, not where the popstate lands:
+  `history.go` is asynchronous, and two layers unmounting in one commit (sign
+  out from Settings, a sheet with the viewer over it) each travel over their
+  own entry whichever order React runs their cleanups. The test covers both
+  orders.
+- Not a route. The URL never changes and home stays a view; the conversation
+  itself is still the base, so back from the chat leaves the app as it did.
+  Whether the chat should sit over home as a layer is an open question, left
+  for Marc.

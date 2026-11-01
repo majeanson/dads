@@ -795,6 +795,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - **`main.room` is `var(--app-h, 100dvh)`** kept at the visual viewport by
   `useVisualViewport`; Android gets `interactive-widget=resizes-content`. Do
   not go back to a bare `100dvh`.
+- **The phone's back button closes what is open, never the app**
+  (`useBackCloses`, pure half `backStack.ts`): every `Sheet` and the viewer
+  push ONE history entry stamped `{ dadsLayers: n }`; a popstate closes every
+  layer above its depth, and closing any other way travels back over its own
+  entry. Nothing is a route: the URL never changes and home is still a view.
+  A new full-screen layer calls the hook; a popover or menu does not.
 - **Text fields are 16px** (`text-base`), or iOS zooms.
 - **Send keeps the keyboard** (`onMouseDown` preventDefault, refocus).
 - `overscroll-behavior: none` on html/body, `contain` on the list and sheets,

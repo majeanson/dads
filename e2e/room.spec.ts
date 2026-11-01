@@ -1145,6 +1145,13 @@ test('a photo opens in the app, moves between them, and can be kept', async ({ b
   // And there is a way to keep it.
   await expect(marc.getByTestId('viewer-save')).toBeVisible();
 
+  // The phone's back button closes the picture, not the app.
+  await marc.goBack();
+  await expect(marc.getByTestId('viewer')).toHaveCount(0);
+  await expect(marc.getByLabel('Say something')).toBeVisible();
+  await marc.getByTestId('line').filter({ hasText: 'shot 0' }).getByTestId('photo').click();
+  await expect(marc.getByTestId('viewer')).toBeVisible();
+
   // Escape closes it, and the conversation is still where he left it.
   await marc.keyboard.press('Escape');
   await expect(marc.getByTestId('viewer')).toHaveCount(0);
@@ -1262,6 +1269,26 @@ test('the album shows what the shelf holds, and a tap opens the viewer on it', a
   await album.getByTestId('album-shot').first().click();
   await expect(marc.getByTestId('viewer')).toBeVisible();
   await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', /\.png$/);
+
+  // The phone's back button closes the picture, not the app (Marc, Android,
+  // 2026-11-01): the viewer goes and the album is still under it; once more
+  // and the album goes, the conversation still where he left it.
+  await marc.goBack();
+  await expect(marc.getByTestId('viewer')).toHaveCount(0);
+  await expect(album).toBeVisible();
+  await marc.goBack();
+  await expect(album).toHaveCount(0);
+  await expect(marc.getByLabel('Say something')).toBeVisible();
+
+  // Closing with the X tidies its entry away, so from the room one back is
+  // still the one that leaves: the history is at the base again.
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await marc.getByTestId('menu-album').click();
+  await expect(album).toBeVisible();
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
+  await marc.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(album).toHaveCount(0);
+  await expect.poll(() => marc.evaluate(() => history.state)).toBeNull();
 });
 
 test('a dad can download what he has written, and only his own profile offers it', async ({

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useT } from './i18n';
 import { mediaUrl } from './media';
 import { Button } from './ui/Button';
+import { useBackCloses } from './useBackCloses';
 import type { Attachment } from '../shared/protocol';
 
 /** One picture in the room, with enough around it to say whose it is. */
@@ -46,6 +47,9 @@ export function Viewer({
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const shot = shots[at];
+
+  // The phone's back button closes the picture, not the app.
+  useBackCloses(shot !== undefined, onClose);
 
   // Arrows move between them, the way they do in every viewer anybody has
   // used. Escape is Radix's.

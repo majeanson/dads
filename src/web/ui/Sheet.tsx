@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Pose } from '../Pose';
 import { useT } from '../i18n';
+import { useBackCloses } from '../useBackCloses';
 import { Button } from './Button';
 
 /**
@@ -30,6 +31,8 @@ export function Sheet({
   children: ReactNode;
 }) {
   const { t } = useT();
+  // The phone's back button closes the sheet, not the app.
+  useBackCloses(true, onClose);
 
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
