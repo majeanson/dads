@@ -2524,3 +2524,26 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   as every push, quiet hours kept by `notify()`, and never while he has a
   socket open — a notification over the conversation he is reading is noise.
   The line posts whether or not the push reaches anyone.
+
+## A swipe to the right on a line is a reply (2026-11-01)
+
+- Marc: "WhatsApp has a swipe right on a message to reply with a small
+  vibration, could we replicate the same?". The gesture every phone chat has
+  taught, on top of the long-press menu's Reply, which stays.
+- `swipe.ts` is the gesture with no DOM in it (tested in the worker pool):
+  ten pixels decide the direction, sideways follows the thumb to a cap, it
+  arms at 56px — the one moment `buzz()` fires, 8ms, nothing on an iPhone —
+  and lifting while armed replies. `touch-action: pan-y` on the line is what
+  makes it possible: with `manipulation` alone the browser took the touch on
+  the first movement and cancelled the pointer. Pointer capture from the
+  moment it goes sideways, so the thumb may leave the line.
+- The line is moved by an inline `translate` on the one element, not through
+  React: a render of five hundred rows per pixel of thumb is a stutter. The
+  arrival animation uses `transform`, so the two compose. The slide back is a
+  160ms transition in the motion section, nothing under reduced motion.
+- Touch only (`pointerType !== 'mouse'`, and only where the pointer is
+  coarse): a mouse drag on a line is a man selecting words. Not from a
+  player's own controls. The click the lift becomes is swallowed in
+  `onClickCapture` beside the long press's.
+- Playwright's mouse is a mouse, so the e2e sends real touches through the
+  devtools protocol (`Input.dispatchTouchEvent`) in the iPhone context.

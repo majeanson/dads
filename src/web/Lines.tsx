@@ -4,7 +4,10 @@ import { parts, shortLink } from '../shared/linkify';
 import { splitMentions } from '../shared/mentions';
 import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
+import { Reply } from 'lucide-react';
+import { buzz } from './buzz';
 import { Face } from './Face';
+import { SWIPE_ARM_PX, swipeEnd, swipeMove, swipeStart, type Swipe } from './swipe';
 import { LinkPreviewCard } from './LinkCard';
 import { dadVar } from './dadColour';
 import { useT } from './i18n';
@@ -136,6 +139,31 @@ export function Lines({
    * so a line that named a man last month still names him. */
   const people = useMembers().map((m) => ({ id: m.memberId, name: m.name }));
 
+  /**
+   * On a phone, a swipe to the right on a line is a reply (`swipe.ts`).
+   *
+   * The line follows the thumb, and buzzes once where lifting would answer.
+   * The DOM is moved by hand (`translate`, one element) rather than through
+   * state: a render of the list for every pixel of a thumb is a stutter. The
+   * click the lift becomes is swallowed, like the one after a long press.
+   */
+  const swipe = useRef<{ s: Swipe; el: HTMLLIElement; id: number } | null>(null);
+  const swiped = useRef(false);
+  const settle = (el: HTMLLIElement) => {
+    el.style.transition = '';
+    el.style.translate = '';
+    el.style.removeProperty('--swipe');
+    el.removeAttribute('data-swiping');
+  };
+  const endSwipe = () => {
+    const live = swipe.current;
+    swipe.current = null;
+    if (live === null) return false;
+    if (live.el.hasPointerCapture(live.id)) live.el.releasePointerCapture(live.id);
+    settle(live.el);
+    return swipeEnd(live.s);
+  };
+
   return (
     <ol className="lines" aria-label={t('room.messages')} ref={lines} onScroll={onScroll}>
       {empty ? (
@@ -183,15 +211,50 @@ export function Lines({
               // The finger lifting at the end of a long press is a click to
               // the browser. Caught on the way DOWN, before the photo's button,
               // the link or the marks below ever hear it.
-              onPointerDownCapture={() => {
+              onPointerDownCapture={(event) => {
                 press.current = { at: Date.now(), whileOpen: menuOpen() };
+                swiped.current = false;
+                // A thumb, not a mouse (a drag with a mouse selects words),
+                // and not on a player's own controls.
+                if (!coarse || !event.isPrimary || event.pointerType === 'mouse') return;
+                if ((event.target as HTMLElement).closest('audio, video, input')) return;
+                swipe.current = {
+                  s: swipeStart(event.clientX, event.clientY),
+                  el: event.currentTarget,
+                  id: event.pointerId,
+                };
               }}
+              onPointerMove={(event) => {
+                const live = swipe.current;
+                if (live === null || event.pointerId !== live.id) return;
+                const was = live.s.phase;
+                const { next, buzz: arm } = swipeMove(live.s, event.clientX, event.clientY);
+                live.s = next;
+                if (next.phase === 'scroll') return endSwipe();
+                if (next.phase !== 'sideways') return;
+                if (was !== 'sideways') {
+                  live.el.setPointerCapture(live.id);
+                  live.el.style.transition = 'none';
+                  live.el.setAttribute('data-swiping', 'yes');
+                }
+                live.el.style.translate = `${next.offset}px`;
+                live.el.style.setProperty('--swipe', String(next.offset / SWIPE_ARM_PX));
+                if (arm) buzz();
+              }}
+              onPointerUp={() => {
+                if (!endSwipe()) return;
+                swiped.current = true;
+                onReply(row.message);
+                onAway();
+              }}
+              onPointerCancel={endSwipe}
               onClickCapture={(event) => {
                 // A click with no pointer behind it — Enter or Space on a
                 // link, a mark, the play button — is never the lift at the
                 // end of a long press, whatever the last press was.
                 if (event.detail === 0) return;
-                if (!notATap(press.current)) return;
+                if (!notATap(press.current) && !swiped.current) return;
+                swiped.current = false;
                 event.preventDefault();
                 event.stopPropagation();
               }}
@@ -214,6 +277,11 @@ export function Lines({
                 onReact(row.message.id, '👍', on);
               }}
             >
+              {/* What the swipe is pulling in from the left: the reply arrow,
+                  shown as far as the thumb has gone. */}
+              <span className="swipe-reply" aria-hidden="true">
+                <Reply size={16} />
+              </span>
               {/* Only at the top of a run. A face on every line of one turn is
                   the app repeating who is talking between every sentence,
                   which is what dropping the name fixed. */}

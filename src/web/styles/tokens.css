@@ -1131,6 +1131,12 @@
       user-select: none;
       -webkit-touch-callout: none;
     }
+    /* Up and down is the browser's scroll; sideways is ours (a swipe to the
+       right is a reply). Without this the browser took the whole touch the
+       moment it moved and cancelled the pointer. */
+    .line {
+      touch-action: pan-y;
+    }
     .lines img,
     .lines video {
       -webkit-user-drag: none;
@@ -1164,6 +1170,24 @@
     align-items: start;
     gap: 0.6rem;
     padding: 0.25rem 0;
+    /* For the reply arrow a swipe pulls in from the left. */
+    position: relative;
+  }
+
+  /* Off the left edge until the line is swiped right, and as visible as the
+     swipe is far: `--swipe` is 1 where lifting replies. */
+  .line .swipe-reply {
+    position: absolute;
+    top: 50%;
+    left: -2.5rem;
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    translate: 0 -50%;
+    color: var(--muted);
+    opacity: clamp(0, var(--swipe, 0), 1);
+    pointer-events: none;
   }
 
   .line .when {
@@ -2057,6 +2081,11 @@
   .motion-tick {
     display: inline-block;
     animation: dads-tick 220ms var(--ease-out) both;
+  }
+  /* A swiped line slides back when the thumb lifts; while the thumb is on
+     it the inline style turns this off and it follows exactly. */
+  .line {
+    transition: translate 160ms var(--ease-out);
   }
   /* Tailwind centres a panel with the `translate` property, which is not
      `transform`, so this one rise composes with it at every width. */

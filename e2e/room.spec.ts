@@ -1419,6 +1419,61 @@ test('an @ tags a dad by his name, and the line shows him in his colour', async 
   await sam.context().close();
 });
 
+test('on a phone, a swipe to the right on a line is a reply', async ({ browser }) => {
+  // Marc, 2026-11-01: "WhatsApp has a swipe right on a message to reply,
+  // with a small vibration". Real touches, through the devtools protocol:
+  // Playwright's mouse is a mouse, and a mouse drag on a line is a man
+  // selecting words.
+  const context = await browser.newContext({ ...devices['iPhone 13'] });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill('Swipe Sam');
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
+  const marc = await comeIn(browser, 'Swipe Marc');
+  await marc.getByLabel('Say something').fill('swipe on this one');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const line = page.getByTestId('line').filter({ hasText: 'swipe on this one' });
+  await expect(line).toBeVisible();
+
+  const cdp = await context.newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
+    });
+  const box = (await line.boundingBox())!;
+  const x = box.x + 40;
+  const y = box.y + box.height / 2;
+
+  // Across and past the arming point: the composer answers him.
+  await touch('touchStart', x, y);
+  for (let step = 1; step <= 8; step++) await touch('touchMove', x + step * 10, y + 1);
+  await touch('touchEnd', 0, 0);
+  await expect(page.getByTestId('replying')).toContainText('Replying to Swipe Marc');
+  await expect(page.getByLabel('Say something')).toBeFocused();
+  await page.getByTestId('context-clear').click();
+  await expect(page.getByTestId('replying')).toHaveCount(0);
+
+  // A short nudge is nothing, and so is a drag that starts downwards: that
+  // one is the browser's scroll.
+  await touch('touchStart', x, y);
+  await touch('touchMove', x + 25, y);
+  await touch('touchEnd', 0, 0);
+  await touch('touchStart', x, y);
+  await touch('touchMove', x + 2, y + 30);
+  await touch('touchMove', x + 80, y + 60);
+  await touch('touchEnd', 0, 0);
+  await expect(page.getByTestId('replying')).toHaveCount(0);
+  // And the line is back where it was.
+  await expect.poll(() => line.evaluate((el) => (el as HTMLElement).style.translate)).toBe('');
+
+  await marc.context().close();
+  await context.close();
+});
+
 test('a reload with a sheet open lands on the base, in the same page', async ({ browser }) => {
   // A home-screen app woken on a new build reloads where it was. The page
   // then sits on the sheet's entry with no sheet, so one back would do

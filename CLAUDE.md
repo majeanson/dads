@@ -163,6 +163,13 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 
 **The line menu and presses**
 
+- **On a phone a swipe right on a line is a reply** (`swipe.ts`, pure;
+  wired in `Lines`): `touch-action: pan-y` on `.line` keeps up-and-down the
+  browser's; the first ten pixels decide; the line follows the thumb by an
+  inline `translate` (never state), the arrow (`swipe-reply`) fades in on
+  `--swipe`, it buzzes once at `SWIPE_ARM_PX`, and the lift's click is
+  swallowed. Touch only: a mouse drag selects words. E2E drives it through
+  CDP touch events.
 - `LineMenu` is a Radix context menu, wrapping only chat and prompt lines.
   The destructive item ARMS on first select (`preventDefault`), fires on the
   second.
