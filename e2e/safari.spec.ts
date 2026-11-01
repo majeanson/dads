@@ -106,16 +106,18 @@ test('a line goes out and the field keeps the keyboard', async ({ page }) => {
   await expect(page.getByLabel('Say something')).toBeFocused();
 });
 
-test('a tap on a line is the marks, and a mark lands', async ({ page }) => {
+test('a long press on a line is the marks, and a mark lands', async ({ page }) => {
   await comeIn(page, 'Di Safari');
   await talk(page);
   const line = await say(page, 'safari line 02 to mark');
-  await line.locator('.body').tap();
-  const row = line.getByTestId('tap-marks');
-  await expect(row).toBeVisible();
-  await row.getByTestId('react-💪').tap();
-  await expect(row).toHaveCount(0);
+  await longPress(line.locator('.body'));
+  const menu = page.getByTestId('line-menu');
+  await expect(menu).toBeVisible();
+  await menu.getByTestId('react-💪').tap();
+  // The menu stays for a second mark; the first has already landed under it.
   await expect(line.getByTestId('mark').filter({ hasText: '💪' })).toContainText('1');
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
 });
 
 test('a long press is the menu, and Reply hands the composer the caret', async ({ page }) => {
@@ -232,8 +234,8 @@ test('a phone that drops out comes back to what changed', async ({ browser }) =>
   await other.getByRole('button', { name: 'Send' }).tap();
   const changed = other.getByTestId('line').filter({ hasText: 'after the tunnel' });
   await expect(changed).toBeVisible();
-  await changed.locator('.body').tap();
-  await changed.getByTestId('tap-marks').getByTestId('react-🙏').tap();
+  await longPress(changed.locator('.body'));
+  await other.getByTestId('line-menu').getByTestId('react-🙏').tap();
   await expect(changed.getByTestId('mark').filter({ hasText: '🙏' })).toContainText('1');
 
   down = false;

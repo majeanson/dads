@@ -762,110 +762,6 @@ test('a mouse gets a button for a mark, and a double tap is a thumb', async ({ b
   await sam.context().close();
 });
 
-test('on a phone, one tap on a line puts the marks under it', async ({ browser }) => {
-  // A thumb, not a mouse: the pointer is coarse, so a tap on the words opens
-  // the six and a tap on one of them is the choice. The long press is still
-  // there; this is the way in a man finds without being told.
-  const context = await browser.newContext({ ...devices['iPhone 13'] });
-  const page = await context.newPage();
-  await page.goto('/');
-  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
-  await page.getByLabel('Your name').fill('Tom Thumb');
-  await page.getByRole('button', { name: 'Come in' }).click();
-  await expect(page.getByTestId('connection')).toHaveText(/here$/);
-  await talk(page);
-
-  await page.getByLabel('Say something').fill('tapped not pressed');
-  await page.getByRole('button', { name: 'Send' }).click();
-  const line = page.getByTestId('line').filter({ hasText: 'tapped not pressed' });
-  await expect(line).toBeVisible();
-
-  await line.locator('.body').tap();
-  const row = line.getByTestId('tap-marks');
-  await expect(row).toBeVisible();
-  await row.getByTestId('react-💪').tap();
-  // The choice closes the row and lands as a mark with a count.
-  await expect(row).toHaveCount(0);
-  await expect(line.getByTestId('mark').filter({ hasText: '💪' })).toContainText('1');
-
-  // A second tap on the words closes an open row without marking anything.
-  await line.locator('.body').tap();
-  await expect(line.getByTestId('tap-marks')).toBeVisible();
-  await line.locator('.body').tap();
-  await expect(line.getByTestId('tap-marks')).toHaveCount(0);
-
-  // Past the six, "+" offers the rest — and what he uses joins the six, so
-  // next time it is one tap away.
-  await line.locator('.body').tap();
-  await expect(line.getByTestId('tap-marks').getByTestId('react-🔥')).toHaveCount(0);
-  await line.getByTestId('react-more').tap();
-  await line.getByTestId('react-all').getByTestId('react-🔥').tap();
-  await expect(line.getByTestId('mark').filter({ hasText: '🔥' })).toContainText('1');
-  await line.locator('.body').tap();
-  await expect(line.getByTestId('tap-marks').getByTestId('react-🔥')).toBeVisible();
-  await expect(line.getByTestId('react-all')).toHaveCount(0);
-
-  await context.close();
-});
-
-test('on a phone, the marks under the last line scroll into sight', async ({ browser }) => {
-  // The last line is the one a man at the bottom answers, and its row opened
-  // below the fold — "+" took it further down still. `toBeVisible` does not
-  // care about the viewport and a tap scrolls by itself, so this measures the
-  // row against the list the way his eyes would.
-  const context = await browser.newContext({ ...devices['iPhone 13'] });
-  const page = await context.newPage();
-  await page.goto('/');
-  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
-  await page.getByLabel('Your name').fill('Lars Last');
-  await page.getByRole('button', { name: 'Come in' }).click();
-  await expect(page.getByTestId('connection')).toHaveText(/here$/);
-  await talk(page);
-
-  // A conversation long enough to scroll, so the last line sits on the fold.
-  for (let i = 1; i <= 14; i++) {
-    const words = `filler line ${String(i).padStart(2, '0')} of a long evening`;
-    await page.getByLabel('Say something').fill(words);
-    await page.getByRole('button', { name: 'Send' }).click();
-    await expect(page.getByTestId('line').filter({ hasText: words })).toBeVisible();
-  }
-
-  await page.getByLabel('Say something').fill('the very last line');
-  await page.getByRole('button', { name: 'Send' }).click();
-  const line = page.getByTestId('line').filter({ hasText: 'the very last line' });
-  await expect(line).toBeVisible();
-  // The keyboard is not part of the question.
-  await page.getByLabel('Say something').blur();
-
-  const below = (testId: string) =>
-    page.evaluate((id) => {
-      const list = document.querySelector('ol.lines')!.getBoundingClientRect();
-      const el = [...document.querySelectorAll(`[data-testid="${id}"]`)].at(-1)!;
-      return Math.round(el.getBoundingClientRect().bottom - list.bottom);
-    }, testId);
-
-  await line.locator('.body').tap();
-  await expect(line.getByTestId('tap-marks')).toBeVisible();
-  await expect.poll(() => below('tap-marks')).toBeLessThanOrEqual(0);
-
-  await line.getByTestId('react-more').tap();
-  await expect(line.getByTestId('react-all')).toBeVisible();
-  await expect.poll(() => below('react-all')).toBeLessThanOrEqual(0);
-
-  // Showing the row must not cost him "following down": a line arriving now
-  // lands where he can see it. A smooth scroll used to pass through spots the
-  // list read as "he scrolled up", and the next line stayed below the fold.
-  const other = await comeIn(browser, 'Lou Arrives');
-  await other.getByLabel('Say something').fill('arriving while the marks are open');
-  await other.getByRole('button', { name: 'Send' }).click();
-  const arrived = page.getByTestId('line').filter({ hasText: 'arriving while the marks are open' });
-  await expect(arrived).toBeVisible();
-  await expect.poll(() => below('line')).toBeLessThanOrEqual(1);
-
-  await other.context().close();
-  await context.close();
-});
-
 test('on a phone, a long press on any line is the menu and a tap is its one thing', async ({
   browser,
 }) => {
@@ -941,16 +837,16 @@ test('on a phone, a long press on any line is the menu and a tap is its one thin
   await longPress(line('press words only').locator('.body'));
   await menuShows();
   await page.waitForTimeout(200);
-  await expect(page.getByTestId('tap-marks')).toHaveCount(0);
   // Copying is in the menu, since the phone no longer selects.
   await page.getByTestId('line-copy').tap();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('press words only');
   await expect(page.getByTestId('line-menu')).toHaveCount(0);
-  // And a tap on the words is the marks.
+  // And a tap on the words is nothing at all (the row of marks it used to
+  // open went on 2026-11-01): no menu, no marks.
   await line('press words only').locator('.body').tap();
-  await expect(line('press words only').getByTestId('tap-marks')).toBeVisible();
-  await line('press words only').locator('.body').tap();
-  await expect(page.getByTestId('tap-marks')).toHaveCount(0);
+  await page.waitForTimeout(200);
+  await expect(page.getByTestId('line-menu')).toHaveCount(0);
+  await expect(line('press words only').getByTestId('mark')).toHaveCount(0);
 
   // A link: the menu, and nowhere else.
   const pages = context.pages().length;
@@ -985,7 +881,6 @@ test('on a phone, a long press on any line is the menu and a tap is its one thin
   await line('press a voice note').getByRole('button', { name: 'Play the voice note' }).tap();
   await page.waitForTimeout(300);
   await expect(page.getByTestId('line-menu')).toHaveCount(0);
-  await expect(page.getByTestId('tap-marks')).toHaveCount(0);
 
   await context.close();
 });
@@ -1030,10 +925,14 @@ test('a line taken back from under an open menu does not eat the next tap', asyn
   await expect(first).toHaveCount(0);
   await expect(sam.getByTestId('line-menu')).toHaveCount(0);
 
-  // A plain tap on the words of the line still there opens the six under it.
+  // A plain tap on the line still there is not eaten: Marc's thumb on it
+  // takes Sam's tap, and the count moves.
   const second = sam.getByTestId('line').filter({ hasText: 'flag line two' });
-  await second.locator('.body').tap();
-  await expect(second.getByTestId('tap-marks')).toBeVisible();
+  await marc.getByTestId('line').filter({ hasText: 'flag line two' }).click({ button: 'right' });
+  await marc.getByTestId('react-👍').click();
+  await expect(second.getByTestId('mark')).toContainText('1');
+  await second.getByTestId('mark').tap();
+  await expect(second.getByTestId('mark')).toContainText('2');
 
   await context.close();
   await marc.context().close();

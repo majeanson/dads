@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 8788;
+// Overridable so two checkouts (a worktree beside the main one) can run their
+// suites at once without fighting over the port. The default is the one.
+const PORT = Number(process.env.E2E_PORT ?? 8788);
 
 export default defineConfig({
   testDir: './e2e',

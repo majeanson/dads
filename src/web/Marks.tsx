@@ -189,9 +189,9 @@ function Mark({
 }
 
 /**
- * Six marks in a row, and a "+" for the rest. Shared by the long-press menu,
- * the quick button and the tap row, so there is one place that decides what
- * a mark looks like. The six are learnt (`favourites.ts`): the defaults at
+ * Six marks in a row, and a "+" for the rest. Shared by the long-press menu
+ * and the quick button, so there is one place that decides what a mark looks
+ * like. The six are learnt (`favourites.ts`): the defaults at
  * first, then whatever this dad actually uses. The ones already his are
  * outlined; they wrap rather than shrink when squeezed.
  */
@@ -228,8 +228,7 @@ export function MarkRow({
         data-testid={`react-${emoji}`}
         onClick={() => pick(emoji, !on)}
         className={cn(
-          // 44px, a thumb: this row is what a tap on a line opens on a
-          // phone now, as well as the long-press menu.
+          // 44px, a thumb: this row is in the long-press menu on a phone.
           'grid h-11 min-w-11 flex-1 cursor-pointer place-items-center rounded-app',
           'border text-xl transition-[border-color,background-color,scale] duration-100 active:scale-90',
           on ? 'border-accent bg-panel' : 'border-transparent hover:border-edge',

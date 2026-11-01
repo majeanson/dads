@@ -29,7 +29,7 @@ export function standalone(): boolean {
   );
 }
 
-function isIOS(): boolean {
+export function isIOS(): boolean {
   // iPadOS reports itself as a Mac; the touch points give it away.
   return (
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||

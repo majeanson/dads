@@ -13,7 +13,7 @@ import { dadVar } from './dadColour';
 import { useT } from './i18n';
 import { Logo } from './Logo';
 import { useMemberNamed, useMembers } from './members';
-import { MarkRow, Marks, marksOf, QuickMark } from './Marks';
+import { Marks, marksOf, QuickMark } from './Marks';
 import type { Row } from './messageGroups';
 import { LineMenu, menuOpen, notATap } from './ui/LineMenu';
 
@@ -25,37 +25,6 @@ function firstLink(body: string): string | null {
 
 function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
-/**
- * The marks a tap opens under a line keep themselves on the screen. Tapping
- * the LAST line — the one a man at the bottom is most likely to answer —
- * opened the row below the fold, and "+" grew it further down still. So the
- * list scrolls just enough to show all of it, when it opens and when "+"
- * changes what is in it — and at no other time.
- *
- * The LIST, not \`scrollIntoView\`, which also moves every scrolling ancestor
- * (the page, under an iOS keyboard). In one step, not smoothly: a smooth
- * scroll passes through positions that are not the bottom, the list's own
- * scroll handler read one of them as "he scrolled up", and a line arriving
- * then did not follow him down. And on what is IN the row, not its size: a
- * resize is also the keyboard or the phone turning, and those were never his
- * tap.
- */
-function inView(el: HTMLElement | null) {
-  if (!el) return;
-  const show = () => {
-    const list = el.closest('ol');
-    if (list === null) return;
-    const row = el.getBoundingClientRect();
-    const box = list.getBoundingClientRect();
-    if (row.bottom > box.bottom) list.scrollTop += row.bottom - box.bottom;
-    else if (row.top < box.top) list.scrollTop -= box.top - row.top;
-  };
-  show();
-  const watch = new MutationObserver(show);
-  watch.observe(el, { childList: true, subtree: true });
-  return () => watch.disconnect();
 }
 
 /**
@@ -119,20 +88,16 @@ export function Lines({
   const arrived = (seq: number) => settled.current !== null && seq > settled.current;
 
   /**
-   * On a phone, one tap on a line puts the five marks under it.
-   *
-   * The long press was the only way in, and a long press is a gesture nobody
-   * finds; the double tap gave a thumb and nothing else. A tap is what a thumb
-   * already does to a line, so it opens the row, and a second tap on a mark
-   * is the choice. Only where the pointer IS a thumb: on a laptop a click on a
-   * line is a man selecting text, and the quick button under the pointer is
-   * already there.
+   * Whether the pointer is a thumb. On a phone the long press is the menu
+   * (marks in it) and the swipe is the reply; a tap on the words is nothing.
+   * A row of marks used to open on a tap (2026-10 to 2026-11-01) and Marc
+   * asked for it to go: a tap is what a thumb does by accident. On a laptop a
+   * click selects text and the double click is a thumb.
    */
   const [coarse] = useState(
     () =>
       typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true,
   );
-  const [marking, setMarking] = useState<string | null>(null);
   /** The press in progress: when it began, and whether a menu was open. */
   const press = useRef({ at: 0, whileOpen: false });
   /** Who "@Sam" could be: everyone the room knows, the departed included,
@@ -207,7 +172,6 @@ export function Lines({
             <li
               className={`group line line-${row.message.kind}${row.showName ? '' : ' is-continued'}${arrived(row.key) ? ' motion-rise' : ''}`}
               data-testid="line"
-              data-marking={marking === row.message.id ? 'yes' : undefined}
               // The finger lifting at the end of a long press is a click to
               // the browser. Caught on the way DOWN, before the photo's button,
               // the link or the marks below ever hear it.
@@ -258,16 +222,9 @@ export function Lines({
                 event.preventDefault();
                 event.stopPropagation();
               }}
-              onClick={(event) => {
-                if (!coarse) return;
-                if ((event.target as HTMLElement).closest('a, button, img, video, audio')) return;
-                // A man selecting words to copy is not asking for marks.
-                if ((window.getSelection()?.toString() ?? '') !== '') return;
-                setMarking((m) => (m === row.message.id ? null : row.message.id));
-              }}
               // With a mouse, a double click on the words is a thumb, the way
               // every other chat has taught it: on, and off again on the next.
-              // Not on a phone, where the single tap opens the row instead, and
+              // Not on a phone, where a double tap is a zoom gone wrong, and
               // not on a link, a photo or a control, each of which a double
               // tap would also open twice.
               onDoubleClick={(event) => {
@@ -360,17 +317,6 @@ export function Lines({
                   nameOf={nameOf}
                   onToggle={(emoji, on) => onReact(row.message.id, emoji, on)}
                 />
-                {marking === row.message.id ? (
-                  <span ref={inView} className="line-marks motion-rise" data-testid="tap-marks">
-                    <MarkRow
-                      mine={marksOf(row.message, you)}
-                      onReact={(emoji, on) => {
-                        onReact(row.message.id, emoji, on);
-                        setMarking(null);
-                      }}
-                    />
-                  </span>
-                ) : null}
               </span>
               <span className="when items-start gap-1">
                 <time>{clock(row.message.createdAt)}</time>

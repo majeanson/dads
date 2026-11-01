@@ -2547,3 +2547,26 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   `onClickCapture` beside the long press's.
 - Playwright's mouse is a mouse, so the e2e sends real touches through the
   devtools protocol (`Input.dispatchTouchEvent`) in the iPhone context.
+
+## No history on an iPhone, and no tap row (2026-11-01)
+
+- Marc, from his iPhone, right after the swipe went live: "it's not working,
+  no reply comes, no keyboard pops. Also disable the swipe to navigate back,
+  make sure it's more like an app." Then, once the app had reloaded, "iPhone
+  worked" — the swipe itself was fine. What had changed was Safari: with
+  history entries to walk, its swipe from the left edge now slid the whole
+  screen sideways like a web page going back, and a reply-swipe that started
+  near the edge went to it. Before today the app had one entry and Safari
+  had nothing to swipe to.
+- So the back layers are not made on iOS (`backless` in `useBackCloses`,
+  `isIOS()` from `push.ts`). They exist for a back button, and an iPhone has
+  none; Android keeps them. Nothing else about the stack changes, and the
+  e2e for it runs in Chromium where it is on.
+- "Also remove single tap reaction, keep long": the row of six that a tap on
+  the words opened on a phone (2026-10) is gone. A tap on the words is
+  nothing; the long press is the menu with the marks in it, the swipe is the
+  reply, and a mark already on the line still takes a tap. `inView` and the
+  `.line-marks` styles went with it. The two e2e built on the row were
+  deleted; the long-press test now proves a tap on the words does nothing,
+  the "menu unmounted under a finger" test proves the next tap lands on a
+  mark, and the Safari spec marks through the menu.

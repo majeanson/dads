@@ -156,10 +156,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   width; marks wrap. Pinned by an e2e at the far edge.
 - `MarkRow` in `Marks.tsx` is the one row of six and a "+". Emoji button only
   where there is a mouse; double CLICK marks on a mouse.
-- **On a phone one tap on the words opens `tap-marks`** (44px each); not on a
-  link, photo, control, or with text selected. It scrolls the LIST into view
-  (`inView`), in one step, only when it opens or "+" changes it — never
-  `scrollIntoView`.
+- **On a phone a tap on the words is nothing** (since 2026-11-01; a row of
+  marks used to open on it). The long press is the menu, with the marks in
+  it; the swipe is the reply. Do not bring the tap row back.
 
 **The line menu and presses**
 
@@ -827,7 +826,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   A new full-screen layer calls the hook; a popover or menu does not.
   **`history.go` is asynchronous**: a layer opened while a traversal of ours
   is in flight gets its entry when the landing arrives (`entered`), never on
-  top of it. An e2e opens a sheet the instant another closed.
+  top of it. An e2e opens a sheet the instant another closed. **Not on an
+  iPhone** (`isIOS()`, `backless`): no back button there, and entries gave
+  Safari an edge swipe that slid the screen like a web page and ate the
+  swipe-to-reply.
 - **Text fields are 16px** (`text-base`), or iOS zooms.
 - **Send keeps the keyboard** (`onMouseDown` preventDefault, refocus).
 - `overscroll-behavior: none` on html/body, `contain` on the list and sheets,
