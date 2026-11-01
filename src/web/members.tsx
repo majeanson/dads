@@ -73,3 +73,9 @@ export function useNameOf(): (memberId: string | null) => string {
 export function useMember(memberId: string): RosterEntry | undefined {
   return useContext(Members).get(memberId);
 }
+
+/** Everyone the room has told us about, the departed included (`gone`). */
+export function useMembers(): RosterEntry[] {
+  const byId = useContext(Members);
+  return useMemo(() => [...byId.values()], [byId]);
+}

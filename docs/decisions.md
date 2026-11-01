@@ -2488,3 +2488,39 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   pinned: the page goes back to the base in the same document — Chrome keeps
   `pushState` entries same-document across a reload (the one navigation entry
   is `reload`).
+
+## Back from the conversation is home (2026-11-01)
+
+- Marc: "make back go home from the chat, it was like that on iPhone but on
+  Android they had a problem". The chat was the base entry, so Android's back
+  left the app from it. Now the conversation is the first back layer
+  (`useBackCloses(view === 'talk', goHome)` in `Room`), sheets and the viewer
+  stack above it, and home is the base. A cold load that opens in the chat
+  (`viewMemory`, within twelve hours) pushes its entry at mount, so back from
+  there is still home and the second back leaves. Still not a route: the URL
+  never changes.
+
+## "@Sam" is Sam (2026-11-01)
+
+- Marc: "add a way to tag a person too, with @". The shape every chat has
+  taught: "@" opens the names, the name goes in, and the line shows it in
+  his colour.
+- **Nothing stored, nothing on the wire.** A mention is the name after an
+  "@", found again against the room's members by whoever reads the line
+  (`shared/mentions.ts`, pure, tested in the worker pool) — the same stance as
+  links: split, never substituted, and the text is what he typed. Longest
+  name first ("@Marc Jr" is not Marc), case-insensitive, at word boundaries
+  (an email is not a mention). A dad who changes his name is not found under
+  the old one, which is right. The departed are still matched for reading
+  (the line still names him) and not offered for typing.
+- The composer tracks the caret and offers the dads whose name, or a word of
+  it, starts with what follows the "@" (`tag-picks`, 44px rows, faces).
+  Tap, Enter or Tab puts the name in with a space; Escape puts the list away
+  for that "@" and nothing else. Himself is left out.
+- **The man named hears it on his phone**, under the sender's name, the line
+  cut to 140 characters: the first push in the app that carries what a dad
+  typed, because "somebody said your name" without the words would only make
+  him open the app to find out what, and the line is his. Same subscription
+  as every push, quiet hours kept by `notify()`, and never while he has a
+  socket open — a notification over the conversation he is reading is noise.
+  The line posts whether or not the push reaches anyone.

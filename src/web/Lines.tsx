@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import type { Attachment as MessageAttachment, RoomMessage } from '../shared/protocol';
 import { parts, shortLink } from '../shared/linkify';
+import { splitMentions } from '../shared/mentions';
 import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
 import { Face } from './Face';
@@ -8,7 +9,7 @@ import { LinkPreviewCard } from './LinkCard';
 import { dadVar } from './dadColour';
 import { useT } from './i18n';
 import { Logo } from './Logo';
-import { useMemberNamed } from './members';
+import { useMemberNamed, useMembers } from './members';
 import { MarkRow, Marks, marksOf, QuickMark } from './Marks';
 import type { Row } from './messageGroups';
 import { LineMenu, menuOpen, notATap } from './ui/LineMenu';
@@ -131,6 +132,9 @@ export function Lines({
   const [marking, setMarking] = useState<string | null>(null);
   /** The press in progress: when it began, and whether a menu was open. */
   const press = useRef({ at: 0, whileOpen: false });
+  /** Who "@Sam" could be: everyone the room knows, the departed included,
+   * so a line that named a man last month still names him. */
+  const people = useMembers().map((m) => ({ id: m.memberId, name: m.name }));
 
   return (
     <ol className="lines" aria-label={t('room.messages')} ref={lines} onScroll={onScroll}>
@@ -246,7 +250,24 @@ export function Lines({
                       {shortLink(part.text)}
                     </a>
                   ) : (
-                    <span key={i}>{part.text}</span>
+                    <span key={i}>
+                      {/* A dad named with an "@" is in his colour: a name,
+                          not a word. The text is what he typed. */}
+                      {splitMentions(part.text, people).map((bit, j) =>
+                        bit.mention ? (
+                          <span
+                            key={j}
+                            className="mention"
+                            style={{ color: dadVar(bit.id) }}
+                            data-testid="mention"
+                          >
+                            {bit.text}
+                          </span>
+                        ) : (
+                          bit.text
+                        ),
+                      )}
+                    </span>
                   ),
                 )}
                 {row.message.editedAt ? (

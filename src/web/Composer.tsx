@@ -7,8 +7,11 @@ import {
   type RefObject,
 } from 'react';
 import { Mic, Pencil, Plus, Reply, SendHorizontal, Square, X } from 'lucide-react';
+import { matching, mentionAt, tagged } from '../shared/mentions';
+import { Face } from './Face';
 import { useT } from './i18n';
 import { Quote } from './Lines';
+import { useMembers } from './members';
 import { isImage, prepare, readableSize, upload, type Prepared } from './media';
 import { canRecord, clockOf, useRecorder } from './recorder';
 import { Button } from './ui/Button';
@@ -37,6 +40,7 @@ export interface ComposerHandle {
 export function Composer({
   ref,
   busy,
+  me,
   onSend,
   onTyping,
   replyTo = null,
@@ -56,6 +60,8 @@ export function Composer({
    * took was a reload landing on the line he had just sent.
    */
   busy?: RefObject<boolean>;
+  /** His own member id: a man does not tag himself. */
+  me: string;
   onSend: (body: string, mediaId?: string) => void;
   onTyping: () => void;
   /** The line he is answering, shown above the field until he sends or clears it. */
@@ -113,6 +119,42 @@ export function Composer({
       editSeq.current++;
       onCancelEdit?.();
     } else if (replyTo) onClearReply?.();
+  }
+
+  /**
+   * "@" and a name tags a dad (Marc, 2026-11-01).
+   *
+   * The dads whose name starts with what he has typed after the "@" are a
+   * list above the field; a tap, Enter or Tab puts the name in, Escape puts
+   * the list away for that "@". Nothing is sent but the text: "@Sam" is
+   * found again by whoever reads it (`shared/mentions.ts`). The departed
+   * are not offered and nor is he.
+   */
+  const people = useMembers()
+    .filter((m) => m.gone !== true && m.memberId !== me)
+    .map((m) => ({ id: m.memberId, name: m.name }));
+  const [caret, setCaret] = useState(0);
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+  /** Which row the keys have moved to, for the "@" they moved it on. */
+  const [moved, setMoved] = useState({ start: -1, query: '', to: 0 });
+  const tagging = mentionAt(draft, caret);
+  const picks = tagging === null ? [] : matching(tagging.query, people);
+  const showPicks = tagging !== null && picks.length > 0 && dismissedAt !== tagging.start;
+  const highlighted =
+    tagging !== null && moved.start === tagging.start && moved.query === tagging.query
+      ? Math.min(moved.to, picks.length - 1)
+      : 0;
+  const readCaret = (field: HTMLInputElement) => setCaret(field.selectionStart ?? 0);
+  function tag(name: string) {
+    if (tagging === null) return;
+    const { next, caret: to } = tagged(draft, tagging.start, caret, name);
+    setDraft(next);
+    setCaret(to);
+    onTyping();
+    requestAnimationFrame(() => {
+      say.current?.focus();
+      say.current?.setSelectionRange(to, to);
+    });
   }
 
   async function pick(file: File | undefined) {
@@ -296,6 +338,36 @@ export function Composer({
         </p>
       ) : null}
 
+      {showPicks ? (
+        <ul
+          id="tag-picks"
+          className="tag-picks"
+          role="listbox"
+          aria-label={t('composer.tag')}
+          data-testid="tag-picks"
+        >
+          {picks.map((p, i) => (
+            <li key={p.id} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === highlighted}
+                className={cn(
+                  'flex h-11 w-full cursor-pointer items-center gap-3 rounded-app px-2 text-left text-base',
+                  i === highlighted ? 'bg-panel' : 'hover:bg-panel',
+                )}
+                // The field keeps the keyboard: a tap here must not fold it.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => tag(p.name)}
+              >
+                <Face memberId={p.id} size={28} />
+                <span className="min-w-0 truncate">{p.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
       {pending !== null ? (
         <p className="pending" data-testid="pending-media">
           {preview === null ? null : <img src={preview} alt="" />}
@@ -407,14 +479,39 @@ export function Composer({
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);
+                readCaret(e.target);
                 onTyping();
               }}
+              onSelect={(e) => readCaret(e.currentTarget)}
               placeholder={pending === null ? t('composer.say') : t('composer.caption')}
               autoComplete="off"
               autoCapitalize="sentences"
               // The keyboard's own return key says what it does here.
               enterKeyHint="send"
+              aria-autocomplete={showPicks ? 'list' : undefined}
+              aria-expanded={showPicks ? true : undefined}
+              aria-controls={showPicks ? 'tag-picks' : undefined}
               onKeyDown={(e) => {
+                if (showPicks && tagging !== null) {
+                  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const to =
+                      (highlighted + (e.key === 'ArrowDown' ? 1 : -1) + picks.length) %
+                      picks.length;
+                    setMoved({ start: tagging.start, query: tagging.query, to });
+                    return;
+                  }
+                  if (e.key === 'Enter' || e.key === 'Tab') {
+                    e.preventDefault();
+                    tag(picks[highlighted]!.name);
+                    return;
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setDismissedAt(tagging.start);
+                    return;
+                  }
+                }
                 if (e.key === 'Escape' && (editing || replyTo)) {
                   e.preventDefault();
                   cancelContext();

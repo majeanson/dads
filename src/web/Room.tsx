@@ -19,6 +19,7 @@ import { Splash, wantsStill } from './Splash';
 import { nightShort } from './NightEditor';
 import { isImage } from './media';
 import { toRows } from './messageGroups';
+import { useBackCloses } from './useBackCloses';
 import { useCall } from './useCall';
 import { useFreshBuild } from './useFreshBuild';
 import { useRoom } from './useRoom';
@@ -133,6 +134,10 @@ export function Room({
   // Going back is just going back: the way in is the moment, the way out is
   // a man leaving a room, and an animation there was one he had to sit through.
   const goHome = useCallback(() => setView('home'), []);
+  // The conversation is the first layer over home: the phone's back button
+  // goes home from it (Marc, 2026-11-01), and a sheet or picture open over
+  // it is taken first. Home is the base, and back from there leaves.
+  useBackCloses(view === 'talk', goHome);
   /** The photo he is looking at full-screen, by media id. */
   const [viewing, setViewing] = useState<string | null>(null);
   /** The line he is answering, or the one he is changing — never both. */
@@ -509,6 +514,7 @@ export function Room({
             <Composer
               ref={composer}
               busy={composing}
+              me={session.member.id}
               onSend={(body, mediaId) => {
                 room.send(body, mediaId, replyTo?.id);
                 setReplyTo(null);

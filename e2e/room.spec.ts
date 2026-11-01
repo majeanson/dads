@@ -1316,15 +1316,15 @@ test('the album shows what the shelf holds, and a tap opens the viewer on it', a
   await expect(album).toHaveCount(0);
   await expect(marc.getByLabel('Say something')).toBeVisible();
 
-  // Closing with the X tidies its entry away, so from the room one back is
-  // still the one that leaves: the history is at the base again.
+  // Closing with the X tidies its entry away, so the history is back on the
+  // conversation's own entry (the first layer over home).
   await marc.getByRole('button', { name: 'Menu' }).click();
   await marc.getByTestId('menu-album').click();
   await expect(album).toBeVisible();
-  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 2 });
   await marc.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
   await expect(album).toHaveCount(0);
-  await expect.poll(() => marc.evaluate(() => history.state)).toBeNull();
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
 });
 
 test('a sheet opened the instant another closed stays open, and back still closes it', async ({
@@ -1343,11 +1343,80 @@ test('a sheet opened the instant another closed stays open, and back still close
   await marc.getByTestId('menu-album').click();
   await expect(marc.getByTestId('album')).toBeVisible();
   // Still open once the history has settled on its entry.
-  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 2 });
   await expect(marc.getByTestId('album')).toBeVisible();
   await marc.goBack();
   await expect(marc.getByTestId('album')).toHaveCount(0);
   await expect(marc.getByLabel('Say something')).toBeVisible();
+});
+
+test('back from the conversation is home, and back from a sheet is the conversation', async ({
+  browser,
+}) => {
+  // The conversation is the first layer over home (Marc, 2026-11-01: it
+  // was so on an iPhone, and on Android back left the app). Home is the
+  // base: back from there leaves, and nothing here can test leaving.
+  const marc = await comeIn(browser, 'Back Home');
+  const room = marc.locator('main.room');
+  await expect(room).toHaveAttribute('data-view', 'talk');
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
+
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await marc.getByTestId('menu-album').click();
+  await expect(marc.getByTestId('album')).toBeVisible();
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 2 });
+  await marc.goBack();
+  await expect(marc.getByTestId('album')).toHaveCount(0);
+  await expect(room).toHaveAttribute('data-view', 'talk');
+  await marc.goBack();
+  await expect(room).toHaveAttribute('data-view', 'home');
+  await expect.poll(() => marc.evaluate(() => history.state)).toBeNull();
+
+  // Going in again is a new entry; the way-back control tidies it away.
+  await talk(marc);
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
+  await marc.getByTestId('go-home').click();
+  await expect(room).toHaveAttribute('data-view', 'home');
+  await expect.poll(() => marc.evaluate(() => history.state)).toBeNull();
+});
+
+test('an @ tags a dad by his name, and the line shows him in his colour', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Tag Marc');
+  const sam = await comeIn(browser, 'Tag Sam');
+  const field = marc.getByLabel('Say something');
+  const picks = marc.getByTestId('tag-picks');
+
+  // Typing "@" and the start of a name offers the dads it could be — not
+  // himself. The room has had many dads by now; a two-word start keeps it
+  // to the one.
+  await field.fill('hey @tag s');
+  await expect(picks).toBeVisible();
+  await expect(picks.getByRole('option')).toHaveCount(1);
+  await picks.getByRole('option', { name: /Tag Sam/ }).click();
+  await expect(field).toHaveValue('hey @Tag Sam ');
+  await expect(picks).toHaveCount(0);
+  await field.pressSequentially('you up?');
+  await marc.getByRole('button', { name: 'Send', exact: true }).click();
+
+  // On the other dad's screen the name is a name, and the words are the
+  // words typed.
+  const line = sam.getByTestId('line').filter({ hasText: 'you up?' });
+  await expect(line).toBeVisible();
+  await expect(line.getByTestId('mention')).toHaveText('@Tag Sam');
+  await expect(line).toContainText('hey @Tag Sam you up?');
+
+  // Enter takes the first offered; Escape puts the list away for that "@".
+  await field.fill('@tag s');
+  await expect(picks).toBeVisible();
+  await field.press('Enter');
+  await expect(field).toHaveValue('@Tag Sam ');
+  await field.fill('@tag s');
+  await expect(picks).toBeVisible();
+  await field.press('Escape');
+  await expect(picks).toHaveCount(0);
+
+  await marc.context().close();
+  await sam.context().close();
 });
 
 test('a reload with a sheet open lands on the base, in the same page', async ({ browser }) => {
@@ -1358,10 +1427,13 @@ test('a reload with a sheet open lands on the base, in the same page', async ({ 
   const marc = await comeIn(browser, 'Reload Sheets');
   await marc.getByRole('button', { name: 'Menu' }).click();
   await marc.getByTestId('menu-album').click();
-  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 2 });
   await marc.reload();
   await expect(marc.getByTestId('connection')).toHaveText(/here$/);
-  await expect.poll(() => marc.evaluate(() => history.state)).toBeNull();
+  // It reopens in the conversation (closed there a moment ago), which is
+  // the one layer over home again; the sheet's entry is gone.
+  await expect(marc.locator('main.room')).toHaveAttribute('data-view', 'talk');
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
   const loads = await marc.evaluate(() =>
     performance.getEntriesByType('navigation').map((e) => (e as PerformanceNavigationTiming).type),
   );

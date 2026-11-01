@@ -7,11 +7,15 @@ import {
   type RoomMessage,
 } from '../../shared/protocol';
 import type { Said } from '../../shared/said';
+import { mentioned } from '../../shared/mentions';
 import { newId } from '../identity';
 import { forgetMedia, mediaFor } from '../media';
 import { todaysPrompt } from '../prompts';
+import { notifyMember } from '../push';
 import { noteChange } from './changes';
 import { messagesFrom, reactionsById } from './hydrate';
+import { membersOfGroup } from './members';
+import { isPresent } from './presence';
 import type { Room, SocketIdentity } from './room';
 import type { TailRow } from './storage';
 
@@ -113,6 +117,39 @@ export async function say(
   const reply = frame.replyTo === undefined ? null : await quoteOf(room, frame.replyTo);
 
   await post(room, 'chat', who.memberId, who.name, body, null, media, null, cid, reply);
+  await tellTheNamed(room, who, body);
+}
+
+/** Past this a notification is a wall; the line is in the room. */
+const TAG_PUSH_LENGTH = 140;
+
+/**
+ * "@Sam" is for Sam: his phone hears it, under the man who said it.
+ *
+ * Only the dads named, only when they are not in the room already (a
+ * notification over the conversation he is reading is noise), and only to
+ * the phones that said yes to the night's reminders — the same subscription
+ * as everything else, with his quiet hours kept by `notify()`. The line
+ * itself goes, cut short: it is his, and "somebody said your name" without
+ * the words would make him open the app to find out what. Nothing is said
+ * in the room, and the line posts whether or not this reaches anyone.
+ */
+async function tellTheNamed(room: Room, who: SocketIdentity, body: string): Promise<void> {
+  if (!body.includes('@')) return;
+  try {
+    const people = (await membersOfGroup(room))
+      .filter((m) => m.gone !== true)
+      .map((m) => ({ id: m.memberId, name: m.name }));
+    const chars = [...body];
+    const cut =
+      chars.length > TAG_PUSH_LENGTH ? chars.slice(0, TAG_PUSH_LENGTH - 1).join('') + '…' : body;
+    for (const id of mentioned(body, people)) {
+      if (id === who.memberId || isPresent(room, id)) continue;
+      await notifyMember(room.env, id, { title: who.name, body: cut, tag: `tag-${who.memberId}` });
+    }
+  } catch (err) {
+    console.error('tag push failed', err);
+  }
 }
 
 /**

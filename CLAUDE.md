@@ -488,7 +488,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   know `rounded-app`). `Logo.tsx` is `icon.svg` minus the square, in
   `currentColor`.
 - **Home is a VIEW, not a route** (`data-view` on `main.room`); the stage is
-  hidden with CSS, never unmounted.
+  hidden with CSS, never unmounted. **But the conversation is the first back
+  layer over it** (`useBackCloses(view === 'talk', goHome)` in `Room`): back
+  from the chat is home, back from home leaves. Sheets stack above it.
 - **The unseen count is DERIVED from the seen mark** (`seen.ts`), never
   tallied. A device new to the room starts at the newest line; an empty room
   starts at nought once `ready`. A line is unseen unless
@@ -728,6 +730,14 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - The tab title carries the unseen count.
 - **Links are split, never substituted** (`linkify.ts`, http(s) only);
   `shortLink` never cuts the host; links are underlined.
+- **"@Sam" is Sam** (`shared/mentions.ts`, pure): nothing stored, nothing on
+  the wire; the name after an "@" is matched against the room's members
+  (longest name first, case-insensitive, at word boundaries) by whoever reads
+  the line, and drawn in his colour (`.mention`). The composer offers the
+  dads under an "@" (`tag-picks`: tap, Enter or Tab; Escape dismisses for
+  that "@"); not himself, not the departed. **The man named is pushed**
+  (`tellTheNamed` in `room/lines.ts`): the line under the sender's name, to
+  the reminder subscription, only when he has no socket open.
 - **A link gets a card** (`LinkCard.tsx`, `GET /api/unfurl?url=`): the page's
   own tags (og, twitter, `<title>`; a YouTube video through oEmbed), read in
   `shared/unfurl.ts`, fetched by the WORKER, never the phone, and cached a
