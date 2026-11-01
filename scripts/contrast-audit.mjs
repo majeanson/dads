@@ -27,9 +27,10 @@ const PAIRS = [
   ['danger', 'bg', 4.5, 'an error'],
   ['danger', 'bg-soft', 4.5, 'an error on a panel'],
   ['on-accent', 'accent', 4.5, 'the label on a filled button'],
-  // The one filled danger surface in the app: a "take it back" row once it is
-  // armed. `bg` is the label on it, the way `on-accent` is on the accent.
-  ['bg', 'danger', 4.5, 'the label on an armed destructive row'],
+  // The filled danger surfaces: a "take it back" row once it is armed, and the
+  // call's hang-up (`look="dangerFilled"`, 2026-11-01). `bg` ("paper") is the
+  // label on it, the way `on-accent` is on the accent.
+  ['bg', 'danger', 4.5, 'the label on an armed row, and on the hang-up'],
   // Home's answer control: "Can't" is filled in ink, not in the accent and
   // not in red, and the page colour is its label.
   ['bg', 'text', 4.5, 'the label on a chosen "can’t"'],

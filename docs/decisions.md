@@ -2570,3 +2570,51 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   deleted; the long-press test now proves a tap on the words does nothing,
   the "menu unmounted under a finger" test proves the next tap lands on a
   mark, and the Safari spec marks through the menu.
+
+## The front camera and the back one (2026-11-01)
+
+- Marc: on a phone a dad wants to show the room what is in front of him, not
+  his face. `switchCamera()` in `useCall` opens the other lens with
+  `facingMode: { ideal }` (never `exact`: a laptop's one webcam faces
+  nothing as far as the constraint knows) and puts the new track on every
+  link with `sender.replaceTrack`. That keeps the sender and its m-line, so
+  there is no fresh offer and no tile flickers — removing one track and
+  adding another, the way the camera toggle does, would renegotiate. The old
+  track is stopped and swapped for the new inside the SAME local
+  `MediaStream`, so connections opened later find it there; the self tile
+  is handed the stream again on each swap (`swaps`) rather than trusted to
+  follow a track change inside it, which not every engine promises.
+- A lens that will not open (refused, only one) leaves the old picture where
+  it was. A phone that cannot hold two cameras open says `NotReadableError`:
+  then the old one is stopped first, and if the other still will not open the
+  first is opened again; if nothing opens, the camera is off, said the way
+  the button says it.
+- The button shows only with the camera on and either more than one
+  `videoinput` (counted after the camera is granted, when browsers list them
+  honestly) or a coarse pointer. Only his own front camera is mirrored — a
+  back camera mirrored shows writing backwards — and nobody else's tile ever.
+- The e2e runs the switching dad in the iPhone context: switch appears, the
+  facing flips, the local track is a different one, his preview is still
+  playing, the other dad still sees his tile, and the count never moves.
+  Chrome's fake camera may ignore `facingMode`; that is fine, the test is
+  about the call surviving the swap, not about which lens.
+
+## Hanging up is red, and the header's phone hangs up (2026-11-01)
+
+- Marc asked for the leave button to read as a hang-up. `look="danger"` was an
+  outline used in eleven places, so the smaller diff was a new kit look,
+  `dangerFilled` (`bg-danger text-paper`), rather than turning `danger`
+  filled. The pair paper-on-danger was already in the contrast audit for the
+  armed destructive row; its label now names the hang-up too. A circle on a
+  phone, where the word is screen-reader only.
+- On the call, the conversation header's phone was a chip that opened who's
+  here. It is now the way out: red, `PhoneOff`, the count beside it,
+  `call-hangup`. Home's chip is unchanged — it takes him to the conversation
+  where the call is; home never hangs up.
+- Its name is "Leave — 2 on the call", not a bare `aria-label` of "Leave":
+  axe failed the latter as `label-content-name-mismatch` (WCAG 2.5.3), the
+  "2" a sighted dad reads being missing from the name. The chip it replaced
+  was already built that way.
+- Two buttons are called "Leave" while he is on a call, so the call spec's
+  existing clicks are scoped to the call bar. The a11y suite gained an "on a
+  call" scene with the camera on.

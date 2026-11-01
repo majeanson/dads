@@ -38,6 +38,23 @@ export interface Peer {
 
 export type CallState = 'out' | 'joining' | 'in' | 'denied' | 'failed';
 
+/** The front camera, or the back one. */
+export type Facing = 'user' | 'environment';
+
+/**
+ * One camera, asked for by the way it faces. An IDEAL, never `exact`: a laptop
+ * with one webcam has no "user" camera as far as the constraint knows, and an
+ * exact one would refuse it outright.
+ */
+async function openCamera(facing: Facing): Promise<MediaStreamTrack> {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: facing } },
+  });
+  const track = stream.getVideoTracks()[0];
+  if (track === undefined) throw new Error('no video track');
+  return track;
+}
+
 interface Signal {
   description?: RTCSessionDescriptionInit;
   candidate?: RTCIceCandidateInit;
@@ -106,6 +123,14 @@ export function useCall({
   const [peers, setPeers] = useState<Peer[]>([]);
   const [muted, setMuted] = useState(false);
   const [camera, setCamera] = useState(false);
+  /** Which way the camera looks: at him, or at what is in front of him. */
+  const [facing, setFacing] = useState<Facing>('user');
+  /** How many cameras this device has, counted once one is on (the labels,
+   * and on some browsers the devices themselves, are hidden until then). */
+  const [cameras, setCameras] = useState(0);
+  /** Counts the times his picture was swapped for another inside the same
+   * stream, so the self preview knows to take it up again. */
+  const [swaps, setSwaps] = useState(0);
   const [speaking, setSpeaking] = useState<string[]>([]);
 
   // A phone locks itself after half a minute of a dad listening rather than
@@ -234,6 +259,7 @@ export function useCall({
     setPeers([]);
     setSpeaking([]);
     setCamera(false);
+    setFacing('user');
     setMuted(false);
   }, []);
 
@@ -303,20 +329,107 @@ export function useCall({
         local.current.removeTrack(track);
       }
       setCamera(false);
+      setFacing('user');
       return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      const track = stream.getVideoTracks()[0];
-      if (track === undefined) return;
+      // His face first, the way every phone's call opens.
+      const track = await openCamera('user');
       local.current.addTrack(track);
       for (const link of links.current.values()) link.pc.addTrack(track, local.current);
+      setFacing('user');
       setCamera(true);
     } catch {
       // No camera, or refused. The call carries on with sound.
+      return;
+    }
+
+    // Counted now and not before: until a camera has been granted, a browser
+    // may list none, or one with no name, whatever the phone has.
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setCameras(devices.filter((d) => d.kind === 'videoinput').length);
+    } catch {
+      // Not knowing is one camera, as far as the button is concerned.
     }
   }, [camera]);
+
+  /**
+   * The front camera to the back one, and back (2026-11-01, Marc asked: a dad
+   * wants to show the room what is in front of him, not his face).
+   *
+   * The new track goes in with `replaceTrack` on the sender that held the old
+   * one. That needs NO renegotiation — the connection keeps the same sender
+   * and the same m-line, only the frames change — so nobody's tile flickers
+   * the way removing one track and adding another would.
+   *
+   * A camera that will not open (one lens, refused) leaves the old picture
+   * exactly where it was.
+   */
+  const switching = useRef(false);
+  const switchCamera = useCallback(async () => {
+    const stream = local.current;
+    const old = stream?.getVideoTracks()[0];
+    if (stream == null || old === undefined || switching.current) return;
+    switching.current = true;
+    const next: Facing = facing === 'user' ? 'environment' : 'user';
+    let to = next;
+    try {
+      let track: MediaStreamTrack;
+      try {
+        track = await openCamera(next);
+      } catch (err) {
+        // Refused, or there is no other lens: nothing changes.
+        if ((err as DOMException)?.name !== 'NotReadableError') return;
+        // Some phones cannot hold both cameras open at once and say the
+        // device is busy. Then the old one has to let go first, and if the
+        // other still will not open, the one he had is opened again.
+        old.stop();
+        try {
+          track = await openCamera(next);
+        } catch {
+          to = facing;
+          track = await openCamera(facing);
+        }
+      }
+      // The call ended, or the camera went off, while the lens was opening.
+      if (local.current !== stream || !stream.getVideoTracks().includes(old)) {
+        track.stop();
+        return;
+      }
+      await Promise.all(
+        [...links.current.values()].map((link) =>
+          link.pc
+            .getSenders()
+            .find((s) => s.track === old)
+            ?.replaceTrack(track)
+            // A connection closing under us is teardown's business.
+            .catch(() => {}),
+        ),
+      );
+      old.stop();
+      // The same stream object, so the self preview and any connection opened
+      // later find the new track where the old one was.
+      stream.removeTrack(old);
+      stream.addTrack(track);
+      setFacing(to);
+      setSwaps((n) => n + 1);
+    } catch {
+      // Nothing would open again after letting go: that is the camera off,
+      // done the way the button does it.
+      old.stop();
+      for (const link of links.current.values()) {
+        const sender = link.pc.getSenders().find((s) => s.track === old);
+        if (sender !== undefined) link.pc.removeTrack(sender);
+      }
+      stream.removeTrack(old);
+      setCamera(false);
+      setFacing('user');
+    } finally {
+      switching.current = false;
+    }
+  }, [facing]);
 
   /**
    * One relayed signal. Held in a ref so the socket handler never has to be
@@ -435,9 +548,13 @@ export function useCall({
     speakingYou: speaking.includes(YOU),
     muted,
     camera,
+    facing,
+    cameras,
+    swaps,
     join,
     leave,
     toggleMute,
+    switchCamera,
     toggleCamera,
     localStream: local,
     onSignal: (from: string, name: string, payload: unknown) =>

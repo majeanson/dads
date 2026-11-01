@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   Menu as MenuIcon,
   Phone,
+  PhoneOff,
   Spade,
   Settings as SettingsIcon,
 } from 'lucide-react';
@@ -57,6 +58,7 @@ export function RoomHeader({
   onSettings,
   onAbout,
   onJoinCall,
+  onLeaveCall,
 }: {
   groupName: string;
   view: 'home' | 'talk';
@@ -80,6 +82,8 @@ export function RoomHeader({
   onSettings: () => void;
   onAbout: () => void;
   onJoinCall: () => void;
+  /** Hangs up: the header's phone, in the conversation, while he is on it. */
+  onLeaveCall: () => void;
   /** The live-call chip: home goes to the conversation, which has the call. */
   onCall: () => void;
   /** The table has been opened on this load, so a game may be running. */
@@ -296,11 +300,13 @@ export function RoomHeader({
             </Button>
           ) : null}
           {/* A call going on is said up here, with the number, whether or not
-              he is in it. Not in it, the chip IS the way in. */}
-          {callers > 0 && callState !== 'in' && callState !== 'denied' && callState !== 'failed' ? (
+              he is in it. Not in it, the chip IS the way in; in it, the phone
+              is the way OUT (2026-11-01, Marc asked), red, the way a phone's
+              own hang-up is. */}
+          {callState === 'in' ? (
+            <HangUp n={Math.max(callers, 1)} onClick={onLeaveCall} />
+          ) : callers > 0 && callState !== 'denied' && callState !== 'failed' ? (
             <LiveCall n={callers} onClick={onCall} joining={callState === 'joining'} join />
-          ) : callers > 0 && callState === 'in' ? (
-            <LiveCall n={callers} onClick={onCall} />
           ) : (
             <JoinCall state={callState} onJoin={onJoinCall} />
           )}
@@ -360,6 +366,32 @@ function LiveCall({
       <span className="sr-only">
         {join ? `${t(joining ? 'call.opening' : 'call.join')} — ` : ''}
         {t('call.count', { n })}
+      </span>
+    </Button>
+  );
+}
+
+/**
+ * The header's phone while he is on the call: the way out, filled red like
+ * the hang-up in the call's own row, with how many are on it beside the icon
+ * as the chip has it. Named "Leave — 2 on the call", the chip's way: a bare
+ * `aria-label` of "Leave" was a name without the number a sighted dad reads
+ * on it, which axe calls a mismatch (WCAG 2.5.3).
+ */
+function HangUp({ n, onClick }: { n: number; onClick: () => void }) {
+  const { t } = useT();
+  return (
+    <Button
+      size="md"
+      look="dangerFilled"
+      className="shrink-0 gap-1 rounded-full! px-3"
+      onClick={onClick}
+      data-testid="call-hangup"
+    >
+      <PhoneOff size={18} aria-hidden="true" />
+      <span aria-hidden="true">{n}</span>
+      <span className="sr-only">
+        {t('call.leave')} — {t('call.count', { n })}
       </span>
     </Button>
   );

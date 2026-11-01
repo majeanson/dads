@@ -171,6 +171,17 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByTestId('line-menu')).toBeVisible();
     found.push(...(await faults(page, 'a line’s menu')));
     await page.keyboard.press('Escape');
+
+    // On the call, with the camera on: the row of controls with the red
+    // hang-up in it, his own picture, and the header's phone as the way out.
+    await page.getByRole('button', { name: 'Join the call' }).click();
+    await page.getByRole('button', { name: 'Camera', exact: true }).click();
+    await expect(page.getByTestId('call-tile')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('call-hangup')).toBeVisible();
+    found.push(...(await faults(page, 'on a call')));
+    await page.getByTestId('call-hangup').click();
+    await expect(page.getByTestId('call')).toHaveCount(0);
+
     await page.getByTestId('go-home').click();
 
     // Home in its other two shapes. With no night and days voted on, the card

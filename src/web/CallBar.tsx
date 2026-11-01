@@ -1,8 +1,12 @@
-import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff } from 'lucide-react';
+import { Mic, MicOff, Phone, PhoneOff, SwitchCamera, Video, VideoOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from './i18n';
 import { Button } from './ui/Button';
-import type { Peer } from './useCall';
+import type { Facing, Peer } from './useCall';
+
+/** A finger, not a mouse: a phone, where the back camera is the point. */
+const coarse = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true;
 
 /**
  * The call, along the top of the room — and only while there is one.
@@ -19,22 +23,33 @@ export function CallBar({
   peers,
   muted,
   camera,
+  facing,
+  cameras,
+  swaps,
   speakingYou,
   localStream,
   onLeave,
   onToggleMute,
   onToggleCamera,
+  onSwitchCamera,
   onWho,
 }: {
   state: 'out' | 'joining' | 'in' | 'denied' | 'failed';
   peers: Peer[];
   muted: boolean;
   camera: boolean;
+  /** Which way his camera looks, for the mirror and for the tests. */
+  facing: Facing;
+  /** How many cameras the device has, once one is on. */
+  cameras: number;
+  /** Bumped each time a switch swapped the track inside his stream. */
+  swaps: number;
   speakingYou: boolean;
   localStream: MediaStream | null;
   onLeave: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
+  onSwitchCamera: () => void;
   /** Opens who's here, which is where the names and the mute marks live. */
   onWho: () => void;
 }) {
@@ -53,8 +68,17 @@ export function CallBar({
   const enlarged =
     big !== null && (big === 'you' ? camera : showing.some((p) => p.memberId === big)) ? big : null;
 
+  // Only where there is another camera to switch to. A phone always gets it:
+  // some browsers on a phone list one camera however many it has.
+  const canSwitch = camera && (cameras > 1 || coarse());
+
   return (
-    <div className="call" data-testid="call" data-big={enlarged === null ? undefined : 'yes'}>
+    <div
+      className="call"
+      data-testid="call"
+      data-big={enlarged === null ? undefined : 'yes'}
+      data-facing={facing}
+    >
       <div className="call-actions">
         <Button
           size="md"
@@ -80,7 +104,22 @@ export function CallBar({
             {camera ? t('call.camera_off') : t('call.camera_on')}
           </span>
         </Button>
-        <Button size="md" look="danger" onClick={onLeave} aria-label={t('call.leave')}>
+        {canSwitch ? (
+          <Button size="md" onClick={onSwitchCamera} data-testid="call-switch">
+            <SwitchCamera size={18} aria-hidden="true" />
+            <span className="max-[26rem]:sr-only">{t('call.switch_camera')}</span>
+          </Button>
+        ) : null}
+        {/* Hanging up is red and filled, the way a phone's own end-call button
+            is (2026-11-01, Marc asked): the one control here that ends
+            something. A circle on a phone, where it is the icon alone. */}
+        <Button
+          size="md"
+          look="dangerFilled"
+          className="rounded-full! max-[26rem]:w-11 max-[26rem]:px-0"
+          onClick={onLeave}
+          aria-label={t('call.leave')}
+        >
           <PhoneOff size={18} aria-hidden="true" />
           <span className="max-[26rem]:sr-only">{t('call.leave')}</span>
         </Button>
@@ -105,6 +144,13 @@ export function CallBar({
               name={t('call.you')}
               speaking={speakingYou && !muted}
               muted
+              // His own face mirrored, the way every front camera shows it; what
+              // the back camera sees, the right way round. Never anybody else's.
+              mirrored={facing === 'user'}
+              // A switch swaps the track inside the same stream. The element is
+              // handed the stream again rather than trusted to follow the swap
+              // on its own, which is not something every engine promises.
+              source={swaps}
               big={enlarged === 'you'}
               onToggleBig={() => setBig(enlarged === 'you' ? null : 'you')}
             />
@@ -201,6 +247,8 @@ function Tile({
   speaking,
   quiet = false,
   muted,
+  mirrored = false,
+  source,
   big,
   onToggleBig,
 }: {
@@ -209,6 +257,9 @@ function Tile({
   speaking: boolean;
   quiet?: boolean;
   muted: boolean;
+  mirrored?: boolean;
+  /** Changes when the stream's picture was swapped for another inside it. */
+  source?: number;
   big: boolean;
   onToggleBig: () => void;
 }) {
@@ -216,7 +267,7 @@ function Tile({
   const video = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (video.current !== null) video.current.srcObject = stream;
-  }, [stream]);
+  }, [stream, source]);
 
   return (
     <figure
@@ -232,7 +283,13 @@ function Tile({
       >
         {/* Always silent — your own because hearing yourself is unusable,
             everyone else's because their sound comes from an <audio>. */}
-        <video ref={video} autoPlay playsInline muted={muted} />
+        <video
+          ref={video}
+          autoPlay
+          playsInline
+          muted={muted}
+          className={mirrored ? 'scale-x-[-1]' : undefined}
+        />
         <span className="sr-only">{big ? t('call.shrink') : t('call.enlarge')}</span>
       </button>
       <figcaption>

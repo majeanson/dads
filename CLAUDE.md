@@ -467,6 +467,20 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - Candidates that outrun their description are queued.
 - Mute disables the track, never removes it. Mute travels over the wire.
 - `inCall` lives on the socket attachment.
+- **Switching camera is `replaceTrack`, never remove-and-add** (`switchCamera`):
+  no renegotiation, no flicker; the new track goes into the SAME local
+  `MediaStream`, and the self tile is handed it again (`swaps`). `facingMode`
+  is always `ideal`, never `exact`. A lens that will not open changes nothing;
+  a busy one (`NotReadableError`) lets the old go first. Offered only with the
+  camera on and more than one camera, or a coarse pointer.
+- **Only his own front camera is mirrored** (`scale-x-[-1]` on the self tile
+  while `facing === 'user'`); a remote tile never is.
+- **Hanging up is red and filled** (`look="dangerFilled"`, paper on
+  `--danger`, audited). **In the conversation's header, on the call, the
+  phone hangs up** (`call-hangup`, "Leave — n on the call", the count kept
+  in its name for WCAG 2.5.3). Home's chip still only goes to the
+  conversation. Two buttons are called "Leave" on a call: scope e2e to
+  `getByTestId('call')`.
 - e2e uses Chrome's fake devices; whether a human hears a human is untested.
 
 ## Home

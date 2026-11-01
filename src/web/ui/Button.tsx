@@ -36,6 +36,10 @@ const button = cva(
         quiet: 'text-muted hover:text-ink',
         /** Taking something away. */
         danger: 'border border-line text-muted hover:border-danger hover:text-danger',
+        /** Ending something now: a call's hang-up, red the way a phone's own
+           is (2026-11-01). The page colour is its label, audited on the red. */
+        dangerFilled:
+          'border border-danger bg-danger text-paper hover:brightness-110 active:brightness-95',
       },
       size: {
         sm: 'h-8 px-2.5 text-sm',

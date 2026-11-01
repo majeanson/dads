@@ -409,6 +409,7 @@ export function Room({
           onSettings={() => setSheet('settings')}
           onAbout={() => setSheet('about')}
           onJoinCall={() => void call.join()}
+          onLeaveCall={call.leave}
         />
 
         {/* Home sits BESIDE the stage rather than in place of it, and the stage
@@ -441,11 +442,15 @@ export function Room({
               peers={call.peers}
               muted={call.muted}
               camera={call.camera}
+              facing={call.facing}
+              cameras={call.cameras}
+              swaps={call.swaps}
               speakingYou={call.speakingYou}
               localStream={call.localStream.current}
               onLeave={call.leave}
               onToggleMute={call.toggleMute}
               onToggleCamera={() => void call.toggleCamera()}
+              onSwitchCamera={() => void call.switchCamera()}
               onWho={() => setSheet('here')}
             />
 
