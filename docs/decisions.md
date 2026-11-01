@@ -2444,3 +2444,21 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   itself is still the base, so back from the chat leaves the app as it did.
   Whether the chat should sit over home as a layer is an open question, left
   for Marc.
+
+## Holding a mark says who put it (2026-11-01)
+
+- Marc: "I'd like to be able to see who put the reactions on a message with
+  a long click". The names were already in the mark's `title` and accessible
+  name, which is nothing on a phone. Now a hold on the mark (`HOLD_MS`, half
+  a second) or a right-click opens a small popover of faces and names.
+- The hold is the mark's own. The line under it is a Radix context-menu
+  trigger whose long press is a 700ms timer started on pointerdown; Radix
+  composes its handlers behind a `defaultPrevented` check, so the mark
+  prevents its own pointerdown and contextmenu and the line's menu never
+  starts. Android also fires a real `contextmenu` at the end of a touch hold;
+  the same handler catches it, which is why the popover opens once and the
+  selection callout does not. The click that ends a hold is swallowed by the
+  mark (`held`), not by the line's `notATap`, which only knows about the menu.
+- A finger that moves ten pixels is scrolling; the hold is let go. Focus
+  stays on the mark (`onOpenAutoFocus` prevented); Escape or a tap elsewhere
+  closes it. Not a dialog, no title: the list IS the answer.

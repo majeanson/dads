@@ -1,10 +1,16 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Plus, SmilePlus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MARKS, type Reaction, type RoomMessage } from '../shared/protocol';
+import { Face } from './Face';
 import { noteMark, readTally, sixFor } from './favourites';
 import { useT } from './i18n';
 import { cn } from './ui/cn';
+
+/** How long a thumb holds a mark before it is asking who, not marking. */
+export const HOLD_MS = 500;
+/** A finger that has wandered this far is scrolling, not holding. */
+const HOLD_SLACK = 10;
 
 /** Which marks this dad has already put on a line. */
 export function marksOf(message: RoomMessage, me: string): string[] {
@@ -21,8 +27,9 @@ export function marksOf(message: RoomMessage, me: string): string[] {
  *
  * The count is the number of dads, not a badge: in a group of five, "3"
  * beside a thumb is the whole story and a list of names is not worth the row.
- * Who they are is in the title and in the accessible name, for the evening
- * somebody wants to know.
+ * Who they are is in the title and in the accessible name — and, for the
+ * evening somebody wants to know (Marc asked, 2026-11-01), under a long
+ * press on the mark: the faces and the names, on a card over it.
  */
 export function Marks({
   reactions,
@@ -35,45 +42,149 @@ export function Marks({
   nameOf: (memberId: string) => string;
   onToggle: (emoji: string, on: boolean) => void;
 }) {
-  const { t } = useT();
   if (reactions === undefined || reactions.length === 0) return null;
 
   return (
     <span className="marks">
-      {reactions.map((r) => {
-        const mine = r.by.includes(me);
-        const who = r.by.map(nameOf).join(', ');
-        return (
-          <button
-            key={r.emoji}
-            type="button"
-            aria-pressed={mine}
-            aria-label={`${r.emoji} — ${who}`}
-            title={who}
-            data-testid="mark"
-            onClick={() => onToggle(r.emoji, !mine)}
-            className={cn(
-              // 32px, not 28: the screens suite refuses anything under 28 and
-              // a mark that lands exactly on the floor is a mark one rounding
-              // error away from failing it.
-              'inline-flex h-8 cursor-pointer items-center gap-1 rounded-full border px-2.5',
-              'text-xs leading-none transition-[border-color,color,scale] duration-100 active:scale-90',
-              // A mark that appears pops; one already there stays put and only
-              // its count moves.
-              'motion-pop',
-              mine ? 'border-accent text-ink' : 'border-line text-muted hover:border-edge',
-            )}
-          >
-            <span aria-hidden="true">{r.emoji}</span>
-            {/* Keyed on the count, so the number ticks when a dad adds his. */}
-            <span key={r.by.length} className="motion-tick tabular-nums">
-              {r.by.length}
-            </span>
-            <span className="sr-only">{t('line.marked')}</span>
-          </button>
-        );
-      })}
+      {reactions.map((r) => (
+        <Mark
+          key={r.emoji}
+          reaction={r}
+          mine={r.by.includes(me)}
+          nameOf={nameOf}
+          onToggle={(on) => onToggle(r.emoji, on)}
+        />
+      ))}
     </span>
+  );
+}
+
+/**
+ * One mark: a tap adds yours or takes it off; a hold, or a right-click, says
+ * who put it there.
+ *
+ * The hold is the mark's own and not the line's. The line under it is a
+ * Radix context-menu trigger whose long press is a timer started on
+ * pointerdown, and whose handlers stand down when the event was already
+ * default-prevented by the time it bubbles up — so the mark prevents its own
+ * pointerdown and contextmenu, and the line's menu stays shut. The click that
+ * ends a hold is swallowed here too (`held`), otherwise asking who put a
+ * thumb on a line would also put yours on it.
+ */
+function Mark({
+  reaction: r,
+  mine,
+  nameOf,
+  onToggle,
+}: {
+  reaction: Reaction;
+  mine: boolean;
+  nameOf: (memberId: string) => string;
+  onToggle: (on: boolean) => void;
+}) {
+  const { t } = useT();
+  const [who, setWho] = useState(false);
+  const timer = useRef<number | null>(null);
+  const held = useRef(false);
+  const from = useRef({ x: 0, y: 0 });
+  const names = r.by.map(nameOf).join(', ');
+
+  const letGo = () => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+  };
+  useEffect(() => letGo, []);
+
+  return (
+    <Popover.Root open={who} onOpenChange={setWho}>
+      <Popover.Anchor asChild>
+        <button
+          type="button"
+          aria-pressed={mine}
+          aria-label={`${r.emoji} — ${names}`}
+          title={names}
+          data-testid="mark"
+          onPointerDown={(event) => {
+            // Ours, not the line's: see above.
+            event.preventDefault();
+            held.current = false;
+            from.current = { x: event.clientX, y: event.clientY };
+            letGo();
+            timer.current = window.setTimeout(() => {
+              timer.current = null;
+              held.current = true;
+              setWho(true);
+            }, HOLD_MS);
+          }}
+          onPointerMove={(event) => {
+            if (timer.current === null) return;
+            const dx = event.clientX - from.current.x;
+            const dy = event.clientY - from.current.y;
+            if (Math.hypot(dx, dy) > HOLD_SLACK) letGo();
+          }}
+          onPointerUp={letGo}
+          onPointerLeave={letGo}
+          onPointerCancel={letGo}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            letGo();
+            setWho(true);
+          }}
+          onClick={() => {
+            if (held.current) {
+              held.current = false;
+              return;
+            }
+            onToggle(!mine);
+          }}
+          className={cn(
+            // 32px, not 28: the screens suite refuses anything under 28 and
+            // a mark that lands exactly on the floor is a mark one rounding
+            // error away from failing it.
+            'inline-flex h-8 cursor-pointer items-center gap-1 rounded-full border px-2.5',
+            'text-xs leading-none transition-[border-color,color,scale] duration-100 active:scale-90',
+            // A mark that appears pops; one already there stays put and only
+            // its count moves.
+            'motion-pop',
+            mine ? 'border-accent text-ink' : 'border-line text-muted hover:border-edge',
+          )}
+        >
+          <span aria-hidden="true">{r.emoji}</span>
+          {/* Keyed on the count, so the number ticks when a dad adds his. */}
+          <span key={r.by.length} className="motion-tick tabular-nums">
+            {r.by.length}
+          </span>
+          <span className="sr-only">{t('line.marked')}</span>
+        </button>
+      </Popover.Anchor>
+      <Popover.Portal>
+        <Popover.Content
+          side="top"
+          align="start"
+          sideOffset={4}
+          collisionPadding={12}
+          aria-label={`${r.emoji} — ${t('line.who_marked')}`}
+          // The thumb that opened it is still on the mark; focus stays there
+          // and Escape or a tap anywhere else puts it away.
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          className={[
+            'z-50 w-max max-w-[var(--radix-popper-available-width)] rounded-lg',
+            'border border-line bg-paper p-2 text-ink shadow-lg',
+            'motion-pop origin-[var(--radix-popper-transform-origin)]',
+          ].join(' ')}
+          data-testid="mark-who"
+        >
+          <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+            {r.by.map((memberId) => (
+              <li key={memberId} className="flex items-center gap-2 text-[0.9375rem]">
+                <Face memberId={memberId} size={24} />
+                <span className="min-w-0 truncate">{nameOf(memberId)}</span>
+              </li>
+            ))}
+          </ul>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 

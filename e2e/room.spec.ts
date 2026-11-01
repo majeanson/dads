@@ -704,6 +704,34 @@ test('a mark says you read it without spending a line', async ({ browser }) => {
   await his.getByTestId('mark').click();
   await expect(his.getByTestId('mark')).toContainText('1');
 
+  // Holding a mark says who put it there (Marc, 2026-11-01), without putting
+  // his own on it and without opening the line's menu under it.
+  const mark = his.getByTestId('mark');
+  await mark.hover();
+  await marc.mouse.down();
+  // `HOLD_MS` in Marks.tsx is 500; held well past it.
+  await marc.waitForTimeout(800);
+  await marc.mouse.up();
+  const who = marc.getByTestId('mark-who');
+  await expect(who).toBeVisible();
+  await expect(who).toContainText('Sam Mark');
+  await expect(who).not.toContainText('Marc Mark');
+  await expect(mark).toContainText('1');
+  await expect(marc.getByRole('menu')).toHaveCount(0);
+  await marc.keyboard.press('Escape');
+  await expect(who).toHaveCount(0);
+
+  // A right-click is the same question on a laptop.
+  await mark.click({ button: 'right' });
+  await expect(who).toBeVisible();
+  await expect(marc.getByRole('menu')).toHaveCount(0);
+  await marc.keyboard.press('Escape');
+  await expect(who).toHaveCount(0);
+
+  // A short tap is still a mark of his own.
+  await mark.click();
+  await expect(mark).toContainText('2');
+
   await marc.context().close();
   await sam.context().close();
 });

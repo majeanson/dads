@@ -147,6 +147,11 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   the whole row (same mark twice takes it off); `message_id` cascades.
 - Marks render only when there are some. A mark is optimistic; a retraction
   is not.
+- **Holding a mark says who put it** (`Mark` in `Marks.tsx`, `mark-who`):
+  `HOLD_MS` on the mark's own timer, or a right-click; faces and names on a
+  popover. The mark default-prevents its pointerdown and contextmenu so the
+  line's Radix long press stands down, and swallows the click that ends the
+  hold (`held`). A tap is still a mark of your own.
 - **The menu is capped by `--radix-popper-available-width`**, never a fixed
   width; marks wrap. Pinned by an e2e at the far edge.
 - `MarkRow` in `Marks.tsx` is the one row of six and a "+". Emoji button only
