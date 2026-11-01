@@ -808,6 +808,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   layer above its depth, and closing any other way travels back over its own
   entry. Nothing is a route: the URL never changes and home is still a view.
   A new full-screen layer calls the hook; a popover or menu does not.
+  **`history.go` is asynchronous**: a layer opened while a traversal of ours
+  is in flight gets its entry when the landing arrives (`entered`), never on
+  top of it. An e2e opens a sheet the instant another closed.
 - **Text fields are 16px** (`text-base`), or iOS zooms.
 - **Send keeps the keyboard** (`onMouseDown` preventDefault, refocus).
 - `overscroll-behavior: none` on html/body, `contain` on the list and sheets,

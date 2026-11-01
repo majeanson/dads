@@ -1,21 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { createBackStack, depthOf } from './backStack';
+import { createBackStack } from './backStack';
 
-/**
- * Bind the back stack to the one browser history. See `backStack.ts`.
- *
- * A reload with a sheet open (a fresh build waking a home-screen app) lands
- * on that sheet's entry with nothing open: travel back to the base at once,
- * so the first press of back is still the one that leaves.
- */
+/** Bind the back stack to the one browser history. See `backStack.ts`. */
 const stack = createBackStack({
   state: () => history.state,
   push: (state) => history.pushState(state, ''),
   go: (steps) => history.go(steps),
 });
-const stale = depthOf(history.state);
-if (stale > 0) history.go(-stale);
 window.addEventListener('popstate', (event) => stack.popped(event.state));
+stack.settle();
 
 /**
  * While `open`, the phone's back button calls `onClose` instead of leaving

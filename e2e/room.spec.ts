@@ -1327,6 +1327,47 @@ test('the album shows what the shelf holds, and a tap opens the viewer on it', a
   await expect.poll(() => marc.evaluate(() => history.state)).toBeNull();
 });
 
+test('a sheet opened the instant another closed stays open, and back still closes it', async ({
+  browser,
+}) => {
+  // Closing a sheet travels back over its history entry, and a traversal is
+  // asynchronous. Opening the next sheet in the same breath used to push its
+  // entry on top of that back, and the back then landed on the base and
+  // popped the new sheet shut — which is how the a11y suite found it.
+  const marc = await comeIn(browser, 'Quick Sheets');
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await marc.getByTestId('menu-album').click();
+  await expect(marc.getByTestId('album')).toBeVisible();
+  await marc.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await marc.getByTestId('menu-album').click();
+  await expect(marc.getByTestId('album')).toBeVisible();
+  // Still open once the history has settled on its entry.
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
+  await expect(marc.getByTestId('album')).toBeVisible();
+  await marc.goBack();
+  await expect(marc.getByTestId('album')).toHaveCount(0);
+  await expect(marc.getByLabel('Say something')).toBeVisible();
+});
+
+test('a reload with a sheet open lands on the base, in the same page', async ({ browser }) => {
+  // A home-screen app woken on a new build reloads where it was. The page
+  // then sits on the sheet's entry with no sheet, so one back would do
+  // nothing and the second would leave. It goes back to the base itself —
+  // and that travel must be within the page, not a second load.
+  const marc = await comeIn(browser, 'Reload Sheets');
+  await marc.getByRole('button', { name: 'Menu' }).click();
+  await marc.getByTestId('menu-album').click();
+  await expect.poll(() => marc.evaluate(() => history.state)).toEqual({ dadsLayers: 1 });
+  await marc.reload();
+  await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await expect.poll(() => marc.evaluate(() => history.state)).toBeNull();
+  const loads = await marc.evaluate(() =>
+    performance.getEntriesByType('navigation').map((e) => (e as PerformanceNavigationTiming).type),
+  );
+  expect(loads).toEqual(['reload']);
+});
+
 test('a dad can download what he has written, and only his own profile offers it', async ({
   browser,
 }) => {

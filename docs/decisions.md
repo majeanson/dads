@@ -2475,3 +2475,16 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   scroll passes through positions `onScroll` reads as "he scrolled up", which
   would unpin him before his line arrived (the same lesson as the tap-marks
   row). Edits do not go to the bottom; an edit is not a new line.
+- **The first E2E run on it failed** (a11y "every scene", prefs "asked in
+  the language"): both close a sheet and open the next in the same breath.
+  `history.go(-1)` is asynchronous, and the new sheet's `pushState` went on
+  top of a back still in flight; Chrome resolved that back to the base, the
+  popstate said depth 0, and the new sheet was popped shut. Locally the album
+  test had an `expect.poll` on `history.state` between the two, which is why
+  it passed. Now a layer opened while a traversal of ours is pending is held
+  out of the history (`entered` false) until the landing, then pushed; a press
+  of back in that window takes it, which is right. The race is an e2e of its
+  own, and it fails on the old code. A reload with a sheet open is also
+  pinned: the page goes back to the base in the same document — Chrome keeps
+  `pushState` entries same-document across a reload (the one navigation entry
+  is `reload`).

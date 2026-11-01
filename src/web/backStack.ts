@@ -9,9 +9,17 @@
  * So every layer that opens over the room — a sheet, the viewer — pushes one
  * history entry, stamped with how many layers are open at that point. Back
  * pops the entry and the layers above that depth close; closing a layer any
- * other way (X, Escape, its own button) travels back over its entry so the
- * history never grows. Nothing here is a route: the URL does not change and
- * home is still a view (`data-view`), not an address.
+ * other way travels back over its entry so the history never grows. Nothing
+ * here is a route: the URL does not change and home is still a view
+ * (`data-view`), not an address.
+ *
+ * `history.go` is asynchronous, and that is the one thing to be careful of.
+ * A sheet closed and the next one opened in the same breath (the a11y suite
+ * does exactly this) would push the new entry on top of a traversal still
+ * in flight, and the traversal then lands on the base and pops the new sheet
+ * shut. So while a traversal of ours is pending, a layer that opens is held
+ * back from the history (`entered` false) and gets its entry when the
+ * landing arrives. Until then a press of back takes it, which is right.
  *
  * The pure half, so the unit suite can drive it with a fake history. The
  * hook that binds it to `window.history` is `useBackCloses`.
@@ -42,33 +50,50 @@ export interface Layer {
 export function createBackStack(nav: Nav) {
   interface Open {
     close: () => void;
+    /** Back took it: its entry is already gone. */
     popped: boolean;
+    /** It has an entry in the history. */
+    entered: boolean;
   }
   const stack: Open[] = [];
-  // Where we believe the history is, counted in layers. `go()` is
-  // asynchronous, so this moves when we ask, not when the popstate lands:
-  // two layers unmounting together each travel over their own entry.
+  /** Traversals we asked for that have not landed as a popstate yet. */
+  let travelling = 0;
+  // Where we believe the history is, counted in layers. Moves when we ask,
+  // not when the popstate lands: two layers unmounting together each travel
+  // over their own entry.
   let position = depthOf(nav.state());
+
+  function travel(steps: number) {
+    travelling += 1;
+    position += steps;
+    nav.go(steps);
+  }
+
+  /** Give every layer still without an entry its own, in order. */
+  function enter() {
+    stack.forEach((layer, i) => {
+      if (layer.entered) return;
+      layer.entered = true;
+      position = i + 1;
+      nav.push({ [KEY]: i + 1 });
+    });
+  }
 
   return {
     /** A layer opened: push its entry. `close` is what back does to it. */
     open(close: () => void): Layer {
-      const layer: Open = { close, popped: false };
+      const layer: Open = { close, popped: false, entered: false };
       stack.push(layer);
-      position = stack.length;
-      nav.push({ [KEY]: stack.length });
+      if (travelling === 0) enter();
       return {
         gone() {
           const at = stack.indexOf(layer);
           if (at === -1) return;
           stack.splice(at, 1);
-          if (layer.popped) return;
+          if (layer.popped || !layer.entered) return;
           // Back over its own entry — never forward, and never past
           // somebody else's travel that has already been asked for.
-          if (position > at) {
-            nav.go(at - position);
-            position = at;
-          }
+          if (position > at) travel(at - position);
         },
       };
     },
@@ -76,13 +101,27 @@ export function createBackStack(nav: Nav) {
     /** A popstate landed on `state`: close everything above its depth. */
     popped(state: unknown) {
       const depth = depthOf(state);
+      if (travelling > 0) travelling -= 1;
       position = depth;
-      // Top first, so a viewer over a sheet goes before the sheet.
-      const closing = stack.splice(depth);
+      // Top first, so a viewer over a sheet goes before the sheet. Layers
+      // with no entry yet are above every entered one and are not in the
+      // history being popped: our own landing leaves them alone.
+      const closing = stack.filter((layer, i) => layer.entered && i >= depth);
       for (const layer of closing.reverse()) {
+        stack.splice(stack.indexOf(layer), 1);
         layer.popped = true;
         layer.close();
       }
+      if (travelling === 0) enter();
+    },
+
+    /**
+     * The page loaded on one of our entries (a reload with a sheet open):
+     * travel back to the base so the first back is still the one that leaves.
+     */
+    settle() {
+      const stale = depthOf(nav.state());
+      if (stale > 0) travel(-stale);
     },
 
     /** How many layers are open; for tests. */

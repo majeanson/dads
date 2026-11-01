@@ -5,9 +5,9 @@ import { createBackStack, depthOf, type Nav } from '../src/web/backStack';
  * A history that behaves like a browser's: push truncates forward, go() is
  * asynchronous and lands as a popstate. `settle()` delivers what is queued.
  */
-function fakeHistory() {
-  const entries: unknown[] = [null];
-  let at = 0;
+function fakeHistory(start: unknown[] = [null]) {
+  const entries: unknown[] = [...start];
+  let at = entries.length - 1;
   let owed = 0;
   const nav: Nav = {
     state: () => entries[at],
@@ -27,6 +27,9 @@ function fakeHistory() {
       at = Math.max(0, Math.min(entries.length - 1, at + owed));
       owed = 0;
       return entries[at];
+    },
+    get owed() {
+      return owed;
     },
     get length() {
       return entries.length;
@@ -66,13 +69,14 @@ describe('back stack', () => {
     const stack = createBackStack(h.nav);
     const layer = stack.open(() => {});
     layer.gone();
-    expect(h.settle()).toBeNull();
+    stack.popped(h.settle());
     expect(h.at).toBe(0);
     // And a layer back already closed does not travel twice.
     stack.open(() => {});
     h.nav.go(-1);
     stack.popped(h.settle());
     expect(h.at).toBe(0);
+    expect(h.owed).toBe(0);
   });
 
   it('a viewer over a sheet: back takes the top only', () => {
@@ -109,8 +113,9 @@ describe('back stack', () => {
         viewer.gone();
         sheet.gone();
       }
-      expect(h.settle()).toBeNull();
+      stack.popped(h.settle());
       expect(h.at).toBe(0);
+      expect(h.owed).toBe(0);
     }
   });
 
@@ -124,5 +129,57 @@ describe('back stack', () => {
     stack.popped(h.settle());
     expect(order).toEqual(['viewer', 'sheet']);
     expect(stack.depth).toBe(0);
+  });
+
+  it('a sheet opened before the last one has finished leaving waits for it', () => {
+    // Close one, open the next in the same breath: the new sheet must not
+    // push its entry on top of a back still in flight, and the landing of
+    // that back must not close it.
+    const h = fakeHistory();
+    const stack = createBackStack(h.nav);
+    let closed = 0;
+    const first = stack.open(() => {});
+    first.gone();
+    stack.open(() => (closed += 1));
+    expect(h.length).toBe(2);
+    expect(h.at).toBe(1);
+
+    stack.popped(h.settle());
+    expect(closed).toBe(0);
+    expect(stack.depth).toBe(1);
+    // Now it has its own entry, and back takes it like any other.
+    expect(h.at).toBe(1);
+    expect(h.length).toBe(2);
+    h.nav.go(-1);
+    stack.popped(h.settle());
+    expect(closed).toBe(1);
+    expect(h.at).toBe(0);
+  });
+
+  it('a layer closed again before its entry ever existed asks for no travel', () => {
+    const h = fakeHistory();
+    const stack = createBackStack(h.nav);
+    stack.open(() => {}).gone();
+    const waiting = stack.open(() => {});
+    waiting.gone();
+    expect(h.owed).toBe(-1);
+    stack.popped(h.settle());
+    expect(h.at).toBe(0);
+    expect(h.owed).toBe(0);
+    expect(stack.depth).toBe(0);
+  });
+
+  it('a page that loads on a sheet entry goes back to the base', () => {
+    const h = fakeHistory([null, { dadsLayers: 1 }, { dadsLayers: 2 }]);
+    const stack = createBackStack(h.nav);
+    stack.settle();
+    // A sheet opened at once waits for that landing too.
+    let closed = 0;
+    stack.open(() => (closed += 1));
+    expect(h.length).toBe(3);
+    stack.popped(h.settle());
+    expect(closed).toBe(0);
+    expect(h.at).toBe(1);
+    expect(h.length).toBe(2);
   });
 });
