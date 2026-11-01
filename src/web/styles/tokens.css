@@ -1179,6 +1179,13 @@
     padding-top: 0.2em;
   }
 
+  /* A line reached by the arrows wears the ring INSIDE itself: it has no
+     side padding, and outside it the ring was cut off at the room's edge
+     (`overflow-x: clip` on main.room). */
+  .line:focus-visible {
+    outline-offset: -2px;
+  }
+
   /* Every cell placed by hand, because the face is not always there and
      auto-placement counts children rather than columns: on a continued line,
      with no face to fill the gutter, the words slid one column left and were

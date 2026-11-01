@@ -10,6 +10,7 @@ import { RoomHeader } from './RoomHeader';
 import { preloadSheets, Sheets, type SheetName } from './Sheets';
 import { TableColumn } from './TableColumn';
 import { Viewer } from './Viewer';
+import { announce } from './announce';
 import { plural, useT } from './i18n';
 import { Button } from './ui/Button';
 import { buzz } from './buzz';
@@ -31,6 +32,10 @@ const TICK_MS = 15_000;
 
 /** Long enough to read twice, short enough that it is gone by the next line. */
 const NOTE_MS = 6000;
+
+/** How many arrivals the live log holds. A screen reader reads each once, as
+ * it is added; the rest are there for a man who goes back to look. */
+const HEARD = 5;
 
 /**
  * The room is the conversation and the call. That is the whole screen.
@@ -80,6 +85,9 @@ export function Room({
     idle(() => preloadSheets());
   }, []);
   const [sheet, setSheet] = useState<SheetName | null>(null);
+  /** The dad whose profile "who is in it" opens on, when a name on a line
+   * opened it. Null from the header: the roster. */
+  const [profileOf, setProfileOf] = useState<string | null>(null);
   /**
    * Home or the conversation.
    *
@@ -173,6 +181,24 @@ export function Room({
    * a notice a dad has to dismiss is a notice that outstays what it was about.
    */
   const [note, setNote] = useState<string | null>(null);
+  /**
+   * The newest lines that arrived, as a screen reader should hear them.
+   *
+   * A polite log, one child per arrival, so each is read once and none
+   * interrupts him (2026-11-01, the pass Marc asked for on reading the room
+   * without a thumb). Never the backfill and never his own (`Lines` decides
+   * that); only while the conversation is on the screen.
+   */
+  const [heard, setHeard] = useState<{ n: number; text: string }[]>([]);
+  const heardCount = useRef(0);
+  const onArrived = useCallback(
+    (message: RoomMessage) => {
+      heardCount.current += 1;
+      const n = heardCount.current;
+      setHeard((was) => [...was, { n, text: announce(message, t) }].slice(-HEARD));
+    },
+    [t],
+  );
   const composer = useRef<ComposerHandle>(null);
   /** Whether the composer is holding something. Written by it during render. */
   const composing = useRef(false);
@@ -403,7 +429,10 @@ export function Room({
           // live now that home holds only the night and the way in.
           waiting={waiting}
           onHome={goHome}
-          onWho={() => setSheet('here')}
+          onWho={() => {
+            setProfileOf(null);
+            setSheet('here');
+          }}
           onNight={() => setSheet('night')}
           onMenu={() => setSheet('menu')}
           onSettings={() => setSheet('settings')}
@@ -475,8 +504,32 @@ export function Room({
               onAway={() => composer.current?.focus()}
               onKeep={(media) => keep(media.id, !media.kept)}
               onOpenPhoto={setViewing}
+              onOpenProfile={(memberId) => {
+                setProfileOf(memberId);
+                setSheet('here');
+              }}
+              // The field's own blur rather than a handle on the composer:
+              // the keyboard goes down and the draft stays where it was.
+              onTapAway={() => {
+                const field = document.activeElement;
+                if (field instanceof HTMLElement && field.id === 'say') field.blur();
+              }}
+              onArrived={view === 'talk' ? onArrived : undefined}
               onScroll={seen.onScroll}
             />
+
+            {/* Not shown: a screen reader's way of hearing the room. */}
+            <div
+              role="log"
+              aria-live="polite"
+              aria-label={t('room.messages')}
+              className="sr-only"
+              data-testid="log"
+            >
+              {heard.map((h) => (
+                <p key={h.n}>{h.text}</p>
+              ))}
+            </div>
 
             {!seen.pinned && seen.unseen > 0 ? (
               <Button
@@ -545,7 +598,13 @@ export function Room({
 
         <Sheets
           open={sheet}
-          onOpen={setSheet}
+          onOpen={(next) => {
+            // Closed, or gone to another sheet: the next "who is in it",
+            // from the header or the call, opens on the roster again.
+            if (next !== 'here') setProfileOf(null);
+            setSheet(next);
+          }}
+          profileOf={profileOf}
           you={session.member.id}
           youName={room.you?.name ?? session.member.displayName}
           messages={room.messages}
