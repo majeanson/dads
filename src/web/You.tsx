@@ -9,7 +9,6 @@ import { useT } from './i18n';
 import { prepareFace } from './media';
 import { Button } from './ui/Button';
 import { FIELD } from './ui/field';
-import { Fold } from './ui/Fold';
 
 /**
  * Who a dad is here: the name he goes by, and his face.
@@ -171,48 +170,49 @@ export function You({ memberId, name }: { memberId: string; name: string }) {
         ) : null}
       </form>
 
-      <Fold label={t('set.look')} testId="look-open">
-        <div className="flex flex-wrap gap-2">
-          {/* A label, not a button wrapping an input: the file picker is the
+      {/* Flat, not behind a fold (2026-11-02): this whole screen is now the
+          leaf a dad opened by pressing his own name in Settings, so the face
+          and the glasses are what he came for, not something to open again. */}
+      <div className="flex flex-wrap gap-2">
+        {/* A label, not a button wrapping an input: the file picker is the
               input, and a label with a real box is what a thumb presses. */}
-          <label
-            htmlFor="face"
-            className={[
-              // The same shape as a Button, because it sits beside one.
-              'inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-3.5',
-              'border border-edge text-base font-medium transition-colors duration-75',
-              'hover:border-accent hover:text-accent',
-              'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2',
-              'has-[:focus-visible]:outline-accent',
-            ].join(' ')}
-          >
-            <UserRound size={18} aria-hidden="true" />
-            {hasFace ? t('you.change_face') : t('you.add_face')}
-          </label>
-          <input
-            ref={picker}
-            id="face"
-            className="sr-only"
-            type="file"
-            accept="image/*"
-            disabled={busy}
-            onChange={(e) => void pick(e.target.files?.[0])}
-            data-testid="face-input"
-          />
+        <label
+          htmlFor="face"
+          className={[
+            // The same shape as a Button, because it sits beside one.
+            'inline-flex h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-3.5',
+            'border border-edge text-base font-medium transition-colors duration-75',
+            'hover:border-accent hover:text-accent',
+            'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2',
+            'has-[:focus-visible]:outline-accent',
+          ].join(' ')}
+        >
+          <UserRound size={18} aria-hidden="true" />
+          {hasFace ? t('you.change_face') : t('you.add_face')}
+        </label>
+        <input
+          ref={picker}
+          id="face"
+          className="sr-only"
+          type="file"
+          accept="image/*"
+          disabled={busy}
+          onChange={(e) => void pick(e.target.files?.[0])}
+          data-testid="face-input"
+        />
 
-          {/* Quiet, not danger: taking off a picture you can put back in ten
+        {/* Quiet, not danger: taking off a picture you can put back in ten
               seconds is not the same act as taking back something you said,
               and two red buttons in one app teaches nobody anything. */}
-          <GlassesPicker memberId={memberId} worn={me?.glasses} photo={preview} />
+        <GlassesPicker memberId={memberId} worn={me?.glasses} photo={preview} />
 
-          {hasFace ? (
-            <Button look="quiet" disabled={busy} onClick={() => void remove()}>
-              <Trash2 size={18} aria-hidden="true" />
-              {t('you.remove_face')}
-            </Button>
-          ) : null}
-        </div>
-      </Fold>
+        {hasFace ? (
+          <Button look="quiet" disabled={busy} onClick={() => void remove()}>
+            <Trash2 size={18} aria-hidden="true" />
+            {t('you.remove_face')}
+          </Button>
+        ) : null}
+      </div>
 
       {error === null ? null : (
         <p className="text-[1.0625rem] text-danger" role="alert">
