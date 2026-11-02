@@ -30,17 +30,48 @@ self.addEventListener('push', (event) => {
     ? payload.actions.filter((a) => a && (a.action === 'rsvp-in' || a.action === 'rsvp-out'))
     : [];
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: payload.body || '',
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      // One tag for a kind of thing: two reminders for the same night replace
-      // each other rather than stacking up on the lock screen.
-      tag: payload.tag || 'dads',
-      actions,
-    }),
+    self.registration
+      .showNotification(title, {
+        body: payload.body || '',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        // One tag for a kind of thing: two reminders for the same night replace
+        // each other rather than stacking up on the lock screen.
+        tag: payload.tag || 'dads',
+        actions,
+      })
+      .then(badge, badge),
   );
 });
+
+/**
+ * A mark on the icon while the app is closed (Marc asked, 2026-11-02).
+ *
+ * No number: this worker cannot know how many lines he has not read, and an
+ * unnumbered badge is a dot that says "something". The app puts the true
+ * count there, or clears it, the moment it opens — `useSeen` does that on its
+ * first render. The Badging API lives on the worker's `navigator`, not on the
+ * registration. Absent on most browsers, refused on some; neither is a fault,
+ * and nothing in here may throw.
+ */
+function badge() {
+  return badging('setAppBadge');
+}
+
+/** He has looked at it. The app sets the real count when it opens. */
+function unbadge() {
+  return badging('clearAppBadge');
+}
+
+function badging(name) {
+  try {
+    const nav = self.navigator;
+    if (!nav || typeof nav[name] !== 'function') return Promise.resolve();
+    return Promise.resolve(nav[name]()).catch(() => {});
+  } catch {
+    return Promise.resolve();
+  }
+}
 
 /**
  * Always this app, never an address out of the payload. Only something
@@ -82,6 +113,8 @@ function answer(coming) {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  // First, and whichever button: he has looked at what the dot was for.
+  unbadge();
   if (event.action === 'rsvp-in') return event.waitUntil(answer(true));
   if (event.action === 'rsvp-out') return event.waitUntil(answer(false));
   event.waitUntil(openTheApp());

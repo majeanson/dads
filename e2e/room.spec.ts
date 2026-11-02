@@ -1309,6 +1309,71 @@ test('a dad at the bottom stays at the bottom when the last line grows', async (
   await page.context().close();
 });
 
+test('a way back down from far up', async ({ browser }) => {
+  // Marc asked (2026-11-02): far up the week with nothing new, he had to
+  // thumb all the way back. One button, two looks: the count when something
+  // new is below, a bare arrow named "Newest" when nothing is. On a 390px
+  // phone, so it is checked against the composer where it matters.
+  const far = await comeInOnAPhone(browser, 'Far Up');
+  const near = await comeIn(browser, 'Near Down');
+  for (let i = 0; i < 25; i++) {
+    await far.getByLabel('Say something').fill(`far ${String(i).padStart(2, '0')}`);
+    await far.getByRole('button', { name: 'Send', exact: true }).click();
+  }
+  await expect(far.getByTestId('line').filter({ hasText: 'far 24' })).toBeVisible();
+
+  const gap = () =>
+    far.evaluate(() => {
+      const list = document.querySelector('ol.lines')!;
+      return Math.round(list.scrollHeight - list.scrollTop - list.clientHeight);
+    });
+  const scrollTo = (where: 'top' | 'near') =>
+    far.evaluate((where) => {
+      const list = document.querySelector('ol.lines')!;
+      list.scrollTop = where === 'top' ? 0 : list.scrollHeight - list.clientHeight - 100;
+    }, where);
+  const down = far.getByTestId('to-bottom');
+
+  // At the bottom there is nowhere to go.
+  await expect.poll(gap).toBeLessThan(4);
+  await expect(down).toHaveCount(0);
+
+  // From the top, the arrow, named for where it goes, above the composer.
+  await scrollTo('top');
+  await expect(down).toBeVisible();
+  await expect(down).toHaveAccessibleName(/^Newest$/);
+  const button = (await down.boundingBox())!;
+  const composer = (await far.locator('form.composer').boundingBox())!;
+  expect(button.y + button.height).toBeLessThanOrEqual(composer.y);
+  expect(button.width).toBeGreaterThanOrEqual(44);
+
+  // Within a screen of the bottom it goes: a flick does that job.
+  await scrollTo('near');
+  await expect(down).toHaveCount(0);
+
+  // Pressed from the top, it takes him all the way down and goes.
+  await scrollTo('top');
+  await down.click();
+  await expect.poll(gap).toBeLessThan(4);
+  await expect(down).toHaveCount(0);
+
+  // Far up again, and the other dad says something: the same button counts it.
+  await scrollTo('top');
+  await expect(down).toHaveAccessibleName(/^Newest$/);
+  await near.getByLabel('Say something').fill('while you were up there');
+  await near.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(down).toHaveText(/^1 new/);
+  await down.click();
+  await expect.poll(gap).toBeLessThan(4);
+  await expect(down).toHaveCount(0);
+  await expect(
+    far.getByTestId('line').filter({ hasText: 'while you were up there' }),
+  ).toBeVisible();
+
+  await far.context().close();
+  await near.context().close();
+});
+
 test('the album shows what the shelf holds, and a tap opens the viewer on it', async ({
   browser,
 }) => {

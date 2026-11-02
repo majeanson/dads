@@ -2881,3 +2881,65 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   faster, and the phone remembers how fast" (`playbackRate`, through a
   reload); "a dad says it instead of typing it" is unchanged but for the
   clock. `a11y.spec` scans a voice note, the hands-free row and the held row.
+
+## A way down from far up (2026-11-02)
+
+- Marc asked: far up the week with nothing new below, there was no way back
+  but thumbing. The "N new" pill only appeared when something had arrived.
+- One button (`to-bottom`), two looks, decided by `jumpLook` (`src/web/jump.ts`,
+  pure): not pinned with something unseen is today's primary pill, wording and
+  `plural()` unchanged; nothing unseen and MORE than a screen above the bottom
+  (`scrollHeight - scrollTop - clientHeight > clientHeight`) is a bare round
+  44px arrow, `look="plain"` so its border makes it findable, named "Newest" /
+  "Les plus récentes". Within a screen of the bottom there is nothing: a flick
+  does that job and a button would sit on the conversation. It sits in flow
+  where the pill sat, between the list and the status line, so it cannot cover
+  the composer or the last line's marks.
+- `farUp` is read in `onScroll`, and re-read in the rows' `stick` (the
+  ResizeObserver that keeps a pinned dad at the bottom, which already fires
+  when a row grows, arrives or a picture loads) and in `keepBottom` (the
+  keyboard changes the list's height, which is what "far" is measured in,
+  without necessarily scrolling it). No observer of its own was needed.
+- **The smooth ride down used to bring the button back.** `toBottom` pins and
+  scrolls smoothly, and every position on the way reads as "he is up the
+  list", so `onScroll` unpinned him and the pill (now the arrow too) flickered
+  back for the length of the ride. While `descending`, a scroll that went DOWN
+  is the ride and changes nothing; one that went up is his thumb and ends it;
+  reaching the bottom ends it. Under reduced motion the scroll is a jump.
+- Tests: `test/jump.test.ts`; e2e "a way back down from far up" (iPhone 13
+  context, 390px: 25 lines, top shows the arrow named "Newest" above the
+  composer and at least 44px wide; 100px from the bottom shows nothing; a
+  press reaches the bottom and the arrow goes; far up again, the other dad's
+  line turns the same button into "1 new"); an axe scene "the way down" in
+  `a11y.spec.ts` at 390×667, lines of three rows so twenty of them are more
+  than two screens.
+
+## A dot on the icon when the app is closed (2026-11-02)
+
+- Marc asked for the home-screen badge while the app is not running. The app
+  already sets the count with `setAppBadge(unseen)` while it runs; a closed
+  app only hears a push.
+- `public/sw.js`'s `push` handler, after the notification is shown (or failed
+  to be), calls `navigator.setAppBadge()` with NO count: the worker does not
+  know how many lines are unread, and pushes are not lines anyway (the night,
+  the table, the call, events). An unnumbered badge is a dot that says
+  "something". `notificationclick` clears it first, whichever button — an
+  RSVP answered from the lock screen is having looked at it.
+- The brief said `self.registration.setAppBadge`; the Badging API is on the
+  worker's `navigator` (WorkerNavigator), not the registration, so that is
+  what is called. Every call is guarded (absent function) and its promise
+  caught, inside a try: the worker must never throw. iOS 16.4+ home-screen
+  apps with notifications allowed, and Android, show it.
+- **The app replaces the dot with the truth when it opens.** `useSeen`'s badge
+  effect runs on the first render (its dependency is `unseen`, which is 0
+  until the backfill), so a cold open clears it and sets the real count once
+  there is one.
+- Tests: `test/sw.test.ts` imports the script against a stubbed `self` and
+  calls its listeners (push sets an unnumbered badge, even when the
+  notification fails; a click clears it and still focuses the app; a browser
+  without the API, or one that refuses or throws, is not a fault). A real push
+  event cannot be sent from a page, so there is no e2e for the worker. e2e
+  "the icon carries the true count, and opening on nothing new clears it"
+  (`home.spec.ts`) stubs the Badging API to a log: a line on home sets 1, going
+  in clears, a cold open on home clears and sets nothing until the next line
+  (the sentinel) sets 1.

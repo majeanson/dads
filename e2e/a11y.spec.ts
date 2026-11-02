@@ -66,6 +66,29 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByTestId('line').filter({ hasText: `a ${theme} line` })).toBeVisible();
     found.push(...(await faults(page, 'the room')));
 
+    // Far up a long conversation, the way back down is a bare arrow
+    // (2026-11-02). Enough lines that the top is more than a screen away, on
+    // a phone's screen, which is where it is for.
+    const wide = page.viewportSize()!;
+    await page.setViewportSize({ width: 390, height: 667 });
+    for (let i = 0; i < 20; i++) {
+      // Three rows each: a run of one-row lines is short, and twenty of
+      // them do not make a phone's screen twice over.
+      await page
+        .getByLabel('Say something')
+        .fill(`${theme} up ${String(i).padStart(2, '0')}\nand\nmore`);
+      await page.getByLabel('Say something').press('Enter');
+    }
+    await expect(page.getByTestId('line').filter({ hasText: `${theme} up 19` })).toBeVisible();
+    await page.evaluate(() => {
+      document.querySelector('ol.lines')!.scrollTop = 0;
+    });
+    await expect(page.getByTestId('to-bottom')).toBeVisible();
+    found.push(...(await faults(page, 'the way down')));
+    await page.getByTestId('to-bottom').click();
+    await expect(page.getByTestId('to-bottom')).toHaveCount(0);
+    await page.setViewportSize(wide);
+
     // Tagging a dad: the field points at a listbox while the picks show.
     // The picker lists everybody but him, so the light run (the room's first
     // dad) has nobody to offer and the scene is the dark run's. React has

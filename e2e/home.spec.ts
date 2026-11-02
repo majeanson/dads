@@ -217,6 +217,62 @@ test('what he has already read is not announced again on the next open', async (
   await sam.context().close();
 });
 
+test('the icon carries the true count, and opening on nothing new clears it', async ({
+  browser,
+}) => {
+  // 2026-11-02: a push now puts an unnumbered dot on the icon while the app
+  // is closed (`sw.js`). The app owns the number once it runs, so a cold open
+  // with nothing unread has to take the dot off. The Badging API is stubbed
+  // to a log: headless Chromium has no icon to put a badge on.
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    const log: unknown[] = [];
+    (window as unknown as { badges: unknown[] }).badges = log;
+    Object.defineProperty(Navigator.prototype, 'setAppBadge', {
+      configurable: true,
+      value: (n?: number) => (log.push(n ?? 'dot'), Promise.resolve()),
+    });
+    Object.defineProperty(Navigator.prototype, 'clearAppBadge', {
+      configurable: true,
+      value: () => (log.push('clear'), Promise.resolve()),
+    });
+  });
+  const marc = await context.newPage();
+  await marc.goto('/');
+  await marc.getByLabel('The word').fill(E2E_HOME_GROUP.code);
+  await marc.getByLabel('Your name').fill('Badged');
+  await marc.getByRole('button', { name: 'Come in' }).click();
+  await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  const sam = await comeIn(browser, 'Badger');
+  const badges = () => marc.evaluate(() => (window as unknown as { badges: unknown[] }).badges);
+  const say = async (text: string) => {
+    await sam.getByLabel('Say something').fill(text);
+    await sam.getByRole('button', { name: 'Send' }).click();
+  };
+
+  await talk(sam);
+  await say('a line for the badge');
+  await expect.poll(async () => (await badges()).at(-1)).toBe(1);
+
+  // Going in reads it, and the icon says so.
+  await marc.getByTestId('home-go').click();
+  await expect.poll(async () => (await badges()).at(-1)).toBe('clear');
+
+  // A cold open on nothing new clears whatever the worker left there, and sets
+  // nothing — until a line arrives, which is the sentinel that it would have.
+  // From home, or the reload would open in the conversation and read it.
+  await marc.getByTestId('go-home').click();
+  await marc.reload();
+  await expect(marc.getByTestId('connection')).toHaveText(/here$/);
+  await expect.poll(badges).toContain('clear');
+  await say('and a second one');
+  await expect.poll(async () => (await badges()).at(-1)).toBe(1);
+  expect((await badges()).filter((b) => b !== 'clear')).toEqual([1]);
+
+  await context.close();
+  await sam.context().close();
+});
+
 test('in, straight back out, and in again: the door still works', async ({ browser }) => {
   // The splash into the conversation runs most of a second. A second press
   // inside it used to do nothing at all — a dead button on home — because the
