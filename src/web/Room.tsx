@@ -233,6 +233,8 @@ export function Room({
     view,
     watching,
     ready: room.connection === 'open',
+    remote: room.seen,
+    share: room.sendSeen,
     bottom,
     lines,
   });

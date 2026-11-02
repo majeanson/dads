@@ -18,11 +18,31 @@ import { storedFit } from './storage';
  * not worth refusing a dad the door.
  */
 export async function membersOfGroup(room: Room): Promise<RosterEntry[]> {
+  return (await readMembers(room)).members;
+}
+
+/**
+ * The same list, and where ONE of them got to in the conversation: what a
+ * hello needs, from the one read. The mark goes only to his own socket, so it
+ * is kept out of the entries, which are everybody's.
+ */
+export async function membersWithMark(
+  room: Room,
+  memberId: string,
+): Promise<{ members: RosterEntry[]; seen: number | null }> {
+  const { members, seen } = await readMembers(room);
+  return { members, seen: seen.get(memberId) ?? null };
+}
+
+async function readMembers(
+  room: Room,
+): Promise<{ members: RosterEntry[]; seen: Map<string, number> }> {
+  const seen = new Map<string, number>();
   const groupId = room.groupId();
-  if (groupId === undefined) return [];
+  if (groupId === undefined) return { members: [], seen };
   try {
     const { results } = await room.env.DB.prepare(
-      'SELECT id, display_name, avatar_at, glasses, glasses_fit, colour, gone_at FROM members WHERE group_id = ?',
+      'SELECT id, display_name, avatar_at, glasses, glasses_fit, colour, gone_at, seen_seq FROM members WHERE group_id = ?',
     )
       .bind(groupId)
       .all<{
@@ -33,8 +53,10 @@ export async function membersOfGroup(room: Room): Promise<RosterEntry[]> {
         glasses_fit: string | null;
         colour: number | null;
         gone_at: number | null;
+        seen_seq: number | null;
       }>();
-    return results.map((r) => {
+    const members = results.map((r) => {
+      if (r.seen_seq !== null) seen.set(r.id, r.seen_seq);
       const fit = storedFit(r.glasses_fit);
       return {
         memberId: r.id,
@@ -46,9 +68,10 @@ export async function membersOfGroup(room: Room): Promise<RosterEntry[]> {
         ...(r.gone_at !== null ? { gone: true } : {}),
       };
     });
+    return { members, seen };
   } catch (err) {
     console.error('members failed', err);
-    return [];
+    return { members: [], seen };
   }
 }
 

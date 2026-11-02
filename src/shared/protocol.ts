@@ -300,7 +300,13 @@ export type ClientFrame =
   | { t: 'react'; id: string; emoji: string; on: boolean }
   /** Change the words of a line you typed. Same authority as taking it back. */
   | { t: 'edit'; id: string; body: string }
-  | { t: 'typing' };
+  | { t: 'typing' }
+  /**
+   * He has looked at everything up to this line, on this device. Kept on his
+   * member row so his other phone's count drops too, and told to nobody
+   * else. Only ever forward: a lower one changes nothing.
+   */
+  | { t: 'seen'; seq: number };
 
 export type ServerFrame =
   | {
@@ -345,6 +351,13 @@ export type ServerFrame =
       media: { mediaId: string; kept: boolean | null }[];
       /** Who won the last game at the table, or null. */
       champions: Champions | null;
+      /**
+       * The newest line HE has looked at, on any of his devices, as the room
+       * knows it when he connects; null for a dad who has never marked one.
+       * His own and never anybody else's: whether a man has read a line is
+       * his business.
+       */
+      seen: number | null;
     }
   /** A game ended: who won it, which replaces whoever won the one before. */
   | { t: 'champions'; champions: Champions | null }
@@ -367,6 +380,11 @@ export type ServerFrame =
   /** A line whose words changed. Everyone is told, the editor included. */
   | { t: 'edited'; id: string; body: string; editedAt: number; rev: number }
   | { t: 'typing'; memberId: string; name: string }
+  /**
+   * His other device read further: everything up to `seq` is seen. Sent only
+   * to his own other sockets, never to the room.
+   */
+  | { t: 'seen'; seq: number }
   /**
    * A picture taken off the shelf, or put back on it.
    *
@@ -454,6 +472,14 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
   if (!value || typeof value !== 'object') return null;
   const frame = value as { t?: unknown; body?: unknown };
   if (frame.t === 'typing') return { t: 'typing' };
+  if (frame.t === 'seen') {
+    // A line's seq: a positive whole number. Nothing else belongs in the
+    // column it is written to.
+    const { seq } = value as { seq?: unknown };
+    return typeof seq === 'number' && Number.isSafeInteger(seq) && seq > 0
+      ? { t: 'seen', seq }
+      : null;
+  }
   if (frame.t === 'chat' && typeof frame.body === 'string') {
     const { mediaId, cid, replyTo } = value as {
       mediaId?: unknown;

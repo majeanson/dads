@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { RoomMessage } from '../shared/protocol';
 import { isFarUp } from './jump';
-import { lastSeen, markSeen } from './seen';
+import { lastSeen, markSeen, reconcile } from './seen';
 import { useVisualViewport } from './useVisualViewport';
 
 /** Close enough to the newest line to count as reading it. */
@@ -9,6 +9,10 @@ const NEAR_BOTTOM_PX = 80;
 
 /** Hidden for longer than this and coming back counts as coming back. */
 const AWAY_MS = 30 * 60_000;
+
+/** A mark goes to the room at most this often while he reads; the newest one
+ * at the end of each wait, and at once when the page is put away. */
+const SHARE_EVERY_MS = 1_000;
 
 export interface Seen {
   /** How many lines he has not looked at. Derived, never accumulated. */
@@ -33,21 +37,21 @@ export interface Seen {
 /**
  * What he has read, and where the list is.
  *
- * One hook because it is one question asked three ways: how many lines are
- * new, whether a new one should scroll the page, and whether the tab's title
- * should say anything. All three are answered from ONE mark — the newest seq
- * he actually looked at, kept per device in localStorage — rather than from a
- * tally. The tally this replaced began every load at nought, so every
- * backfilled line incremented it and opening the app on a conversation he had
- * already read announced forty-one new ones.
+ * Two halves, because they are two jobs:
  *
- * Nothing here is sent anywhere. Whether a man has read a line is his
- * business, so it lives beside the theme and never leaves the browser.
+ *  - `useSeenMark` (below) is the MARK: the newest line he has looked at, on
+ *    any of his devices. Everything about "how many are new" — the count, the
+ *    divider, the tab's title, the icon's badge — is derived from it, never
+ *    tallied. It knows nothing about scrolling.
+ *  - this hook is the LIST: whether he is at the bottom, following new lines
+ *    down, the way back down from far up. It tells the mark when he has read
+ *    something, which is being at the bottom of the conversation with the
+ *    page showing.
  *
- * `watching` is the whole guard: home and the conversation are two views of
- * one component and the stage is hidden with CSS rather than unmounted, so
- * every effect in here would otherwise fire while a dad is standing on home,
- * where it can neither see nor scroll anything.
+ * `watching` is the list's whole guard: home and the conversation are two
+ * views of one component and the stage is hidden with CSS rather than
+ * unmounted, so every effect in here would otherwise fire while a dad is
+ * standing on home, where it can neither see nor scroll anything.
  */
 export function useSeen({
   groupId,
@@ -56,6 +60,8 @@ export function useSeen({
   view,
   watching,
   ready,
+  remote,
+  share,
   bottom,
   lines,
 }: {
@@ -68,11 +74,27 @@ export function useSeen({
   /** The room has said hello, so `messages` is the backfill and not merely
    * nothing yet. What tells an empty room apart from one still loading. */
   ready: boolean;
+  /** His mark as the room last said (`useRoom`'s `seen`). */
+  remote: number | null;
+  /** Tell the room how far he has read (`useRoom`'s `sendSeen`). */
+  share: (seq: number) => void;
   bottom: RefObject<HTMLLIElement | null>;
   lines: RefObject<HTMLOListElement | null>;
 }): Seen {
+  const { unseen, since, read } = useSeenMark({
+    groupId,
+    groupName,
+    messages,
+    ready,
+    remote,
+    share,
+  });
+
   const [pinned, setPinned] = useState(true);
   const [farUp, setFarUp] = useState(false);
+  /** The page is showing. State rather than a read of `document.hidden`, so
+   * coming back to the tab re-runs the effect that counts it as reading. */
+  const [shown, setShown] = useState(() => !document.hidden);
   /** Where the list was at the last scroll, to tell down from up. */
   const lastTop = useRef(0);
   /**
@@ -84,17 +106,8 @@ export function useSeen({
    * the ride and changes nothing; one that went up is his thumb, and ends it.
    */
   const descending = useRef(false);
-  /**
-   * The newest line he has actually looked at, on this device.
-   *
-   * Null until the first backfill lands, which is a dad who has never opened
-   * this room here.
-   */
-  const [seenSeq, setSeenSeq] = useState<number | null>(() => lastSeen(groupId));
-  const [since, setSince] = useState<number | null>(() => lastSeen(groupId));
 
   const lastSeq = messages.at(-1)?.seq ?? 0;
-  const unseen = seenSeq === null ? 0 : messages.reduce((n, m) => (m.seq > seenSeq ? n + 1 : n), 0);
 
   const pinnedNow = useRef(pinned);
   pinnedNow.current = pinned;
@@ -118,36 +131,12 @@ export function useSeen({
   }, [messages.length, watching, pinned, bottom]);
 
   /**
-   * Going in is reading it, and so is scrolling to the newest line.
-   *
-   * Advancing the mark rather than zeroing a tally. What he has seen is a
-   * property of him and this device, it survives the tab, and the count is
-   * derived from it.
+   * Going in is reading it, and so is scrolling to the newest line — with the
+   * page showing. The mark only moves forward, so telling it again is free.
    */
   useEffect(() => {
-    if (!watching || !pinned || document.hidden) return;
-    if (lastSeq <= 0 || (seenSeq !== null && lastSeq <= seenSeq)) return;
-    setSeenSeq(lastSeq);
-    markSeen(groupId, lastSeq);
-  }, [watching, pinned, lastSeq, seenSeq, groupId]);
-
-  // A dad who has never opened this room on this device has nothing to catch
-  // up on: the archive is not a backlog. The mark starts at the newest line
-  // he was handed rather than at nothing.
-  //
-  // And in a room where nothing has been said, it starts at nought ONCE the
-  // room has said hello — not at the first line to arrive. Waiting for a line
-  // to anchor to made that line the mark, so the first thing ever said in a
-  // group was the one thing the door never counted.
-  useEffect(() => {
-    if (seenSeq !== null) return;
-    if (lastSeq > 0) {
-      setSeenSeq(lastSeq);
-      markSeen(groupId, lastSeq);
-    } else if (ready) {
-      setSeenSeq(0);
-    }
-  }, [seenSeq, lastSeq, ready, groupId]);
+    if (watching && pinned && shown) read(lastSeq);
+  }, [watching, pinned, shown, lastSeq, read]);
 
   /** Straight to the bottom, and everything down to there is read. */
   useEffect(() => {
@@ -216,7 +205,7 @@ export function useSeen({
   }, [lines]);
 
   // Reaching the newest line is reading everything down to it — but that is
-  // the mark-advancing effect's job, which fires as soon as `pinned` flips.
+  // the reading effect's job, which fires as soon as `pinned` flips.
   // Smooth, unless he has asked the phone for no motion; then it is a jump.
   const toBottom = useCallback(() => {
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
@@ -266,33 +255,163 @@ export function useSeen({
   }, [pinned, bottom, lines]);
   useVisualViewport(keepBottom);
 
-  // Coming back to the tab is seeing it. Coming back after long enough is
-  // coming back: the last line he saw becomes the boundary, and the divider
-  // below points at everything since.
+  // Coming back to the tab is seeing it, if he is still at the bottom: the
+  // reading effect runs again because `shown` changed.
+  useEffect(() => {
+    function look() {
+      setShown(!document.hidden);
+      if (!document.hidden && atBottom()) setPinned(true);
+    }
+    document.addEventListener('visibilitychange', look);
+    return () => document.removeEventListener('visibilitychange', look);
+  }, [atBottom]);
+
+  return { unseen, since, pinned, farUp, onScroll, toBottom, sent, unpin };
+}
+
+/**
+ * The mark: the newest line he has looked at, on ANY of his devices.
+ *
+ * One mark per dad, not per phone (Marc asked, 2026-11-02). Two sources, one
+ * answer: this device's own copy in localStorage (`seen.ts`), which is what
+ * there is before the socket says hello and all there is when it cannot, and
+ * the room's, which arrives in `hello` and again whenever his other device
+ * reads further. The mark is whichever got further (`reconcile`); neither
+ * ever goes backwards. When he reads here, the copy is written at once and
+ * the room is told at most once a second (`share`), and at once when the page
+ * is put away, so the other phone's count drops while he is still reading.
+ *
+ * Nobody else is told — whether a man has read a line is his business. The
+ * room relays his mark only to his own sockets.
+ */
+export function useSeenMark({
+  groupId,
+  groupName,
+  messages,
+  ready,
+  remote,
+  share,
+}: {
+  groupId: string;
+  groupName: string;
+  messages: RoomMessage[];
+  ready: boolean;
+  remote: number | null;
+  share: (seq: number) => void;
+}): { unseen: number; since: number | null; read: (seq: number) => void } {
+  /** What this device has read, or null if it has never opened this room. */
+  const [local, setLocal] = useState<number | null>(() => lastSeen(groupId));
+  const mark = reconcile(local, remote);
+  const markNow = useRef(mark);
+  markNow.current = mark;
+
+  const lastSeq = messages.at(-1)?.seq ?? 0;
+  const unseen = mark === null ? 0 : messages.reduce((n, m) => (m.seq > mark ? n + 1 : n), 0);
+
+  // --- telling the room, at most once a second -----------------------------
+
+  const pending = useRef<number | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flush = useCallback(() => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = null;
+    if (pending.current !== null) share(pending.current);
+    pending.current = null;
+  }, [share]);
+
+  /** He has looked at everything up to `seq` on this device. */
+  const read = useCallback(
+    (seq: number) => {
+      if (seq <= 0 || (markNow.current !== null && seq <= markNow.current)) return;
+      setLocal((had) => (had !== null && had >= seq ? had : seq));
+      markSeen(groupId, seq);
+      pending.current = Math.max(pending.current ?? 0, seq);
+      timer.current ??= setTimeout(flush, SHARE_EVERY_MS);
+    },
+    [groupId, flush],
+  );
+
+  // Put away is the last chance: a phone locked mid-read must not leave the
+  // other one counting what he just read. And unmounting sends what is held.
+  useEffect(() => {
+    const away = () => {
+      if (document.hidden) flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', away);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', away);
+      flush();
+    };
+  }, [flush]);
+
+  // What this device already had goes to the room too, once: a phone that
+  // read further before the room kept marks (or offline) says so. `useRoom`
+  // holds it until the socket opens, and the room ignores it if it is behind.
+  useEffect(() => {
+    const had = lastSeen(groupId);
+    if (had !== null) share(had);
+  }, [groupId, share]);
+
+  // His other device read further: this device's copy catches up, so a
+  // reload before the socket is back does not count those lines again.
+  useEffect(() => {
+    if (remote !== null) markSeen(groupId, remote);
+  }, [remote, groupId]);
+
+  // A dad who has never opened this room on ANY device has nothing to catch
+  // up on: the archive is not a backlog. The mark starts at the newest line
+  // he was handed rather than at nothing. (A new phone of a dad who has read
+  // here before starts where he got to: the room's mark is not null.)
+  //
+  // And in a room where nothing has been said, it starts at nought ONCE the
+  // room has said hello — not at the first line to arrive. Waiting for a line
+  // to anchor to made that line the mark, so the first thing ever said in a
+  // group was the one thing the door never counted.
+  useEffect(() => {
+    if (mark !== null) return;
+    if (lastSeq > 0) read(lastSeq);
+    else if (ready) setLocal(0);
+  }, [mark, lastSeq, ready, read]);
+
+  // --- the divider -----------------------------------------------------------
+
+  /**
+   * Where "new since you were here" goes: the mark as it was when this sitting
+   * began. Set when the screen opens and when he comes back after AWAY_MS,
+   * and settled against the room's mark the next time the room speaks, so it
+   * means since he was here on ANY of his devices — not since this phone
+   * last looked. It does not follow him while he reads.
+   */
+  const [since, setSince] = useState<number | null>(() => lastSeen(groupId));
+  const settling = useRef(true);
+  useEffect(() => {
+    if (!ready || !settling.current) return;
+    settling.current = false;
+    setSince((s) => reconcile(s, remote));
+  }, [ready, remote]);
+
   const hiddenAt = useRef<number | null>(null);
   useEffect(() => {
-    function seen() {
+    function back() {
       if (document.hidden) {
         hiddenAt.current = Date.now();
         return;
       }
       const away = hiddenAt.current !== null && Date.now() - hiddenAt.current > AWAY_MS;
       hiddenAt.current = null;
-      // Coming back is reading it; the mark-advancing effect picks it up on
-      // the next render, because the tab is no longer hidden.
-      if (away) setSince(lastSeen(groupId));
-      else if (atBottom()) setPinned(true);
+      if (!away) return;
+      // The socket has usually dropped while the phone slept, and the room's
+      // word on how far he got arrives with the hello that follows.
+      setSince(markNow.current);
+      settling.current = true;
     }
-    document.addEventListener('visibilitychange', seen);
-    return () => document.removeEventListener('visibilitychange', seen);
-  }, [atBottom, groupId]);
+    document.addEventListener('visibilitychange', back);
+    return () => document.removeEventListener('visibilitychange', back);
+  }, []);
 
-  // Looking at the newest line, with the tab showing, is having seen it.
-  useEffect(() => {
-    if (pinned && unseen === 0 && !document.hidden && lastSeq > 0) {
-      markSeen(groupId, lastSeq);
-    }
-  }, [pinned, unseen, lastSeq, groupId]);
+  // --- what the count is shown on --------------------------------------------
 
   /**
    * The tab's own title carries the count while you are looking elsewhere.
@@ -307,8 +426,9 @@ export function useSeen({
   /**
    * The same count on the home-screen icon, where the browser has one.
    *
-   * Only while the app is running — a closed app is told by push, which is
-   * its own opt-in. Absent API, or a refusal, is not a fault.
+   * On the first render too (`unseen` is 0 until the backfill), which is what
+   * replaces the service worker's unnumbered dot with the truth when the app
+   * opens. Absent API, or a refusal, is not a fault.
    */
   useEffect(() => {
     const nav = navigator as Navigator & {
@@ -319,5 +439,5 @@ export function useSeen({
     done?.catch(() => {});
   }, [unseen]);
 
-  return { unseen, since, pinned, farUp, onScroll, toBottom, sent, unpin };
+  return { unseen, since, read };
 }

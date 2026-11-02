@@ -1152,7 +1152,8 @@ secret, custom domain bound by the route in wrangler.toml.
   Home sits BESIDE the stage and the stage is hidden with CSS — taking it out
   of the tree would unmount the table's iframe and restart a game.
 - **The unseen count is DERIVED from the last line he looked at, never
-  tallied.** `seen.ts` keeps that mark per device; the count is
+  tallied.** `seen.ts` keeps that mark per device (per DAD since 2026-11-02:
+  "One seen mark per dad, not per phone", at the end); the count is
   `messages.filter(seq > mark).length`. It used to be an accumulator starting
   at nought each load, so every backfilled line incremented it and opening the
   app on a conversation he had already read announced forty-one new ones. A
@@ -1800,7 +1801,9 @@ neither see nor scroll anything.
 - **"New since you were here" is a divider, not a badge.** `src/web/seen.ts`
   keeps the last `seq` he was looking at, per device and per group, in
   localStorage beside the theme — nothing is sent, because whether a man has
-  read a line is his business. A line counts as seen only while he is at the
+  read a line is his business. (Since 2026-11-02 the mark is sent, to his own
+  member row and his own other devices and nobody else's; see "One seen mark
+  per dad, not per phone".) A line counts as seen only while he is at the
   bottom with the tab showing. `toRows` takes a `since` and puts at most ONE
   divider before the first line after it, and none at the very top of the
   list: a divider above everything says nothing a fresh list does not. Coming
@@ -3144,3 +3147,76 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   hears Marc again — it fails without the fix). "a dad can enlarge a tile"
   now presses the tile by name, the tile holding a second button.
   `a11y.spec` gains "on a call, with a picture that can float", both themes.
+
+## One seen mark per dad, not per phone (2026-11-02)
+
+- Marc asked: "One seen mark per dad, not per phone. Clean this up, make it
+  thoroughly good and clean code." The mark the count, the divider, the tab
+  title and the icon's badge are derived from lived only in each device's
+  localStorage, so a dad who read everything on his phone came back to a
+  laptop that still said "12 new" and wore the badge. Both his devices are
+  ONE member row (a second device is only ever added by a link or a code from
+  the first; `member_devices` holds its token), so the mark belongs there.
+- **On the member, in D1**: migration 0032 adds `members.seen_seq` (NULL =
+  never marked). A column, not a table, so `backupTables.ts` needs nothing.
+  It goes live with the deploy's own `migrate:remote` on merge: a column add
+  needs no hand (no backfill, nothing renamed), so `DEPLOY_ENABLED` stays on.
+- **The wire**: client `{ t: 'seen', seq }` (a positive safe integer, else
+  `bad_frame`); `room/seen.ts` writes it with `seen_seq IS NULL OR seen_seq <
+?` in the WHERE, so it never goes backwards whatever the object remembers,
+  and with `group_id` and `gone_at IS NULL` as the SQL audit wants. Only a
+  write that MOVED the mark is relayed, as `{ t: 'seen', seq }`, to his other
+  sockets (`getWebSockets(memberId)` minus the sender). **Nobody else is ever
+  told**: whether a man has read a line is still his business; it just
+  follows him now. `hello.seen` is his own mark, from the one members read
+  that builds `hello.members` (`membersWithMark`), never anybody else's.
+- **No throttle in the object**: the phone sends at most once a second.
+  `room.memory.seen` (awake-only, per member, the furthest mark written or
+  read in a hello since the object woke) skips the D1 write for a mark no
+  further; it is claimed before the await, so two sockets racing with the same
+  mark make one write. An eviction forgets it, which costs one write the
+  WHERE turns into nothing.
+- **The client**: `seen.ts` stays the pure store, now the local COPY: what the
+  screen counts from before the socket says hello, and all there is when it
+  cannot. `reconcile(local, remote)` is the further of the two, null-aware
+  (two nulls stay null, so a dad new to the room on every device still starts
+  at the newest line). `useSeen` is split in two: `useSeenMark` is the mark
+  (local copy, the room's word, the divider, title and badge, sending) and
+  `useSeen` is the list (pinned, following, the way down) and calls `read`
+  when he is at the bottom of the conversation with the page showing —
+  `shown` is now state, so coming back to the tab re-runs that rather than
+  waiting for some other render. A read writes the copy at once and the room
+  at most once a second (trailing, the newest mark), flushed at once on
+  `pagehide` and on going hidden, and on unmount. The room's mark, when it is
+  further, is written into the copy too, so a reload before the socket is back
+  does not count them again. A device sends what it already had once on
+  mount; `useRoom` keeps the furthest mark asked for (`wantSeen`) and sends it
+  again on every open, like the outbox. `useRoom`'s frame switch now ends in
+  a `never`, as the room's does.
+- **The divider** keeps its rule (the boundary is set when the screen opens
+  and when he comes back after half an hour) and is then settled against the
+  room's mark the next time the room speaks, so "new since you were here"
+  means since he was here on ANY of his devices. Known edge: back from away
+  on a socket that never dropped, the settling waits for the room's next
+  word on his mark, which is his other device reading further — that moves
+  the divider once, forward, which is still true.
+- Considered and not done: keeping the mark in the room object's storage
+  (long-lived records belong in D1, and it must survive an eviction); a table
+  of marks per device (the question is never "how far did this phone get");
+  sending the mark on every scroll (once a second is plenty for a count on
+  another screen).
+- Tests: `test/seen.test.ts` (`reconcile`: the further of two, either alone,
+  two nulls stay null). `test/room.test.ts` "the seen mark": kept on him, told
+  to his other socket and not to another dad's (sentinel: a later typing
+  frame reaches the other dad first) nor back to the sender; never backwards,
+  and not-a-line seqs are `bad_frame` (sentinel: the next relay is the further
+  mark); comes back in his next socket's hello and not in another dad's; a
+  row already further refuses a lower mark and nothing is relayed. e2e
+  `prefs.spec.ts` "reading on one of his phones clears the count on the
+  other": two contexts paired into one dad (the pairing is now the
+  `pairedDevice` helper the code test uses too), a third dad posts three
+  lines; the phone on home says "3 new" and "(3)" in its title; the laptop
+  reads; the phone's count and title clear with no reload while a fourth
+  dad's "3 new" stays (the sentinel); then the phone's own copy is wound back
+  to 1 and reloaded, and it still says nothing new — only `hello.seen` can
+  say that.

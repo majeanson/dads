@@ -4,6 +4,7 @@ import type { CallMember, RoomsOpen } from '../shared/protocol';
 import type { TableEvent } from '../shared/jaffre';
 import type { Champions, RoomMessage, RosterEntry, ServerFrame } from '../shared/protocol';
 import { report } from './oops';
+import { reconcile } from './seen';
 
 export type Connection = 'connecting' | 'open' | 'reconnecting';
 
@@ -48,6 +49,14 @@ export interface RoomState {
   eventsPulse: number;
   /** Somebody started a new table; the frame has to be pointed at it. */
   tablePulse: number;
+  /**
+   * The newest line he has looked at on any of his devices, as the room last
+   * said: from `hello`, then raised by a `seen` frame when his other phone
+   * reads further. Null until the room has said, or for a dad who never
+   * marked one. Only ever goes up; `useSeen` reconciles it with this device's
+   * own copy.
+   */
+  seen: number | null;
   /** Lines typed while the socket was down, waiting to go. */
   waiting: number;
   /** He left this room or was taken out of it, and the room has closed his
@@ -127,6 +136,7 @@ export function useRoom(
     todoPulse: 0,
     eventsPulse: 0,
     tablePulse: 0,
+    seen: null,
     waiting: 0,
     removed: false,
   });
@@ -183,6 +193,14 @@ export function useRoom(
     waiting.done(took);
   };
 
+  /**
+   * The furthest seen mark this phone has asked to tell the room. Kept across
+   * sockets and sent again on every open, like the outbox: a mark made in a
+   * lift reaches the other phone when the signal comes back. The room ignores
+   * one it already has.
+   */
+  const wantSeen = useRef(0);
+
   /** Anything at all from the server, pong included. */
   const lastHeard = useRef(0);
   const closedByUs = useRef(false);
@@ -216,6 +234,7 @@ export function useRoom(
         // its own id, and not before. Re-sending one the room already has is
         // what the cid is for at the other end. In the order he typed them.
         for (const line of outbox.current) sendLine(ws, line);
+        if (wantSeen.current > 0) ws.send(JSON.stringify({ t: 'seen', seq: wantSeen.current }));
 
         let lastPing = Date.now();
         pingTimer = setInterval(() => {
@@ -370,9 +389,14 @@ export function useRoom(
             champions: frame.champions ?? null,
             call: frame.call,
             messages: replay === null ? frame.messages : merge(replay(s.messages), frame.messages),
+            seen: reconcile(s.seen, frame.seen ?? null),
           }));
           return;
         }
+        case 'seen':
+          // His other device read further. Nobody else's mark ever arrives.
+          setState((s) => ({ ...s, seen: reconcile(s.seen, frame.seq) }));
+          return;
         case 'unshelved': {
           heardRev(frame.rev);
           const pruned = new Set(frame.mediaIds);
@@ -542,6 +566,11 @@ export function useRoom(
           setState((s) => ({ ...s, waiting: outbox.current.length }));
           return;
         }
+        default: {
+          // A new kind of frame has to be handled here, not fall through.
+          const unhandled: never = frame;
+          return unhandled;
+        }
       }
     };
 
@@ -641,6 +670,19 @@ export function useRoom(
   }, []);
 
   /**
+   * He has looked at everything up to `seq` on this device; tell the room, so
+   * his other devices stop counting it. `useSeen` already holds these to one
+   * a second. Not optimistic about anything — a mark only goes forward — so
+   * a socket that is down just keeps it for the next open.
+   */
+  const sendSeen = useCallback((seq: number) => {
+    if (seq <= wantSeen.current) return;
+    wantSeen.current = seq;
+    const ws = socket.current;
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ t: 'seen', seq }));
+  }, []);
+
+  /**
    * Take a line back.
    *
    * Not optimistic, and that is the point: the line stays on his own screen
@@ -722,6 +764,7 @@ export function useRoom(
     answerPrompt,
     relayTableEvent,
     sendTyping,
+    sendSeen,
     setInCall,
     sendSignal,
     onSignalRef,
