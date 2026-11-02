@@ -1724,3 +1724,101 @@ test('on a phone, a name opens his profile and a tap on nothing puts the keyboar
   await pat.context().close();
   await ned.context().close();
 });
+
+test('on a phone, a photo swipes to the next, zooms in two fingers, and swipes down to close', async ({
+  browser,
+}) => {
+  // Marc, 2026-11-02: the gestures every phone's viewer has. Real touches,
+  // through the devtools protocol: Playwright's mouse is a mouse, and the
+  // viewer keeps a mouse to its buttons.
+  const page = await comeInOnAPhone(browser, 'Vic Viewer');
+  // Big enough to be worth zooming: a 1px picture has nowhere to pan to.
+  const files = ['public/icon-512.png', 'public/icon-192.png'];
+  for (const [i, path] of files.entries()) {
+    await page.setInputFiles('#attach', {
+      name: `vic-${i}.png`,
+      mimeType: 'image/png',
+      buffer: readFileSync(path),
+    });
+    await page.getByLabel('Say something').fill(`vic picture ${'ab'[i]}`);
+    await page.getByRole('button', { name: 'Send' }).click();
+    await expect(
+      page.getByTestId('line').filter({ hasText: `vic picture ${'ab'[i]}` }),
+    ).toBeVisible();
+  }
+  const src = (words: string) =>
+    page.getByTestId('line').filter({ hasText: words }).locator('img').getAttribute('src');
+  const [first, second] = [await src('vic picture a'), await src('vic picture b')];
+
+  await page.getByTestId('line').filter({ hasText: 'vic picture a' }).getByTestId('photo').click();
+  const viewer = page.getByTestId('viewer');
+  const shot = viewer.getByTestId('viewer-shot');
+  await expect(shot).toHaveAttribute('src', first!);
+
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: [number, number][]) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: points.map(([x, y], id) => ({ x, y, id })),
+    });
+  /** One finger from (x, y), by (dx, dy), in eight steps. */
+  const drag = async (x: number, y: number, dx: number, dy: number) => {
+    await touch('touchStart', [[x, y]]);
+    for (let step = 1; step <= 8; step++)
+      await touch('touchMove', [[x + (dx * step) / 8, y + (dy * step) / 8]]);
+    await touch('touchEnd', []);
+  };
+  const box = (await viewer.getByTestId('viewer-stage').boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+
+  // Left is the next one, right the one before.
+  await drag(cx + 100, cy, -220, 4);
+  await expect(shot).toHaveAttribute('src', second!);
+  await drag(cx - 100, cy, 220, 4);
+  await expect(shot).toHaveAttribute('src', first!);
+
+  // Two fingers apart: it grows about them.
+  await touch('touchStart', [
+    [cx - 20, cy],
+    [cx + 20, cy],
+  ]);
+  for (let step = 1; step <= 8; step++)
+    await touch('touchMove', [
+      [cx - 20 - step * 12, cy],
+      [cx + 20 + step * 12, cy],
+    ]);
+  await touch('touchEnd', []);
+  const scale = () => shot.evaluate((el) => Number((el as HTMLElement).style.scale || 1));
+  await expect.poll(scale).toBeGreaterThan(1.5);
+
+  // Zoomed in, a finger down the picture pans it and does not close it, and
+  // the sideways part of it does not move on.
+  await drag(cx, cy, -40, 160);
+  await expect.poll(() => shot.evaluate((el) => (el as HTMLElement).style.translate)).not.toBe('');
+  await expect(viewer).toBeVisible();
+  await expect(shot).toHaveAttribute('src', first!);
+
+  // A double tap is back to the whole picture, and another is in again.
+  const tap = async () => {
+    await touch('touchStart', [[cx, cy]]);
+    await touch('touchEnd', []);
+  };
+  await tap();
+  await tap();
+  await expect.poll(scale).toBe(1);
+  await tap();
+  await tap();
+  await expect.poll(scale).toBe(2.5);
+  await tap();
+  await tap();
+  await expect.poll(scale).toBe(1);
+
+  // At rest again, down closes it, onto the conversation as he left it.
+  await drag(cx, cy, 0, 200);
+  await expect(viewer).toHaveCount(0);
+  await expect(page.getByLabel('Say something')).toBeVisible();
+  await expect(page.locator('main.room')).toHaveAttribute('data-view', 'talk');
+
+  await page.context().close();
+});

@@ -517,6 +517,25 @@
       max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom))
       max(0.5rem, env(safe-area-inset-left));
     color: #ffffff;
+    /* The pictures either side of the one shown wait off the screen. */
+    overflow: hidden;
+  }
+
+  /* The black, the header and the foot fade as the picture is pulled down
+     (an inline opacity while the finger is on it), and come back with this
+     when it springs back. */
+  .viewer-ground,
+  .viewer-head,
+  .viewer-foot {
+    transition: opacity 220ms var(--ease-out);
+  }
+
+  /* Above the stage, so a zoomed picture passes under them and they stay
+     where a thumb can reach them. */
+  .viewer-head,
+  .viewer-foot {
+    position: relative;
+    z-index: 1;
   }
 
   .viewer-head {
@@ -542,16 +561,51 @@
     font-size: 0.8125rem;
   }
 
-  /* CONTAIN, never cover: a photograph of people is not wallpaper and must
-     never have its edges cropped to fill a screen. */
-  .viewer-shot {
+  /* The gestures' ground (2026-11-02): the fingers here are the picture's,
+     so the browser neither scrolls nor pinch-zooms the page under them. */
+  .viewer-stage {
+    position: relative;
     min-height: 0;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* What a swipe moves: the picture and the ones either side of it. The
+     inline `translate` follows the finger with the transition turned off;
+     left to this, it slides on or springs back. */
+  .viewer-track {
+    position: absolute;
+    inset: 0;
+    transition: translate 240ms var(--ease-out);
+  }
+
+  .viewer-frame {
+    position: absolute;
+    inset: 0;
+  }
+  .viewer-frame[data-side='prev'] {
+    translate: calc(-100% - 1rem) 0;
+  }
+  .viewer-frame[data-side='next'] {
+    translate: calc(100% + 1rem) 0;
+  }
+
+  /* CONTAIN, never cover: a photograph of people is not wallpaper and must
+     never have its edges cropped to fill a screen. Centred by `auto` margins
+     against an inset of nought, which is where a photograph belongs on a
+     screen of nothing else. Zoomed by an inline `translate` and `scale`
+     about its own centre (never `transform`). */
+  .viewer-shot {
+    position: absolute;
+    inset: 0;
     max-width: 100%;
     max-height: 100%;
-    /* `auto` on all four sides centres a grid item in both directions, which
-       is where a photograph belongs on a screen of nothing else. */
     margin: auto;
     object-fit: contain;
+    transition:
+      translate 200ms var(--ease-out),
+      scale 200ms var(--ease-out);
   }
 
   .viewer-foot {
