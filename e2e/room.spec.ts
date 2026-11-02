@@ -1606,6 +1606,45 @@ test('a keyboard can see the composer', async ({ browser }) => {
   await context.close();
 });
 
+test('a kept draft that starts with a name opens no names, and Enter sends it', async ({
+  browser,
+}) => {
+  // 2026-11-02: the caret started at 0 under a restored draft, so "@Sam ..."
+  // opened the names on load and Enter put a name in at the start.
+  const sam = await comeIn(browser, 'Sam Drafted');
+  const dora = await comeIn(browser, 'Dora Drafts');
+  const field = dora.getByLabel('Say something');
+  await field.fill('@Sam Drafted are you in?');
+  await expect
+    .poll(() =>
+      dora.evaluate(() =>
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith('dads.draft.'))
+          .map((k) => localStorage.getItem(k)),
+      ),
+    )
+    .toEqual(['@Sam Drafted are you in?']);
+  await sam.getByLabel('Say something').fill('sam drafted is here');
+  await sam.getByLabel('Say something').press('Enter');
+  await dora.reload();
+  await talk(dora);
+  await expect(field).toHaveValue('@Sam Drafted are you in?');
+  // The room's hello has come (it brings the members with the lines), so
+  // the names would be showing by now if they were going to.
+  await expect(dora.getByTestId('line').filter({ hasText: 'sam drafted is here' })).toBeVisible();
+  await expect(dora.getByTestId('tag-picks')).toHaveCount(0);
+  await field.focus();
+  await expect(dora.getByTestId('tag-picks')).toHaveCount(0);
+  await field.press('Enter');
+  await expect(
+    sam.getByTestId('line').filter({ hasText: '@Sam Drafted are you in?' }),
+  ).toBeVisible();
+  await expect(field).toHaveValue('');
+
+  await sam.context().close();
+  await dora.context().close();
+});
+
 test('a half-typed line is still there after a reload', async ({ browser }) => {
   // Marc chose it, 2026-11-01: the draft is his, per room, on this phone.
   const marc = await comeIn(browser, 'Draft Marc');
