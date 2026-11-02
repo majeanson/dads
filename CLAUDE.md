@@ -516,7 +516,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - **With no evening to come, it asks "when's the next one?"** with the two
   best days as leaves (`NextDays.tsx`); the month grid stays in the sheet.
 - **Home is the card, the door, and Settings in the corner**
-  (`home-settings`). **The invite lives inside Settings** (`settings-invite`).
+  (`home-settings`). **The invite lives inside Settings** (`settings-invite`,
+  the second row of its list).
   Everything else is behind the conversation's Menu. There is no Dad night
   row; the card IS the night (`dad-night`). Beside Settings, "What this is"
   (`home-about`): the door's own sentence, "say if you're coming", then
@@ -657,12 +658,22 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   before a count does.
 - A sheet's chrome gives way first; content scrolls. Questions keep only today
   on the first screen, with a question of your own folded behind a row
-  (`prompt-add-open`) like what was asked before; the week puts past weeks on a tab; Settings folds the
-  creator's controls behind `room-owning`. Settings is three sections (you; this room; this device): face and glasses sit behind `look-open`, the three switches behind `features-open` (`Fold`; children mount only when open), the device section ends with "Use on another device" (`settings-link`, also still in the Menu), then one quiet line: sign out beside the build label. Settings fills a 667px phone to
-  the pixel — measure as a joined dad AND as the creator, in both languages.
-  The device section's rows (language, theme, text size) have no padding of
-  their own: the 50px track sets the row, and that is what paid for the text
-  size's row.
+  (`prompt-add-open`) like what was asked before; the week puts past weeks on a tab.
+- **Settings is a short list of four rows, each a leaf** (2026-11-02): him
+  (`settings-you`: face, name, glasses, colour, flat), the invite
+  (`settings-invite`, opens the invite sheet, the one row in the accent), the
+  room (`settings-room`: the three switches flat, then the creator's controls
+  folded behind `room-owning`), this device (`settings-device`: language,
+  theme, text size, the reminder and quiet hours, `settings-link`), then the
+  quiet line with sign out and the build label. Each row carries a one-line
+  summary (`shared/settingsSummary.ts`; a joined dad's room row says who
+  opened it). A leaf is `ui/Leaf.tsx` (`leaf-back` first, then its h2) and a
+  back layer (`useBackCloses`): Android's back returns to the list before it
+  closes the sheet. e2e helpers `settings`, `you`, `thisRoom`, `device`.
+  The list and the device leaf fit a 667px phone at normal text — measure
+  as a joined dad AND as the creator, in both languages. The device rows
+  (language, theme, text size) have no padding of their own: the 50px track
+  sets the row.
 - **The text size is three steps of the root** (`html[data-text]`, 112.5% and
   125%), so everything in `rem` grows. The rule is "fits at NORMAL": Settings
   may scroll at the larger sizes; home must not (`fit.spec` stamps `larger`

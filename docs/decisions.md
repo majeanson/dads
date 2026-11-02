@@ -3004,3 +3004,59 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   the largest text size" and "the room fits 390px in French at the largest
   text size" (no sideways scroll, nothing past either edge). The existing
   Settings fit tests hold at normal.
+
+## Settings is four rows, each a leaf (2026-11-02)
+
+- Marc: "arrange settings differently so it's less cluttered". Settings was
+  one long sheet in three sections — him, the room, this device — tuned to
+  fill a 667px phone to the pixel, with folds inside it (`look-open`,
+  `features-open`, `room-owning`) to get there; the text size's row (the day
+  before) had used the last of it.
+- Now the first screen is a short list in the menu's shape (one grouped
+  list, 64px rows with a chevron): him (his face and name, his pair and his
+  colour in words under it), "Invite a dad" (the one action, in the accent,
+  same id and same sheet as before), the room (its name; under it which of
+  the three are on, or "Opened by Sam" for a dad who did not open it), and
+  "On this device" ("EN · Dark · Large text · Reminders on" — only what was
+  CHOSEN beyond the language, because a summary that spells out every
+  default is the clutter it replaced). The quiet sign-out line stays on the
+  first screen. The summaries are pure (`shared/settingsSummary.ts`); the
+  device row reads the theme and the text size off `<html>`, where the leaf
+  has just stamped them, rather than keeping a second copy of either.
+- Each row opens a leaf in the same sheet, the way a name in "Who's here"
+  opens a profile: `ui/Leaf.tsx` (the way back, "Settings", first and
+  focused; then the leaf's h2). Back to the list puts the focus on the row he
+  left by. `Profile.tsx` was left as it is. The leaf is a back layer
+  (`useBackCloses`), so Android's back returns to the list and only then
+  closes the sheet; on an iPhone there are no layers, as decided on
+  2026-11-01.
+- Him: the `look-open` fold went; the leaf IS the fold. The room: the
+  `features-open` fold went and the switches are flat under "What this room
+  has on"; the creator's word / hand over / take out / delete stay folded
+  behind `room-owning` — four forms with a paragraph each are a long way to
+  scroll past for a creator who came to flip a switch. The device: the rows
+  as they were, then "Use on another device" (`settings-link`). No control
+  does anything different; only where it lives changed.
+- Measured at 390×667, normal text: the list is four 64px rows and the
+  sign-out line, about 320px of a 601px sheet. The device leaf is 298 of
+  601px as a joined dad and as the creator, in English and in French
+  (headless Chromium has no push, so the reminder row is not in that number;
+  its switch row and the quiet-hours row add about 110px).
+- Not done: keeping the long sheet and folding more of it (every fold is a
+  second tap and the screen stays long); tabs, considered and not built —
+  "Invite" is an action, not a page, and four labels side by side would not
+  fit in French at 390px.
+- Tests: `test/settingsSummary.test.ts` (both summaries, both languages, the
+  empty room). e2e `prefs.spec` "settings is a short list, and each row is a
+  leaf with a way back" (the four rows and sign out and nothing else; each
+  leaf shows its content and `leaf-back` returns to the list with the row
+  focused; a choice in the device leaf shows in its summary; `page.goBack()`
+  from a leaf returns to the list with the sheet open, and once more closes
+  it). `fit.spec` "settings and its device leaf fit the small phone, joined
+  and creator, in both languages" replaces "the creator's settings fit the
+  small phone"; "every sheet fits the small phone without scrolling" gains
+  the three leaves. `a11y.spec` checks the list and each leaf, both themes
+  (its dad is in a room with no creator, so the room's leaf is the three
+  switches, everybody's). Every spec that reached a control in Settings goes
+  through the leaf that holds it now (`you`, `thisRoom`, `device` in
+  `e2e/talk.ts`, mirrored in `prod/names.ts`).
