@@ -958,4 +958,105 @@ describe('RoomDO', () => {
       expect(hello.you.name).toBe('Marc');
     });
   });
+
+  /**
+   * One seen mark per dad, not per phone (Marc asked, 2026-11-02).
+   *
+   * Both of his devices are one member row, so the mark is kept there and
+   * relayed to his OTHER sockets — never to anybody else's, because whether a
+   * man has read a line is his business.
+   */
+  describe('the seen mark', () => {
+    const markOf = async (memberId: string) =>
+      (
+        await env.DB.prepare('SELECT seen_seq FROM members WHERE id = ?')
+          .bind(memberId)
+          .first<{ seen_seq: number | null }>()
+      )?.seen_seq ?? null;
+    const seen = (dad: Dad, seq: unknown) => dad.ws.send(JSON.stringify({ t: 'seen', seq }));
+    const seenFrames = (dad: Dad) =>
+      dad.frames.filter((f) => f.t === 'seen').map((f) => (f as { seq: number }).seq);
+
+    it('is kept on him, told to his other phone, and to nobody else', async () => {
+      const phone = await enter(group, 'Marc');
+      const laptop = await enter(group, 'Marc', phone.cookie);
+      const sam = await enter(group, 'Sam');
+      open.push(phone, laptop, sam);
+      const hello = await phone.next('hello');
+      expect(hello.seen).toBeNull();
+      await laptop.next('hello');
+      await sam.next('hello');
+
+      seen(phone, 5);
+      expect((await laptop.next('seen')).seq).toBe(5);
+      expect(await markOf(hello.you.memberId)).toBe(5);
+
+      // The sentinel: a frame the phone sends AFTER its mark reaches Sam, so
+      // a relay to Sam would have arrived before it.
+      phone.ws.send(JSON.stringify({ t: 'typing' }));
+      await sam.next('typing');
+      expect(seenFrames(sam)).toEqual([]);
+      // Nor back to the phone that said it.
+      expect(seenFrames(phone)).toEqual([]);
+    });
+
+    it('never goes backwards, and ignores what is not a line', async () => {
+      const phone = await enter(group, 'Marc');
+      const laptop = await enter(group, 'Marc', phone.cookie);
+      open.push(phone, laptop);
+      const { you } = await phone.next('hello');
+      await laptop.next('hello');
+
+      seen(phone, 9);
+      await laptop.next('seen', (f) => f.seq === 9);
+      // A phone back from a drawer with an old mark.
+      seen(laptop, 4);
+      for (const junk of [0, -3, 1.5, '12', null, Number.MAX_SAFE_INTEGER + 2]) {
+        seen(phone, junk);
+        await phone.next('error', (f) => f.code === 'bad_frame');
+        phone.frames.length = 0;
+      }
+      // The sentinel: a further mark is the NEXT one the laptop hears.
+      seen(phone, 11);
+      await laptop.next('seen', (f) => f.seq === 11);
+      expect(seenFrames(laptop)).toEqual([9, 11]);
+      expect(seenFrames(phone)).toEqual([]);
+      expect(await markOf(you.memberId)).toBe(11);
+    });
+
+    it('comes back in the hello of his next socket', async () => {
+      const phone = await enter(group, 'Marc');
+      const laptop = await enter(group, 'Marc', phone.cookie);
+      open.push(phone, laptop);
+      await phone.next('hello');
+      await laptop.next('hello');
+      seen(phone, 7);
+      await laptop.next('seen');
+
+      const later = await enter(group, 'Marc', phone.cookie);
+      const sam = await enter(group, 'Sam');
+      open.push(later, sam);
+      expect((await later.next('hello')).seen).toBe(7);
+      // His mark is his: another dad's hello carries his own, which is none.
+      expect((await sam.next('hello')).seen).toBeNull();
+    });
+
+    it('is refused by the row itself when the row is further', async () => {
+      // Not only by what the object remembers, which an eviction forgets: a
+      // row already further is never moved back, and nothing is relayed.
+      const phone = await enter(group, 'Marc');
+      const laptop = await enter(group, 'Marc', phone.cookie);
+      open.push(phone, laptop);
+      const { you } = await phone.next('hello');
+      await laptop.next('hello');
+      await env.DB.prepare('UPDATE members SET seen_seq = 20 WHERE id = ?')
+        .bind(you.memberId)
+        .run();
+      seen(phone, 15);
+      seen(phone, 25);
+      await laptop.next('seen', (f) => f.seq === 25);
+      expect(seenFrames(laptop)).toEqual([25]);
+      expect(await markOf(you.memberId)).toBe(25);
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import { device, home, menu, settings, talk, you } from './talk';
 import { E2E_PREFS_GROUP } from './global-setup';
 
@@ -577,10 +577,12 @@ test('he picks his colour, is told what it changes, and can go back to automatic
   await expect(page.getByTestId('colour-11')).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('a new device asks with a code and comes in as the same dad', async ({ browser }) => {
-  const first = await (await browser.newContext()).newPage();
-  await comeIn(first, 'Pia Phone');
-
+/**
+ * A second device for the dad on `first`, let in by a code typed on the
+ * first: a fresh context that ends up as the SAME member, not a new dad.
+ * `first` is left in Settings, where the code was typed.
+ */
+async function pairedDevice(browser: Browser, first: Page): Promise<Page> {
   // The home-screen app: nothing stored, so it is a stranger at the door.
   const second = await (await browser.newContext()).newPage();
   await second.goto('/');
@@ -595,13 +597,77 @@ test('a new device asks with a code and comes in as the same dad', async ({ brow
   await first.getByRole('button', { name: 'Let it in' }).click();
   await expect(first.getByTestId('pair-done')).toBeVisible();
 
-  // And the second device is in, as him: his name, not a new dad's.
   await expect(second.getByTestId('connection')).toHaveText(/here$/, { timeout: 15_000 });
+  return second;
+}
+
+test('a new device asks with a code and comes in as the same dad', async ({ browser }) => {
+  const first = await (await browser.newContext()).newPage();
+  await comeIn(first, 'Pia Phone');
+  const second = await pairedDevice(browser, first);
+
+  // And the second device is in, as him: his name, not a new dad's.
   await you(second);
   await expect(second.getByTestId('my-name')).toHaveValue('Pia Phone');
 
   await first.context().close();
   await second.context().close();
+});
+
+/**
+ * One seen mark per dad, not per phone (Marc asked, 2026-11-02): reading on
+ * one of his devices clears the count on the other, live, and the mark is
+ * still his after a reload because the room hands it back in its hello.
+ */
+test('reading on one of his phones clears the count on the other', async ({ browser }) => {
+  const phone = await (await browser.newContext()).newPage();
+  await comeIn(phone, 'Seen Twice');
+  const laptop = await pairedDevice(browser, phone);
+  // The phone back on home, where it is not reading anything.
+  await phone.reload();
+  await home(phone);
+
+  // The sentinel: another dad, also standing on home. His mark is his own.
+  const other = await (await browser.newContext()).newPage();
+  await comeIn(other, 'Seen Elsewhere');
+  await home(other);
+
+  const poster = await (await browser.newContext()).newPage();
+  await comeIn(poster, 'Seen Poster');
+  for (const n of ['01', '02', '03']) {
+    await poster.getByLabel('Say something').fill(`read on the laptop ${n}`);
+    await poster.getByRole('button', { name: 'Send' }).click();
+    await expect(poster.getByTestId('line').filter({ hasText: `laptop ${n}` })).toBeVisible();
+  }
+  await expect(phone.getByTestId('home-new')).toContainText('3 new');
+  await expect(phone).toHaveTitle(/^\(3\) /);
+  await expect(other.getByTestId('home-new')).toContainText('3 new');
+
+  // He reads them on the laptop, down to the newest.
+  await talk(laptop);
+  await expect(laptop.getByTestId('line').filter({ hasText: 'laptop 03' })).toBeInViewport();
+
+  // The phone's count goes, without a reload: the room told it.
+  await expect(phone.getByTestId('home-new')).toHaveCount(0);
+  await expect(phone).not.toHaveTitle(/^\(/);
+  // And nobody else's moved.
+  await expect(other.getByTestId('home-new')).toContainText('3 new');
+
+  // A reload with this phone's own copy wound back to the start: only the
+  // room's mark, in its hello, can say he has read them.
+  await phone.evaluate(() => {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('dads.seen.')) localStorage.setItem(key, '1');
+    }
+  });
+  await phone.reload();
+  await home(phone);
+  await expect(phone.getByTestId('connection')).toHaveText(/here$/);
+  await expect(phone.getByTestId('line').filter({ hasText: 'laptop 03' })).toHaveCount(1);
+  await expect(phone.getByTestId('home-new')).toHaveCount(0);
+  await expect(phone).not.toHaveTitle(/^\(/);
+
+  for (const page of [phone, laptop, other, poster]) await page.context().close();
 });
 
 test('the home-screen app leads with the way in as himself', async ({ browser }) => {

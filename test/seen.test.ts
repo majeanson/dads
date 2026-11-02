@@ -26,7 +26,7 @@ vi.stubGlobal('localStorage', {
   },
 });
 
-const { lastSeen, markSeen } = await import('../src/web/seen');
+const { lastSeen, markSeen, reconcile } = await import('../src/web/seen');
 
 beforeEach(() => {
   store.clear();
@@ -75,5 +75,27 @@ describe('the mark', () => {
     refuse = true;
     expect(() => markSeen('grp_1', 42)).not.toThrow();
     expect(lastSeen('grp_1')).toBeNull();
+  });
+});
+
+describe('this device and the room, as one mark', () => {
+  it('takes whichever got further: he read that far on one of his devices', () => {
+    expect(reconcile(12, 30)).toBe(30);
+    expect(reconcile(30, 12)).toBe(30);
+    expect(reconcile(30, 30)).toBe(30);
+  });
+
+  it('takes the one there is when the other has nothing to say', () => {
+    // No socket yet, or a room that has never had a mark from him.
+    expect(reconcile(12, null)).toBe(12);
+    // A device new to a dad who has read elsewhere starts where he got to.
+    expect(reconcile(null, 30)).toBe(30);
+  });
+
+  it('is nothing when neither knows, not nought', () => {
+    // Null is what makes a brand-new dad start at the newest line rather than
+    // at the bottom of the archive; nought would count every line as new.
+    expect(reconcile(null, null)).toBeNull();
+    expect(reconcile(0, null)).toBe(0);
   });
 });

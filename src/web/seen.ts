@@ -1,11 +1,13 @@
 /**
- * Where a dad got to, per device.
+ * Where a dad got to, this device's copy.
  *
- * The mark that everything about "how many are new" is derived from. It is
- * per device and per group, beside the theme and the language: a laptop and a
- * phone are two places he reads from and each remembers its own. Nothing is
- * sent — whether a man has read a line is his business; this only exists so
- * the room can say "from here on is new" when he comes back.
+ * The mark that everything about "how many are new" is derived from. Since
+ * 2026-11-02 it is ONE mark per dad, kept on his member row by the room, so
+ * reading on the laptop clears the phone (Marc asked). This file is the local
+ * copy of it, per group: what the screen counts from before the socket has
+ * said hello, and all there is when storage or the socket is refused. The two
+ * meet in `reconcile`, which takes whichever got further. Nobody but him is
+ * ever told — whether a man has read a line is his business.
  *
  * Storage is reached through a locally-typed accessor rather than the DOM
  * global, so this file and its test typecheck in the worker pool with the
@@ -48,6 +50,22 @@ export function markSeen(groupId: string, seq: number): void {
   try {
     if (seq > (lastSeen(groupId) ?? 0)) store()?.setItem(KEY + groupId, String(seq));
   } catch {
-    // Storage refused. He loses the divider on this device; the room works.
+    // Storage refused. The room still keeps his mark; this device only loses
+    // its copy for the seconds before the socket says hello.
   }
+}
+
+/**
+ * This device's mark and the room's, as one: whichever got further.
+ *
+ * Both only ever move forward, so the further one is the truth — he read that
+ * far on one of his devices — and the other is merely behind. Null is "never
+ * marked here" (or "the room does not know yet"), which is no answer rather
+ * than nought: two nulls stay null, so a device new to a dad who is new to the
+ * room still starts at the newest line, not at the beginning of the archive.
+ */
+export function reconcile(local: number | null, remote: number | null): number | null {
+  if (local === null) return remote;
+  if (remote === null) return local;
+  return Math.max(local, remote);
 }

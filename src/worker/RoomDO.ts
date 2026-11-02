@@ -6,7 +6,8 @@ import { broadcastCallRoster, callRoster, hangUp, onCall, relayRtc } from './roo
 import { currentRev, remembersSince, replaySince } from './room/changes';
 import { internalRoute } from './room/internal';
 import { backfill, edit, react, retract, say } from './room/lines';
-import { membersOfGroup } from './room/members';
+import { membersWithMark } from './room/members';
+import { knownSeen, noteSeen } from './room/seen';
 import { ensureEventsScheduled } from './room/events';
 import { applyNight, ensureNightScheduled, timersDue } from './room/night';
 import {
@@ -101,7 +102,8 @@ export class RoomDO extends DurableObject<Env> {
       Number.isInteger(since) &&
       since >= 0 &&
       remembersSince(room, since);
-    const members = await membersOfGroup(room);
+    const { members, seen } = await membersWithMark(room, memberId);
+    knownSeen(room, memberId, seen);
     const replay = resuming ? await replaySince(room, since) : null;
     const hello: ServerFrame = {
       t: 'hello',
@@ -116,6 +118,7 @@ export class RoomDO extends DurableObject<Env> {
       changed: replay?.changed ?? [],
       media: replay?.media ?? [],
       champions: await champions(room),
+      seen,
     };
     server.send(JSON.stringify(hello));
 
@@ -175,6 +178,8 @@ export class RoomDO extends DurableObject<Env> {
     switch (frame.t) {
       case 'typing':
         return room.broadcast({ t: 'typing', memberId: who.memberId, name: who.name }, ws);
+      case 'seen':
+        return noteSeen(room, ws, who, frame.seq);
       case 'call':
         return onCall(room, ws, who, frame);
       case 'rtc':

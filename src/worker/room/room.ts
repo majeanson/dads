@@ -54,6 +54,12 @@ export interface RoomMemory {
    * crown still answers for an object that was evicted in between.
    */
   crownClaim: { key: string; at: number } | null;
+  /**
+   * The furthest seen mark written to each dad's member row since the object
+   * woke (`seen.ts`), so a mark no further is not another D1 write. Forgetting
+   * it on eviction costs one write the WHERE turns into nothing.
+   */
+  readonly seen: Map<string, number>;
 }
 
 /**
@@ -81,7 +87,7 @@ export function makeRoom(ctx: DurableObjectState, env: Env): Room {
     env,
     ctx,
     sql,
-    memory: { postedCids: new Map(), turnNudged: new Map(), crownClaim: null },
+    memory: { postedCids: new Map(), turnNudged: new Map(), crownClaim: null, seen: new Map() },
     groupId() {
       return sql
         .exec<{ value: string }>(`SELECT value FROM meta WHERE key = 'group_id'`)
