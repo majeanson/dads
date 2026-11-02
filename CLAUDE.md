@@ -797,6 +797,18 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   mic, otherwise Send, never both. `recorder.ts`: two minutes, under half a
   second discarded, track always stopped; container list tried in order. No
   caption, no confirmation.
+- **Hold the mic to talk, lift to send, slide left to throw it away**
+  (`holdToTalk.ts`: `HOLD_MS` 150, `CANCEL_PX` 80, `--slide` on the row, a
+  buzz at the start and at the line). **A tap or Enter is the hands-free
+  row** (cancel and Send), started by the CLICK, never the lift. The mic is
+  the SAME keyed button through the hold (pointer capture; one that unmounts
+  takes the lift with it). A `pointercancel` mid-hold keeps the recording,
+  hands-free. Recording starts from the hold's timer, never on pointerdown.
+  A stop or cancel while the microphone is still being asked for puts it
+  back down when it answers.
+- **A voice note has a speed** (1×, 1.5×, 2×; `voiceRate.ts`,
+  `dads.voice.rate`, per device): every player on the screen follows.
+  `voice-clock` is the time alone.
 - Inline allowlist includes audio and `video/mp4|webm|quicktime`. **HEIC is
   deliberately not.** **`image/svg+xml` is never inline**; anything off the
   list is `octet-stream`, `nosniff`, `attachment`. Do not widen it.

@@ -2769,3 +2769,62 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   the keyboard away" (iPhone context: field focused, tap the words, not
   focused; a second tap opens nothing and the name's tap after it reaches
   the profile).
+
+## Hold the microphone to talk (2026-11-02)
+
+- Marc asked for the convention every phone chat has: hold the microphone,
+  talk, lift to send; slide left to throw it away. A tap used to be the only
+  way, and it took two more presses (the square, or the X) to finish.
+- `holdToTalk.ts` is the gesture with no DOM in it (tested in the worker
+  pool): down, then `HOLD_MS` (150) later a hold — the recording starts and
+  the phone buzzes; the finger may wander; `CANCEL_PX` (80) left of where it
+  went down arms the cancel with a second buzz, and the X on the row grows
+  and reddens with `--slide` on the way (as the swipe's `--swipe`); lifting
+  armed throws it away, lifting anywhere else sends at once through the same
+  `sendVoice`. Under half a second is still discarded by the recorder.
+- **A tap is still a tap**: shorter than the hold, nothing starts until its
+  CLICK, which opens the hands-free row with its two buttons, for a man with
+  one hand on a child. Starting it on the lift was rejected: the row swaps
+  under the finger, and the click that follows could land on the new Send.
+  A keyboard's Enter or Space is a click with no pointer before it and does
+  the same. After a hold the click the lift becomes is swallowed (`spent`);
+  if it never comes, the next press clears it.
+- **The microphone is one keyed button through the whole hold.** It used to
+  be inside the row that recording replaces, and a button that unmounts takes
+  its captured pointer with it: the lift never arrived. It now sits outside
+  that row (`key="mic"`), the row changing round it.
+- **The permission prompt takes the pointer** the first time (a
+  `pointercancel`), and lifting while the microphone is still being asked for
+  is the same moment: the recording is kept and the row becomes the
+  hands-free one. The recorder also learned to put the microphone back down
+  if a stop or cancel came while it was being asked for — before, a quick
+  lift would have left it recording into a row nobody could see — and not to
+  wait for ever on a recorder that had already stopped itself at two minutes
+  (or throw on its timer by stopping it twice).
+- **iOS and the gesture**: the recording starts from the hold's timer, not on
+  pointerdown. No browser asks for a user gesture to open the microphone
+  (WebKit gates `AudioContext` and autoplay on one, not `getUserMedia`; both
+  only need a visible, focused page), so a timer does not break anything; the
+  Safari spec was run. Opening the stream on pointerdown and keeping audio
+  only after the hold was considered and rejected: a thumb that brushed the
+  button would switch the microphone and its indicator on.
+- The mic stands up (1.25×) in the room's colour while held and turns red
+  once letting go would throw the note away — utilities with `!`, because a
+  thumb left on a phone keeps the plain look's hover colours. `touch-none`
+  so sliding is not a scroll, no callout, and the context menu a held finger
+  makes on Android is prevented.
+- **Playback speed**: the player has a small 1× → 1.5× → 2× button, its
+  accessible name "Speed 1.5×" ("Vitesse 1,5×"). The speed belongs to the
+  phone (`voiceRate.ts`, `dads.voice.rate`, guarded storage), and every
+  player on the screen follows a change (`useSyncExternalStore`); both
+  `playbackRate` and `defaultPlaybackRate` are set, because loading a source
+  resets the first. The clock now has its own `voice-clock`, since the note's
+  text includes the speed.
+- Tests: `test/holdToTalk.test.ts` (the machine, the slide, the speed
+  helper); e2e "on a phone, holding the microphone talks and lifting sends
+  it" (CDP touches; on both screens), "on a phone, sliding left off the
+  microphone throws the note away" (a text line as the sentinel), "on a
+  phone, a tap on the microphone records hands-free", "a voice note plays
+  faster, and the phone remembers how fast" (`playbackRate`, through a
+  reload); "a dad says it instead of typing it" is unchanged but for the
+  clock. `a11y.spec` scans a voice note, the hands-free row and the held row.
