@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { home, menu, talk } from './talk';
+import { device, home, menu, settings, talk, you } from './talk';
 import { E2E_PREFS_GROUP } from './global-setup';
 
 // One group, and each test brings its own dad.
@@ -17,13 +17,13 @@ async function comeIn(page: Page, name: string) {
 test('a dad reads the room in French, and it stays French', async ({ page }) => {
   await comeIn(page, 'Marc');
 
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await device(page);
   await page.getByRole('button', { name: 'FR', exact: true }).click();
 
   // The whole app turns over: the sheet he is standing in, home behind it,
   // and the conversation and its menu behind that.
-  await expect(page.getByTestId('settings')).toContainText('Sur cet appareil');
+  await expect(page.getByTestId('settings-leaf-device')).toContainText('Sur cet appareil');
+  await expect(page.getByTestId('leaf-back')).toHaveText('Réglages');
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Réglages' })).toBeVisible();
   await expect(page.getByTestId('connection')).toHaveText(/ici$/);
@@ -46,8 +46,74 @@ test('a dad reads the room in French, and it stays French', async ({ page }) => 
   // And back again.
   await home(page);
   await page.getByRole('button', { name: 'Réglages' }).click();
+  await page.getByTestId('settings-device').click();
   await page.getByRole('button', { name: 'EN', exact: true }).click();
-  await expect(page.getByTestId('settings')).toContainText('On this device');
+  await expect(page.getByTestId('settings-leaf-device')).toContainText('On this device');
+});
+
+test('settings is a short list, and each row is a leaf with a way back', async ({ page }) => {
+  // Marc, 2026-11-02: "arrange settings differently so it's less cluttered".
+  await comeIn(page, 'Lee Leaf');
+  await settings(page);
+  const list = page.getByTestId('settings');
+
+  // Four rows and the quiet line, and nothing else: no field, no switch.
+  for (const row of [
+    'settings-you',
+    'settings-invite',
+    'settings-room',
+    'settings-device',
+    'settings-sign-out',
+  ]) {
+    await expect(list.getByTestId(row)).toBeVisible();
+  }
+  await expect(list.getByRole('button')).toHaveCount(5);
+  await expect(list.getByRole('switch')).toHaveCount(0);
+  await expect(list.getByRole('textbox')).toHaveCount(0);
+  // Each row says what is behind it.
+  await expect(list.getByTestId('settings-you')).toContainText('Lee Leaf');
+  await expect(list.getByTestId('settings-you-summary')).toContainText('Shades');
+  await expect(list.getByTestId('settings-room-summary')).toHaveText(
+    'Questions · The week · The table',
+  );
+  await expect(list.getByTestId('settings-device-summary')).toHaveText('EN');
+
+  // Each leaf holds what it is about, and the way back is the list again,
+  // with the row he left by under his finger (and the focus).
+  for (const [row, leaf, inside] of [
+    ['settings-you', 'settings-leaf-you', 'my-name'],
+    ['settings-room', 'settings-leaf-room', 'room-questions'],
+    ['settings-device', 'settings-leaf-device', 'text-size'],
+  ] as const) {
+    await page.getByTestId(row).click();
+    await expect(page.getByTestId(leaf)).toBeVisible();
+    await expect(page.getByTestId(inside)).toBeVisible();
+    await expect(list).toHaveCount(0);
+    await expect(page.getByTestId('leaf-back')).toBeFocused();
+    await page.getByTestId('leaf-back').click();
+    await expect(list).toBeVisible();
+    await expect(page.getByTestId(row)).toBeFocused();
+  }
+
+  // What he picks in a leaf is what the row then says.
+  await page.getByTestId('settings-device').click();
+  await page.getByRole('button', { name: 'Dark', exact: true }).click();
+  await page.getByTestId('text-size').getByRole('button', { name: 'Large', exact: true }).click();
+  await page.getByTestId('leaf-back').click();
+  await expect(list.getByTestId('settings-device-summary')).toHaveText('EN · Dark · Large text');
+
+  // The phone's back button (Android: Chromium is not an iPhone, so the
+  // layers are on) goes from a leaf to the list, and the sheet stays open;
+  // once more and the sheet goes.
+  await page.getByTestId('settings-room').click();
+  await expect(page.getByTestId('settings-leaf-room')).toBeVisible();
+  await page.goBack();
+  await expect(list).toBeVisible();
+  await expect(page.getByTestId('settings-leaf-room')).toHaveCount(0);
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('main.room')).toHaveAttribute('data-view', 'home');
 });
 
 test('a dad asks for dark, and gets dark', async ({ page }) => {
@@ -56,8 +122,7 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   // Nothing is stamped on the page until he asks: the phone decides.
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
 
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await device(page);
   await page.getByRole('button', { name: 'Dark' }).click();
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
 
@@ -78,8 +143,7 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   await talk(page);
 
   // Handing it back to the phone takes the stamp off again.
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await device(page);
   await page.getByRole('button', { name: 'Follow the phone' }).click();
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
 });
@@ -96,8 +160,7 @@ test('a dad makes the words bigger, and they stay bigger', async ({ page }) => {
   await expect(line).toBeVisible();
   const before = (await line.boundingBox())!.height;
 
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await device(page);
   const sizes = page.getByTestId('text-size');
   await sizes.getByRole('button', { name: 'Larger', exact: true }).click();
   await expect(sizes.getByRole('button', { name: 'Larger', exact: true })).toHaveAttribute(
@@ -122,8 +185,7 @@ test('a dad makes the words bigger, and they stay bigger', async ({ page }) => {
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
 
   // Back to normal takes the stamp off again.
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await device(page);
   await sizes.getByRole('button', { name: 'Normal', exact: true }).click();
   await expect(root).not.toHaveAttribute('data-text');
   expect(await rootSize()).toBe('16px');
@@ -148,8 +210,7 @@ test('a phone that asks for more contrast gets firmer lines and quiet words', as
     expect(more.border).toBe(more.strong);
     expect(more.muted).not.toBe(plain.muted);
   }
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await device(page);
   await page.getByRole('button', { name: 'Dark', exact: true }).click();
   const forced = await tokens();
   expect(forced.border).toBe(forced.strong);
@@ -169,8 +230,7 @@ test('the app’s own words follow each dad, in the room they share', async ({ b
   await comeIn(marc, 'Marc');
   await comeIn(sam, 'Sam');
 
-  await home(marc);
-  await marc.getByRole('button', { name: 'Settings' }).click();
+  await device(marc);
   await marc.getByRole('button', { name: 'FR', exact: true }).click();
 
   // Marc sets the night, in French, from home's card.
@@ -211,8 +271,7 @@ test('the day’s question is asked in the language it is read in', async ({ pag
   const english = await page.getByTestId('prompt-body').textContent();
 
   await page.getByRole('button', { name: 'Close', exact: true }).click();
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await device(page);
   await page.getByRole('button', { name: 'FR', exact: true }).click();
   await page.getByRole('button', { name: 'Ferme', exact: true }).click();
   await menu(page);
@@ -257,8 +316,7 @@ test('the phone’s own chrome follows the theme it was asked for', async ({ pag
   // Nothing fixed while the phone decides: the media-query pair holds.
   expect(await bar()).toBeNull();
 
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await device(page);
   await page.getByRole('button', { name: 'Dark' }).click();
   expect(await bar()).toBe('#121314');
 
@@ -277,8 +335,7 @@ test('a dad changes the name he goes by, and the roster follows', async ({ brows
   const samPage = await sam.newPage();
   await comeIn(samPage, 'Hank');
 
-  await home(marcPage);
-  await marcPage.getByRole('button', { name: 'Settings' }).click();
+  await you(marcPage);
   await marcPage.getByTestId('my-name').fill('Gus-antoine');
   await marcPage.getByTestId('you').getByRole('button', { name: 'Save' }).click();
 
@@ -314,11 +371,9 @@ test('a photo he has just added wears his glasses, and a new pair lands on it', 
   // Without closing Settings: the picture he just chose was a bare preview,
   // and the glasses only appeared on it after the sheet was reopened.
   await comeIn(page, 'Ugo Snap');
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await you(page);
   const face = page.getByTestId('you');
 
-  await page.getByTestId('look-open').click();
   await page.setInputFiles('#face', 'public/icon-192.png');
   await expect(face.locator('img')).toBeVisible();
   await expect(face.locator('.face-shades')).toHaveAttribute('data-glasses', 'shades');
@@ -347,11 +402,9 @@ test('he fits his glasses to his photo, and every face of his wears them there',
   page,
 }) => {
   await comeIn(page, 'Vic Fit');
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await you(page);
 
   // With no photo there is nothing to fit: a colour face is drawn to fit.
-  await page.getByTestId('look-open').click();
   await page.getByTestId('glasses-open').click();
   await expect(page.getByTestId('glasses-picker')).toBeVisible();
   await expect(page.getByTestId('glasses-fit')).toHaveCount(0);
@@ -403,12 +456,10 @@ test('he fits his glasses to his photo, and every face of his wears them there',
 
 test('a dad chooses his glasses, and they stay his', async ({ page }) => {
   await comeIn(page, 'Ivo Frames');
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await you(page);
 
   // The app's shades until he chooses. One button beside his face opens the
   // six.
-  await page.getByTestId('look-open').click();
   await page.getByTestId('glasses-open').click();
   const picker = page.getByTestId('glasses-picker');
   await expect(picker.getByTestId('glasses-shades')).toHaveAttribute('aria-pressed', 'true');
@@ -440,8 +491,7 @@ test('a dad chooses his glasses, and they stay his', async ({ page }) => {
 
   await page.reload();
   await expect(page.getByTestId('connection')).toHaveText(/here$/);
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByTestId('look-open').click();
+  await you(page);
   await page.getByTestId('glasses-open').click();
   await expect(page.getByTestId('glasses-aviators')).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Close', exact: true }).click();
@@ -499,8 +549,7 @@ test('he picks his colour, is told what it changes, and can go back to automatic
   page,
 }) => {
   await comeIn(page, 'Colourful');
-  await home(page);
-  await page.getByTestId('home-settings').click();
+  await you(page);
 
   // Its own control beside his name, and it says what it changes.
   await page.getByTestId('colour-open').click();
@@ -519,7 +568,7 @@ test('he picks his colour, is told what it changes, and can go back to automatic
 
   // And it is his on a reload: it lives in the room, not the tab.
   await page.reload();
-  await page.getByTestId('home-settings').click();
+  await you(page);
   await page.getByTestId('colour-open').click();
   await expect(page.getByTestId('colour-11')).toHaveAttribute('aria-pressed', 'true');
 
@@ -540,8 +589,7 @@ test('a new device asks with a code and comes in as the same dad', async ({ brow
   const code = (await second.getByTestId('pair-code').textContent()) ?? '';
 
   // From Settings, beside the other things about a phone.
-  await home(first);
-  await first.getByTestId('home-settings').click();
+  await device(first);
   await first.getByTestId('settings-link').click();
   await first.getByTestId('pair-code-in').fill(code.toLowerCase());
   await first.getByRole('button', { name: 'Let it in' }).click();
@@ -549,7 +597,7 @@ test('a new device asks with a code and comes in as the same dad', async ({ brow
 
   // And the second device is in, as him: his name, not a new dad's.
   await expect(second.getByTestId('connection')).toHaveText(/here$/, { timeout: 15_000 });
-  await second.getByRole('button', { name: 'Settings' }).click();
+  await you(second);
   await expect(second.getByTestId('my-name')).toHaveValue('Pia Phone');
 
   await first.context().close();
@@ -609,8 +657,7 @@ test('a dad pauses his notifications, sets quiet hours, and both are still there
 }) => {
   await withReminderOn(page);
   await comeIn(page, 'Quiet Marc');
-  await home(page);
-  await page.getByTestId('home-settings').click();
+  await device(page);
 
   // Offered only once the reminder is on, and folded: its label says what is
   // in force, so he need not open it to know.
@@ -626,7 +673,7 @@ test('a dad pauses his notifications, sets quiet hours, and both are still there
 
   // It survives a reload: it is the server's, not the page's.
   await page.reload();
-  await page.getByTestId('home-settings').click();
+  await device(page);
   await expect(page.getByTestId('quiet-open')).toContainText('Paused until');
 
   // Resume, and the three pauses are back.
@@ -658,8 +705,7 @@ test('quiet hours are not offered until the reminder is on, and read in French',
   browser,
 }) => {
   await comeIn(page, 'Quiet Off');
-  await home(page);
-  await page.getByTestId('home-settings').click();
+  await device(page);
   await expect(page.getByTestId('quiet-open')).toHaveCount(0);
   await page.getByRole('button', { name: 'Close', exact: true }).click();
 
@@ -669,8 +715,7 @@ test('quiet hours are not offered until the reminder is on, and read in French',
   await comeIn(fr, 'Quiet Fr');
   await fr.evaluate(() => localStorage.setItem('dads.lang', 'fr'));
   await fr.reload();
-  await home(fr);
-  await fr.getByTestId('home-settings').click();
+  await device(fr);
   await expect(fr.getByTestId('quiet-open')).toHaveText('Heures calmes et pause');
 });
 
@@ -688,9 +733,7 @@ test('his own face wears the fit even when the room answers before the upload do
     await route.fulfill({ response });
   });
   await comeIn(page, 'Vic Late');
-  await home(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByTestId('look-open').click();
+  await you(page);
   await page.setInputFiles('#face', 'public/icon-192.png');
   const face = page.getByTestId('you');
   await expect(face.locator('img')).toBeVisible();

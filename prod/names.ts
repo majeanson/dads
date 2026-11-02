@@ -99,6 +99,40 @@ export async function talk(page: Page): Promise<void> {
   await expect(room).toHaveAttribute('data-view', 'talk');
 }
 
+/**
+ * Settings, from home's corner, on its first screen: the short list. The
+ * rest mirror `e2e/talk.ts` — the leaves of Settings (2026-11-02): him, the
+ * room, this device — and the invite, which is a row of that list.
+ */
+export async function settings(page: Page): Promise<void> {
+  await home(page);
+  await page.getByTestId('home-settings').click();
+  await expect(page.getByTestId('settings')).toBeVisible();
+}
+
+export async function invite(page: Page): Promise<void> {
+  await settings(page);
+  await page.getByTestId('settings-invite').click();
+}
+
+export async function you(page: Page): Promise<void> {
+  await settings(page);
+  await page.getByTestId('settings-you').click();
+  await expect(page.getByTestId('settings-leaf-you')).toBeVisible();
+}
+
+export async function thisRoom(page: Page): Promise<void> {
+  await settings(page);
+  await page.getByTestId('settings-room').click();
+  await expect(page.getByTestId('settings-leaf-room')).toBeVisible();
+}
+
+export async function device(page: Page): Promise<void> {
+  await settings(page);
+  await page.getByTestId('settings-device').click();
+  await expect(page.getByTestId('settings-leaf-device')).toBeVisible();
+}
+
 /** Back to home, from wherever he is. Idempotent, like `talk`. */
 export async function home(page: Page): Promise<void> {
   const room = page.locator('main.room');

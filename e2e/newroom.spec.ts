@@ -36,6 +36,14 @@ const openSettings = async (page: Page) => {
     .click();
 };
 
+/** The room's own leaf of Settings (2026-11-02): its switches, and the
+ * creator's word, handover, taking out and deleting. */
+const roomLeaf = async (page: Page) => {
+  await openSettings(page);
+  await page.getByTestId('settings-room').click();
+  await expect(page.getByTestId('settings-leaf-room')).toBeVisible();
+};
+
 test('a room is opened, shared, and its switches belong to the man who opened it', async ({
   browser,
 }) => {
@@ -72,17 +80,18 @@ test('a room is opened, shared, and its switches belong to the man who opened it
   await expect(guest.getByTestId('line').filter({ hasText: 'first one in' })).toBeVisible();
 
   // The switches are the creator's: the line says so, and one answers him.
-  await openSettings(maker);
+  await roomLeaf(maker);
   await expect(maker.getByTestId('rooms-owner')).toContainText('The word');
-  await maker.getByTestId('features-open').click();
   await maker.getByTestId('room-questions').click();
   await expect(maker.getByTestId('room-questions')).not.toBeChecked();
   await maker.getByRole('button', { name: 'Close', exact: true }).click();
 
   // And not the guest's: the line names whose they are, and his cannot move.
+  // The list already says so, under the room's name.
   await openSettings(guest);
+  await expect(guest.getByTestId('settings-room-summary')).toHaveText('Opened by Marc Founder');
+  await guest.getByTestId('settings-room').click();
   await expect(guest.getByTestId('rooms-owner')).toContainText('Marc Founder');
-  await guest.getByTestId('features-open').click();
   await expect(guest.getByTestId('room-week')).toBeDisabled();
 
   await maker.context().close();
@@ -145,7 +154,7 @@ test('the creator changes the word, then hands the room on', async ({ browser })
   await expect(maker.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
 
   // The word: never shown, only replaced.
-  await openSettings(maker);
+  await roomLeaf(maker);
   await maker.getByTestId('room-owning').click();
   await expect(maker.getByTestId('room-word')).toHaveValue('');
   await maker.getByTestId('room-word').fill(second);
@@ -164,7 +173,7 @@ test('the creator changes the word, then hands the room on', async ({ browser })
   await expect(guest.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
 
   // Handing it over, armed once because it cannot be undone from this side.
-  await openSettings(maker);
+  await roomLeaf(maker);
   await maker.getByTestId('room-owning').click();
   await maker.getByTestId('hand-to').selectOption({ label: 'Sam Handed' });
   await maker.getByTestId('hand-over').click();
@@ -172,9 +181,8 @@ test('the creator changes the word, then hands the room on', async ({ browser })
 
   // It is Sam's room now: his switches move and Marc's have gone from his
   // screen altogether.
-  await openSettings(guest);
+  await roomLeaf(guest);
   await expect(guest.getByTestId('rooms-owner')).toContainText('The word');
-  await guest.getByTestId('features-open').click();
   await guest.getByTestId('room-week').click();
   await expect(guest.getByTestId('room-week')).not.toBeChecked();
 

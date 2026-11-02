@@ -213,9 +213,23 @@ for (const theme of ['light', 'dark'] as const) {
     found.push(...(await faults(page, 'dad night')));
     await close();
 
+    // Settings is a list of four, each a leaf of its own (2026-11-02). This
+    // group was made by the script, so it has no creator: the room's leaf is
+    // the three switches, everybody's.
     await page.getByTestId('home-settings').click();
     await settled();
     found.push(...(await faults(page, 'settings')));
+    for (const [row, leaf] of [
+      ['settings-you', 'settings-leaf-you'],
+      ['settings-room', 'settings-leaf-room'],
+      ['settings-device', 'settings-leaf-device'],
+    ] as const) {
+      await page.getByTestId(row).click();
+      await expect(page.getByTestId(leaf)).toBeVisible();
+      await settled();
+      found.push(...(await faults(page, `settings, ${leaf}`)));
+      await page.getByTestId('leaf-back').click();
+    }
     await page.getByTestId('settings-invite').click();
     await expect(page.getByTestId('invite')).toBeVisible();
     await settled();
@@ -299,7 +313,7 @@ for (const theme of ['light', 'dark'] as const) {
     // of this walk never opens.
     await page.getByTestId('home-settings').click();
     await settled();
-    await page.getByTestId('look-open').click();
+    await page.getByTestId('settings-you').click();
     await page.setInputFiles('#face', 'public/icon-192.png');
     await page.getByTestId('glasses-open').click();
     await expect(page.getByTestId('glasses-picker')).toBeVisible();

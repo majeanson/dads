@@ -136,10 +136,10 @@ test('a long press is the menu, and Reply hands the composer the caret', async (
 test('a photo and a pair of glasses, on his face at once', async ({ page }) => {
   await comeIn(page, 'Flo Safari');
   await page.getByRole('button', { name: 'Settings' }).tap();
+  await page.getByTestId('settings-you').tap();
   const face = page.getByTestId('you');
   // Cropped and shrunk in the browser (`prepareFace`): Safari decodes and
   // draws it its own way, and a face it cannot decode is one it cannot show.
-  await page.getByTestId('look-open').tap();
   await page.setInputFiles('#face', 'public/icon-192.png');
   await expect(face.locator('img')).toBeVisible();
   await page.getByTestId('glasses-open').tap();
@@ -150,6 +150,7 @@ test('a photo and a pair of glasses, on his face at once', async ({ page }) => {
 test('dark, asked for, is dark', async ({ page }) => {
   await comeIn(page, 'Gil Safari');
   await page.getByRole('button', { name: 'Settings' }).tap();
+  await page.getByTestId('settings-device').tap();
   await page.getByRole('button', { name: 'Dark' }).tap();
   // The same pinned value as Chromium's check: the page really is dark.
   const bg = await page.evaluate(() =>
@@ -178,6 +179,7 @@ test('in, straight back out, and in again, in French', async ({ page }) => {
   // masked SVG painted Safari's way — and in the language whose test found it.
   await comeIn(page, 'Ivo Safari');
   await page.getByRole('button', { name: 'Settings' }).tap();
+  await page.getByTestId('settings-device').tap();
   await page.getByRole('button', { name: 'FR', exact: true }).tap();
   await page.getByRole('button', { name: 'Ferme', exact: true }).tap();
   const room = page.locator('main.room');

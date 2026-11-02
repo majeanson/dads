@@ -181,6 +181,18 @@ for (const size of WIDTHS) {
     const rows: [string, () => Promise<void>][] = [
       ['dad night', () => page.getByTestId('dad-night').click()],
       ['settings', () => page.getByTestId('home-settings').click()],
+      // Each leaf of Settings (2026-11-02), in French at this width.
+      ...(['you', 'room', 'device'] as const).map(
+        (leaf) =>
+          [
+            `settings, ${leaf}`,
+            async () => {
+              await page.getByTestId('home-settings').click();
+              await page.getByTestId(`settings-${leaf}`).click();
+              await page.getByTestId(`settings-leaf-${leaf}`).waitFor();
+            },
+          ] as [string, () => Promise<void>],
+      ),
       [
         'the invite',
         async () => {

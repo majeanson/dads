@@ -133,6 +133,24 @@ test('every sheet fits the small phone without scrolling', async ({ browser }) =
         await page.getByTestId('home-settings').click();
       },
     ],
+    // Each leaf of Settings (2026-11-02) fits too, at the normal size.
+    ...(
+      [
+        ['settings, you', 'settings-you'],
+        ['settings, this room', 'settings-room'],
+        ['settings, this device', 'settings-device'],
+      ] as const
+    ).map(
+      ([scene, row]) =>
+        [
+          scene,
+          async () => {
+            await home(page);
+            await page.getByTestId('home-settings').click();
+            await page.getByTestId(row).click();
+          },
+        ] as [string, () => Promise<void>],
+    ),
     [
       'the invite',
       async () => {
@@ -346,35 +364,83 @@ test('the night sheet’s three answers share one row on the small phone', async
   await context.close();
 });
 
-test('the creator’s settings fit the small phone', async ({ browser }) => {
-  // Only the man who opened the room sees the word and the handover, and the
-  // rest of this file signs in as a joined dad — so Settings fit the phone
-  // for everybody except him. Its own address, so opening a room here does
-  // not count against the three a day the new-room spec spends.
-  const context = await browser.newContext({
+test('settings and its device leaf fit the small phone, joined and creator, in both languages', async ({
+  browser,
+}) => {
+  // Settings is a short list now (2026-11-02), each row a leaf, so the list
+  // has room to spare; the leaf with the most rows in it — this device:
+  // language, theme, text size, the reminder, another device — should still
+  // fit without scrolling at the normal size. Measured for a joined dad and
+  // for the creator, whose room leaf holds the word and the handover. The
+  // creator has his own address, so opening a room here does not count
+  // against the three a day the new-room spec spends.
+  const creator = await browser.newContext({
     viewport: SMALL,
     extraHTTPHeaders: { 'CF-Connecting-IP': '10.9.9.9' },
   });
-  const page = await context.newPage();
-  await page.goto('/');
-  await page.getByTestId('start-room').click();
-  await page.getByLabel('What to call it').fill('The Fit Owner');
-  await page.getByLabel('The word to get in').fill(`fit owner ${Date.now().toString(36)}`);
-  await page.getByLabel('Your name').fill('Fit Owner');
-  await page.getByTestId('open-room').click();
-  await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  const owner = await creator.newPage();
+  await owner.goto('/');
+  await owner.getByTestId('start-room').click();
+  await owner.getByLabel('What to call it').fill('The Fit Owner');
+  await owner.getByLabel('The word to get in').fill(`fit owner ${Date.now().toString(36)}`);
+  await owner.getByLabel('Your name').fill('Fit Owner');
+  await owner.getByTestId('open-room').click();
+  await expect(owner.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
 
-  await page.getByTestId('home-settings').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  // It really is the creator's sheet: the row that holds the two forms.
-  await expect(page.getByTestId('room-owning')).toBeVisible();
-  await page.waitForTimeout(300);
-  expect(await overflow(page, '[role="dialog"] > div:last-child')).toBe(0);
+  const joined = await browser.newContext({ viewport: SMALL });
+  const dad = await joined.newPage();
+  await comeIn(dad, 'Fit Joined');
 
-  // And the forms are still one press away.
-  await page.getByTestId('room-owning').click();
-  await expect(page.getByTestId('room-word')).toBeVisible();
-  await context.close();
+  const content = '[role="dialog"] > div:last-child';
+  const measured: string[] = [];
+  for (const [who, page] of [
+    ['creator', owner],
+    ['joined', dad],
+  ] as const) {
+    for (const lang of ['en', 'fr'] as const) {
+      await page.evaluate((l) => localStorage.setItem('dads.lang', l), lang);
+      await page.reload();
+      await expect(page.getByTestId('connection')).toBeVisible();
+      await home(page);
+      await page.getByTestId('home-settings').click();
+      await expect(page.getByTestId('settings')).toBeVisible();
+      await page.waitForTimeout(300);
+      expect(await overflow(page, content), `${who} ${lang}: the list`).toBe(0);
+      expect(await sideways(page, content), `${who} ${lang}: the list`).toBe(0);
+
+      await page.getByTestId('settings-device').click();
+      await expect(page.getByTestId('text-size')).toBeVisible();
+      await page.waitForTimeout(300);
+      measured.push(
+        `${who} ${lang}: ${await page.evaluate((sel) => {
+          // The leaf's own height against the room the sheet gives it.
+          const el = document.querySelector(sel) as HTMLElement;
+          const leaf = el.querySelector('[data-testid="settings-leaf-device"]') as HTMLElement;
+          return `${Math.round(leaf.getBoundingClientRect().height)} of ${el.clientHeight}px`;
+        }, content)}`,
+      );
+      expect(await overflow(page, content), `${who} ${lang}: this device`).toBe(0);
+      expect(await sideways(page, content), `${who} ${lang}: this device`).toBe(0);
+      await page.getByTestId('leaf-back').click();
+
+      // The room's leaf: the creator's forms are one press away, a joined
+      // dad is told whose they are.
+      await page.getByTestId('settings-room').click();
+      if (who === 'creator') {
+        await page.getByTestId('room-owning').click();
+        await expect(page.getByTestId('room-word')).toBeVisible();
+      } else {
+        await expect(page.getByTestId('rooms-owner')).toHaveCount(0);
+        await expect(page.getByTestId('room-week')).toBeVisible();
+      }
+      expect(await sideways(page, content), `${who} ${lang}: the room`).toBe(0);
+      await page.getByRole('button', { name: /^(Close|Ferme)$/ }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+    }
+  }
+  console.log(`this device, 390×667, normal text: ${measured.join('; ')}`);
+  await creator.close();
+  await joined.close();
 });
 
 test('the glasses fitter fits a narrow phone in French', async ({ browser }) => {
@@ -388,7 +454,7 @@ test('the glasses fitter fits a narrow phone in French', async ({ browser }) => 
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: /^Réglages/ })
     .click();
-  await page.getByTestId('look-open').click();
+  await page.getByTestId('settings-you').click();
   await page.setInputFiles('#face', 'public/icon-192.png');
   await page.getByTestId('glasses-open').click();
   await page.getByTestId('glasses-fit').click({ timeout: 15_000 });

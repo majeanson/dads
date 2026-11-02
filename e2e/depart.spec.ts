@@ -5,7 +5,7 @@ import {
   type BrowserContextOptions,
   type Page,
 } from '@playwright/test';
-import { home, menu, settings, talk } from './talk';
+import { home, menu, talk, thisRoom } from './talk';
 
 /**
  * Leaving a room, and being taken out of one.
@@ -59,7 +59,7 @@ test('the creator takes a dad out, and his screen goes to the door', async ({ br
   const sam = await comeIn(browser, word, 'Sam Removed');
   await expect(opener.getByTestId('connection')).toHaveText('2 here');
 
-  await settings(opener);
+  await thisRoom(opener);
   await opener.getByTestId('room-owning').click();
   await opener.getByTestId('remove-who').selectOption({ label: 'Sam Removed' });
   // Armed: the first press says who, the second does it.
@@ -134,7 +134,7 @@ test('a phone asleep when he was taken out finds the door when it wakes', async 
   await sam.getByRole('button', { name: 'Come in' }).click();
   await expect(opener.getByTestId('connection')).toHaveText('2 here');
 
-  await settings(opener);
+  await thisRoom(opener);
   await opener.getByTestId('room-owning').click();
   await opener.getByTestId('remove-who').selectOption({ label: 'Sam Asleep' });
   await opener.getByTestId('remove-do').click();
@@ -191,7 +191,7 @@ test('the creator deletes the room by its name, and nobody can get back in', asy
   const opener = await openRoom(browser, name, word);
   const sam = await comeIn(browser, word, 'Sam Deleted');
 
-  await settings(opener);
+  await thisRoom(opener);
   await opener.getByTestId('room-owning').click();
   // Nothing to press until the name has been typed.
   await expect(opener.getByTestId('delete-do')).toBeDisabled();

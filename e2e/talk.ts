@@ -40,16 +40,40 @@ export async function menu(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Menu' }).click();
 }
 
-/** Settings, from home's corner. */
+/** Settings, from home's corner, on its first screen: the short list. */
 export async function settings(page: Page): Promise<void> {
   await home(page);
   await page.getByTestId('home-settings').click();
+  await expect(page.getByTestId('settings')).toBeVisible();
 }
 
 /** The invite, which lives inside Settings. */
 export async function invite(page: Page): Promise<void> {
   await settings(page);
   await page.getByTestId('settings-invite').click();
+}
+
+/**
+ * The leaves of Settings (2026-11-02): him (name, face, glasses, colour), the
+ * room (the three switches and the creator's controls) and this device
+ * (language, theme, text size, the reminder, another device).
+ */
+export async function you(page: Page): Promise<void> {
+  await settings(page);
+  await page.getByTestId('settings-you').click();
+  await expect(page.getByTestId('settings-leaf-you')).toBeVisible();
+}
+
+export async function thisRoom(page: Page): Promise<void> {
+  await settings(page);
+  await page.getByTestId('settings-room').click();
+  await expect(page.getByTestId('settings-leaf-room')).toBeVisible();
+}
+
+export async function device(page: Page): Promise<void> {
+  await settings(page);
+  await page.getByTestId('settings-device').click();
+  await expect(page.getByTestId('settings-leaf-device')).toBeVisible();
 }
 
 /** Back to home, from wherever he is. Idempotent, like `talk`. */

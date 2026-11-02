@@ -133,8 +133,11 @@ test('its creator owns the switches, and a guest does not', async ({ browser }) 
     .getByRole('navigation', { name: 'Rooms' })
     .getByRole('button', { name: /^Settings/ })
     .click();
+  // The room's row says whose it is, and its leaf (2026-11-02) holds the
+  // switches he cannot move.
+  await expect(guest.getByTestId('settings-room-summary')).toContainText('Opened by');
+  await guest.getByTestId('settings-room').click();
   await expect(guest.getByTestId('rooms-owner')).toBeVisible();
-  await guest.getByTestId('features-open').click();
   await expect(guest.getByTestId('room-week')).toBeDisabled();
 
   await maker.context().close();
