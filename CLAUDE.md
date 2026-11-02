@@ -194,7 +194,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   is not moved: `pointing`); lines are `tabIndex -1`. Arrows, Home, End move
   between chat/prompt lines; Enter, Space, Shift+F10 and the menu key
   dispatch a `contextmenu` at the line's left (Radix anchors there); Tab
-  leaves the list (`beyond`). The ring sits inside the line
+  leaves the list (`beyond`). **Shift+Tab landing on a control INSIDE the
+  list from outside goes to the newest line** (`backTab`, that key only: a
+  closing menu or sheet keeps putting focus back where it was; the attach
+  button between the field and the list keeps its place). The ring sits inside the line
   (`.line:focus-visible`).
 - **On a phone a tap in the list moves no focus** (mousedown prevented under
   `pointer: coarse`, not on players or fields): WebKit gave a tapped mark's
@@ -206,7 +209,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   never his own, only while `view === 'talk'` (`onArrived`, from the same
   `settled` boundary the easing uses).
 - **A picture is named for its sender** ("A photo from Sam", `view.title`),
-  on the line and in the viewer; a file name is never alt text in the room.
+  on the line, in the viewer and on a search result; a file name is never
+  alt text.
 
 ## Dad night (M3)
 
@@ -707,7 +711,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   back layer (`useBackCloses`): Android's back returns to the list before it
   closes the sheet. e2e helpers `settings`, `you`, `thisRoom`, `device`.
   The list and the device leaf fit a 667px phone at normal text — measure
-  as a joined dad AND as the creator, in both languages. The device rows
+  as a joined dad AND as the creator, in both languages. **The room's switches
+  are his flips on top of `rooms`** (`flips.ts`): a flip stands until the room
+  says the same, so another device's change shows on an open sheet. **The
+  device summary is state**: Settings holds `useTheme`/`useTextSize` and hands
+  them to `Toggles`; the reminder is asked once per open and `Remind` reports
+  its switch up (`onOn`) — a return to the list asks nothing. The device rows
   (language, theme, text size) have no padding of their own: the 50px track
   sets the row.
 - **The text size is three steps of the root** (`html[data-text]`, 112.5% and
@@ -854,7 +863,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   dads under an "@" (`tag-picks`: tap, Enter or Tab; Escape dismisses for
   that "@"); not himself, not the departed. **The man named is pushed**
   (`tellTheNamed` in `room/lines.ts`): the line under the sender's name, to
-  the reminder subscription, only when he has no socket open.
+  the reminder subscription, only when he has no socket open. Pinned by
+  `test/mentions-push.test.ts`, which hands the object a VAPID pair, stubs
+  `fetch` and decrypts what the phone would get — no seam in the code.
 - **A link gets a card** (`LinkCard.tsx`, `GET /api/unfurl?url=`): the page's
   own tags (og, twitter, `<title>`; a YouTube video through oEmbed), read in
   `shared/unfurl.ts`, fetched by the WORKER, never the phone, and cached a
@@ -978,7 +989,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - **The draft is his, per room, on this phone** (`drafts.ts`,
   `dads.draft.<group>`): written 300ms after he stops, at once ('') on send,
   flushed on unmount. **An edit borrows the field and never writes the
-  draft**; when it ends the draft comes back, not an empty field.
+  draft**; when it ends the draft comes back, not an empty field. **The caret
+  starts at the END of a restored draft** (from 0, a draft starting "@" opened
+  the names and Enter tagged instead of sending).
 - **The tag picker's field stays a textbox**: `aria-autocomplete`,
   `aria-controls`, `aria-activedescendant` (`tag-pick-<member>`) while the
   picks show, **never `aria-expanded`**. axe scans it (`tagging a dad`).
