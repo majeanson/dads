@@ -41,7 +41,9 @@ test('two dads see each other and each other’s lines', async ({ browser }) => 
   // roster is the question and the log is the detail — and NOT in the
   // conversation.
   await marc.getByTestId('comings').click();
-  await expect(marc.getByTestId('coming').filter({ hasText: 'Sam came in' })).toBeVisible();
+  // The first of them: a serial retry of this file brings Sam in again, and
+  // the log then says so more than once.
+  await expect(marc.getByTestId('coming').filter({ hasText: 'Sam came in' }).first()).toBeVisible();
   await marc.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(marc.getByTestId('line').filter({ hasText: 'came in' })).toHaveCount(0);
 
@@ -1872,7 +1874,10 @@ test('Shift+Tab from the composer comes up onto the newest line', async ({ brows
     await expect(kim.getByTestId('line').filter({ hasText: words.slice(0, 16) })).toBeVisible();
   }
   const newest = kim.getByTestId('line').filter({ hasText: 'back tab line 02' });
-  await expect(newest.getByRole('link')).toBeVisible();
+  // The link IN the words: where the page can be reached, the line also
+  // grows a card for it, which is a second link (CI has the internet).
+  const link = newest.getByRole('link', { name: 'example.com', exact: true });
+  await expect(link).toBeVisible();
   const field = kim.getByLabel('Say something');
   const attach = kim.locator('#attach');
 
@@ -1895,8 +1900,8 @@ test('Shift+Tab from the composer comes up onto the newest line', async ({ brows
 
   // Focus put on the link inside the line any other way stays on the link.
   await field.focus();
-  await newest.getByRole('link').focus();
-  await expect(newest.getByRole('link')).toBeFocused();
+  await link.focus();
+  await expect(link).toBeFocused();
 
   await kim.context().close();
 });
