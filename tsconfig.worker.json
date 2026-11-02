@@ -16,6 +16,8 @@
     "src/web/fresh.ts",
     "src/web/seen.ts",
     "src/web/swipe.ts",
+    "src/web/holdToTalk.ts",
+    "src/web/voiceRate.ts",
     "src/web/viewMemory.ts",
     "src/web/drafts.ts",
     "src/shared/**/*.ts",
