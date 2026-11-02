@@ -236,7 +236,10 @@ export function Composer({
   const people = useMembers()
     .filter((m) => m.gone !== true && m.memberId !== me)
     .map((m) => ({ id: m.memberId, name: m.name }));
-  const [caret, setCaret] = useState(0);
+  // At the end of a restored draft, where the field puts it: from 0, a draft
+  // that began with "@" opened the names on mount, and Enter put a name in
+  // at the start instead of sending (2026-11-02).
+  const [caret, setCaret] = useState(() => draft.length);
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   /** Which row the keys have moved to, for the "@" they moved it on. */
   const [moved, setMoved] = useState({ start: -1, query: '', to: 0 });

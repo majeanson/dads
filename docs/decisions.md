@@ -3264,3 +3264,75 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
 - Left as they are, on purpose: the two duplicated class strings and the
   `coarse()` helper in the call bar (style, not fault), and the device
   summary's reads in Settings, which the hardening workstream closes.
+
+## The loose ends of two days, closed (2026-11-02)
+
+- Marc: "add tests, solidify, make sure this app is prod ready". These are
+  the ends the agents of the last two days reported and nobody closed, and
+  three more a code review found.
+- **The mention push had no test.** `test/mentions-push.test.ts` drives real
+  sockets through `/ws`. The suite has no VAPID keys (every push is a no-op,
+  the case that must stay harmless), so the room object is handed a pair of
+  its own through `runInDurableObject`, `fetch` is stubbed (the object shares
+  the test's isolate), and each push is decrypted with the phone's own key
+  (RFC 8291 the other way round). No seam was needed in `lines.ts`. Pinned:
+  away he gets it, titled with the sender's name, tagged `tag-<sender>`, cut
+  to 140 with an ellipsis; with his room open nothing; naming himself nothing;
+  gone (a subscription row put back after leaving) nothing, and the next dad
+  named still gets his. The departed case is held twice — `tellTheNamed`
+  filters the gone and `TARGET` reads `gone_at IS NULL` — and the test holds
+  either. A first draft of the test's own sentinel line contained the "@Sam"
+  it followed and counted two pushes; the sentinel says nothing now.
+- **The viewer's spring-back** is in its e2e: a 60px pull with the finger
+  resting 150ms before the lift (no speed, so no flick) leaves the same
+  picture and the track's `translate` back to nothing, having first seen it
+  move. The rest is part of the gesture, not a wait for the app.
+- **Settings' switches follow the room.** They were `useState(rooms)`, a copy
+  taken on open, so the creator flipping one on his laptop left his phone's
+  open sheet saying the old thing. Now the sheet keeps only its own flips on
+  top of the `rooms` prop (`flips.ts`, pure): a flip stands until the room
+  says the same thing — the socket's frame can come before or after the PUT's
+  answer, and dropping it on the answer would show the old value for the gap
+  (the shape CLAUDE.md records for the face) — and goes at once if the PUT
+  fails. e2e "a switch flipped on his other device shows on the Settings
+  already open" (a room of his own, his second device paired by code; it
+  failed on the old code at the list's summary).
+- **The creator's leaf had never been scanned**: the a11y dad's room has no
+  creator. "the creator's room leaf reads, in light" opens a room from its own
+  address, lets a second dad in so the handover and take-out have a name, and
+  scans with `room-owning` open. No faults. One theme: its pieces are the same
+  ones both runs above already read.
+- **A search result's picture** passed no sender, so its alt was the file
+  name; it passes the result's name now ("A photo from Marc Snapshot",
+  `find.spec`).
+- **Shift+Tab back up from the composer** walked into the list from its end:
+  the browser's order is the list, then its children, so going backwards the
+  last mark or link of the newest line comes first. The brief said to catch
+  Shift+Tab in the field and focus the list. It was measured first, and the
+  field's Shift+Tab goes to the attach button (an sr-only file input between
+  the list and the field), not into the list — catching it in the field would
+  have skipped attach and left the same fault one key further up. So the list
+  catches it: a Shift+Tab (a window keydown in the capture phase, flag cleared
+  after the task) whose focus lands on a control inside the list, coming from
+  outside it, goes to the newest line. Only that key, because a closing menu
+  or profile sheet puts the focus back on a control inside the list and that
+  is where it belongs; a line's portalled menu is React's child of the list
+  and is let alone. e2e "Shift+Tab from the composer comes up onto the newest
+  line" (field, attach, newest line, arrows, and Tab down again: attach, field).
+- **Settings asked about the reminder on every return to the list**, a
+  service-worker lookup and a `GET /api/push` each time, and read the theme
+  and text size off `<html>` while rendering. Settings now holds
+  `useTheme`/`useTextSize` (they were only ever used by `Toggles`, which takes
+  them as props now), asks about the reminder once per open, and `Remind`
+  reports its switch up (`onOn`). e2e "the device row says what was chosen,
+  and coming back to the list asks nothing" counts the requests (one for the
+  list, one per opening of the device leaf, none for the two returns, the
+  third leaf opening as the sentinel).
+- **A restored draft that began with "@" opened the names on load**: the
+  caret started at 0 and `lastIndexOf('@', -1)` finds the "@" at 0, so Enter
+  put a name in at the start instead of sending. The caret starts at the end
+  of the draft now (`mentionAt` refusing a caret of 0 is a separate change, not
+  this branch's). e2e "a kept draft that starts with a name opens no names,
+  and Enter sends it" checks before the field is focused, after the hello is
+  in: focusing the field fires `select` and puts the caret right, which is
+  why a first version of the test passed on the old code.

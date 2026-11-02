@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { device, home, menu, settings, talk, you } from './talk';
+import { device, home, menu, settings, talk, thisRoom, you } from './talk';
 import { E2E_PREFS_GROUP } from './global-setup';
 
 // One group, and each test brings its own dad.
@@ -622,6 +622,55 @@ test('a new device asks with a code and comes in as the same dad', async ({ brow
 });
 
 /**
+ * The room's switches follow the room while Settings is open (2026-11-02).
+ * They were a copy taken when the sheet opened, so the creator flipping one
+ * on his laptop left his phone's open Settings saying the old thing.
+ */
+test('a switch flipped on his other device shows on the Settings already open', async ({
+  browser,
+}) => {
+  // A room with a creator, so the switches are somebody's: his own, opened
+  // from an address of its own (three rooms a day per address).
+  const laptop = await (
+    await browser.newContext({ extraHTTPHeaders: { 'CF-Connecting-IP': '10.9.7.1' } })
+  ).newPage();
+  await laptop.goto('/');
+  await laptop.getByTestId('start-room').click();
+  await laptop.getByLabel('What to call it').fill('The Switch Room');
+  await laptop.getByLabel('The word to get in').fill(`switch room ${Date.now().toString(36)}`);
+  await laptop.getByLabel('Your name').fill('Sid Switch');
+  await laptop.getByTestId('open-room').click();
+  await expect(laptop.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  const phone = await pairedDevice(browser, laptop);
+  await laptop.reload();
+
+  // The phone stands on the list, the laptop in the room's leaf.
+  await settings(phone);
+  const summary = phone.getByTestId('settings-room-summary');
+  await expect(summary).toHaveText('Questions · The week · The table');
+  await thisRoom(laptop);
+  await laptop.getByTestId('room-week').click();
+  await expect(laptop.getByTestId('room-week')).toHaveAttribute('aria-checked', 'false');
+  await expect(summary).toHaveText('Questions · The table');
+
+  // And the phone in the leaf itself, while the laptop turns the table off.
+  await phone.getByTestId('settings-room').click();
+  await expect(phone.getByTestId('room-week')).toHaveAttribute('aria-checked', 'false');
+  await laptop.getByTestId('room-table').click();
+  await expect(phone.getByTestId('room-table')).toHaveAttribute('aria-checked', 'false');
+
+  // His own flip on the phone still answers the finger, and the laptop's
+  // open leaf follows it the same way.
+  await phone.getByTestId('room-week').click();
+  await expect(phone.getByTestId('room-week')).toHaveAttribute('aria-checked', 'true');
+  await expect(laptop.getByTestId('room-week')).toHaveAttribute('aria-checked', 'true');
+  await expect(phone.getByTestId('room-table')).toHaveAttribute('aria-checked', 'false');
+
+  await laptop.context().close();
+  await phone.context().close();
+});
+
+/**
  * One seen mark per dad, not per phone (Marc asked, 2026-11-02): reading on
  * one of his devices clears the count on the other, live, and the mark is
  * still his after a reload because the room hands it back in its hello.
@@ -790,6 +839,44 @@ test('quiet hours are not offered until the reminder is on, and read in French',
   await fr.reload();
   await device(fr);
   await expect(fr.getByTestId('quiet-open')).toHaveText('Heures calmes et pause');
+});
+
+test('the device row says what was chosen, and coming back to the list asks nothing', async ({
+  page,
+}) => {
+  // 2026-11-02: the list used to ask the service worker and the server about
+  // the reminder every time it showed, a return from any leaf included, and
+  // read the theme and the text size off <html> while it rendered.
+  await withReminderOn(page);
+  let asked = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/push') asked += 1;
+  });
+  await comeIn(page, 'Rory Remind');
+  await settings(page);
+  const summary = page.getByTestId('settings-device-summary');
+  await expect(summary).toHaveText('EN · Reminders on');
+  expect(asked).toBe(1);
+
+  // The leaf's switch asks once for itself; a choice there is on the list
+  // when he comes back, and the return asks nothing.
+  await page.getByTestId('settings-device').click();
+  await expect(page.getByTestId('remind')).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Dark', exact: true }).click();
+  await page.getByTestId('leaf-back').click();
+  await expect(summary).toHaveText('EN · Dark · Reminders on');
+  await page.getByTestId('settings-you').click();
+  await page.getByTestId('leaf-back').click();
+  await expect(page.getByTestId('settings-you')).toBeFocused();
+  // The sentinel: the device leaf again is exactly one more ask, so the two
+  // returns before it made none.
+  await page.getByTestId('settings-device').click();
+  await expect(page.getByTestId('remind')).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(() => asked).toBe(3);
+  await page.getByRole('button', { name: 'Follow the phone', exact: true }).click();
+  await page.getByTestId('leaf-back').click();
+  await expect(summary).toHaveText('EN · Reminders on');
+  expect(asked).toBe(3);
 });
 
 test('his own face wears the fit even when the room answers before the upload does', async ({

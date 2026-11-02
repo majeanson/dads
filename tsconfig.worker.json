@@ -15,6 +15,7 @@
     "src/web/dadColour.ts",
     "src/web/favourites.ts",
     "src/web/fresh.ts",
+    "src/web/flips.ts",
     "src/web/jump.ts",
     "src/web/seen.ts",
     "src/web/swipe.ts",

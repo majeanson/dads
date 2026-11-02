@@ -85,6 +85,9 @@ test('a photograph on a result is shown, not offered to be opened', async ({ bro
   await expect(found).toHaveCount(1);
   await expect(found.first().locator('img')).toBeVisible();
   await expect(found.first().getByTestId('photo')).toHaveCount(0);
+  // Named for the man who sent it, as on the line, not for the file
+  // (2026-11-02): a screen reader read "kayak dot png".
+  await expect(found.first().locator('img')).toHaveAttribute('alt', 'A photo from Marc Snapshot');
 
   await marc.context().close();
 });

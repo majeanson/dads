@@ -49,7 +49,8 @@ export function Attachment({
   /**
    * Who sent it, for its name: "A photo from Sam". The file's own name was
    * the alt text, and a screen reader read "IMG underscore 1234 dot jpg" for
-   * every picture in the room. Absent (a search result), the file name stays.
+   * every picture in the room. A search result passes it too (2026-11-02).
+   * Absent, the file name stays.
    */
   from?: string;
   /** Opens the picture full-screen. Images only; everything else plays or

@@ -343,3 +343,50 @@ for (const theme of ['light', 'dark'] as const) {
     await context.close();
   });
 }
+
+/**
+ * The creator's half of the room's leaf: the word, handing the room on,
+ * taking a dad out, deleting it. The group above was made by the script and
+ * has no creator, so none of it was ever scanned (2026-11-02). A room of its
+ * own, opened from an address of its own (three rooms a day per address),
+ * with a second dad in it so the handover and the take-out have somebody to
+ * name. One theme: the forms are made of the same pieces the light and dark
+ * runs above already read in both.
+ */
+test('the creator’s room leaf reads, in light', async ({ browser }) => {
+  const options = { colorScheme: 'light' as const, reducedMotion: 'reduce' as const };
+  const context = await browser.newContext({
+    ...options,
+    extraHTTPHeaders: { 'CF-Connecting-IP': '10.9.6.1' },
+  });
+  const page = await context.newPage();
+  const word = `a11y owner ${Date.now().toString(36)}`;
+  await page.goto('/');
+  await page.getByTestId('start-room').click();
+  await page.getByLabel('What to call it').fill('The A11y Owner');
+  await page.getByLabel('The word to get in').fill(word);
+  await page.getByLabel('Your name').fill('Owen Owner');
+  await page.getByTestId('open-room').click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+
+  const friend = await (await browser.newContext(options)).newPage();
+  await friend.goto('/');
+  await friend.getByLabel('The word').fill(word);
+  await friend.getByLabel('Your name').fill('Fred Friend');
+  await friend.getByRole('button', { name: 'Come in' }).click();
+  await expect(friend.getByTestId('connection')).toHaveText(/here$/);
+  await expect(page.getByTestId('connection')).toHaveText('2 here');
+
+  await page.getByTestId('home-settings').click();
+  await page.getByTestId('settings-room').click();
+  await page.getByTestId('room-owning').click();
+  await expect(page.getByTestId('room-owning')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByTestId('delete-name')).toBeVisible();
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((an) => an.finished.catch(() => undefined))),
+  );
+  expect(await faults(page, 'the creator’s room leaf')).toEqual([]);
+
+  await friend.context().close();
+  await context.close();
+});

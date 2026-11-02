@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GLASSES, type RoomsOpen, type RosterEntry } from '../shared/protocol';
 import { deviceSummary, roomSummary } from '../shared/settingsSummary';
 import { setRooms } from './api';
+import { settleFlips, shownSwitches, withoutFlip, type Flips } from './flips';
 import { BuildLabel } from './BuildLabel';
 import { hashedColour } from './dadColour';
 import { Face } from './Face';
@@ -18,7 +19,8 @@ import { useT } from './i18n';
 import { useMember } from './members';
 import { pushShape } from './push';
 import { Remind } from './Remind';
-import { parseTextSize } from './textSizeValue';
+import { useTextSize } from './textSize';
+import { useTheme } from './theme';
 import { TheRoom } from './TheRoom';
 import { Toggles } from './Toggles';
 import { Button } from './ui/Button';
@@ -125,14 +127,22 @@ export function Settings({
   const { t, lang } = useT();
   const me = useMember(you.memberId);
   // Optimistic: the switch answers the finger, and the socket brings everyone
-  // else's copy along a moment later.
-  const [shown, setShown] = useState(rooms);
+  // else's copy along a moment later. Only his own flips are kept here, on top
+  // of `rooms`, so a switch flipped on another phone while this sheet is open
+  // shows here too (it was a copy taken once, on open). See flips.ts.
+  const [flips, setFlips] = useState<Flips>({});
+  const shown = shownSwitches(rooms, flips);
   const [busy, setBusy] = useState(false);
   /** The word and the handover, shown only once the creator asks. */
   const [owning, setOwning] = useState(false);
   const [leaf, setLeaf] = useState<LeafName | null>(null);
   /** Whether this device is told when something is on, for the summary. */
   const [reminding, setReminding] = useState(false);
+  // The device leaf's theme and text size, held here and handed to its
+  // toggles, so the list's summary is the same state the choice is made in
+  // rather than <html> read during render (2026-11-02).
+  const [theme, setTheme] = useTheme();
+  const [size, setSize] = useTextSize();
   const list = useRef<HTMLDivElement>(null);
   const cameFrom = useRef<LeafName | null>(null);
 
@@ -140,14 +150,21 @@ export function Settings({
   // it closes the sheet. The sheet's Close still closes everything.
   useBackCloses(leaf !== null, () => setLeaf(null));
 
+  // Asked once per open of the sheet. The switch lives in the device leaf,
+  // and it reports each change up (`onOn`), so coming back to the list asks
+  // the service worker nothing (2026-11-02: it used to, on every return).
   useEffect(() => {
-    if (leaf !== null) return;
-    // Read again each time the list shows, because the switch for it lives
-    // in the leaf he may just have come back from.
     let cancelled = false;
     pushShape()
       .then((s) => !cancelled && setReminding(s.kind === 'ready' && s.on))
       .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (leaf !== null) return;
     // Back on the list, the focus goes to the row he left by, not to the top
     // of the page: the button that had it is gone.
     const from = cameFrom.current;
@@ -157,9 +174,6 @@ export function Settings({
         ?.querySelector<HTMLElement>(`[data-testid="settings-${from}"]`)
         ?.focus({ preventScroll: true });
     }
-    return () => {
-      cancelled = true;
-    };
   }, [leaf]);
 
   function open(next: LeafName) {
@@ -167,15 +181,18 @@ export function Settings({
     setLeaf(next);
   }
 
+  // A flip stands until the room says the same thing.
+  useEffect(() => setFlips((now) => settleFlips(rooms, now)), [rooms]);
+
   async function toggle(key: keyof RoomsOpen) {
     if (!mine) return;
-    const next = { ...shown, [key]: !shown[key] };
-    setShown(next);
+    const value = !shown[key];
+    setFlips((now) => ({ ...now, [key]: value }));
     setBusy(true);
     try {
-      await setRooms({ [key]: next[key] });
+      await setRooms({ [key]: value });
     } catch {
-      setShown(shown);
+      setFlips((now) => withoutFlip(now, key));
     } finally {
       setBusy(false);
     }
@@ -279,8 +296,8 @@ export function Settings({
             the reminder are four answers to four questions, and they look
             like it. */}
         <div className="border-t border-line">
-          <Toggles />
-          <Remind />
+          <Toggles theme={theme} setTheme={setTheme} size={size} setSize={setSize} />
+          <Remind onOn={setReminding} />
           {/* Being him on another phone is about HIM and this device both, and
               it is what a dad looks for the day he gets a new phone or adds
               the home-screen app: here, beside the other things about this
@@ -300,11 +317,6 @@ export function Settings({
     );
   }
 
-  // What the device leaf chose, read off the page rather than kept twice:
-  // the theme and the text size are stamped on <html> the moment they are
-  // picked, and that stamp is what the screen is actually showing.
-  const root = document.documentElement.dataset;
-  const theme = root.theme === 'light' || root.theme === 'dark' ? root.theme : 'system';
   const pair = me?.glasses ?? GLASSES[0];
   const colour = me?.colour ?? hashedColour(you.memberId);
 
@@ -346,7 +358,7 @@ export function Settings({
         <Door
           icon={<SlidersHorizontal size={22} aria-hidden="true" className="shrink-0 text-muted" />}
           label={t('set.yours')}
-          summary={deviceSummary(lang, theme, parseTextSize(root.text), reminding)}
+          summary={deviceSummary(lang, theme, size, reminding)}
           onClick={() => open('device')}
           testId="settings-device"
         />
