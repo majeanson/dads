@@ -2,8 +2,8 @@ import { Moon, Sun, SunMoon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useT, type Lang } from './i18n';
 import { cn } from './ui/cn';
-import { useTheme, type Theme } from './theme';
-import { useTextSize, type TextSize } from './textSize';
+import type { Theme } from './theme';
+import type { TextSize } from './textSize';
 
 const LANGS: { id: Lang; label: string }[] = [
   { id: 'en', label: 'EN' },
@@ -109,10 +109,23 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export function Toggles() {
+/**
+ * The theme and the size of the words are held by Settings (`useTheme`,
+ * `useTextSize`) and handed in, so its list's summary reads the same state
+ * these segments set (2026-11-02).
+ */
+export function Toggles({
+  theme,
+  setTheme,
+  size,
+  setSize,
+}: {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  size: TextSize;
+  setSize: (size: TextSize) => void;
+}) {
   const { t } = useT();
-  const [theme, setTheme] = useTheme();
-  const [size, setSize] = useTextSize();
 
   const themes: { id: Theme; Icon: typeof Sun; label: string }[] = [
     { id: 'system', Icon: SunMoon, label: t('theme.system') },

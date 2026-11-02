@@ -93,7 +93,7 @@ export function RemindOffer({ onDone }: { onDone: () => void }) {
  * is most of the time: Apple only allows notifications once the app is on the
  * home screen, which is worth saying out loud since it is a thing he can fix.
  */
-export function Remind() {
+export function Remind({ onOn }: { onOn?: (on: boolean) => void } = {}) {
   const { t } = useT();
   const [shape, setShape] = useState<PushShape | null>(null);
   const [busy, setBusy] = useState(false);
@@ -107,6 +107,12 @@ export function Remind() {
       cancelled = true;
     };
   }, []);
+
+  // Settings' summary says "Reminders on" from what this switch knows, so a
+  // return to the list asks nothing of the service worker (2026-11-02).
+  useEffect(() => {
+    if (shape?.kind === 'ready') onOn?.(shape.on);
+  }, [shape, onOn]);
 
   // Nothing at all unless there is something to press. "Your browser is
   // blocking notifications" is a sentence about a setting three menus deep in

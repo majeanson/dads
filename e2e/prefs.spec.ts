@@ -841,6 +841,44 @@ test('quiet hours are not offered until the reminder is on, and read in French',
   await expect(fr.getByTestId('quiet-open')).toHaveText('Heures calmes et pause');
 });
 
+test('the device row says what was chosen, and coming back to the list asks nothing', async ({
+  page,
+}) => {
+  // 2026-11-02: the list used to ask the service worker and the server about
+  // the reminder every time it showed, a return from any leaf included, and
+  // read the theme and the text size off <html> while it rendered.
+  await withReminderOn(page);
+  let asked = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/push') asked += 1;
+  });
+  await comeIn(page, 'Rory Remind');
+  await settings(page);
+  const summary = page.getByTestId('settings-device-summary');
+  await expect(summary).toHaveText('EN · Reminders on');
+  expect(asked).toBe(1);
+
+  // The leaf's switch asks once for itself; a choice there is on the list
+  // when he comes back, and the return asks nothing.
+  await page.getByTestId('settings-device').click();
+  await expect(page.getByTestId('remind')).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Dark', exact: true }).click();
+  await page.getByTestId('leaf-back').click();
+  await expect(summary).toHaveText('EN · Dark · Reminders on');
+  await page.getByTestId('settings-you').click();
+  await page.getByTestId('leaf-back').click();
+  await expect(page.getByTestId('settings-you')).toBeFocused();
+  // The sentinel: the device leaf again is exactly one more ask, so the two
+  // returns before it made none.
+  await page.getByTestId('settings-device').click();
+  await expect(page.getByTestId('remind')).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(() => asked).toBe(3);
+  await page.getByRole('button', { name: 'Follow the phone', exact: true }).click();
+  await page.getByTestId('leaf-back').click();
+  await expect(summary).toHaveText('EN · Reminders on');
+  expect(asked).toBe(3);
+});
+
 test('his own face wears the fit even when the room answers before the upload does', async ({
   page,
 }) => {
