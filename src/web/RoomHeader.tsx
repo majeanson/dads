@@ -408,7 +408,11 @@ function RoomTitle({ name, onClick }: { name: string; onClick: () => void }) {
       type="button"
       onClick={onClick}
       data-testid="room-title"
-      className="block max-w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left text-inherit"
+      // 28px tall at the least, whatever the line box of the name is (23px at
+      // `text-lg` in the conversation, which the production screens audit
+      // refused as too small to press, 2026-11-02); the margins give the
+      // extra back so the header does not grow.
+      className="block max-w-full min-h-7 -my-[2.5px] cursor-pointer truncate border-0 bg-transparent p-0 text-left leading-7 text-inherit"
     >
       {name}
     </button>

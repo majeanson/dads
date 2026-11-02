@@ -148,7 +148,11 @@ test('the menu offers exactly what the group has switched on', async ({ browser 
     rooms.questions ? 1 : 0,
   );
   await expect(chat.getByRole('button', { name: /^The week/ })).toHaveCount(rooms.week ? 1 : 0);
-  await expect(chat.getByRole('button', { name: /the table$/ })).toHaveCount(rooms.table ? 1 : 0);
+  // Anchored at the start: the row says what the table is after its name
+  // ("cards · 4 seats"), so the name no longer ENDS with "the table".
+  await expect(chat.getByRole('button', { name: /^Open the table/ })).toHaveCount(
+    rooms.table ? 1 : 0,
+  );
   await expect(chat.getByRole('button', { name: /^Find something/ })).toBeVisible();
   await expect(chat.getByRole('button', { name: 'Settings' })).toBeVisible();
   // Never a Dad night row: home's card is the night and carries its own way
