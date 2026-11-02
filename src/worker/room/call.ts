@@ -50,6 +50,16 @@ export async function onCall(
     inCall: frame.join,
     muted: frame.muted === true,
   } satisfies SocketIdentity);
+  // "In" from a NEW socket while an older one of his still says in is the
+  // same dad back after his socket dropped in the background (2026-11-02):
+  // he has let his links go, but the others still hold theirs to the old
+  // connection, and the roster — one entry per dad — never said he left, so
+  // nothing would make them rebuild. Take the old socket off the call, so
+  // its late close is not a hang-up on the new one, and tell the others to
+  // drop their side: the roster that follows rebuilds the mesh as a join does.
+  if (frame.join && who.inCall !== true && retireOlder(room, ws, who.memberId)) {
+    hangUp(room, who, ws);
+  }
   broadcastCallRoster(room);
   if (!frame.join) hangUp(room, who, ws);
   // A dad alone on the call is waiting for somebody: that is the moment.
@@ -60,6 +70,19 @@ export async function onCall(
       tag: 'live-call',
     });
   }
+}
+
+/** His other sockets still marked on the call are taken off it. True if any was. */
+function retireOlder(room: Room, keep: WebSocket, memberId: string): boolean {
+  let any = false;
+  for (const other of room.ctx.getWebSockets(memberId)) {
+    if (other === keep) continue;
+    const his = other.deserializeAttachment() as SocketIdentity | null;
+    if (his?.inCall !== true) continue;
+    other.serializeAttachment({ ...his, inCall: false, muted: false } satisfies SocketIdentity);
+    any = true;
+  }
+  return any;
 }
 
 /** Relayed verbatim to one dad, with the sender named by the room rather
