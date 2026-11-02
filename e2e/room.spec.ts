@@ -241,7 +241,7 @@ test('a dad says it instead of typing it', async ({ browser }) => {
   // recording carries no length in its header — the browser reports it as
   // endless until it has played once — so the note had no length, a bar
   // that never filled, and a tap on it that went nowhere.
-  await expect(sam.getByTestId('voice-note').last()).toContainText(/^0:0[1-9]$/, {
+  await expect(sam.getByTestId('voice-clock').last()).toHaveText(/^0:0[1-9]$/, {
     timeout: 10_000,
   });
 
@@ -268,6 +268,133 @@ test('a recording thrown away is not sent', async ({ browser }) => {
   await expect(marc.getByTestId('recording')).toHaveCount(0);
   await marc.waitForTimeout(1500);
   await expect(marc.getByTestId('voice-note')).toHaveCount(before);
+
+  await marc.context().close();
+});
+
+/** A dad on an iPhone, in the room, and a way to touch his screen for real:
+ * Playwright's mouse is a mouse, and holding the microphone is a finger. */
+async function phoneDad(browser: Browser, name: string) {
+  const context = await browser.newContext({ ...devices['iPhone 13'] });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill(name);
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
+  const cdp = await context.newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
+    });
+  const mic = async () => {
+    const box = (await page.getByTestId('record').boundingBox())!;
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  return { page, touch, mic };
+}
+
+test('on a phone, holding the microphone talks and lifting sends it', async ({ browser }) => {
+  // Marc, 2026-11-02: the convention every phone chat has.
+  const { page, touch, mic } = await phoneDad(browser, 'Hold Hank');
+  const sam = await comeIn(browser, 'Hold Sam');
+  const before = await sam.getByTestId('voice-note').count();
+
+  const at = await mic();
+  await touch('touchStart', at.x, at.y);
+  // Held, the row says how to change his mind, and the finger is still down.
+  await expect(page.getByTestId('recording')).toContainText('Slide left to throw it away');
+  await expect(page.getByTestId('record')).toHaveAttribute('data-held', 'held');
+  await expect(page.getByTestId('recording')).toContainText('0:01', { timeout: 5_000 });
+  await touch('touchEnd');
+
+  // Lifting sent it, with nothing more to press.
+  await expect(page.getByTestId('recording')).toHaveCount(0);
+  await expect(page.getByTestId('voice-note')).toHaveCount(before + 1, { timeout: 15_000 });
+  await expect(sam.getByTestId('voice-note')).toHaveCount(before + 1, { timeout: 15_000 });
+  await expect(page.getByTestId('record')).not.toHaveAttribute('data-held');
+
+  await sam.context().close();
+  await page.context().close();
+});
+
+test('on a phone, sliding left off the microphone throws the note away', async ({ browser }) => {
+  const { page, touch, mic } = await phoneDad(browser, 'Slide Sid');
+  const before = await page.getByTestId('voice-note').count();
+
+  const at = await mic();
+  await touch('touchStart', at.x, at.y);
+  await expect(page.getByTestId('recording')).toContainText('0:01', { timeout: 5_000 });
+  for (let step = 1; step <= 6; step++) await touch('touchMove', at.x - step * 20, at.y);
+  // Past the line: letting go now is the cancel, and the row says so.
+  await expect(page.getByTestId('recording')).toContainText('Let go to throw it away');
+  await expect(page.getByTestId('record')).toHaveAttribute('data-held', 'armed');
+  await touch('touchEnd');
+  await expect(page.getByTestId('recording')).toHaveCount(0);
+
+  // The sentinel: a line sent after it arrives, and no note came before it.
+  await page.getByLabel('Say something').fill('slid it away 01');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByTestId('line').filter({ hasText: 'slid it away 01' })).toBeVisible();
+  await expect(page.getByTestId('voice-note')).toHaveCount(before);
+
+  await page.context().close();
+});
+
+test('on a phone, a tap on the microphone records hands-free', async ({ browser }) => {
+  // One hand on a child: a tap starts it, and the row has its own two buttons.
+  const { page } = await phoneDad(browser, 'Tap Tom');
+  const before = await page.getByTestId('voice-note').count();
+
+  await page.getByTestId('record').tap();
+  await expect(page.getByTestId('recording')).toContainText('listening');
+  await expect(page.getByRole('button', { name: 'Throw it away' })).toBeVisible();
+  await expect(page.getByTestId('recording')).toContainText('0:01', { timeout: 5_000 });
+  // Lifting the finger from the tap did not send it: it is still going.
+  await expect(page.getByTestId('voice-note')).toHaveCount(before);
+  await page.getByRole('button', { name: 'Send', exact: true }).tap();
+
+  await expect(page.getByTestId('voice-note')).toHaveCount(before + 1, { timeout: 15_000 });
+  await expect(page.getByTestId('recording')).toHaveCount(0);
+
+  await page.context().close();
+});
+
+test('a voice note plays faster, and the phone remembers how fast', async ({ browser }) => {
+  const marc = await comeIn(browser, 'Speedy Ned');
+  await marc.setInputFiles('#attach', {
+    name: 'note.webm',
+    mimeType: 'audio/webm',
+    buffer: Buffer.alloc(2048),
+  });
+  await marc.getByLabel('Say something').fill('play this one faster');
+  await marc.getByRole('button', { name: 'Send' }).click();
+  const note = () =>
+    marc.getByTestId('line').filter({ hasText: 'play this one faster' }).getByTestId('voice-note');
+  await expect(note()).toBeVisible();
+
+  const speed = () => note().getByTestId('voice-speed');
+  const rate = () =>
+    note()
+      .locator('audio')
+      .evaluate((el) => (el as HTMLAudioElement).playbackRate);
+  await expect(speed()).toHaveAccessibleName('Speed 1×');
+  await speed().click();
+  await expect(speed()).toHaveAccessibleName('Speed 1.5×');
+  await expect.poll(rate).toBe(1.5);
+
+  // Every note on this phone, after a reload too.
+  await marc.reload();
+  await talk(marc);
+  await expect(speed()).toHaveAccessibleName('Speed 1.5×');
+  await expect.poll(rate).toBe(1.5);
+  await speed().click();
+  await expect(speed()).toHaveAccessibleName('Speed 2×');
+  await speed().click();
+  await expect(speed()).toHaveAccessibleName('Speed 1×');
+  await expect.poll(rate).toBe(1);
 
   await marc.context().close();
 });

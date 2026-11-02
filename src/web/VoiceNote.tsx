@@ -1,6 +1,35 @@
 import { Pause, Play } from 'lucide-react';
-import { useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from 'react';
+import { deviceStorage } from './drafts';
 import { useT } from './i18n';
+import { Button } from './ui/Button';
+import { nextRate, readRate, writeRate, type Rate } from './voiceRate';
+
+/**
+ * The speed is the PHONE's, not one note's (Marc asked, 2026-11-02): every
+ * player on the screen follows a change made on any of them. The value
+ * lives in storage; this is only who to tell.
+ */
+const rateListeners = new Set<() => void>();
+function onRate(listener: () => void) {
+  rateListeners.add(listener);
+  return () => void rateListeners.delete(listener);
+}
+const currentRate = () => readRate(deviceStorage());
+// Storage that refuses would leave every player at 1× after a press, so
+// the last choice is also held here for this page.
+let chosen: Rate | null = null;
+function useRate(): [Rate, () => void] {
+  const kept = useSyncExternalStore(onRate, () => chosen ?? currentRate());
+  return [
+    kept,
+    () => {
+      chosen = nextRate(kept);
+      writeRate(deviceStorage(), chosen);
+      rateListeners.forEach((l) => l());
+    },
+  ];
+}
 
 function clock(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '';
@@ -19,8 +48,18 @@ function clock(seconds: number): string {
  * every other line.
  */
 export function VoiceNote({ src }: { src: string }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const audio = useRef<HTMLAudioElement>(null);
+  const [rate, faster] = useRate();
+  // Both: loading a source puts `playbackRate` back to the default.
+  useEffect(() => {
+    const el = audio.current;
+    if (!el) return;
+    el.defaultPlaybackRate = rate;
+    el.playbackRate = rate;
+  }, [rate]);
+  /** "1.5×", and "1,5×" in French. */
+  const shown = `${rate.toLocaleString(lang === 'fr' ? 'fr-CA' : 'en-CA')}×`;
   const [playing, setPlaying] = useState(false);
   const [at, setAt] = useState(0);
   const [length, setLength] = useState(Number.NaN);
@@ -65,7 +104,7 @@ export function VoiceNote({ src }: { src: string }) {
 
   return (
     <span
-      className="mt-1.5 flex w-full max-w-80 items-center gap-2.5 rounded-full border border-line bg-panel py-1 pr-3.5 pl-1"
+      className="mt-1.5 flex w-full max-w-80 items-center gap-2.5 rounded-full border border-line bg-panel py-1 pr-2 pl-1"
       data-testid="voice-note"
     >
       <button
@@ -94,14 +133,29 @@ export function VoiceNote({ src }: { src: string }) {
           style={{ width: `${done * 100}%` }}
         />
       </span>
-      <span className="shrink-0 text-xs text-muted tabular-nums">
+      <span className="shrink-0 text-xs text-muted tabular-nums" data-testid="voice-clock">
         {clock(playing || at > 0 ? at : length)}
       </span>
+      {/* 1×, 1.5×, 2×, and round: the speed this phone plays every note at.
+          Small, inside the conversation, and its name says the speed. */}
+      <Button
+        look="quiet"
+        size="iconSm"
+        className="w-auto min-w-9 shrink-0 px-1 text-xs tabular-nums"
+        aria-label={t('voice.speed', { rate: shown })}
+        onClick={faster}
+        data-testid="voice-speed"
+      >
+        {shown}
+      </Button>
       <audio
         ref={audio}
         src={src}
         preload="metadata"
-        onLoadedMetadata={(e) => learned(e.currentTarget)}
+        onLoadedMetadata={(e) => {
+          e.currentTarget.playbackRate = rate;
+          learned(e.currentTarget);
+        }}
         onDurationChange={(e) => learned(e.currentTarget)}
         onTimeUpdate={(e) => {
           if (!probing.current) setAt(e.currentTarget.currentTime);

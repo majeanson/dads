@@ -89,6 +89,32 @@ for (const theme of ['light', 'dark'] as const) {
     found.push(...(await faults(page, 'a photo, full screen')));
     await page.keyboard.press('Escape');
 
+    // A voice note on a line, with its speed; then the microphone, tapped
+    // (the hands-free row) and held (the row that says to slide).
+    await page.setInputFiles('#attach', {
+      name: 'note.webm',
+      mimeType: 'audio/webm',
+      buffer: Buffer.alloc(2048),
+    });
+    await page.getByLabel('Say something').fill(`a ${theme} voice note`);
+    await page.getByRole('button', { name: 'Send' }).click();
+    const note = page.getByTestId('line').filter({ hasText: `a ${theme} voice note` });
+    await expect(note.getByTestId('voice-speed')).toBeVisible();
+    found.push(...(await faults(page, 'a voice note')));
+    await page.getByTestId('record').click();
+    await expect(page.getByRole('button', { name: 'Throw it away' })).toBeVisible();
+    found.push(...(await faults(page, 'recording, hands-free')));
+    await page.getByRole('button', { name: 'Throw it away' }).click();
+    await expect(page.getByTestId('recording')).toHaveCount(0);
+    const mic = (await page.getByTestId('record').boundingBox())!;
+    await page.mouse.move(mic.x + mic.width / 2, mic.y + mic.height / 2);
+    await page.mouse.down();
+    await expect(page.getByTestId('recording')).toContainText('Slide left to throw it away');
+    found.push(...(await faults(page, 'recording, held')));
+    await page.mouse.move(mic.x - 150, mic.y + mic.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await expect(page.getByTestId('recording')).toHaveCount(0);
+
     const menu = () => page.getByRole('button', { name: 'Menu' }).click();
     const close = () => page.getByRole('button', { name: 'Close', exact: true }).first().click();
     // A sheet is ready to scan once it is on the screen and has stopped

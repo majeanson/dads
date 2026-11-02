@@ -15,6 +15,8 @@ import { useT } from './i18n';
 import { Quote } from './Lines';
 import { useMembers } from './members';
 import { isImage, prepare, readableSize, upload, type Prepared } from './media';
+import { buzz } from './buzz';
+import { HOLD_MS, IDLE, holdStep, slideOf, type Hold, type HoldEvent } from './holdToTalk';
 import { canRecord, clockOf, useRecorder } from './recorder';
 import { Button } from './ui/Button';
 import { cn } from './ui/cn';
@@ -398,6 +400,36 @@ export function Composer({
     if (mediaId !== null) onSend('', mediaId);
   }
 
+  /**
+   * Hold the microphone to talk, lift to send, slide left to throw it away
+   * (Marc asked, 2026-11-02). The gesture is `holdToTalk.ts`; this only does
+   * what it says. Held in a ref because the pointer's events come faster
+   * than renders; rendered only when what the row shows changes (held or
+   * not, armed or not). How far the finger has slid is written straight
+   * onto the row as `--slide`, like the swipe's `--swipe`.
+   */
+  const hold = useRef<Hold>(IDLE);
+  const [held, setHeld] = useState<'held' | 'armed' | null>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const recordingRow = useRef<HTMLDivElement>(null);
+  useEffect(() => () => clearTimeout(holdTimer.current), []);
+
+  function gesture(event: HoldEvent) {
+    const { next, effects } = holdStep(hold.current, event);
+    hold.current = next;
+    // A string, so a move that changes neither is not a render.
+    setHeld(next.kind === 'held' ? (next.armed ? 'armed' : 'held') : null);
+    recordingRow.current?.style.setProperty('--slide', String(slideOf(next)));
+    for (const effect of effects) {
+      if (effect === 'start') void recorder.start();
+      else if (effect === 'buzz') buzz();
+      else if (effect === 'send') void sendVoice();
+      else recorder.cancel();
+    }
+  }
+  /** Held, and the recording has begun (or is being asked for). */
+  const holding = held !== null && recording;
+
   return (
     <form
       className="composer rounded-[1.625rem] border border-line bg-panel p-1.5 shadow-sm"
@@ -502,10 +534,16 @@ export function Composer({
       ) : null}
 
       {/* Recording takes the whole row: a red dot, how long he has been
-          talking, and the two things he can do about it. Nothing else on the
-          row can be pressed by accident while he is speaking. */}
+          talking, and what he can do about it. Nothing else on the row can be
+          pressed by accident while he is speaking. Held, that is a hint (his
+          finger is on the microphone, which stays where it was, at the end);
+          hands-free, a button to throw it away, and Send at the end. */}
       {recording ? (
-        <>
+        <div
+          ref={recordingRow}
+          className="recording col-span-2 flex min-h-11 min-w-0 items-center gap-1"
+          data-held={held ?? undefined}
+        >
           <span
             className="flex min-w-0 flex-1 items-center gap-2 px-1 text-[0.9375rem]"
             aria-live="polite"
@@ -515,30 +553,30 @@ export function Composer({
             <span className="tabular-nums">
               {recorder.state.kind === 'recording' ? clockOf(recorder.state.ms) : '0:00'}
             </span>
-            <span className="truncate text-muted">{t('composer.recording')}</span>
+            {holding ? (
+              <span className="slide-hint flex min-w-0 items-center gap-1.5">
+                <X size={18} aria-hidden="true" className="slide-x shrink-0" />
+                <span className="truncate">
+                  {held === 'armed' ? t('composer.release_cancel') : t('composer.slide_cancel')}
+                </span>
+              </span>
+            ) : (
+              <span className="truncate text-muted">{t('composer.recording')}</span>
+            )}
           </span>
-          <Button
-            look="danger"
-            size="icon"
-            className="h-11 w-11 rounded-full!"
-            aria-label={t('composer.cancel')}
-            onClick={recorder.cancel}
-          >
-            <X size={18} aria-hidden="true" />
-            <span className="sr-only">{t('composer.cancel')}</span>
-          </Button>
-          <Button
-            look="primary"
-            size="icon"
-            className="h-11 w-11 rounded-full!"
-            aria-label={t('composer.send')}
-            disabled={sending}
-            onClick={() => void sendVoice()}
-          >
-            <Square size={16} aria-hidden="true" />
-            <span className="sr-only">{t('composer.send')}</span>
-          </Button>
-        </>
+          {holding ? null : (
+            <Button
+              look="danger"
+              size="icon"
+              className="h-11 w-11 shrink-0 rounded-full!"
+              aria-label={t('composer.cancel')}
+              onClick={recorder.cancel}
+            >
+              <X size={18} aria-hidden="true" />
+              <span className="sr-only">{t('composer.cancel')}</span>
+            </Button>
+          )}
+        </div>
       ) : (
         <>
           <label
@@ -641,46 +679,104 @@ export function Composer({
             />
             <EmojiPicker onPick={insert} className="hidden shrink-0 pointer-fine:inline-flex" />
           </div>
-          {/* One or the other, never both: with nothing typed the room is
-              asking him to speak, and the moment he types a letter it is
-              asking him to send. Four controls on a phone row is three. */}
-          {draft.trim() === '' && pending === null && !editing && canRecord() ? (
-            <Button
-              look="plain"
-              size="icon"
-              className="h-11 w-11 rounded-full!"
-              aria-label={t('composer.record')}
-              disabled={sending}
-              onClick={() => void recorder.start()}
-              data-testid="record"
-            >
-              <Mic size={18} aria-hidden="true" />
-              <span className="sr-only">{t('composer.record')}</span>
-            </Button>
-          ) : (
-            <Button
-              type="submit"
-              look="primary"
-              size="icon"
-              className="h-11 w-11 rounded-full!"
-              aria-label={t('composer.send')}
-              disabled={
-                sending ||
-                (!draft.trim() && pending === null) ||
-                (editing !== null && editing !== undefined && draft.trim() === editing.body.trim())
-              }
-              // Pressing Send must not take focus off the field: on a phone
-              // that is the keyboard folding away after every line, and on
-              // iOS it is the composer jumping too.
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              <SendHorizontal size={18} aria-hidden="true" />
-              <span className="sr-only">
-                {sending ? t('composer.sending') : t('composer.send')}
-              </span>
-            </Button>
-          )}
         </>
+      )}
+
+      {/* One or the other, never both: with nothing typed the room is asking
+          him to speak, and the moment he types a letter it is asking him to
+          send. Four controls on a phone row is three. Outside the row above,
+          and keyed, so the microphone under a held finger is the SAME button
+          while the row changes round it: a button that went away would take
+          the pointer with it, and the lift would never arrive. */}
+      {held !== null ||
+      (!recording && draft.trim() === '' && pending === null && !editing && canRecord()) ? (
+        <Button
+          key="mic"
+          look="plain"
+          size="icon"
+          className={cn(
+            'mic h-11 w-11 touch-none rounded-full!',
+            // Held, it stands up under the finger in the room's colour, and
+            // turns red once letting go would throw the note away. Important,
+            // because a thumb left on a phone keeps the plain look's hover.
+            'data-held:scale-125! data-[held=held]:border-accent! data-[held=held]:bg-accent! data-[held=held]:text-on-accent!',
+            'data-[held=armed]:border-danger! data-[held=armed]:bg-danger! data-[held=armed]:text-paper!',
+          )}
+          aria-label={t('composer.record')}
+          disabled={sending}
+          data-held={held ?? undefined}
+          // Hold to talk, lift to send, slide left to throw it away; a tap,
+          // or Enter, is the hands-free row (`holdToTalk.ts`). The pointer is
+          // captured so the finger may wander off the button and still be
+          // heard. The recording starts from the hold's timer, not on the
+          // way down: a thumb that lands here by mistake must not switch the
+          // microphone on, and no browser asks for a gesture to open one.
+          onPointerDown={(e) => {
+            if (e.button !== 0) return;
+            try {
+              e.currentTarget.setPointerCapture(e.pointerId);
+            } catch {
+              // A pointer that is already gone: the lift still comes here.
+            }
+            gesture({ t: 'down', x: e.clientX });
+            clearTimeout(holdTimer.current);
+            holdTimer.current = setTimeout(() => gesture({ t: 'elapsed' }), HOLD_MS);
+          }}
+          onPointerMove={(e) => {
+            if (hold.current.kind === 'held') gesture({ t: 'move', x: e.clientX });
+          }}
+          onPointerUp={() => {
+            clearTimeout(holdTimer.current);
+            gesture({ t: 'up', live: recorder.live() });
+          }}
+          // The browser took the finger — the microphone's own prompt, the
+          // first time. What was started goes on, hands-free.
+          onPointerCancel={() => {
+            clearTimeout(holdTimer.current);
+            gesture({ t: 'lost' });
+          }}
+          onClick={() => gesture({ t: 'click' })}
+          // A finger held on a button is a context menu on Android.
+          onContextMenu={(e) => e.preventDefault()}
+          data-testid="record"
+        >
+          <Mic size={18} aria-hidden="true" />
+          <span className="sr-only">{t('composer.record')}</span>
+        </Button>
+      ) : recording ? (
+        <Button
+          key="stop"
+          look="primary"
+          size="icon"
+          className="h-11 w-11 rounded-full!"
+          aria-label={t('composer.send')}
+          disabled={sending}
+          onClick={() => void sendVoice()}
+        >
+          <Square size={16} aria-hidden="true" />
+          <span className="sr-only">{t('composer.send')}</span>
+        </Button>
+      ) : (
+        <Button
+          key="send"
+          type="submit"
+          look="primary"
+          size="icon"
+          className="h-11 w-11 rounded-full!"
+          aria-label={t('composer.send')}
+          disabled={
+            sending ||
+            (!draft.trim() && pending === null) ||
+            (editing !== null && editing !== undefined && draft.trim() === editing.body.trim())
+          }
+          // Pressing Send must not take focus off the field: on a phone
+          // that is the keyboard folding away after every line, and on
+          // iOS it is the composer jumping too.
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <SendHorizontal size={18} aria-hidden="true" />
+          <span className="sr-only">{sending ? t('composer.sending') : t('composer.send')}</span>
+        </Button>
       )}
     </form>
   );

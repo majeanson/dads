@@ -1381,6 +1381,28 @@
     }
   }
 
+  /* Hold to talk (2026-11-02). A finger held on the microphone is not a
+     callout, and sliding it is not a scroll (`touch-none` on the button). */
+  .composer .mic {
+    -webkit-touch-callout: none;
+  }
+
+  /* "Slide left to throw it away": the X grows and reddens as the finger
+     goes; past the line the words turn red too and say so. `--slide` is 0
+     to 1, written by the composer as the finger moves; 1 is where letting go
+     throws it away. The words do not move: leaning them after the finger
+     put the X on top of the clock. */
+  .composer .recording .slide-hint {
+    color: var(--muted);
+  }
+  .composer .recording .slide-x {
+    scale: calc(1 + var(--slide, 0) * 0.35);
+    color: color-mix(in srgb, var(--danger) calc(var(--slide, 0) * 100%), var(--muted));
+  }
+  .composer .recording[data-held='armed'] .slide-hint {
+    color: var(--danger);
+  }
+
   /* --- the table --- */
 
   .table-frame {
