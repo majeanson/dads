@@ -3060,3 +3060,87 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   switches, everybody's). Every spec that reached a control in Settings goes
   through the leaf that holds it now (`you`, `thisRoom`, `device` in
   `e2e/talk.ts`, mirrored in `prod/names.ts`).
+
+## The call survives a switch away (2026-11-02)
+
+- Marc: "The call that survives a switch away. Make it thoroughly good and
+  clean code." On a phone, leaving the app mid-call to look at something is
+  the common case.
+- **The phone knows there is a call.** While he is on it, `useCall` publishes
+  it through `navigator.mediaSession` (`mediaSession.ts`): the room's name as
+  the title, "On the call" / "Dans l'appel" beside it, the app's icon, and the
+  system's `hangup`, `togglemicrophone` and `togglecamera` wired to the app's
+  own, with `setMicrophoneActive` / `setCameraActive` kept in step. Android's
+  Chrome makes that the call notification with its own mute and hang-up; iOS
+  shows what it can. All of it is cleared on leave — a notification for a call
+  that ended would go on lying. Every call is guarded; a browser without it
+  still has the call. The handlers read the newest callbacks through a ref, so
+  a mute does not take the session down and put it back.
+- **A picture follows him out.** `enterpictureinpicture` is registered while
+  he is on the call, which is what lets Chrome float a picture by itself when
+  he switches away. Which one is `pickPip` (pure, `callAway.ts`): the tile he
+  enlarged, else whoever is speaking, else the first one showing; never his
+  own preview; nothing when nobody shows a picture (then the call is sound,
+  and the notification is what keeps it findable). The "Keep in view" button
+  (`call-pip`) is on that same tile and only there, so the button and the
+  switch away never disagree. It shows only where `pictureInPictureEnabled`.
+  A per-tile button on every picture was considered: two ways of choosing
+  what floats would sooner or later choose differently. Coming back to the
+  app exits the floating window.
+- **Coming back is still being on the call.** Nothing is paused or let go on
+  `visibilitychange`; the stage is hidden on home, never unmounted, so the
+  `<audio>` elements play on. While checking that, the `<audio>`s turned out
+  to be two lists keyed differently (`p.memberId` while only heard,
+  `a-${p.memberId}` while showing), so a dad turning his camera on or off had
+  his `<audio>` remounted mid-word — against the rule that a camera never
+  interrupts the sound. One list now, keyed by the dad. On the return each link
+  is judged by `linkVerdict`: `failed` restarts ICE as before; `disconnected`
+  restarts only once it has been down 10s, counted from when it was first seen
+  so (`downSince` on the link) — a link that heals by itself is left to;
+  `closed` is a dad gone and is dropped with his tile. Eight seconds later,
+  if the room no longer counts him on the call, or there are others and not
+  one link is connected (`callDropped`), the call row says "The call dropped —
+  tap to rejoin", and the tap lets everything go and joins again. Alone on the
+  call is not dropped. A link reaching `connected` clears it.
+- **Found and fixed: a new socket did not re-announce the call.** `inCall`
+  lives on the socket's attachment, and when a socket closes the room hangs
+  the dad up with everybody else. Nothing on the client said "still in" on the
+  new socket, so a phone whose socket dropped in the background came back
+  showing the call while the others had taken him off it — the frozen "in" the
+  brief was written against. The smallest honest fix is in `useCall` (not
+  `useRoom`, not the worker): when `connection` goes back to `open` while he is
+  in, his links are let go (the others have already dropped their end) and the
+  room is sent `call` join with his mute; the roster that answers rebuilds the
+  mesh exactly as a join does. "The call survives a reload" did not cover it:
+  a reload starts the app over at `out`.
+- **Clean code.** `useCall.ts` says at the top what lives where; the restart
+  that the `failed` handler and the return both need is one `restart()`; every
+  new effect lists what it reads (the return reads the roster through a ref, so
+  joining or a roster change does not re-subscribe the listener). Signalling,
+  ICE and negotiation are untouched.
+- **What the tests could not see.** Headless Chromium never hides a page: a
+  second page brought to the front, a minimised window
+  (`Browser.setWindowBounds`), CDP focus emulation and a frozen lifecycle all
+  leave `visibilityState` "visible" (tried in both Playwright's headless shell
+  and the `chromium` channel). So the e2e overrides `document.visibilityState`
+  and `hidden` and dispatches `visibilitychange` — exactly what the app
+  listens to. The Media Session's metadata is readable; its handlers are not,
+  so an `addInitScript` spy keeps every handler the app sets and calls them
+  as the system would. Headless has no PiP window, so `requestPictureInPicture`
+  is replaced by a recorder of which tile it was asked of. The dropped row is
+  not driven end to end: it needs a link to die in a way a local mesh does
+  not; its decision is unit-tested.
+- Tests: `test/callAway.test.ts` (`pickPip` order, never "you", none without a
+  picture, an enlarged tile whose camera went off; the session text in both
+  languages; `linkVerdict` for failed, disconnected inside and past the grace,
+  closed, and the healthy states; `callDropped`). e2e `call.spec` "the phone is
+  told about the call, and the picture can follow him out" (title, artist and
+  the four handlers; the system's mute is the app's; the one "Keep in view" is
+  on Marc's tile with Sam's own camera on, and both it and the system's
+  handler float Marc's tile; away and back keeps "2 on the call" and the very
+  same live `<audio>`; the system's hang-up leaves and clears the session) and
+  "a socket that drops mid-call comes back still on the call" (the socket cut
+  through `routeWebSocket`; Sam's roster goes to one and back to two and he
+  hears Marc again — it fails without the fix). "a dad can enlarge a tile"
+  now presses the tile by name, the tile holding a second button.
+  `a11y.spec` gains "on a call, with a picture that can float", both themes.

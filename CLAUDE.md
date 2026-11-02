@@ -505,6 +505,32 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   in its name for WCAG 2.5.3). Home's chip still only goes to the
   conversation. Two buttons are called "Leave" on a call: scope e2e to
   `getByTestId('call')`.
+- **What lives where**: `useCall.ts` is wiring (mic, camera, links,
+  signalling, the return); the decisions are pure in `callAway.ts`
+  (`pickPip`, `callSessionText`, `linkVerdict`, `callDropped`); what the
+  system is told is `mediaSession.ts`.
+- **The phone knows there is a call** while `state === 'in'`: Media Session
+  metadata (room name, "On the call", `/icon-192.png`), `hangup`,
+  `togglemicrophone`, `togglecamera`, `setMicrophoneActive`/`setCameraActive`
+  kept in step, all cleared on leave. Every call guarded.
+- **The picture that floats** is `pickPip`: enlarged, else speaking, else the
+  first showing; never his own; none with no picture. Chrome's
+  `enterpictureinpicture` and the one "Keep in view" (`call-pip`, on that
+  tile only, only where `pictureInPictureEnabled`) float the same one.
+  Coming back exits it.
+- **Nothing is paused on `visibilitychange`.** The `<audio>` list is ONE list
+  keyed by the dad (two lists remounted it when a camera toggled). On return:
+  `failed` restarts, `disconnected` past 10s (`downSince`, first seen) restarts,
+  `closed` is dropped; 8s later, off the roster or others with nothing
+  connected is `call-dropped` ("tap to rejoin" → `rejoin()`), never a silent
+  "in".
+- **A new socket re-announces the call**: the room hangs a dad up when his
+  socket closes, so on `connection` going back to `open` while in, `useCall`
+  drops its links and sends `call` join with his mute.
+- Headless Chromium never hides a page (another page in front, a minimised
+  window, focus emulation: all still "visible"); e2e overrides
+  `visibilityState` and dispatches the event. Media Session and PiP are proved
+  through an `addInitScript` spy.
 - e2e uses Chrome's fake devices; whether a human hears a human is untested.
 
 ## Home
