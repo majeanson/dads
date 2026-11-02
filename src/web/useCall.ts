@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { callDropped, callSessionText, linkVerdict, RETURN_GRACE_MS, YOU } from './callAway';
 import { joinedSound, leftSound } from './callSound';
 import type { CallMember } from '../shared/protocol';
+import { useT } from './i18n';
+import { useCallMediaSession } from './mediaSession';
 import { report } from './oops';
 import { SpeakingWatch } from './speaking';
+import type { Connection } from './useRoom';
 import { useWakeLock } from './wakeLock';
 
 /**
@@ -21,6 +25,14 @@ import { useWakeLock } from './wakeLock';
  * hand-rolled one-sided offer. That matters for more than glare: adding or
  * removing a camera track mid-call needs a FRESH offer, and a design where
  * only one side may ever offer leaves the other side's camera toggle inert.
+ *
+ * What lives where (2026-11-02): this hook is the wiring — the microphone and
+ * camera, the links and their signalling, and what to do when he comes back
+ * to the app. The decisions it acts on while he is away (which picture
+ * floats, what the phone is told, whether a link is worth restarting, whether
+ * the call has dropped) are pure, in `callAway.ts`. What the system is told
+ * — the Media Session and the floating picture — is `mediaSession.ts`. The
+ * screen is `CallBar.tsx`. The wake lock is `wakeLock.ts`.
  */
 
 export interface Peer {
@@ -73,13 +85,13 @@ interface PeerLink {
   makingOffer: boolean;
   /** Candidates that outran the description they belong to. */
   early: RTCIceCandidateInit[];
+  /** When this link was first seen `disconnected`, or null while it is not.
+   * A link that heals by itself is left to; one still down when he comes back
+   * after the grace is restarted (`linkVerdict`). */
+  downSince: number | null;
 }
 
 const FALLBACK_ICE: RTCIceServer[] = [{ urls: 'stun:stun.cloudflare.com:3478' }];
-
-/** What this dad's own microphone is watched under: not a member id, so it
- * can never collide with one. */
-const YOU = 'you';
 
 /**
  * Asked for once per call, not once per signal.
@@ -109,17 +121,27 @@ function iceServers(): Promise<RTCIceServer[]> {
 
 export function useCall({
   you,
+  roomName,
   members,
+  connection,
   send,
   onJoinChange,
 }: {
   you: string | null;
+  /** What the phone's call notification is titled. */
+  roomName: string;
   /** Who the room says is on the call, this dad included. */
   members: CallMember[];
+  /** The room's socket: a new one has to be told he is still on the call. */
+  connection: Connection;
   send: Send;
   onJoinChange: (join: boolean, muted?: boolean) => void;
 }) {
+  const { lang } = useT();
   const [state, setState] = useState<CallState>('out');
+  /** Back in the app, the call is "in" and nothing is connected: said on the
+   * call row, with a way back in, rather than sat on in silence. */
+  const [dropped, setDropped] = useState(false);
   const [peers, setPeers] = useState<Peer[]>([]);
   const [muted, setMuted] = useState(false);
   const [camera, setCamera] = useState(false);
@@ -169,6 +191,25 @@ export function useCall({
   );
 
   /**
+   * A hiccup is not the end of the call. Restarting ICE fires
+   * negotiationneeded again, so the pair re-forms itself; tearing the
+   * connection down instead would leave it dead for the rest of the evening,
+   * because the roster never changed and nothing would rebuild it.
+   */
+  const restart = useCallback(
+    (memberId: string, link: PeerLink) => {
+      // From now: a restart that has not healed it yet is not another one due.
+      if (link.downSince !== null) link.downSince = Date.now();
+      try {
+        link.pc.restartIce();
+      } catch {
+        teardown(memberId);
+      }
+    },
+    [teardown],
+  );
+
+  /**
    * Opens the connection to one dad, or returns the one already open.
    *
    * Both sides call this as soon as they see each other on the call roster —
@@ -183,7 +224,13 @@ export function useCall({
 
       const pc = new RTCPeerConnection({ iceServers: servers });
       // Both ends must disagree about this, and must do so without asking.
-      const link: PeerLink = { pc, polite: me > memberId, makingOffer: false, early: [] };
+      const link: PeerLink = {
+        pc,
+        polite: me > memberId,
+        makingOffer: false,
+        early: [],
+        downSince: null,
+      };
       links.current.set(memberId, link);
 
       pc.onnegotiationneeded = () => {
@@ -219,21 +266,17 @@ export function useCall({
       };
 
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed') {
+        const now = pc.connectionState;
+        if (now === 'disconnected') link.downSince ??= Date.now();
+        else link.downSince = null;
+        // Somebody is there again: whatever the return decided, it is a call.
+        if (now === 'connected') setDropped(false);
+        if (now === 'failed') {
           // Whether two kitchens ever hear each other is untested anywhere
           // else; this is how a failed pair gets known about.
           report('web.call', 'connection failed', `ice: ${pc.iceConnectionState}`);
-          // A hiccup is not the end of the call. Restarting ICE fires
-          // negotiationneeded again, so the pair re-forms itself; tearing the
-          // connection down here would leave it dead for the rest of the
-          // evening, because the roster never changed and nothing would
-          // rebuild it.
-          try {
-            pc.restartIce();
-          } catch {
-            teardown(memberId);
-          }
-        } else if (pc.connectionState === 'closed') {
+          restart(memberId, link);
+        } else if (now === 'closed') {
           teardown(memberId);
         }
       };
@@ -244,7 +287,7 @@ export function useCall({
 
       return link;
     },
-    [publish, send, teardown],
+    [publish, restart, send, teardown],
   );
 
   /** Everything the microphone is attached to, gone. */
@@ -261,6 +304,7 @@ export function useCall({
     setCamera(false);
     setFacing('user');
     setMuted(false);
+    setDropped(false);
   }, []);
 
   const join = useCallback(async () => {
@@ -297,6 +341,13 @@ export function useCall({
     setState('out');
     onJoinChange(false);
   }, [onJoinChange, stop]);
+
+  /** Back in after the call dropped while he was away: everything let go, the
+   * microphone opened again and the room told, exactly as a first join. */
+  const rejoin = useCallback(() => {
+    stop();
+    void join();
+  }, [join, stop]);
 
   /** Mute is a track that stops sending, not a track that goes away: removing
    * it would renegotiate and make everyone's tiles flicker.
@@ -523,6 +574,86 @@ export function useCall({
 
   useEffect(() => stop, [stop]);
 
+  /**
+   * A new socket is a dad off the call until he says otherwise: `inCall` lives
+   * on the socket's attachment, and when the old one closed the room hung him
+   * up with everybody else (2026-11-02, found while making the call survive a
+   * switch away — nothing re-announced it, so a phone whose socket dropped in
+   * the background came back "in" a call the room had taken him off).
+   *
+   * So when the socket opens again while he is on the call, the links he holds
+   * are let go — the others have already dropped their end — and the room is
+   * told he is in, muted or not. The roster that answers it rebuilds the mesh
+   * the way a join does.
+   */
+  const wasOpen = useRef(connection === 'open');
+  useEffect(() => {
+    const open = connection === 'open';
+    const back = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!back || state !== 'in') return;
+    for (const memberId of [...links.current.keys()]) teardown(memberId);
+    onJoinChange(true, muted);
+  }, [connection, muted, onJoinChange, state, teardown]);
+
+  /**
+   * Coming back to the app is still being on the call. Nothing is paused or let
+   * go while he is away — the sound plays on from the <audio> elements — so
+   * the return is where a link that did not survive the trip is mended: a
+   * `failed` one restarted, one `disconnected` past the grace restarted, a
+   * `closed` one dropped with its tile. Then, a grace later, if the room no
+   * longer counts him or nobody he should hear is connected, the call row says
+   * the call dropped instead of sitting "in" in silence.
+   */
+  const latest = useRef({ members, you });
+  useEffect(() => {
+    latest.current = { members, you };
+  }, [members, you]);
+  useEffect(() => {
+    if (state !== 'in') return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      for (const [memberId, link] of [...links.current]) {
+        const verdict = linkVerdict(link.pc.connectionState, link.downSince, now);
+        if (verdict === 'gone') teardown(memberId);
+        else if (verdict === 'restart') restart(memberId, link);
+      }
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const { members, you } = latest.current;
+        const connected = [...links.current.values()].filter(
+          (l) => l.pc.connectionState === 'connected',
+        ).length;
+        const lost = callDropped({
+          onRoster: members.some((m) => m.memberId === you),
+          others: members.filter((m) => m.memberId !== you).length,
+          connected,
+        });
+        if (lost) setDropped(true);
+      }, RETURN_GRACE_MS);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [restart, state, teardown]);
+
+  // The phone knows there is a call: its notification, its mute and hang-up.
+  const text = callSessionText(lang, roomName);
+  useCallMediaSession({
+    active: state === 'in',
+    title: text.title,
+    artist: text.artist,
+    muted,
+    camera,
+    onHangUp: leave,
+    onToggleMute: toggleMute,
+    onToggleCamera: () => void toggleCamera(),
+  });
+
   // Somebody sitting down or getting up is heard, not just seen. The roster
   // is the truth; the first one after joining is who was already there.
   const heard = useRef<Set<string> | null>(null);
@@ -541,6 +672,7 @@ export function useCall({
 
   return {
     state,
+    dropped,
     // Merged here rather than in `publish` so that a mark going on and off
     // several times a second never rebuilds a peer's stream object — which
     // would hand every <video> a "new" source and make the tiles flicker.
@@ -552,6 +684,7 @@ export function useCall({
     cameras,
     swaps,
     join,
+    rejoin,
     leave,
     toggleMute,
     switchCamera,

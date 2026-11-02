@@ -209,7 +209,9 @@ export function Room({
 
   const call = useCall({
     you: room.you?.memberId ?? null,
+    roomName: session.group.name,
     members: room.call,
+    connection: room.connection,
     send: room.sendSignal,
     onJoinChange: room.setInCall,
   });
@@ -470,6 +472,7 @@ export function Room({
           <div className="col-talk">
             <CallBar
               state={call.state}
+              dropped={call.dropped}
               peers={call.peers}
               muted={call.muted}
               camera={call.camera}
@@ -479,6 +482,7 @@ export function Room({
               speakingYou={call.speakingYou}
               localStream={call.localStream.current}
               onLeave={call.leave}
+              onRejoin={call.rejoin}
               onToggleMute={call.toggleMute}
               onToggleCamera={() => void call.toggleCamera()}
               onSwitchCamera={() => void call.switchCamera()}

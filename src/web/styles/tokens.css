@@ -1824,6 +1824,30 @@
     cursor: pointer;
   }
 
+  /* "Keep in view": a corner of the picture it floats, on the caption's own
+     ground and colours for the caption's reason — the tile behind it is a
+     moving picture. Two classes, so the tile's own button rule above does not
+     stretch it across the tile. 2.25rem: inside the conversation, where the
+     call's controls may be under a thumb's 44px, and never under 28. */
+  .call-tile .call-pip {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius);
+    background: rgb(0 0 0 / 60%);
+    color: #fff;
+  }
+
+  .call-tile .call-pip:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   /* One tile, enlarged, takes the row to itself — still in the same place in
      the same list, just no longer a thumbnail. */
   .call[data-big='yes'] .call-tiles {

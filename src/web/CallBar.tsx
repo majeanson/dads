@@ -1,6 +1,17 @@
-import { Mic, MicOff, Phone, PhoneOff, SwitchCamera, Video, VideoOff } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import {
+  Mic,
+  MicOff,
+  Phone,
+  PhoneOff,
+  PictureInPicture2,
+  SwitchCamera,
+  Video,
+  VideoOff,
+} from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { pickPip, YOU } from './callAway';
 import { useT } from './i18n';
+import { floatPicture, pipAvailable, usePictureInPicture } from './mediaSession';
 import { Button } from './ui/Button';
 import type { Facing, Peer } from './useCall';
 
@@ -20,6 +31,7 @@ const coarse = () =>
  */
 export function CallBar({
   state,
+  dropped,
   peers,
   muted,
   camera,
@@ -29,12 +41,15 @@ export function CallBar({
   speakingYou,
   localStream,
   onLeave,
+  onRejoin,
   onToggleMute,
   onToggleCamera,
   onSwitchCamera,
   onWho,
 }: {
   state: 'out' | 'joining' | 'in' | 'denied' | 'failed';
+  /** Back in the app with nothing connected: the call row says so. */
+  dropped: boolean;
   peers: Peer[];
   muted: boolean;
   camera: boolean;
@@ -47,6 +62,7 @@ export function CallBar({
   speakingYou: boolean;
   localStream: MediaStream | null;
   onLeave: () => void;
+  onRejoin: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
   onSwitchCamera: () => void;
@@ -57,16 +73,22 @@ export function CallBar({
   /** The one tile a dad has asked to actually look at. */
   const [big, setBig] = useState<string | null>(null);
 
+  const showing = peers.filter((p) => p.hasVideo);
+  // A tile that has gone away cannot stay enlarged.
+  const enlarged =
+    big !== null && (big === YOU ? camera : showing.some((p) => p.memberId === big)) ? big : null;
+
+  // The picture that floats over other apps when he leaves this one with the
+  // call on (2026-11-02): never his own, none when nobody is showing one.
+  const pip = pickPip(peers, enlarged);
+  const videos = useRef(new Map<string, HTMLVideoElement>());
+  const pick = useCallback(() => (pip === null ? null : videos.current.get(pip)), [pip]);
+  usePictureInPicture(state === 'in', pick);
+
   // Out of a call there is nothing to show: the way in is a button in the
   // header, because a whole row saying "no call is happening" is a row of
   // conversation nobody can see.
   if (state === 'out' || state === 'joining') return null;
-
-  const showing = peers.filter((p) => p.hasVideo);
-  const listening = peers.filter((p) => !p.hasVideo);
-  // A tile that has gone away cannot stay enlarged.
-  const enlarged =
-    big !== null && (big === 'you' ? camera : showing.some((p) => p.memberId === big)) ? big : null;
 
   // Only where there is another camera to switch to. A phone always gets it:
   // some browsers on a phone list one camera however many it has.
@@ -79,6 +101,20 @@ export function CallBar({
       data-big={enlarged === null ? undefined : 'yes'}
       data-facing={facing}
     >
+      {/* After a long sleep the call can be "on" with nobody connected. Said
+          here, on the call's own row, with the way back in under the thumb —
+          never a call that looks on and is silent. */}
+      {dropped ? (
+        <Button
+          size="md"
+          className="justify-start border-danger whitespace-normal text-danger"
+          onClick={onRejoin}
+          data-testid="call-dropped"
+        >
+          <Phone size={18} aria-hidden="true" />
+          {t('call.dropped')}
+        </Button>
+      ) : null}
       <div className="call-actions">
         <Button
           size="md"
@@ -151,8 +187,8 @@ export function CallBar({
               // handed the stream again rather than trusted to follow the swap
               // on its own, which is not something every engine promises.
               source={swaps}
-              big={enlarged === 'you'}
-              onToggleBig={() => setBig(enlarged === 'you' ? null : 'you')}
+              big={enlarged === YOU}
+              onToggleBig={() => setBig(enlarged === YOU ? null : YOU)}
             />
           ) : null}
           {/* Silent: every dad's sound comes from the <audio> elements
@@ -168,17 +204,29 @@ export function CallBar({
               muted
               big={enlarged === p.memberId}
               onToggleBig={() => setBig(enlarged === p.memberId ? null : p.memberId)}
+              onVideo={(el) => {
+                if (el === null) videos.current.delete(p.memberId);
+                else videos.current.set(p.memberId, el);
+              }}
+              // One button, on the picture that would float anyway, so the
+              // button and the switch away agree on which.
+              onFloat={
+                pip === p.memberId && pipAvailable()
+                  ? () => floatPicture(videos.current.get(p.memberId))
+                  : undefined
+              }
             />
           ))}
         </div>
       ) : null}
 
-      {/* Sound for everyone, whether or not they are on screen. */}
-      {listening.map((p) => (
+      {/* Sound for everyone, whether or not they are on screen. One list,
+          keyed by the dad alone: it used to be two, split by who was showing
+          a picture, so a camera going on or off remounted his <audio> and
+          cut him off mid-word (2026-11-02). The stage is hidden on home, not
+          unmounted, so these play on wherever he is in the app. */}
+      {peers.map((p) => (
         <Audio key={p.memberId} stream={p.stream} />
-      ))}
-      {showing.map((p) => (
-        <Audio key={`a-${p.memberId}`} stream={p.stream} />
       ))}
     </div>
   );
@@ -251,6 +299,8 @@ function Tile({
   source,
   big,
   onToggleBig,
+  onVideo,
+  onFloat,
 }: {
   stream: MediaStream;
   name: string;
@@ -262,12 +312,27 @@ function Tile({
   source?: number;
   big: boolean;
   onToggleBig: () => void;
+  /** Hands the bar this tile's <video>, which is what floats. */
+  onVideo?: (el: HTMLVideoElement | null) => void;
+  /** Floats this picture over other apps; absent where it cannot. */
+  onFloat?: () => void;
 }) {
   const { t } = useT();
   const video = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (video.current !== null) video.current.srcObject = stream;
   }, [stream, source]);
+  // Its own effect, so a new function from the parent each render does not
+  // hand the stream to the element again.
+  const handOver = useRef(onVideo);
+  useEffect(() => {
+    handOver.current = onVideo;
+  }, [onVideo]);
+  useEffect(() => {
+    const el = video.current;
+    handOver.current?.(el);
+    return () => handOver.current?.(null);
+  }, []);
 
   return (
     <figure
@@ -292,6 +357,21 @@ function Tile({
         />
         <span className="sr-only">{big ? t('call.shrink') : t('call.enlarge')}</span>
       </button>
+      {/* His picture in a window of its own over whatever else he opens: the
+          same thing Chrome does by itself on a switch away, for the browsers
+          and the moments it does not. */}
+      {onFloat !== undefined ? (
+        <button
+          type="button"
+          className="call-pip"
+          onClick={onFloat}
+          aria-label={t('call.pip')}
+          data-testid="call-pip"
+        >
+          <PictureInPicture2 size={16} aria-hidden="true" />
+          <span className="sr-only">{t('call.pip')}</span>
+        </button>
+      ) : null}
       <figcaption>
         {name}
         {/* The glyph and its words, not a bare ✕ named only by a `title` — a
