@@ -115,6 +115,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - The outbox is bounded: 20 lines, 3 tries each, and an `error` drops only
   the line it NAMES by `cid`. A refusal with no cid leaves the outbox alone.
 - The composer stays live while the socket is down.
+- **The seen mark is the DAD's, not the phone's** (`members.seen_seq`, 0032).
+  `{ t: 'seen', seq }` is written forward-only (`seen_seq < ?` in the WHERE,
+  `group_id` and `gone_at` beside it) by `room/seen.ts`, then relayed to his
+  OTHER sockets only, after a write that moved it. Nobody else is ever told.
+  `hello.seen` is his own mark, from the same members read as `hello.members`.
+  `room.memory.seen` spares a D1 write for a mark no further.
 - **`sending` comes off in a `finally`**: `fetch` rejects on a network hop.
 
 **Taking back, editing, replying**
@@ -537,9 +543,13 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   layer over it** (`useBackCloses(view === 'talk', goHome)` in `Room`): back
   from the chat is home, back from home leaves. Sheets stack above it.
 - **The unseen count is DERIVED from the seen mark** (`seen.ts`), never
-  tallied. A device new to the room starts at the newest line; an empty room
-  starts at nought once `ready`. A line is unseen unless
-  `view === 'talk' && !tableOpen`.
+  tallied. **One mark per dad**: this device's copy in localStorage and the
+  room's (`hello.seen`, `seen` frames) meet in `reconcile` (the further one).
+  `useSeenMark` keeps the mark, divider, title and badge; `useSeen` is the
+  list and calls `read`. A send is at most once a second, flushed on
+  `pagehide`/hidden. A dad new to the room on EVERY device starts at the
+  newest line; an empty room starts at nought once `ready`. A line is unseen
+  unless `view === 'talk' && !tableOpen`.
 - Going in clears the door's count; read through a ref.
 - **Home is live**: it re-reads the night on the newest `rsvp`/`item_added`
   stir, not on any line.
@@ -799,7 +809,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   **Sending takes him to the bottom from wherever he was** (`seen.sent()`,
   instant, pins) so his own line lands in sight.
 - "New since you were here" is ONE divider (`toRows` with `since`), never at
-  the very top; the mark is per device, nothing sent.
+  the very top; its boundary is settled against the room's mark when the
+  room next speaks, so it means since he was here on ANY of his devices.
 - The tab title carries the unseen count.
 - **One way down, two looks** (`to-bottom`, `jumpLook` in `jump.ts`): not
   pinned with something unseen, the primary "N new" pill; more than a screen
