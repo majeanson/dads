@@ -253,6 +253,21 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByTestId('call-tile')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('call-hangup')).toBeVisible();
     found.push(...(await faults(page, 'on a call')));
+    // Another dad showing his picture, which carries "Keep in view" in its
+    // corner (2026-11-02): a control on a moving picture.
+    const other = await browser.newContext({ colorScheme: theme, reducedMotion: 'reduce' });
+    const caller = await other.newPage();
+    await caller.goto('/');
+    await caller.getByLabel('The word').fill(E2E_A11Y_GROUP.code);
+    await caller.getByLabel('Your name').fill(`${theme} caller`);
+    await caller.getByRole('button', { name: 'Come in' }).click();
+    await expect(caller.getByTestId('connection')).toHaveText(/here$/);
+    await talk(caller);
+    await caller.getByRole('button', { name: 'Join the call' }).click();
+    await caller.getByRole('button', { name: 'Camera', exact: true }).click();
+    await expect(page.getByTestId('call-pip')).toBeVisible({ timeout: 20_000 });
+    found.push(...(await faults(page, 'on a call, with a picture that can float')));
+    await other.close();
     await page.getByTestId('call-hangup').click();
     await expect(page.getByTestId('call')).toHaveCount(0);
 

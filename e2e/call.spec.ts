@@ -1,4 +1,12 @@
-import { devices, expect, test, type Browser, type Page } from '@playwright/test';
+import {
+  devices,
+  expect,
+  test,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type WebSocketRoute,
+} from '@playwright/test';
 import { talk } from './talk';
 import { E2E_CALL_GROUP } from './global-setup';
 
@@ -11,12 +19,18 @@ test.describe.configure({ mode: 'serial' });
  * between two browsers — which is the part that actually breaks. Whether a
  * human can hear a human is not something a headless browser can answer.
  */
-async function comeIn(browser: Browser, name: string, phone = false): Promise<Page> {
+async function comeIn(
+  browser: Browser,
+  name: string,
+  phone = false,
+  before?: (context: BrowserContext) => Promise<unknown>,
+): Promise<Page> {
   // A phone: a coarse pointer and a phone's screen. The fake camera comes from
   // the browser's launch flags, so it is there in this context too.
   const context = await browser.newContext(
     phone ? { ...devices['iPhone 13'], permissions: ['microphone', 'camera'] } : {},
   );
+  await before?.(context);
   const page = await context.newPage();
   await page.route('https://jaffre.marcportal.com/**', (route) =>
     route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><h1>table</h1>' }),
@@ -149,10 +163,11 @@ test('a dad can enlarge a tile, and knows who is muted', async ({ browser }) => 
   const tile = marc.getByTestId('call-tile').filter({ hasText: 'Sam' });
   await expect(tile).toBeVisible({ timeout: 20_000 });
 
-  // Tap the man to see the man, and tap him again to put him back.
-  await tile.getByRole('button').click();
+  // Tap the man to see the man, and tap him again to put him back. The tile
+  // itself, not the "Keep in view" in its corner.
+  await tile.getByRole('button', { name: /^Make this/ }).click();
   await expect(tile).toHaveAttribute('data-big', 'yes');
-  await tile.getByRole('button').click();
+  await tile.getByRole('button', { name: /^Make this/ }).click();
   await expect(tile).not.toHaveAttribute('data-big', 'yes');
 
   // Sam mutes himself. From Marc's end a muted man and a quiet one are the
@@ -258,6 +273,219 @@ test('the phone in the header hangs up while he is on the call', async ({ browse
   // The header is the way in again: the chip, since Sam is still on it.
   await expect(marc.getByRole('button', { name: 'Join the call' })).toBeVisible();
   await expect(marc.getByTestId('call-live')).toContainText('1');
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
+/**
+ * The call while he is somewhere else (Marc, 2026-11-02). Headless Chromium
+ * shows nothing of a Media Session or a floating window, so both are watched
+ * from inside the page: every action handler the app sets is kept, and
+ * `requestPictureInPicture` records which tile it was asked of instead of
+ * opening a window there is no screen for.
+ */
+interface Watched {
+  __handlers: Record<string, (() => void) | null>;
+  __floated: string[];
+}
+
+const watchTheSystem = (context: BrowserContext) =>
+  context.addInitScript(() => {
+    const w = window as unknown as Watched;
+    w.__handlers = {};
+    w.__floated = [];
+    const session = navigator.mediaSession;
+    const set = session.setActionHandler.bind(session) as (
+      action: string,
+      handler: (() => void) | null,
+    ) => void;
+    (session as unknown as { setActionHandler: typeof set }).setActionHandler = (
+      action,
+      handler,
+    ) => {
+      w.__handlers[action] = handler;
+      set(action, handler);
+    };
+    HTMLVideoElement.prototype.requestPictureInPicture = function (this: HTMLVideoElement) {
+      const tile = this.closest('[data-testid="call-tile"]');
+      w.__floated.push(tile?.querySelector('figcaption')?.textContent ?? '');
+      return Promise.resolve({} as PictureInPictureWindow);
+    };
+  });
+
+/** What the phone has been told about the call. */
+const told = (page: Page) =>
+  page.evaluate(() => {
+    const w = window as unknown as Watched;
+    const m = navigator.mediaSession.metadata;
+    return {
+      title: m?.title ?? null,
+      artist: m?.artist ?? null,
+      actions: Object.keys(w.__handlers)
+        .filter((k) => w.__handlers[k] !== null)
+        .sort(),
+    };
+  });
+
+const floated = (page: Page) => page.evaluate(() => (window as unknown as Watched).__floated);
+
+const press = (page: Page, action: string) =>
+  page.evaluate((a) => (window as unknown as Watched).__handlers[a]?.(), action);
+
+/**
+ * Switching to another app, as the page hears it. Nothing in headless Chromium
+ * really hides a page — a second page brought to the front, a minimised window
+ * and CDP's focus emulation all leave `visibilityState` at "visible" — so the
+ * page is told what a phone tells it: the state, and the event.
+ */
+const away = (page: Page, hidden: boolean) =>
+  page.evaluate((h) => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => (h ? 'hidden' : 'visible'),
+    });
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
+    document.dispatchEvent(new Event('visibilitychange'));
+  }, hidden);
+
+test('the phone is told about the call, and the picture can follow him out', async ({
+  browser,
+}) => {
+  const marc = await comeIn(browser, 'Marc Shows', false, watchTheSystem);
+  const sam = await comeIn(browser, 'Sam Wanders', false, watchTheSystem);
+
+  await marc.getByRole('button', { name: 'Join the call' }).click();
+  await sam.getByRole('button', { name: 'Join the call' }).click();
+  await expect(marc.getByTestId('call')).toContainText('2 on the call');
+  await expect(sam.getByTestId('call')).toContainText('2 on the call');
+
+  // The call notification: the room's name, "on the call", and the system's
+  // own hang-up, mute, camera and floating picture all wired to the app's.
+  await expect
+    .poll(() => told(sam))
+    .toEqual({
+      title: E2E_CALL_GROUP.name,
+      artist: 'On the call',
+      actions: ['enterpictureinpicture', 'hangup', 'togglecamera', 'togglemicrophone'],
+    });
+  // The system's mute button is the app's mute button.
+  await press(sam, 'togglemicrophone');
+  await expect(sam.getByRole('button', { name: 'Unmute' })).toBeVisible();
+  await press(sam, 'togglemicrophone');
+  await expect(sam.getByRole('button', { name: 'Mute', exact: true })).toBeVisible();
+
+  // Marc shows himself, and Sam shows himself too: Sam's own preview is never
+  // what floats, so the one "Keep in view" is on Marc's picture.
+  await marc.getByRole('button', { name: 'Camera', exact: true }).click();
+  const marcSeen = sam.getByTestId('call-tile').filter({ hasText: 'Marc Shows' });
+  await expect(marcSeen).toBeVisible({ timeout: 20_000 });
+  await sam.getByRole('button', { name: 'Camera', exact: true }).click();
+  await expect(sam.getByTestId('call-tile').filter({ hasText: 'You' })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(sam.getByTestId('call-pip')).toHaveCount(1);
+  const keep = marcSeen.getByTestId('call-pip');
+  await expect(keep).toHaveAccessibleName('Keep in view');
+
+  await keep.click();
+  await expect.poll(() => floated(sam)).toEqual(['Marc Shows']);
+  // And what Chrome does by itself when he switches away floats the same one.
+  await press(sam, 'enterpictureinpicture');
+  await expect.poll(() => floated(sam)).toEqual(['Marc Shows', 'Marc Shows']);
+
+  // Away and back: still on the call, and still hearing Marc from the very
+  // same <audio>, which was never paused or put back.
+  await sam.evaluate(() => {
+    (document.querySelector('[data-testid="call"] audio') as unknown as { mark?: 1 }).mark = 1;
+  });
+  await away(sam, true);
+  await away(sam, false);
+  await expect(sam.getByTestId('call')).toContainText('2 on the call');
+  await expect(marc.getByTestId('call')).toContainText('2 on the call');
+  const sound = await sam.evaluate(() =>
+    [...document.querySelectorAll('[data-testid="call"] audio')].map((el) => {
+      const audio = el as HTMLAudioElement & { mark?: 1 };
+      const stream = audio.srcObject as MediaStream | null;
+      return {
+        same: audio.mark === 1,
+        live: stream?.getAudioTracks().some((t) => t.readyState === 'live') ?? false,
+      };
+    }),
+  );
+  expect(sound).toEqual([{ same: true, live: true }]);
+
+  // The system's hang-up hangs up, and the phone is told there is no call.
+  await press(marc, 'hangup');
+  await expect(marc.getByRole('button', { name: 'Join the call' })).toBeVisible();
+  await expect(sam.getByTestId('call')).toContainText('just you so far');
+  await expect.poll(() => told(marc)).toEqual({ title: null, artist: null, actions: [] });
+  await sam.getByTestId('call').getByRole('button', { name: 'Leave' }).click();
+  await expect.poll(() => told(sam)).toEqual({ title: null, artist: null, actions: [] });
+
+  await marc.context().close();
+  await sam.context().close();
+});
+
+test('a socket that drops mid-call comes back still on the call', async ({ browser }) => {
+  // Found 2026-11-02: the room takes a dad off the call when his socket
+  // closes, and a phone whose socket dropped in the background reconnected
+  // without saying he was still on it — "in" on his screen, gone on everyone
+  // else's. Marc's socket is cut from the middle; Sam watches the roster.
+  let marcSocket: WebSocketRoute | null = null;
+  let sockets = 0;
+  const marc = await comeIn(browser, 'Marc Drops', false, (context) =>
+    context.routeWebSocket('**/ws*', (ws) => {
+      sockets += 1;
+      marcSocket = ws;
+      const server = ws.connectToServer();
+      ws.onMessage((m) => server.send(m));
+      server.onMessage((m) => ws.send(m));
+    }),
+  );
+  const rosters: number[] = [];
+  const sam = await comeIn(browser, 'Sam Holds On', false, (context) =>
+    context.routeWebSocket('**/ws*', (ws) => {
+      const server = ws.connectToServer();
+      ws.onMessage((m) => server.send(m));
+      server.onMessage((m) => {
+        const frame = JSON.parse(String(m)) as { t: string; members?: unknown[] };
+        if (frame.t === 'call-roster') rosters.push(frame.members?.length ?? 0);
+        ws.send(m);
+      });
+    }),
+  );
+
+  await marc.getByRole('button', { name: 'Join the call' }).click();
+  await sam.getByRole('button', { name: 'Join the call' }).click();
+  await expect(marc.getByTestId('call')).toContainText('2 on the call');
+  await expect(sam.getByTestId('call')).toContainText('2 on the call');
+  await expect(sam.locator('[data-testid="call"] audio')).toHaveCount(1, { timeout: 20_000 });
+
+  rosters.length = 0;
+  const first = sockets;
+  await (marcSocket as WebSocketRoute | null)?.close();
+
+  // A new socket, the room hears him go, and then hears him come back on.
+  await expect.poll(() => sockets, { timeout: 30_000 }).toBeGreaterThan(first);
+  await expect.poll(() => rosters, { timeout: 30_000 }).toContain(1);
+  await expect.poll(() => rosters.at(-1), { timeout: 30_000 }).toBe(2);
+  await expect(sam.getByTestId('call')).toContainText('2 on the call');
+  await expect(marc.getByTestId('call')).toContainText('2 on the call');
+  // And the two are joined again, not merely listed: Sam hears him.
+  await expect
+    .poll(
+      () =>
+        sam.evaluate(() =>
+          [...document.querySelectorAll('[data-testid="call"] audio')].some((el) =>
+            ((el as HTMLAudioElement).srcObject as MediaStream | null)
+              ?.getAudioTracks()
+              .some((t) => t.readyState === 'live'),
+          ),
+        ),
+      { timeout: 20_000 },
+    )
+    .toBe(true);
 
   await marc.context().close();
   await sam.context().close();
