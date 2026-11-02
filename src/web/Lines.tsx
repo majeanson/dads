@@ -178,6 +178,26 @@ export function Lines({
   const pointing = useRef(false);
 
   /**
+   * Whether the focus about to land came from Shift+Tab. Coming back up from
+   * the composer, the browser walks into the list from its END — the last
+   * mark or link of the newest line — rather than onto the list, which comes
+   * before its children. That Tab is sent to the newest line instead, as a
+   * Tab from above is (2026-11-02). Only that key: a menu or a sheet closing
+   * puts the focus back on a control inside the list, and that is where it
+   * belongs. The flag lives for the one task the key's own focus move is in.
+   */
+  const backTab = useRef(false);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !event.shiftKey) return;
+      backTab.current = true;
+      setTimeout(() => (backTab.current = false), 0);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
+
+  /**
    * On a phone, a swipe to the right on a line is a reply (`swipe.ts`).
    *
    * The line follows the thumb, and buzzes once where lifting would answer.
@@ -235,7 +255,18 @@ export function Lines({
       onFocus={(event) => {
         const pressed = pointing.current;
         pointing.current = false;
-        if (pressed || event.target !== event.currentTarget) return;
+        if (pressed) return;
+        if (event.target !== event.currentTarget) {
+          // A line's menu is portalled out of the list but is still its
+          // child to React: its focus is its own.
+          if (!event.currentTarget.contains(event.target as Node)) return;
+          // Shift+Tab from below lands on the last control inside a line;
+          // a move between lines, or out of a line's own controls, is not
+          // coming in from outside.
+          const from = event.relatedTarget as Node | null;
+          if (!backTab.current || (from !== null && event.currentTarget.contains(from))) return;
+          if (reachable().includes(event.target as HTMLElement)) return;
+        }
         reachable().at(-1)?.focus();
       }}
       onKeyDown={(event) => {

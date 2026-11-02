@@ -1821,6 +1821,47 @@ test('a keyboard reaches a line, and its menu', async ({ browser }) => {
   await kim.context().close();
 });
 
+test('Shift+Tab from the composer comes up onto the newest line', async ({ browser }) => {
+  // 2026-11-02: going back up from the field, the browser walked into the
+  // list from its end — the newest line's last link or mark — and not onto
+  // a line. The attach button sits between the field and the list and keeps
+  // its place in the order.
+  const kim = await comeIn(browser, 'Kim Back');
+  for (const words of ['back tab line 01', 'back tab line 02 https://example.com']) {
+    await kim.getByLabel('Say something').fill(words);
+    await kim.getByLabel('Say something').press('Enter');
+    await expect(kim.getByTestId('line').filter({ hasText: words.slice(0, 16) })).toBeVisible();
+  }
+  const newest = kim.getByTestId('line').filter({ hasText: 'back tab line 02' });
+  await expect(newest.getByRole('link')).toBeVisible();
+  const field = kim.getByLabel('Say something');
+  const attach = kim.locator('#attach');
+
+  await field.focus();
+  await kim.keyboard.press('Shift+Tab');
+  await expect(attach).toBeFocused();
+  await kim.keyboard.press('Shift+Tab');
+  await expect(newest).toBeFocused();
+  // The arrows work from there, as from a Tab from above.
+  await kim.keyboard.press('ArrowUp');
+  await expect(kim.getByTestId('line').filter({ hasText: 'back tab line 01' })).toBeFocused();
+  await kim.keyboard.press('End');
+  await expect(newest).toBeFocused();
+
+  // And Tab from the line goes back down the same way.
+  await kim.keyboard.press('Tab');
+  await expect(attach).toBeFocused();
+  await kim.keyboard.press('Tab');
+  await expect(field).toBeFocused();
+
+  // Focus put on the link inside the line any other way stays on the link.
+  await field.focus();
+  await newest.getByRole('link').focus();
+  await expect(newest.getByRole('link')).toBeFocused();
+
+  await kim.context().close();
+});
+
 test('a screen reader hears a line arrive', async ({ browser }) => {
   const lena = await comeIn(browser, 'Lena Listens');
   const sam = await comeIn(browser, 'Sam Speaks');

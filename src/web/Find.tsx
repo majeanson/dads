@@ -174,7 +174,7 @@ export function Find() {
                 {/* No `onOpen`: the viewer holds the photographs that are in
                     the conversation, and this one may be older than every
                     line still loaded. It shows where it sits. */}
-                {r.media ? <Attachment media={r.media} /> : null}
+                {r.media ? <Attachment media={r.media} from={r.name || t('line.someone')} /> : null}
               </li>
             ))}
           </ul>
