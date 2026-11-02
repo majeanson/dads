@@ -751,6 +751,12 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   granted.
 - `public/sw.js` shows the notification and focuses a tab; it caches nothing
   and intercepts no fetch.
+- **A push puts an unnumbered badge on the icon** (`navigator.setAppBadge()`
+  in the worker, after showing it — the worker cannot know a count); a tap on
+  the notification clears it first. Every call guarded and swallowed: the
+  worker never throws. The app owns the number once it runs (`useSeen` clears
+  on its first render when nothing is unseen). `test/sw.test.ts` loads the
+  script against a stubbed `self`.
 - iPhone: only from the home screen (`pushShape()`).
 - The day-before nudge carries `rsvp-in`/`rsvp-out` (`RSVP_ACTIONS`, pinned —
   `sw.js` matches the strings by hand); the worker shows only actions it knows.
@@ -770,6 +776,13 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - "New since you were here" is ONE divider (`toRows` with `since`), never at
   the very top; the mark is per device, nothing sent.
 - The tab title carries the unseen count.
+- **One way down, two looks** (`to-bottom`, `jumpLook` in `jump.ts`): not
+  pinned with something unseen, the primary "N new" pill; more than a screen
+  above the bottom with nothing unseen, a bare 44px arrow named "Newest".
+  Within a screen, nothing. `farUp` is read in `onScroll`, the rows'
+  `stick` and `keepBottom` — no observer of its own. On the way down a scroll
+  that went DOWN changes nothing (`descending`); one that went up is his
+  thumb. Reduced motion jumps.
 - **Links are split, never substituted** (`linkify.ts`, http(s) only);
   `shortLink` never cuts the host; links are underlined.
 - **"@Sam" is Sam** (`shared/mentions.ts`, pure): nothing stored, nothing on
