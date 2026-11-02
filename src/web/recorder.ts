@@ -56,6 +56,15 @@ export function useRecorder() {
   const chunks = useRef<Blob[]>([]);
   const startedAt = useRef(0);
   const ticker = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  /** The microphone is being asked for, and there is no recorder yet. */
+  const asking = useRef(false);
+  /**
+   * He let go, or threw it away, before the microphone answered — a hold
+   * lifted at once, or the page going. When the answer comes the microphone
+   * is put straight back down rather than recording into a row nobody is
+   * looking at.
+   */
+  const abandoned = useRef(false);
 
   const release = useCallback(() => {
     if (ticker.current) clearInterval(ticker.current);
@@ -65,10 +74,18 @@ export function useRecorder() {
   }, []);
 
   // A page that goes away mid-recording must not leave the microphone on.
-  useEffect(() => release, [release]);
+  useEffect(
+    () => () => {
+      abandoned.current = true;
+      release();
+    },
+    [release],
+  );
 
   const start = useCallback(async () => {
-    if (recorder.current !== null) return;
+    if (recorder.current !== null || asking.current) return;
+    asking.current = true;
+    abandoned.current = false;
     setState({ kind: 'asking' });
     let stream: MediaStream;
     try {
@@ -76,7 +93,13 @@ export function useRecorder() {
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
     } catch {
-      setState({ kind: 'denied' });
+      if (!abandoned.current) setState({ kind: 'denied' });
+      return;
+    } finally {
+      asking.current = false;
+    }
+    if (abandoned.current) {
+      stream.getTracks().forEach((t) => t.stop());
       return;
     }
 
@@ -93,22 +116,38 @@ export function useRecorder() {
       const ms = Date.now() - startedAt.current;
       // It stops itself rather than recording into the void: the cap is the
       // feature, and a man who looks up at 2:01 should have his two minutes.
-      if (ms >= MAX_MS) rec.stop();
-      else setState({ kind: 'recording', ms });
+      // Once: a recorder that has stopped throws on a second stop.
+      if (ms >= MAX_MS) {
+        clearInterval(ticker.current);
+        ticker.current = undefined;
+        rec.stop();
+      } else setState({ kind: 'recording', ms });
     }, 200);
   }, []);
 
   /** The recording so far, or null if there is nothing worth sending. */
   const stop = useCallback(async (): Promise<Prepared | null> => {
     const rec = recorder.current;
-    if (rec === null) return null;
+    if (rec === null) {
+      // Lifted before the microphone answered: there is nothing yet, and
+      // what comes is put down again.
+      if (asking.current) {
+        abandoned.current = true;
+        setState({ kind: 'idle' });
+      }
+      return null;
+    }
 
     const ms = Date.now() - startedAt.current;
-    const finished = new Promise<void>((resolve) => {
-      rec.onstop = () => resolve();
-    });
-    if (rec.state !== 'inactive') rec.stop();
-    await finished;
+    // At two minutes it has already stopped itself and will not say so
+    // twice; waiting for that would be waiting for ever.
+    if (rec.state !== 'inactive') {
+      const finished = new Promise<void>((resolve) => {
+        rec.onstop = () => resolve();
+      });
+      rec.stop();
+      await finished;
+    }
 
     const type = rec.mimeType || 'audio/webm';
     const blob = new Blob(chunks.current, { type: type.split(';')[0] });
@@ -127,6 +166,7 @@ export function useRecorder() {
   }, [release]);
 
   const cancel = useCallback(() => {
+    if (asking.current) abandoned.current = true;
     const rec = recorder.current;
     if (rec !== null && rec.state !== 'inactive') {
       rec.onstop = null;
@@ -137,7 +177,11 @@ export function useRecorder() {
     setState({ kind: 'idle' });
   }, [release]);
 
-  return { state, start, stop, cancel };
+  /** Whether the microphone is really on yet, read at the moment of asking
+   * rather than at the last render. */
+  const live = useCallback(() => recorder.current !== null, []);
+
+  return { state, start, stop, cancel, live };
 }
 
 function extension(type: string): string {
