@@ -155,6 +155,7 @@ const ABOUT_FEATURES: { key: Key; icon: LucideIcon }[] = [
 export function Sheets({
   open,
   onOpen,
+  profileOf = null,
   you,
   youName,
   messages,
@@ -180,6 +181,9 @@ export function Sheets({
 }: {
   open: SheetName | null;
   onOpen: (sheet: SheetName | null) => void;
+  /** "Who is in it" opened on this dad's profile: his name or face on a
+   * line was tapped. Null or absent: the roster. */
+  profileOf?: string | null;
   /** Everyone in the group, present or not. The roster is who is connected;
    * handing the room over is not a thing to offer only about men who happen
    * to be online. */
@@ -252,6 +256,7 @@ export function Sheets({
               .filter((m) => m.gone !== true)
               .map((m) => ({ memberId: m.memberId, name: m.name, you: m.memberId === you }))}
             call={call}
+            start={profileOf}
           />
         </Body>
       </Sheet>

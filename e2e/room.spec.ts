@@ -1060,14 +1060,19 @@ test('a photo opens in the app, moves between them, and can be kept', async ({ b
   // share the room.
   await marc.getByTestId('line').filter({ hasText: 'shot 0' }).getByTestId('photo').click();
   await expect(marc.getByTestId('viewer')).toBeVisible();
-  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', 'shot-0.png');
+  // Told apart by what they are, not by name: the alt says who sent it, and
+  // both are his.
+  const src = (words: string) =>
+    marc.getByTestId('line').filter({ hasText: words }).locator('img').getAttribute('src');
+  const [first, second] = [await src('shot 0'), await src('shot 1')];
+  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('src', first!);
   await expect(marc.getByTestId('viewer')).toContainText(/\d+ of \d+/);
 
   // The others in the conversation are an arrow away, by button and by key.
   await marc.getByTestId('viewer-next').click();
-  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', 'shot-1.png');
+  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('src', second!);
   await marc.keyboard.press('ArrowLeft');
-  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', 'shot-0.png');
+  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('src', first!);
 
   // And there is a way to keep it.
   await expect(marc.getByTestId('viewer-save')).toBeVisible();
@@ -1203,7 +1208,8 @@ test('the album shows what the shelf holds, and a tap opens the viewer on it', a
 
   await album.getByTestId('album-shot').first().click();
   await expect(marc.getByTestId('viewer')).toBeVisible();
-  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', /\.png$/);
+  // Named for who sent it, as on the line (2026-11-01), never the file name.
+  await expect(marc.getByTestId('viewer-shot')).toHaveAttribute('alt', /^A photo from /);
 
   // The phone's back button closes the picture, not the app (Marc, Android,
   // 2026-11-01): the viewer goes and the album is still under it; once more
@@ -1549,4 +1555,172 @@ test('a dad can download what he has written, and only his own profile offers it
 
   await marc.context().close();
   await sam.context().close();
+});
+
+/** A dad on a phone: the iPhone context, in through the door like anybody. */
+async function comeInOnAPhone(browser: Browser, name: string): Promise<Page> {
+  const context = await browser.newContext({ ...devices['iPhone 13'] });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByLabel('The word').fill(E2E_ROOM_GROUP.code);
+  await page.getByLabel('Your name').fill(name);
+  await page.getByRole('button', { name: 'Come in' }).click();
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await talk(page);
+  return page;
+}
+
+test('a keyboard reaches a line, and its menu', async ({ browser }) => {
+  // 2026-11-01: the list is one Tab stop, the arrows move between the lines,
+  // and Enter on one opens the menu the right click and the long press open.
+  const kim = await comeIn(browser, 'Kim Keys');
+  for (const words of ['keys line 01', 'keys line 02']) {
+    await kim.getByLabel('Say something').fill(words);
+    await kim.getByLabel('Say something').press('Enter');
+    await expect(kim.getByTestId('line').filter({ hasText: words })).toBeVisible();
+  }
+  const line = (words: string) => kim.getByTestId('line').filter({ hasText: words });
+  const menu = kim.getByTestId('line-menu');
+
+  await kim.locator('ol.lines').focus();
+  await expect(line('keys line 02')).toBeFocused();
+  await kim.keyboard.press('ArrowUp');
+  await expect(line('keys line 01')).toBeFocused();
+  await kim.keyboard.press('End');
+  await expect(line('keys line 02')).toBeFocused();
+  await kim.keyboard.press('ArrowUp');
+
+  // Enter is the menu; Escape puts it away and the line has the focus back.
+  await kim.keyboard.press('Enter');
+  await expect(menu).toBeVisible();
+  await kim.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(line('keys line 01')).toBeFocused();
+
+  // Shift+F10, the other key every desktop opens a context menu with.
+  await kim.keyboard.press('Shift+F10');
+  await expect(menu).toBeVisible();
+  await kim.getByTestId('line-reply').focus();
+  await kim.keyboard.press('Enter');
+  await expect(kim.getByTestId('replying')).toContainText('Replying to Kim Keys');
+  await expect(kim.getByLabel('Say something')).toBeFocused();
+  await kim.getByTestId('context-clear').click();
+
+  // Tab from a line leaves the list rather than walking every mark in it.
+  await kim.locator('ol.lines').focus();
+  await expect(line('keys line 02')).toBeFocused();
+  await kim.keyboard.press('Tab');
+  expect(
+    await kim.evaluate(
+      () => document.activeElement !== null && document.activeElement.closest('ol') === null,
+    ),
+  ).toBe(true);
+
+  await kim.context().close();
+});
+
+test('a screen reader hears a line arrive', async ({ browser }) => {
+  const lena = await comeIn(browser, 'Lena Listens');
+  const sam = await comeIn(browser, 'Sam Speaks');
+
+  // His own line first: the sentinel for "his own is never read to him".
+  await lena.getByLabel('Say something').fill('lena says hello');
+  await lena.getByLabel('Say something').press('Enter');
+  await expect(sam.getByTestId('line').filter({ hasText: 'lena says hello' })).toBeVisible();
+
+  await sam.getByLabel('Say something').fill('heard you loud and clear');
+  await sam.getByLabel('Say something').press('Enter');
+  const log = lena.getByTestId('log');
+  await expect(log).toContainText('Sam Speaks: heard you loud and clear');
+  // One child per arrival, and nothing from the backfill this shared room
+  // already held when he came in.
+  await expect(log.locator('p')).toHaveCount(1);
+  await expect(log).not.toContainText('lena says hello');
+
+  await lena.context().close();
+  await sam.context().close();
+});
+
+test('a picture is named for the man who sent it', async ({ browser }) => {
+  const lena = await comeIn(browser, 'Lena Looks');
+  const sam = await comeIn(browser, 'Sam Snaps');
+  await sam.setInputFiles('#attach', {
+    name: 'IMG_0001.png',
+    mimeType: 'image/png',
+    buffer: readFileSync('public/icon-192.png'),
+  });
+  await sam.getByLabel('Say something').fill('named picture');
+  await sam.getByRole('button', { name: 'Send' }).click();
+
+  const line = lena.getByTestId('line').filter({ hasText: 'named picture' });
+  await expect(line.getByTestId('photo').locator('img')).toHaveAttribute(
+    'alt',
+    'A photo from Sam Snaps',
+  );
+  await expect(lena.getByTestId('log')).toContainText('Sam Snaps: named picture, a photo');
+  await line.getByTestId('photo').click();
+  await expect(lena.getByTestId('viewer-shot')).toHaveAttribute('alt', 'A photo from Sam Snaps');
+
+  await lena.context().close();
+  await sam.context().close();
+});
+
+test('a name on a line opens his profile', async ({ browser }) => {
+  const pia = await comeIn(browser, 'Pia Profile');
+  const ned = await comeIn(browser, 'Ned Named');
+  await ned.getByLabel('Say something').fill('ned has a line here');
+  await ned.getByLabel('Say something').press('Enter');
+  const line = pia.getByTestId('line').filter({ hasText: 'ned has a line here' });
+  await expect(line).toBeVisible();
+
+  // The name is a button saying whose profile it opens; the face says the same.
+  await expect(line.getByTestId('line-who')).toHaveAccessibleName('Ned Named profile');
+  await expect(line.getByTestId('line-face')).toHaveAccessibleName('Ned Named profile');
+  await line.getByTestId('line-who').click();
+  await expect(pia.getByTestId('profile-name')).toHaveText('Ned Named');
+  await pia.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(pia.getByTestId('profile')).toHaveCount(0);
+  await expect(pia.getByLabel('Say something')).toBeVisible();
+
+  // His face is the same way in.
+  await line.getByTestId('line-face').click();
+  await expect(pia.getByTestId('profile-name')).toHaveText('Ned Named');
+  await pia.getByRole('button', { name: 'Close', exact: true }).click();
+
+  // And the header still opens on everybody, not on the last man looked at.
+  await pia.getByTestId('connection').click();
+  await expect(pia.getByTestId('here')).toBeVisible();
+  await expect(pia.getByTestId('profile')).toHaveCount(0);
+  await pia.getByRole('button', { name: 'Close', exact: true }).click();
+
+  await pia.context().close();
+  await ned.context().close();
+});
+
+test('on a phone, a name opens his profile and a tap on nothing puts the keyboard away', async ({
+  browser,
+}) => {
+  const pat = await comeInOnAPhone(browser, 'Pat Thumb');
+  const ned = await comeIn(browser, 'Ned Tapped');
+  await ned.getByLabel('Say something').fill('tap near this line');
+  await ned.getByLabel('Say something').press('Enter');
+  const line = pat.getByTestId('line').filter({ hasText: 'tap near this line' });
+  await expect(line).toBeVisible();
+
+  // The keyboard up, then a tap on the words: it goes down so he can read.
+  const field = pat.getByLabel('Say something');
+  await field.tap();
+  await expect(field).toBeFocused();
+  await line.locator('.body').tap();
+  await expect(field).not.toBeFocused();
+
+  // Again with nothing focused: nothing at all, and no menu in the way of the
+  // next tap — which is his name, and his profile.
+  await line.locator('.body').tap();
+  await line.getByTestId('line-who').tap();
+  await expect(pat.getByTestId('profile-name')).toHaveText('Ned Tapped');
+  await expect(pat.getByTestId('line-menu')).toHaveCount(0);
+
+  await pat.context().close();
+  await ned.context().close();
 });

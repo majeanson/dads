@@ -23,6 +23,32 @@ function firstLink(body: string): string | null {
   return found !== undefined && found.link ? found.href : null;
 }
 
+/** The lines a key moves between: what a dad typed, never the room's own. */
+const TYPED = 'li.line-chat, li.line-prompt';
+
+/**
+ * The first thing Tab would reach after the list, or the last one before it.
+ * Inert, hidden and disabled things are not reachable, and neither is
+ * anything inside the list: that is the point.
+ */
+function beyond(list: HTMLElement, back: boolean): HTMLElement | undefined {
+  const all = [
+    ...document.querySelectorAll<HTMLElement>(
+      'a[href], button, input, textarea, select, [tabindex]',
+    ),
+  ].filter(
+    (el) =>
+      el.tabIndex >= 0 &&
+      !list.contains(el) &&
+      !el.matches(':disabled') &&
+      el.closest('[inert]') === null &&
+      el.getClientRects().length > 0,
+  );
+  const side = back ? Node.DOCUMENT_POSITION_PRECEDING : Node.DOCUMENT_POSITION_FOLLOWING;
+  const there = all.filter((el) => (list.compareDocumentPosition(el) & side) !== 0);
+  return back ? there.at(-1) : there[0];
+}
+
 function clock(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
@@ -51,6 +77,9 @@ export function Lines({
   onAway,
   onKeep,
   onOpenPhoto,
+  onOpenProfile,
+  onTapAway,
+  onArrived,
   onScroll,
 }: {
   rows: Row[];
@@ -71,6 +100,16 @@ export function Lines({
   onAway: () => void;
   onKeep: (media: MessageAttachment) => void;
   onOpenPhoto: (mediaId: string) => void;
+  /** A name or a face on a line: that dad's profile. */
+  onOpenProfile: (memberId: string) => void;
+  /** On a phone, a tap on nothing in the conversation: put the keyboard away. */
+  onTapAway: () => void;
+  /**
+   * A dad's line arrived while the list was settled — not the backfill, not
+   * his own. Absent while the conversation is not on the screen; the lines
+   * that arrive then are passed over, not saved up.
+   */
+  onArrived?: (message: RoomMessage) => void;
   onScroll: () => void;
 }) {
   const { t, lang } = useT();
@@ -88,6 +127,30 @@ export function Lines({
   const arrived = (seq: number) => settled.current !== null && seq > settled.current;
 
   /**
+   * Telling a screen reader a line arrived (`announce.ts`, the log in `Room`).
+   *
+   * From the same boundary the easing uses, so the backfill is never read
+   * out; `heard` is the newest seq already passed over, so each line is told
+   * once however often the rows are rebuilt (a mark, an edit, a picture kept).
+   */
+  const heard = useRef<number | null>(null);
+  const tell = useRef(onArrived);
+  useEffect(() => {
+    tell.current = onArrived;
+  }, [onArrived]);
+  useEffect(() => {
+    if (settled.current === null) return;
+    const from = heard.current ?? settled.current;
+    heard.current = Math.max(from, newest);
+    if (newest <= from || tell.current === undefined) return;
+    for (const row of rows) {
+      if (row.kind !== 'message' || row.key <= from) continue;
+      const m = row.message;
+      if ((m.kind === 'chat' || m.kind === 'prompt') && m.memberId !== you) tell.current(m);
+    }
+  }, [rows, newest, you]);
+
+  /**
    * Whether the pointer is a thumb. On a phone the long press is the menu
    * (marks in it) and the swipe is the reply; a tap on the words is nothing.
    * A row of marks used to open on a tap (2026-10 to 2026-11-01) and Marc
@@ -102,7 +165,17 @@ export function Lines({
   const press = useRef({ at: 0, whileOpen: false });
   /** Who "@Sam" could be: everyone the room knows, the departed included,
    * so a line that named a man last month still names him. */
-  const people = useMembers().map((m) => ({ id: m.memberId, name: m.name }));
+  const members = useMembers();
+  const people = members.map((m) => ({ id: m.memberId, name: m.name }));
+  /** Who still has a profile to open: a dad who has left is a 404. */
+  const inRoom = new Set(members.filter((m) => m.gone !== true).map((m) => m.memberId));
+
+  /**
+   * Whether the focus about to land came from a press rather than a key.
+   * A click on the list's empty space focuses the list, and moving him to
+   * the newest line for that would scroll away from what he clicked.
+   */
+  const pointing = useRef(false);
 
   /**
    * On a phone, a swipe to the right on a line is a reply (`swipe.ts`).
@@ -129,8 +202,108 @@ export function Lines({
     return swipeEnd(live.s);
   };
 
+  /** The lines a key moves between: what a dad typed, oldest first. */
+  const reachable = () => [...(lines.current?.querySelectorAll<HTMLElement>(TYPED) ?? [])];
+
   return (
-    <ol className="lines" aria-label={t('room.messages')} ref={lines} onScroll={onScroll}>
+    <ol
+      className="lines"
+      aria-label={t('room.messages')}
+      ref={lines}
+      onScroll={onScroll}
+      // One Tab stop for the whole conversation, and the arrows inside it
+      // (Marc asked for a keyboard way to a line's menu, 2026-11-01). The
+      // list takes the Tab and hands it straight to the newest line.
+      tabIndex={0}
+      onMouseDown={(event) => {
+        // On a phone a tap in the list moves no focus: the lines are
+        // focusable now, and WebKit hands the focus of a tapped mark or photo
+        // to the nearest focusable thing above it — the line — which took
+        // the keyboard down from under a thumb that only meant to mark.
+        // Putting it away is a tap on nothing (`onTapAway`), on purpose.
+        // (A line's menu is portalled out of the list but is still its child
+        // to React, so its presses come through here too; they are its own.)
+        if (!event.currentTarget.contains(event.target as Node)) return;
+        if (coarse) {
+          if (!(event.target as HTMLElement).closest('audio, video, input, textarea')) {
+            event.preventDefault();
+          }
+          return;
+        }
+        pointing.current = true;
+      }}
+      onFocus={(event) => {
+        const pressed = pointing.current;
+        pointing.current = false;
+        if (pressed || event.target !== event.currentTarget) return;
+        reachable().at(-1)?.focus();
+      }}
+      onKeyDown={(event) => {
+        const el = event.target as HTMLElement;
+        const all = reachable();
+        const at = all.indexOf(el);
+        // A key on a link, a mark or a player inside a line is that
+        // control's own.
+        if (at === -1 && el !== event.currentTarget) return;
+        const go = (i: number) => {
+          const next = all[Math.max(0, Math.min(all.length - 1, i))];
+          if (next === undefined) return;
+          event.preventDefault();
+          next.focus();
+        };
+        const last = all.length - 1;
+        if (event.key === 'ArrowUp') return go(at === -1 ? last : at - 1);
+        if (event.key === 'ArrowDown') return go(at === -1 ? last : at + 1);
+        if (event.key === 'Home') return go(0);
+        if (event.key === 'End') return go(last);
+        if (at === -1) return;
+        if (
+          event.key === 'Enter' ||
+          event.key === ' ' ||
+          event.key === 'ContextMenu' ||
+          (event.key === 'F10' && event.shiftKey)
+        ) {
+          // The menu the long press and the right click open, opened the
+          // same way: Radix anchors it where the event says, so near the
+          // start of the line rather than in the corner of the screen.
+          // Shift+F10 and the menu key are handled here too, because the
+          // browser only turns them into a `contextmenu` when the operating
+          // system does, and prevented they are not opened twice.
+          event.preventDefault();
+          const box = el.getBoundingClientRect();
+          el.dispatchEvent(
+            new MouseEvent('contextmenu', {
+              bubbles: true,
+              cancelable: true,
+              clientX: box.left + 24,
+              clientY: box.top + Math.min(box.height / 2, 24),
+            }),
+          );
+          return;
+        }
+        if (event.key === 'Tab') {
+          // Out of the list, not into the next line's marks and links: the
+          // arrows are the way through it, the menu the way into a line.
+          const out = beyond(event.currentTarget, event.shiftKey);
+          if (out === undefined) return;
+          event.preventDefault();
+          out.focus();
+        }
+      }}
+      onClick={(event) => {
+        // On a phone with the keyboard up, a tap on the conversation that
+        // lands on nothing puts the keyboard away so he can read (Marc,
+        // 2026-11-01). The lift of a long press or a swipe never gets here:
+        // the line swallows it on the way down.
+        if (!coarse || event.detail === 0) return;
+        if (!event.currentTarget.contains(event.target as Node)) return;
+        const field = document.activeElement;
+        if (!(field instanceof HTMLElement) || field.id !== 'say') return;
+        if ((event.target as HTMLElement).closest('a, button, img, video, audio, input')) return;
+        if ((window.getSelection()?.toString() ?? '') !== '') return;
+        onTapAway();
+      }}
+    >
       {empty ? (
         <li className="lines-empty quiet">
           {/* Nobody has said anything: the face, putting its glasses on,
@@ -172,6 +345,9 @@ export function Lines({
             <li
               className={`group line line-${row.message.kind}${row.showName ? '' : ' is-continued'}${arrived(row.key) ? ' motion-rise' : ''}`}
               data-testid="line"
+              // Reached by the arrows from the list, never by Tab: five
+              // hundred lines are not five hundred Tab stops.
+              tabIndex={-1}
               // The finger lifting at the end of a long press is a click to
               // the browser. Caught on the way DOWN, before the photo's button,
               // the link or the marks below ever hear it.
@@ -242,19 +418,49 @@ export function Lines({
               {/* Only at the top of a run. A face on every line of one turn is
                   the app repeating who is talking between every sentence,
                   which is what dropping the name fixed. */}
+              {/* His name and his face are his profile, for a dad still in
+                  the room (Marc chose it, 2026-11-01): the same screen "Who's
+                  here" opens. A man who has left has none, so his stay words. */}
               {row.showName && row.message.memberId !== null ? (
-                <Face className="face" memberId={row.message.memberId} size={32} />
+                inRoom.has(row.message.memberId) ? (
+                  <button
+                    type="button"
+                    className="face block h-8 w-8 cursor-pointer rounded-full"
+                    aria-label={`${row.message.name} ${t('line.profile_of')}`}
+                    onClick={() => onOpenProfile(row.message.memberId!)}
+                    data-testid="line-face"
+                  >
+                    <Face className="block" memberId={row.message.memberId} size={32} />
+                  </button>
+                ) : (
+                  <Face className="face" memberId={row.message.memberId} size={32} />
+                )
               ) : null}
-              <span
-                className="who"
-                style={
-                  row.showName && row.message.memberId !== null
-                    ? { color: dadVar(row.message.memberId) }
-                    : undefined
-                }
-              >
-                {row.showName ? row.message.name : ''}
-              </span>
+              {row.showName && row.message.memberId !== null && inRoom.has(row.message.memberId) ? (
+                // The name as it always looked, now a button: the row is
+                // short, so the padding reaches past it without moving it.
+                <button
+                  type="button"
+                  className="who -my-1 min-h-7 cursor-pointer justify-self-start py-1 text-left"
+                  style={{ color: dadVar(row.message.memberId) }}
+                  onClick={() => onOpenProfile(row.message.memberId!)}
+                  data-testid="line-who"
+                >
+                  {row.message.name}
+                  <span className="sr-only"> {t('line.profile_of')}</span>
+                </button>
+              ) : (
+                <span
+                  className="who"
+                  style={
+                    row.showName && row.message.memberId !== null
+                      ? { color: dadVar(row.message.memberId) }
+                      : undefined
+                  }
+                >
+                  {row.showName ? row.message.name : ''}
+                </span>
+              )}
               <span className="body">
                 {/* What he was answering, as it was: a name and a cut-down
                     line, above his own. It goes nowhere on a tap — the
@@ -308,6 +514,7 @@ export function Lines({
                 {row.message.media ? (
                   <Attachment
                     media={row.message.media}
+                    from={row.message.name}
                     onOpen={() => onOpenPhoto(row.message.media!.id)}
                   />
                 ) : null}
@@ -319,7 +526,9 @@ export function Lines({
                 />
               </span>
               <span className="when items-start gap-1">
-                <time>{clock(row.message.createdAt)}</time>
+                <time dateTime={new Date(row.message.createdAt).toISOString()}>
+                  {clock(row.message.createdAt)}
+                </time>
                 <QuickMark
                   mine={marksOf(row.message, you)}
                   onReact={(emoji, on) => onReact(row.message.id, emoji, on)}

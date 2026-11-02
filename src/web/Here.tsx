@@ -40,6 +40,7 @@ export function Here({
   roster,
   everyone,
   call,
+  start = null,
 }: {
   roster: {
     memberId: string;
@@ -49,9 +50,12 @@ export function Here({
   /** Everyone in the room, present or not: a profile is for them all. */
   everyone: { memberId: string; name: string; you: boolean }[];
   call: CallMember[];
+  /** Open on this dad's profile rather than the roster: his name on a line
+   * was tapped. Back from it is the roster, like any other profile. */
+  start?: string | null;
 }) {
   const { t, lang } = useT();
-  const [profile, setProfile] = useState<string | null>(null);
+  const [profile, setProfile] = useState<string | null>(start);
   const locale = lang === 'fr' ? 'fr-CA' : 'en-CA';
   const [events, setEvents] = useState<PresenceEvent[] | null | 'loading'>('loading');
   const [showLog, setShowLog] = useState(false);

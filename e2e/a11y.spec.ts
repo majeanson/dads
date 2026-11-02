@@ -193,6 +193,20 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByTestId('call-hangup').click();
     await expect(page.getByTestId('call')).toHaveCount(0);
 
+    // A line reached from the keyboard, the ring on it; and a profile opened
+    // from a name on a line, which is "who is here" opened on him.
+    await page.locator('ol.lines').focus();
+    await expect(page.locator('ol.lines li:focus')).toHaveCount(1);
+    found.push(...(await faults(page, 'a line, from the keyboard')));
+    await page
+      .getByTestId('line')
+      .filter({ hasText: `a ${theme} line` })
+      .getByTestId('line-who')
+      .click();
+    await expect(page.getByTestId('profile')).toBeVisible();
+    await settled();
+    found.push(...(await faults(page, 'a profile, from a line')));
+    await close();
     await page.getByTestId('go-home').click();
 
     // Home in its other two shapes. With no night and days voted on, the card

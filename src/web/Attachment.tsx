@@ -42,14 +42,23 @@ function Kept({ over }: { over: boolean }) {
  */
 export function Attachment({
   media,
+  from,
   onOpen,
 }: {
   media: MessageAttachment;
+  /**
+   * Who sent it, for its name: "A photo from Sam". The file's own name was
+   * the alt text, and a screen reader read "IMG underscore 1234 dot jpg" for
+   * every picture in the room. Absent (a search result), the file name stays.
+   */
+  from?: string;
   /** Opens the picture full-screen. Images only; everything else plays or
    * downloads where it sits. */
   onOpen?: () => void;
 }) {
+  const { t } = useT();
   const href = mediaUrl(media.id);
+  const named = from === undefined ? media.name : t('view.title', { name: from });
 
   if (isVideo(media.contentType)) {
     return (
@@ -65,6 +74,7 @@ export function Attachment({
           preload="metadata"
           width={media.width ?? undefined}
           height={media.height ?? undefined}
+          aria-label={from === undefined ? undefined : t('line.video_from', { name: from })}
         />
         {media.kept ? <Kept over /> : null}
       </span>
@@ -107,7 +117,7 @@ export function Attachment({
       <span className="relative mt-1.5 block w-fit max-w-full">
         <img
           src={href}
-          alt={media.name}
+          alt={named}
           width={media.width ?? undefined}
           height={media.height ?? undefined}
           loading="lazy"
@@ -130,11 +140,11 @@ export function Attachment({
         className="block w-full cursor-pointer overflow-hidden rounded-lg border border-line p-0"
         onClick={onOpen}
         data-testid="photo"
-        aria-label={media.name}
+        aria-label={named}
       >
         <img
           src={href}
-          alt={media.name}
+          alt={named}
           width={media.width ?? undefined}
           height={media.height ?? undefined}
           loading="lazy"

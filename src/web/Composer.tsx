@@ -196,6 +196,25 @@ export function Composer({
     field.style.overflowY = wanted > cap ? 'auto' : 'hidden';
   }, [draft, recording]);
 
+  /**
+   * Where the caret goes once React has put new words in the field: after a
+   * name picked from the list, after an emoji. Placed in a layout effect, in
+   * the same commit as the words, not on the next animation frame as it was:
+   * a thumb typing straight on after the pick never waits for a frame, so
+   * the letters landed at the end and THEN the caret jumped back before them
+   * ("hey @Tag Sam up?you" — the tagging e2e, twice, on a loaded machine).
+   */
+  const wantCaret = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const to = wantCaret.current;
+    if (to === null) return;
+    wantCaret.current = null;
+    const field = say.current;
+    if (field === null) return;
+    field.focus();
+    field.setSelectionRange(to, to);
+  }, [draft]);
+
   function cancelContext() {
     if (editing) {
       editSeq.current++;
@@ -232,11 +251,8 @@ export function Composer({
     const { next, caret: to } = tagged(draft, tagging.start, caret, name);
     change(next);
     setCaret(to);
+    wantCaret.current = to;
     onTyping();
-    requestAnimationFrame(() => {
-      say.current?.focus();
-      say.current?.setSelectionRange(to, to);
-    });
   }
 
   async function pick(file: File | undefined) {
@@ -307,11 +323,9 @@ export function Composer({
     const to = field?.selectionEnd ?? at;
     const next = draft.slice(0, at) + emoji + draft.slice(to);
     change(next);
+    setCaret(at + emoji.length);
+    wantCaret.current = at + emoji.length;
     onTyping();
-    requestAnimationFrame(() => {
-      field?.focus();
-      field?.setSelectionRange(at + emoji.length, at + emoji.length);
-    });
   }
 
   async function submit(event: FormEvent) {

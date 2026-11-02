@@ -164,7 +164,12 @@ export function Viewer({
 
           {/* Contained, not covered: a photograph of people is not wallpaper
               and must never have its edges cropped to fill a screen. */}
-          <img className="viewer-shot" src={href} alt={shot.media.name} data-testid="viewer-shot" />
+          <img
+            className="viewer-shot"
+            src={href}
+            alt={t('view.title', { name: shot.name })}
+            data-testid="viewer-shot"
+          />
 
           <div className="viewer-foot">
             {shots.length < 2 ? null : (

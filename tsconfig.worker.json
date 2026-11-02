@@ -8,6 +8,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/worker.tsbuildinfo"
   },
   "include": [
+    "src/web/announce.ts",
     "src/web/backStack.ts",
     "src/web/messageGroups.ts",
     "src/web/dadColour.ts",

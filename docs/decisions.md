@@ -2671,3 +2671,101 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   Tab, none on an iPhone tap), "a half-typed line is still there after a
   reload" (and after an edit, and gone once sent); the tagging test checks
   `aria-activedescendant` and the absence of `aria-expanded`.
+
+## A line by keyboard, and its menu (2026-11-01)
+
+- Part of the pass Marc asked for on reading the room with a keyboard, a
+  screen reader or a thumb. Lines were not focusable at all: the menu (marks,
+  reply, edit, copy, keep, take back) was a right click or a long press, and
+  nothing else.
+- The list is one Tab stop and the lines a roving focus: `ol.lines` takes the
+  Tab and hands it to the newest chat or prompt line; the arrows, Home and End
+  move between typed lines (day dividers and the room's own lines are
+  skipped); Enter, Space, Shift+F10 and the menu key open the line's menu by
+  dispatching a `contextmenu` at the line's left edge, which is what Radix
+  already listens to, so it anchors there. Chrome only makes a `contextmenu`
+  out of Shift+F10 when the operating system does (not through the devtools
+  protocol), so those two keys are handled too; prevented, they do not open
+  it twice. Escape and Radix hand the focus back to the line. Tab from a line
+  leaves the list (`beyond`, the first reachable thing after it) rather than
+  walking every mark and link in five hundred lines; Shift+Tab goes to the
+  last thing before it.
+- A press is not a Tab: a click on a gap in the list focuses the list, and
+  moving him to the newest line for that scrolled away from what he clicked,
+  so a mousedown marks the focus as a press (`pointing`).
+- **On a phone, a tap in the list now moves no focus** (mousedown prevented
+  under `pointer: coarse`, except on a player or a field). With focusable
+  lines, WebKit hands the focus of a tapped button that does not take it (a
+  mark, the photo) to the nearest focusable ancestor — the line — and the
+  keyboard went down under a thumb that only meant to mark.
+- The ring is inside the line (`outline-offset: -2px`): it has no side
+  padding, and outside it the ring was cut at the room's edge.
+- Tests: e2e "a keyboard reaches a line, and its menu" (focus, arrows, End,
+  Enter, Escape back to the line, Shift+F10, Reply from the menu, Tab out);
+  an axe scene "a line, from the keyboard". Measured at 390px in French with
+  a long name: no sideways scroll, the focused line's ring inside the screen
+  (12px to 378px), the log 1px by 1px, the name's button 32px tall.
+
+## New lines are read aloud (2026-11-01)
+
+- New lines were silent to a screen reader. Now an sr-only polite
+  `role="log"` in `Room` holds the last five arrivals, one `<p>` each, so
+  each is read once and none interrupts. The words are `announce.ts` (pure,
+  `test/announce.test.ts`): "Sam: the words", cut to 200 characters, a
+  picture, a clip, a voice note or a file said in the reader's language, the
+  quote of a reply left out (it buries the news).
+- Fed by `Lines` from the same `settled` boundary the easing uses, so the
+  backfill is never read; a `heard` seq so a rebuilt row list (a mark, an
+  edit) does not read a line twice; never his own; only while
+  `view === 'talk'` — lines that arrive on home are passed over, not saved
+  up for later.
+- Tests: e2e "a screen reader hears a line arrive" (his own line first as
+  the sentinel; exactly one child, so nothing of the shared room's backfill).
+
+## A picture says who sent it (2026-11-01)
+
+- The alt text and the photo button's name were the file name, so a screen
+  reader read "IMG underscore 1234 dot jpg". Now they are the album's and the
+  viewer title's words, "A photo from Sam" (`view.title`), on the line and in
+  the viewer; a clip is "A video from Sam". A search result has no sender
+  passed and keeps the file name. `<time>` on a line carries `dateTime`.
+- The viewer test told its two photos apart by alt; it now uses `src`.
+- Tests: e2e "a picture is named for the man who sent it" (alt on the other
+  dad's line, the log's "a photo", the viewer's alt).
+
+## A name on a line is his profile (2026-11-01)
+
+- Marc chose it: the name (at the top of a run) or the face on a line opens
+  that dad's profile — "who is in it" opened on him (`profileOf` in `Room`,
+  `start` on `Here`); back from it is the roster, Close is the room. The
+  header, the call bar and any later open start on the roster again
+  (`profileOf` is cleared whenever another sheet or none is opened).
+- The name is `.who` itself as a `<button>`, so the column's ellipsis and
+  width still apply and it looks as it did; `justify-self: start` so the
+  empty space beside a short name is not a button, and `-my-1 py-1 min-h-7`
+  so the hit area reaches past the short row without moving it (inside the
+  conversation, so under 44px is allowed; 28px keeps `prod/screens` happy).
+  Its accessible name is "Sam profile" (`line.profile_of`); the face button
+  says the same.
+- Only for a dad still in the room: a departed dad's profile is a 404, so
+  his name stays text. Not on the room's own lines.
+- A long press on the name still opens the line's menu (it bubbles to the
+  trigger, like the photo), and its lift is swallowed the same way.
+- Tests: e2e "a name on a line opens his profile" (name, face, header still
+  the roster) and the phone variant below.
+
+## A tap on the conversation puts the keyboard away (2026-11-01)
+
+- Marc chose it: on a phone with the field focused, a tap in the
+  conversation that lands on nothing (not a link, photo, button, mark, name
+  or a selection) blurs the field so the keyboard goes down and he can read.
+  iOS keeps the keyboard up for a tap on plain text; and with the list no
+  longer taking focus from a tap (above) Android would too.
+- In the ol's `onClick`, which the swallowed lift of a long press or a swipe
+  never reaches (the line stops it in the capture phase). The field's own
+  `blur()` (by `#say`, so it survives the composer becoming a textarea); the
+  draft stays.
+- Tests: e2e "on a phone, a name opens his profile and a tap on nothing puts
+  the keyboard away" (iPhone context: field focused, tap the words, not
+  focused; a second tap opens nothing and the name's tap after it reaches
+  the profile).

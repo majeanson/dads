@@ -8,9 +8,14 @@ test.describe.configure({ mode: 'serial' });
 const DAY = 24 * 60 * 60 * 1000;
 
 /** A date a few days out, as the field wants it. UTC, so it is never "today"
- * wherever the machine and the group disagree about midnight. */
+ * wherever the machine and the group disagree about midnight. Taken ONCE,
+ * when the file loads: the tests here are serial and share one event, and a
+ * run that crossed midnight UTC between two of them (CI, 2026-11-01 23:59)
+ * planned the bowling on one day and looked for it on the next — and the
+ * serial retry then found the bowling already planned. */
+const NOW = Date.now();
 function inDays(n: number): string {
-  return new Date(Date.now() + n * DAY).toISOString().slice(0, 10);
+  return new Date(NOW + n * DAY).toISOString().slice(0, 10);
 }
 
 async function comeIn(browser: Browser, name: string): Promise<Page> {
