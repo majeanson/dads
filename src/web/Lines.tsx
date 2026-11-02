@@ -232,6 +232,11 @@ export function Lines({
         }
         pointing.current = true;
       }}
+      // A press that moved no focus (a click to select words) must not be
+      // remembered as the reason for the NEXT focus, which may be a Tab.
+      onMouseUp={() => {
+        pointing.current = false;
+      }}
       onFocus={(event) => {
         const pressed = pointing.current;
         pointing.current = false;
@@ -431,6 +436,9 @@ export function Lines({
                     data-testid="line-face"
                   >
                     <Face className="block" memberId={row.message.memberId} size={32} />
+                    <span className="sr-only">
+                      {row.message.name} {t('line.profile_of')}
+                    </span>
                   </button>
                 ) : (
                   <Face className="face" memberId={row.message.memberId} size={32} />

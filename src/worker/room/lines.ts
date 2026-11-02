@@ -117,7 +117,9 @@ export async function say(
   const reply = frame.replyTo === undefined ? null : await quoteOf(room, frame.replyTo);
 
   await post(room, 'chat', who.memberId, who.name, body, null, media, null, cid, reply);
-  await tellTheNamed(room, who, body);
+  // Off the line's path: the push is nobody's echo, and the frame handler
+  // should not hold the socket for a members read and a round of sends.
+  room.ctx.waitUntil(tellTheNamed(room, who, body));
 }
 
 /** Past this a notification is a wall; the line is in the room. */
@@ -135,7 +137,9 @@ const TAG_PUSH_LENGTH = 140;
  * in the room, and the line posts whether or not this reaches anyone.
  */
 async function tellTheNamed(room: Room, who: SocketIdentity, body: string): Promise<void> {
-  if (!body.includes('@')) return;
+  // An "@" with a letter after it, at least: a line with none has nobody in
+  // it, and the members read is not worth doing for it.
+  if (!/@\p{L}/u.test(body)) return;
   try {
     const people = (await membersOfGroup(room))
       .filter((m) => m.gone !== true)
@@ -143,10 +147,16 @@ async function tellTheNamed(room: Room, who: SocketIdentity, body: string): Prom
     const chars = [...body];
     const cut =
       chars.length > TAG_PUSH_LENGTH ? chars.slice(0, TAG_PUSH_LENGTH - 1).join('') + '…' : body;
-    for (const id of mentioned(body, people)) {
-      if (id === who.memberId || isPresent(room, id)) continue;
-      await notifyMember(room.env, id, { title: who.name, body: cut, tag: `tag-${who.memberId}` });
-    }
+    const named = mentioned(body, people).filter(
+      (id) => id !== who.memberId && !isPresent(room, id),
+    );
+    // Together, not one after another: three names are three phones to
+    // reach, and none of them has to wait for the others.
+    await Promise.all(
+      named.map((id) =>
+        notifyMember(room.env, id, { title: who.name, body: cut, tag: `tag-${who.memberId}` }),
+      ),
+    );
   } catch (err) {
     console.error('tag push failed', err);
   }

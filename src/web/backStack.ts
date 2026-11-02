@@ -29,6 +29,8 @@
 export interface Nav {
   state(): unknown;
   push(state: unknown): void;
+  /** Re-stamp the entry we are on, without moving. */
+  replace(state: unknown): void;
   go(steps: number): void;
 }
 
@@ -122,6 +124,24 @@ export function createBackStack(nav: Nav) {
     settle() {
       const stale = depthOf(nav.state());
       if (stale > 0) travel(-stale);
+    },
+
+    /**
+     * A traversal we asked for never landed. It happens: a restored tab whose
+     * one entry carries our stamp has nothing behind it, and `go(-1)` there
+     * fires no popstate at all. Waiting for ever would hold every layer out
+     * of the history, which is the bug this module was written against. So
+     * the hook gives a landing a moment, and then calls this: nothing is in
+     * flight, and the layers waiting get their entries now.
+     */
+    lost() {
+      travelling = 0;
+      // Where we are is the base after all, whatever its stamp says: a stale
+      // stamp left on it would make the next back land on "one layer open"
+      // and close nothing.
+      position = 0;
+      nav.replace(null);
+      enter();
     },
 
     /** How many layers are open; for tests. */

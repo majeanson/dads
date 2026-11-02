@@ -70,6 +70,11 @@ describe('typing one', () => {
     expect(mentionAt('@', 1)).toEqual({ start: 0, query: '' });
   });
 
+  it('is nothing before the caret has been placed', () => {
+    // A draft restored from storage, the caret still at nought: not typing.
+    expect(mentionAt('@Sam are you in?', 0)).toBeNull();
+  });
+
   it('is nothing with no @, or an @ inside a word', () => {
     expect(mentionAt('hey Sam', 7)).toBeNull();
     expect(mentionAt('sam@sam', 7)).toBeNull();

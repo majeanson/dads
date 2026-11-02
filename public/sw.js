@@ -40,8 +40,34 @@ self.addEventListener('push', (event) => {
         tag: payload.tag || 'dads',
         actions,
       })
-      .then(badge, badge),
+      // The dot either way — the push arrived — but a notification that
+      // could not be shown is still a failure, and it stays one: swallowing
+      // it here would hide it from the browser's own log.
+      .then(badgeUnlessLooking, (err) =>
+        badgeUnlessLooking().then(() => {
+          throw err;
+        }),
+      ),
   );
+});
+
+/**
+ * No dot while he is looking at the app: the app itself keeps the count
+ * there (and clears it) from what he has read, and a push that arrives in
+ * front of him is about something he can see. A dismissed notification
+ * (swiped away, never tapped) also had its look: the app may never open to
+ * clear a dot for it, so that is done here.
+ */
+function badgeUnlessLooking() {
+  return self.clients
+    .matchAll({ type: 'window', includeUncontrolled: true })
+    .then((windows) => windows.some((w) => w.visibilityState === 'visible'))
+    .catch(() => false)
+    .then((looking) => (looking ? undefined : badge()));
+}
+
+self.addEventListener('notificationclose', () => {
+  unbadge();
 });
 
 /**

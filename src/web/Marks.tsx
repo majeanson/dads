@@ -86,6 +86,8 @@ function Mark({
   const [who, setWho] = useState(false);
   const timer = useRef<number | null>(null);
   const held = useRef(false);
+  /** The card was up when the finger landed: that tap is its dismissal, not a mark. */
+  const openAtDown = useRef(false);
   const from = useRef({ x: 0, y: 0 });
   const names = r.by.map(nameOf).join(', ');
 
@@ -108,6 +110,7 @@ function Mark({
             // Ours, not the line's: see above.
             event.preventDefault();
             held.current = false;
+            openAtDown.current = who;
             from.current = { x: event.clientX, y: event.clientY };
             letGo();
             timer.current = window.setTimeout(() => {
@@ -124,7 +127,13 @@ function Mark({
           }}
           onPointerUp={letGo}
           onPointerLeave={letGo}
-          onPointerCancel={letGo}
+          // The browser took the finger (a scroll begun on the mark): no
+          // click is coming to spend `held`, so it is spent here, or the
+          // next real tap would be swallowed.
+          onPointerCancel={() => {
+            letGo();
+            held.current = false;
+          }}
           onContextMenu={(event) => {
             event.preventDefault();
             letGo();
@@ -133,6 +142,12 @@ function Mark({
           onClick={() => {
             if (held.current) {
               held.current = false;
+              return;
+            }
+            // Tapping the mark with its card up puts the card away (the
+            // press outside the card already did), and is not a mark.
+            if (openAtDown.current) {
+              openAtDown.current = false;
               return;
             }
             onToggle(!mine);

@@ -19,9 +19,16 @@ function fakeHistory(start: unknown[] = [null]) {
     go(steps) {
       owed += steps;
     },
+    replace(state) {
+      entries[at] = state;
+    },
   };
   return {
     nav,
+    /** The queued travel never happens: a browser with nowhere to go. */
+    lose() {
+      owed = 0;
+    },
     /** Deliver the queued travel; returns the state landed on. */
     settle(): unknown {
       at = Math.max(0, Math.min(entries.length - 1, at + owed));
@@ -167,6 +174,26 @@ describe('back stack', () => {
     expect(h.at).toBe(0);
     expect(h.owed).toBe(0);
     expect(stack.depth).toBe(0);
+  });
+
+  it('a landing that never comes is given up on, and the waiting layer gets its entry', () => {
+    // A restored tab whose only entry carries the stamp: go(-1) has nowhere
+    // to go and fires nothing.
+    const h = fakeHistory([{ dadsLayers: 1 }]);
+    const stack = createBackStack(h.nav);
+    stack.settle();
+    h.lose();
+    let closed = 0;
+    stack.open(() => (closed += 1));
+    expect(h.length).toBe(1);
+    stack.lost();
+    // The entry we were on is the base now, whatever its stamp said.
+    expect(h.length).toBe(2);
+    expect(closed).toBe(0);
+    // And back now takes the layer, as it should.
+    h.nav.go(-1);
+    stack.popped(h.settle());
+    expect(closed).toBe(1);
   });
 
   it('a page that loads on a sheet entry goes back to the base', () => {

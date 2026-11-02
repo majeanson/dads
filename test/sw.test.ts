@@ -85,9 +85,29 @@ describe('the service worker and the icon', () => {
     expect(focus).toHaveBeenCalledTimes(2);
   });
 
-  it('a notification that could not be shown still marks the icon', async () => {
+  it('a notification that could not be shown still marks the icon, and still fails', async () => {
     showNotification.mockImplementationOnce(() => Promise.reject(new Error('denied')));
-    await fire('push', push({ title: 'x' }));
+    await expect(fire('push', push({ title: 'x' }))).rejects.toThrow('denied');
     expect(setAppBadge).toHaveBeenCalledOnce();
+  });
+
+  it('no dot while he is looking at the app, which keeps the count itself', async () => {
+    const clients = (self as unknown as { clients: { matchAll: () => Promise<unknown[]> } })
+      .clients;
+    const was = clients.matchAll;
+    clients.matchAll = () =>
+      Promise.resolve([{ url: 'https://dads.example/', focus, visibilityState: 'visible' }]);
+    try {
+      await fire('push', push({ title: 'x' }));
+      expect(showNotification).toHaveBeenCalledOnce();
+      expect(setAppBadge).not.toHaveBeenCalled();
+    } finally {
+      clients.matchAll = was;
+    }
+  });
+
+  it('a notification swiped away had its look: the dot goes', async () => {
+    await fire('notificationclose', {});
+    expect(clearAppBadge).toHaveBeenCalledOnce();
   });
 });

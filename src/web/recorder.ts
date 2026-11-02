@@ -121,6 +121,12 @@ export function useRecorder() {
         clearInterval(ticker.current);
         ticker.current = undefined;
         rec.stop();
+        // The microphone goes OFF with it: the browser's recording light
+        // stayed on until he pressed something, for a recorder that had
+        // already stopped. The recorder is kept, with its two minutes, for
+        // the stop or the lift that sends it; the clock stands at the cap.
+        stream.getTracks().forEach((t) => t.stop());
+        setState({ kind: 'recording', ms: MAX_MS });
       } else setState({ kind: 'recording', ms });
     }, 200);
   }, []);

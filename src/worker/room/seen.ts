@@ -27,19 +27,32 @@ export async function noteSeen(
   // make one write. Forgotten on eviction, which costs one write that the
   // WHERE turns into nothing.
   const marks = room.memory.seen;
-  if (seq <= (marks.get(who.memberId) ?? 0)) return;
+  const before = marks.get(who.memberId);
+  if (seq <= (before ?? 0)) return;
   marks.set(who.memberId, seq);
 
   const groupId = room.groupId();
   if (groupId === undefined) return;
-  const { meta } = await room.env.DB.prepare(
-    `UPDATE members SET seen_seq = ?
-     WHERE id = ? AND group_id = ? AND gone_at IS NULL
-       AND (seen_seq IS NULL OR seen_seq < ?)`,
-  )
-    .bind(seq, who.memberId, groupId, seq)
-    .run();
-  if (meta.changes === 0) return;
+  let changes: number;
+  try {
+    ({
+      meta: { changes },
+    } = await room.env.DB.prepare(
+      `UPDATE members SET seen_seq = ?
+       WHERE id = ? AND group_id = ? AND gone_at IS NULL
+         AND (seen_seq IS NULL OR seen_seq < ?)`,
+    )
+      .bind(seq, who.memberId, groupId, seq)
+      .run());
+  } catch (err) {
+    // The claim above was for a write that did not happen: give it back, so
+    // the next mark (the phone sends its furthest again on every open) is
+    // not turned away as "already written".
+    if (before === undefined) marks.delete(who.memberId);
+    else marks.set(who.memberId, before);
+    throw err;
+  }
+  if (changes === 0) return;
 
   for (const other of room.ctx.getWebSockets(who.memberId)) {
     if (other !== ws) room.sendTo(other, { t: 'seen', seq });

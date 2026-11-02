@@ -84,6 +84,10 @@ export function mentioned(body: string, people: Named[]): string[] {
  * may too; the caller closes the picker when nobody matches it.
  */
 export function mentionAt(draft: string, caret: number): { start: number; query: string } | null {
+  // Nothing before the caret is nothing to be typing. (`lastIndexOf` with a
+  // negative start searches from 0, which made a restored draft beginning
+  // with "@" open the list on its own before he had touched the field.)
+  if (caret <= 0) return null;
   const at = draft.lastIndexOf('@', caret - 1);
   if (at === -1 || !startsAWord(draft, at)) return null;
   const query = draft.slice(at + 1, caret);

@@ -207,12 +207,21 @@ export function useSeen({
   // Reaching the newest line is reading everything down to it — but that is
   // the reading effect's job, which fires as soon as `pinned` flips.
   // Smooth, unless he has asked the phone for no motion; then it is a jump.
+  const rideOver = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const toBottom = useCallback(() => {
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
     descending.current = !still;
+    // A ride that never reaches the bottom (a picture loading under it moved
+    // the end away) must not be a ride for ever: after it has had its time,
+    // his own scrolls count again.
+    clearTimeout(rideOver.current);
+    rideOver.current = setTimeout(() => {
+      descending.current = false;
+    }, 1_500);
     bottom.current?.scrollIntoView({ block: 'end', behavior: still ? 'auto' : 'smooth' });
     setPinned(true);
   }, [bottom]);
+  useEffect(() => () => clearTimeout(rideOver.current), []);
 
   /**
    * He sent something: wherever he was reading, his own line is what he wants

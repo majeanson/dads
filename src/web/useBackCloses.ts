@@ -13,13 +13,29 @@ import { isIOS } from './push';
  * is how it was before and what an app feels like there.
  */
 const backless = isIOS();
+
+/** How long a traversal gets to land as a popstate before it is given up on. */
+const LANDING_MS = 1_500;
+let landing: ReturnType<typeof setTimeout> | undefined;
+
 const stack = createBackStack({
   state: () => history.state,
   push: (state) => history.pushState(state, ''),
-  go: (steps) => history.go(steps),
+  replace: (state) => history.replaceState(state, ''),
+  go: (steps) => {
+    // A same-document traversal lands within a frame or two. One that never
+    // does (a restored tab with nothing behind its one entry) must not hold
+    // every later layer out of the history: see `lost` in backStack.ts.
+    clearTimeout(landing);
+    landing = setTimeout(() => stack.lost(), LANDING_MS);
+    history.go(steps);
+  },
 });
 if (!backless) {
-  window.addEventListener('popstate', (event) => stack.popped(event.state));
+  window.addEventListener('popstate', (event) => {
+    clearTimeout(landing);
+    stack.popped(event.state);
+  });
   stack.settle();
 }
 

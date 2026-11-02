@@ -3220,3 +3220,47 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   dad's "3 new" stays (the sentinel); then the phone's own copy is wound back
   to 1 and reloaded, and it still says nothing new — only `hello.seen` can
   say that.
+
+## Hardening after a review (2026-11-02)
+
+- Marc: "add tests, solidify, make sure this app is prod ready". A
+  high-effort review of everything since 2026-10-31 found seventeen
+  things; the real ones, fixed here with a test where there is logic:
+  - `mentionAt` with the caret at nought read `lastIndexOf('@', -1)` as
+    "from the start", so a restored draft beginning with "@" opened the tag
+    list on its own. Nothing before the caret is nothing being typed.
+  - The room claimed a seen mark in memory before the D1 write; a write
+    that threw left the claim and the mark was never retried. The claim is
+    given back on a throw.
+  - "The call dropped" was decided once on return and only cleared by a
+    link connecting; a dad alone on the call has no link to connect. It is
+    decided again whenever the roster changes.
+  - A mark's `held` flag was spent only by the click after a hold; a
+    `pointercancel` (a scroll begun on the mark) left it set and swallowed
+    the next tap. And a tap on the mark to put its card away also marked
+    the line: the press that dismisses is remembered and is not a mark.
+  - At the two-minute cap the recorder stopped but the microphone stayed
+    open, its light on, until he pressed something. The tracks stop with
+    the recorder; the clock stands at the cap.
+  - A traversal that never lands (a restored tab whose one entry carries
+    the stamp) held every later layer out of the history for good. The
+    hook gives a landing 1.5s, then `lost()` enters the waiting layers.
+  - `descending` (the ride down after "N new") could stay set when the ride
+    never reached the bottom; it now expires 1.5s after the ride starts.
+  - `pointing` on the list was set on every mousedown and cleared only by a
+    focus that followed; a click that moved no focus left it set and the
+    next Tab into the list did not land on the newest line.
+  - The mention push did a members read for any "@" and sent to each named
+    dad in turn inside the frame handler. It needs an "@" with a letter
+    after it, sends in parallel, and runs in `waitUntil`, off the line's
+    path.
+  - The service worker put a dot on the icon for every push, even with the
+    app open in front of him, and the app only cleared it when the count
+    changed. No dot while a window is visible; a notification swiped away
+    clears it too; and a notification that could not be shown still fails
+    as it did before, instead of being swallowed on the way to the badge.
+  - The face button on a line had `aria-label` and no sr-only span, against
+    the rule.
+- Left as they are, on purpose: the two duplicated class strings and the
+  `coarse()` helper in the call bar (style, not fault), and the device
+  summary's reads in Settings, which the hardening workstream closes.

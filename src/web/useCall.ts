@@ -641,6 +641,25 @@ export function useCall({
     };
   }, [restart, state, teardown]);
 
+  /**
+   * "Dropped" was decided on what the roster said at the time. The roster
+   * moving (the socket back, the others gone home) can make it true again
+   * without any link ever reaching `connected` — a dad alone on the call has
+   * no link to connect — so it is decided again whenever the roster changes.
+   */
+  useEffect(() => {
+    if (!dropped) return;
+    const connected = [...links.current.values()].filter(
+      (l) => l.pc.connectionState === 'connected',
+    ).length;
+    const lost = callDropped({
+      onRoster: members.some((m) => m.memberId === you),
+      others: members.filter((m) => m.memberId !== you).length,
+      connected,
+    });
+    if (!lost) setDropped(false);
+  }, [dropped, members, you]);
+
   // The phone knows there is a call: its notification, its mute and hang-up.
   const text = callSessionText(lang, roomName);
   useCallMediaSession({
