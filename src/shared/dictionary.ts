@@ -178,6 +178,9 @@ const EN = {
   'call.enlarge': 'Make this bigger',
   'call.shrink': 'Make this smaller again',
   'call.is_muted': 'microphone off',
+  'call.on_call': 'On the call',
+  'call.pip': 'Keep in view',
+  'call.dropped': 'The call dropped — tap to rejoin',
 
   // ------------------------------------------------------------- the menu
   'menu.title': 'Menu',
@@ -836,6 +839,9 @@ const FR: Record<Key, string> = {
   'call.enlarge': 'Agrandis',
   'call.shrink': 'Réduis',
   'call.is_muted': 'micro fermé',
+  'call.on_call': 'Dans l’appel',
+  'call.pip': 'Garde-la en vue',
+  'call.dropped': 'L’appel a lâché — touche pour revenir',
 
   // ------------------------------------------------------------- le menu
   'menu.title': 'Menu',

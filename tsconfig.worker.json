@@ -10,6 +10,7 @@
   "include": [
     "src/web/announce.ts",
     "src/web/backStack.ts",
+    "src/web/callAway.ts",
     "src/web/messageGroups.ts",
     "src/web/dadColour.ts",
     "src/web/favourites.ts",
