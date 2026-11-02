@@ -582,9 +582,16 @@ test('he picks his colour, is told what it changes, and can go back to automatic
  * first: a fresh context that ends up as the SAME member, not a new dad.
  * `first` is left in Settings, where the code was typed.
  */
+let paired = 0;
 async function pairedDevice(browser: Browser, first: Page): Promise<Page> {
   // The home-screen app: nothing stored, so it is a stranger at the door.
-  const second = await (await browser.newContext()).newPage();
+  // From an address of its own: every pairing ASK counts against the join
+  // bucket of the address it came from, and the suite's one shared bucket
+  // (`local`, ten in ten minutes) ran dry on CI once a third test asked —
+  // every join in every file after it was 429 (2026-11-02).
+  const second = await (
+    await browser.newContext({ extraHTTPHeaders: { 'CF-Connecting-IP': `10.9.8.${++paired}` } })
+  ).newPage();
   await second.goto('/');
   await second.getByTestId('pair-start').click();
   await expect(second.getByTestId('pair-code')).toHaveText(/^[A-Z2-9]{8}$/);

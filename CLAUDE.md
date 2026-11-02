@@ -1059,7 +1059,8 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   context without a `CF-Connecting-IP` is the address `local`, ten failures lock
   it for ten minutes, and a spec that deliberately fails a join can make the
   specs after it unable to come in at all (429). Give that attempt an address
-  of its own (`setExtraHTTPHeaders`), as `openRoom` does.
+  of its own (`setExtraHTTPHeaders`), as `openRoom` does. **A pairing ask
+  counts too** (`pairedDevice` in `prefs.spec` asks from `10.9.8.n`).
 - **A NEW file under `src/worker/` is not audited locally** until `test/sql-audit.test.ts`
   changes: its `import.meta.glob` is expanded once and the transform is cached, so
   the file list goes stale (edits to a file that was already there ARE seen). CI is
