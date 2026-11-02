@@ -183,6 +183,24 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   `menuitemcheckbox` (`MarkRow inMenu`).
 - A continued line's clock is hidden by `.line .when` (which owns
   `display: flex`), not fought by a utility.
+- **The list is one Tab stop; the lines are a roving focus.** `ol.lines` is
+  `tabIndex 0` and hands a KEYBOARD focus to the newest typed line (a press
+  is not moved: `pointing`); lines are `tabIndex -1`. Arrows, Home, End move
+  between chat/prompt lines; Enter, Space, Shift+F10 and the menu key
+  dispatch a `contextmenu` at the line's left (Radix anchors there); Tab
+  leaves the list (`beyond`). The ring sits inside the line
+  (`.line:focus-visible`).
+- **On a phone a tap in the list moves no focus** (mousedown prevented under
+  `pointer: coarse`, not on players or fields): WebKit gave a tapped mark's
+  focus to the line and the keyboard dropped. **A tap on nothing with the
+  field focused puts the keyboard away** (`onTapAway`, in the ol's `onClick`,
+  after the line's swallowing capture).
+- **Arrivals are read in a polite `role="log"`** (`data-testid="log"`, sr-only,
+  last five, one `<p>` each) from `announce.ts` (pure): never the backfill,
+  never his own, only while `view === 'talk'` (`onArrived`, from the same
+  `settled` boundary the easing uses).
+- **A picture is named for its sender** ("A photo from Sam", `view.title`),
+  on the line and in the viewer; a file name is never alt text in the room.
 
 ## Dad night (M3)
 
@@ -674,6 +692,10 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   the group already sees: his answer for the night, upcoming events he put up or
   answered, his answers to the questions, his week. A switched-off room leaves
   its part out; a dad who has left is 404.
+- **A name or a face on a line is his profile** (`line-who`, `line-face`):
+  "who is in it" opened on him (`profileOf` → `Here start`). Only for a dad
+  still in the room (`gone`); a departed dad's name stays text. The name is
+  `.who` itself as a button, its accessible name "Sam profile".
 
 - Coming and going is `presence` in D1 (`notePresence`), never the tail. Read
   behind "N here": roster, then the log behind `comings`.
