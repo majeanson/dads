@@ -2618,3 +2618,56 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
 - Two buttons are called "Leave" while he is on a call, so the call spec's
   existing clicks are scoped to the call bar. The a11y suite gained an "on a
   call" scene with the camera on.
+
+## The composer grows, keeps his draft, and shows a keyboard where it is (2026-11-01)
+
+- Marc chose a field that grows over a fixed one-line input. `#say` is a
+  `<textarea rows=1>` that grows from one line (44px, as before) to five
+  (`MAX_LINES`), then scrolls. Measured from `scrollHeight` on every change,
+  height set to auto first so it shrinks again; `field-sizing: content` alone
+  was not used because Safari does not have it. `.composer` is
+  `align-items: end`, so attach and Send stay beside the line being typed.
+- **Enter still sends**, on a laptop and from a phone keyboard's Send key
+  (which arrives as an Enter keydown); Shift+Enter is the new line. Enter goes
+  through `form.requestSubmit()`, so `onSubmit` is still the one way a line
+  leaves, and `submit` now refuses while `sending` — implicit submission used
+  to respect the greyed Send button, Enter on a textarea does not. An IME's
+  Enter (`isComposing`) is choosing a word, not sending. With the tag picks
+  open, Enter, Tab and Escape keep their meaning. Considered: Enter as a new
+  line on a phone (WhatsApp's way); rejected because Marc asked for Enter to
+  send everywhere and the Send key already says so (`enterKeyHint`).
+- The break he typed is the break everybody reads: `.line .body` is
+  `pre-wrap`. A quote and a link card sit inside the body and are `normal` —
+  a quote is cut to one line, and a page's description does not get to bring
+  its own line breaks into the room. The server's trim takes leading and
+  trailing newlines; `MAX_MESSAGE_LENGTH` is unchanged.
+- **The draft is his** (Marc chose this): `drafts.ts`, `dads.draft.<group>`,
+  read as the composer's first state, written 300ms after he stops typing,
+  written as nothing AT ONCE on send (a reload a moment after sending must
+  not bring the line back), flushed on unmount. Only his own typing writes
+  it — a name picked, an emoji, a keystroke — so an edit, which borrows the
+  field for the line's words, never overwrites it; when the edit ends, sent
+  or cancelled, the field gets the draft back instead of being emptied. The
+  draft still counts as "busy" for `useFreshBuild`: a reload would keep the
+  words now, but not the keyboard or the caret.
+- **The tag picker is a listbox the field points at, and the field is still a
+  textbox.** It used to carry `aria-expanded`, which a textbox may not, and a
+  textarea may not be a combobox. Now `aria-autocomplete="list"`,
+  `aria-controls`, and `aria-activedescendant` on the highlighted
+  `tag-pick-<member>`. axe never saw it open; `a11y.spec` scans "tagging a
+  dad" now (the dark run only: in the light run the room's one dad has nobody
+  to tag).
+- **A keyboard can see it is in the composer.** The field wears no outline
+  (it is a hole in the pill), so the pill wears the app's ring for it:
+  `.composer:has(#say:focus-visible)`. The brief said `:focus-visible` alone
+  would keep a tapping thumb ringless; it does not — a text field matches
+  `:focus-visible` on every focus, a tap included — so the rule is under
+  `@media (pointer: fine)`. Only the field: attach and Send have their own.
+- `ComposerHandle.blur()` exists for a tap in the conversation to put the
+  keyboard away.
+- Pinned by `test/drafts.test.ts` and, in `room.spec`, "a line can be more
+  than one line" (both screens read the break; the field grows, caps at five
+  lines and comes back to one), "a keyboard can see the composer" (ring on
+  Tab, none on an iPhone tap), "a half-typed line is still there after a
+  reload" (and after an edit, and gone once sent); the tagging test checks
+  `aria-activedescendant` and the absence of `aria-expanded`.

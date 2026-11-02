@@ -846,6 +846,23 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   swipe-to-reply.
 - **Text fields are 16px** (`text-base`), or iOS zooms.
 - **Send keeps the keyboard** (`onMouseDown` preventDefault, refocus).
+- **The composer's field is a `<textarea>` that grows to five lines**
+  (`MAX_LINES`), measured from `scrollHeight` on every change, never
+  `field-sizing` (Safari). **Enter sends** (`requestSubmit()`, so `onSubmit`
+  stays the one way out), Shift+Enter is a new line, an IME's Enter is not a
+  send, and with the tag picks open Enter/Tab/Escape keep their meaning.
+  `.composer` is `align-items: end`. `.line .body` is `pre-wrap`; a quote and
+  a link card inside it are `normal`.
+- **The draft is his, per room, on this phone** (`drafts.ts`,
+  `dads.draft.<group>`): written 300ms after he stops, at once ('') on send,
+  flushed on unmount. **An edit borrows the field and never writes the
+  draft**; when it ends the draft comes back, not an empty field.
+- **The tag picker's field stays a textbox**: `aria-autocomplete`,
+  `aria-controls`, `aria-activedescendant` (`tag-pick-<member>`) while the
+  picks show, **never `aria-expanded`**. axe scans it (`tagging a dad`).
+- **The composer wears the focus ring for its field**
+  (`.composer:has(#say:focus-visible)`) only under `pointer: fine`: a text
+  field matches `:focus-visible` on a tap too.
 - `overscroll-behavior: none` on html/body, `contain` on the list and sheets,
   `touch-action: manipulation`; pinch zoom left alone.
 - A thumb is 44px; `prod/screens.spec.ts` refuses under 28px.

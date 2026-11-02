@@ -16,6 +16,7 @@
     "src/web/seen.ts",
     "src/web/swipe.ts",
     "src/web/viewMemory.ts",
+    "src/web/drafts.ts",
     "src/shared/**/*.ts",
     "src/worker/**/*.ts",
     "test/**/*.ts",

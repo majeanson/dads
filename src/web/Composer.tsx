@@ -1,6 +1,7 @@
 import {
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -8,6 +9,7 @@ import {
 } from 'react';
 import { Mic, Pencil, Plus, Reply, SendHorizontal, Square, X } from 'lucide-react';
 import { matching, mentionAt, tagged } from '../shared/mentions';
+import { deviceStorage, readDraft, writeDraft } from './drafts';
 import { Face } from './Face';
 import { useT } from './i18n';
 import { Quote } from './Lines';
@@ -23,7 +25,14 @@ export interface ComposerHandle {
   offer: (file: File | undefined) => void;
   /** Put the caret in the field: he chose Reply or Edit on a line. */
   focus: () => void;
+  /** Put the keyboard away: he tapped the conversation to read it. */
+  blur: () => void;
 }
+
+/** The field grows with what he types up to this many lines, then scrolls. */
+const MAX_LINES = 5;
+/** How long typing has to pause before the draft is written down. */
+const DRAFT_MS = 300;
 
 /**
  * Where a dad says something.
@@ -40,6 +49,7 @@ export interface ComposerHandle {
 export function Composer({
   ref,
   busy,
+  groupId,
   me,
   onSend,
   onTyping,
@@ -60,6 +70,8 @@ export function Composer({
    * took was a reload landing on the line he had just sent.
    */
   busy?: RefObject<boolean>;
+  /** The room, whose half-typed line this phone keeps (`drafts.ts`). */
+  groupId: string;
   /** His own member id: a man does not tag himself. */
   me: string;
   onSend: (body: string, mediaId?: string) => void;
@@ -74,7 +86,9 @@ export function Composer({
   onCancelEdit?: () => void;
 }) {
   const { t } = useT();
-  const [draft, setDraft] = useState('');
+  // What he had half typed here before a reload or a look into another room
+  // (Marc asked, 2026-11-01).
+  const [draft, setDraft] = useState(() => readDraft(deviceStorage(), groupId));
   /** Picked but not sent: the dad still gets a caption, or a change of mind. */
   const [pending, setPending] = useState<Prepared | null>(null);
   /** A thumbnail of it, while it is still his to take back. */
@@ -83,7 +97,13 @@ export function Composer({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const recorder = useRecorder();
   const picker = useRef<HTMLInputElement>(null);
-  const say = useRef<HTMLInputElement>(null);
+  const say = useRef<HTMLTextAreaElement>(null);
+  /**
+   * The draft waiting to be written down: one write per pause in his typing,
+   * not one per letter. Flushed when an edit takes the field and when the
+   * composer goes, so the last few letters are never the ones lost.
+   */
+  const unwritten = useRef<{ timer: ReturnType<typeof setTimeout>; text: string } | null>(null);
   /**
    * Which edit is the one on the screen now. An edit waits up to
    * ACK_GRACE_MS for its line, and meanwhile he can press X and pick Edit on
@@ -99,20 +119,82 @@ export function Composer({
   const recording = recorder.state.kind === 'recording' || recorder.state.kind === 'asking';
   if (busy) busy.current = draft.trim() !== '' || pending !== null || sending || recording;
 
-  // Editing takes the field: his words go in, and what he was typing waits
-  // in the outbox of his own head. Cancelling gives the field back empty.
+  function flushDraft() {
+    const waiting = unwritten.current;
+    if (waiting === null) return;
+    clearTimeout(waiting.timer);
+    unwritten.current = null;
+    writeDraft(deviceStorage(), groupId, waiting.text);
+  }
+
+  /**
+   * The field changed because HE changed it: typing, a name picked, an
+   * emoji. Only these are his draft. An edit's words are the line's, not
+   * his, so they are never written down over what he was typing.
+   */
+  function change(next: string) {
+    setDraft(next);
+    if (editing) return;
+    if (unwritten.current !== null) clearTimeout(unwritten.current.timer);
+    unwritten.current = { text: next, timer: setTimeout(flushDraft, DRAFT_MS) };
+  }
+
+  /** Sent: nothing is half typed any more, and that is written at once. */
+  function forgetDraft() {
+    if (unwritten.current !== null) clearTimeout(unwritten.current.timer);
+    unwritten.current = null;
+    writeDraft(deviceStorage(), groupId, '');
+  }
+
+  // Going (sign out, a room left): the last letters are written down.
+  useEffect(
+    () => () => {
+      const waiting = unwritten.current;
+      if (waiting === null) return;
+      clearTimeout(waiting.timer);
+      writeDraft(deviceStorage(), groupId, waiting.text);
+    },
+    [groupId],
+  );
+
+  // Editing takes the field: his words go in, and what he was typing waits,
+  // written down. When the edit ends, sent or cancelled, the field gives his
+  // draft back rather than an empty field.
   const editingId = editing?.id ?? null;
   useEffect(() => {
     // A different line (or none) is a different edit: whatever the last one
     // is still waiting to hear is no longer about the field.
     editSeq.current++;
     if (editing) {
+      flushDraft();
       setDraft(editing.body);
       setPending(null);
-    } else setDraft('');
+    } else setDraft(readDraft(deviceStorage(), groupId));
     // Only when WHICH line changes, not on every render of the same one.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId]);
+
+  /**
+   * The field grows with his words, one line to MAX_LINES, then scrolls
+   * (Marc chose this, 2026-11-01). Measured rather than left to
+   * `field-sizing: content`, which Safari does not have. Height to auto
+   * first, so it shrinks again once the line has gone. Again after a
+   * recording, which takes the field off the row and puts a new one back.
+   */
+  useLayoutEffect(() => {
+    const field = say.current;
+    if (field === null) return;
+    const style = getComputedStyle(field);
+    const line = parseFloat(style.lineHeight) || 24;
+    const cap =
+      line * MAX_LINES +
+      (parseFloat(style.paddingTop) || 0) +
+      (parseFloat(style.paddingBottom) || 0);
+    field.style.height = 'auto';
+    const wanted = field.scrollHeight;
+    field.style.height = `${Math.min(wanted, cap)}px`;
+    field.style.overflowY = wanted > cap ? 'auto' : 'hidden';
+  }, [draft, recording]);
 
   function cancelContext() {
     if (editing) {
@@ -144,11 +226,11 @@ export function Composer({
     tagging !== null && moved.start === tagging.start && moved.query === tagging.query
       ? Math.min(moved.to, picks.length - 1)
       : 0;
-  const readCaret = (field: HTMLInputElement) => setCaret(field.selectionStart ?? 0);
+  const readCaret = (field: HTMLTextAreaElement) => setCaret(field.selectionStart ?? 0);
   function tag(name: string) {
     if (tagging === null) return;
     const { next, caret: to } = tagged(draft, tagging.start, caret, name);
-    setDraft(next);
+    change(next);
     setCaret(to);
     onTyping();
     requestAnimationFrame(() => {
@@ -165,7 +247,11 @@ export function Composer({
 
   useImperativeHandle(
     ref,
-    () => ({ offer: (file) => void pick(file), focus: () => say.current?.focus() }),
+    () => ({
+      offer: (file) => void pick(file),
+      focus: () => say.current?.focus(),
+      blur: () => say.current?.blur(),
+    }),
     [],
   );
 
@@ -220,7 +306,7 @@ export function Composer({
     const at = field?.selectionStart ?? draft.length;
     const to = field?.selectionEnd ?? at;
     const next = draft.slice(0, at) + emoji + draft.slice(to);
-    setDraft(next);
+    change(next);
     onTyping();
     requestAnimationFrame(() => {
       field?.focus();
@@ -230,6 +316,8 @@ export function Composer({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    // Enter reaches here too, and Enter does not know the button is greyed.
+    if (sending) return;
     const body = draft.trim();
 
     // Changing a line: the same Send, a different verb. Not optimistic — the
@@ -265,6 +353,7 @@ export function Composer({
     if (pending === null) {
       onSend(body);
       setDraft('');
+      forgetDraft();
       // The keyboard stays up: he said one thing, he is probably saying
       // another. Blurring here would drop it after every line on a phone.
       say.current?.focus();
@@ -275,6 +364,7 @@ export function Composer({
     if (mediaId === null) return;
     onSend(body, mediaId);
     setDraft('');
+    forgetDraft();
     setPending(null);
     if (picker.current !== null) picker.current.value = '';
     say.current?.focus();
@@ -351,6 +441,7 @@ export function Composer({
               <button
                 type="button"
                 role="option"
+                id={`tag-pick-${p.id}`}
                 aria-selected={i === highlighted}
                 className={cn(
                   'flex h-11 w-full cursor-pointer items-center gap-3 rounded-app px-2 text-left text-base',
@@ -468,17 +559,21 @@ export function Composer({
           </label>
           {/* The field and the emoji button share the middle cell, so the row
               is still three controls wide: the button only exists where there
-              is a mouse, and a phone's keyboard is its own picker. */}
-          <div className="flex min-w-0 items-center">
-            <input
+              is a mouse, and a phone's keyboard is its own picker. Both sit
+              at the bottom of the cell once the field has grown. */}
+          <div className="flex min-w-0 items-end">
+            <textarea
               ref={say}
               id="say"
+              rows={1}
               // 16px: anything smaller and iOS zooms the page in when he taps
-              // the field, and does not zoom it back out.
-              className="h-11 min-w-0 flex-1 rounded-lg border-0 bg-transparent px-2 text-base text-ink placeholder:text-muted/70 focus:outline-none"
+              // the field, and does not zoom it back out. One line is 44px
+              // (24 of line and 10 above and below), the same as before it
+              // could grow; the height past that is set from what he typed.
+              className="block min-h-11 min-w-0 flex-1 resize-none rounded-lg border-0 bg-transparent px-2 py-2.5 text-base leading-6 text-ink placeholder:text-muted/70 focus:outline-none"
               value={draft}
               onChange={(e) => {
-                setDraft(e.target.value);
+                change(e.target.value);
                 readCaret(e.target);
                 onTyping();
               }}
@@ -488,9 +583,12 @@ export function Composer({
               autoCapitalize="sentences"
               // The keyboard's own return key says what it does here.
               enterKeyHint="send"
+              // A textarea is a textbox and may not be a combobox, and a
+              // textbox may not say it is expanded. What it may say is that
+              // a list completes it and which of its rows the keys are on.
               aria-autocomplete={showPicks ? 'list' : undefined}
-              aria-expanded={showPicks ? true : undefined}
               aria-controls={showPicks ? 'tag-picks' : undefined}
+              aria-activedescendant={showPicks ? `tag-pick-${picks[highlighted]!.id}` : undefined}
               onKeyDown={(e) => {
                 if (showPicks && tagging !== null) {
                   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -515,6 +613,15 @@ export function Composer({
                 if (e.key === 'Escape' && (editing || replyTo)) {
                   e.preventDefault();
                   cancelContext();
+                  return;
+                }
+                // Enter sends, as it did when this was one line: a laptop's
+                // Enter, and a phone keyboard's Send key, which arrives as
+                // one. Shift+Enter is the new line. Not mid-composition: an
+                // IME's Enter is choosing a word, not sending it.
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
                 }
               }}
             />

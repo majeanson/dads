@@ -1255,8 +1255,12 @@
     }
   }
 
+  /* A line can be more than one line (2026-11-01): Shift+Enter is a new
+     line, and the break he typed is the break everyone reads. The quote card
+     and a link card inside the words do not keep breaks (below). */
   .line .body {
     overflow-wrap: anywhere;
+    white-space: pre-wrap;
   }
 
   .line .when {
@@ -1293,11 +1297,27 @@
     font-size: 0.8125rem;
   }
 
+  /* The controls sit at the BOTTOM of the row: the field grows to five
+     lines (2026-11-01), and attach and Send stay where the thumb is, beside
+     the line he is typing, not floating halfway up his paragraph. */
   .composer {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    align-items: center;
+    align-items: end;
     gap: 0.4rem;
+  }
+
+  /* A keyboard can see it is in the composer: the field itself wears no
+     outline (it is a hole in the pill), so the pill wears the app's one
+     focus ring for it. A text field matches :focus-visible on EVERY focus,
+     a finger's too, so it is only where there is a fine pointer: a phone
+     tapping into the field does not light up. Only the field — the
+     attach and Send controls have their own ring. */
+  @media (pointer: fine) {
+    .composer:has(#say:focus-visible) {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
   }
 
   /* --- the table --- */
@@ -1477,6 +1497,9 @@
     font-size: 0.875rem;
     line-height: 1.35;
     overflow: hidden;
+    /* Inside a line's words, which keep their breaks. A quote is cut to one
+       line, and a break in it would be a second. */
+    white-space: normal;
   }
 
   .quote-who {
@@ -1506,6 +1529,9 @@
     background: var(--bg-soft);
     color: var(--text);
     text-decoration: none;
+    /* Inside words that keep their breaks; a page's own description does not
+       get to bring its line breaks into the room. */
+    white-space: normal;
     overflow: hidden;
   }
   .link-card-image {
