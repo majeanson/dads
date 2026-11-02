@@ -1980,6 +1980,23 @@ test('on a phone, a photo swipes to the next, zooms in two fingers, and swipes d
   await drag(cx - 100, cy, 220, 4);
   await expect(shot).toHaveAttribute('src', first!);
 
+  // A short, slow pull (well under a third of the width, and the finger
+  // resting before it lifts, so no flick) springs back: the same picture, and
+  // the track back at nought. The track having moved while the finger was on
+  // is what makes "back at nought" mean something.
+  const track = viewer.locator('.viewer-track');
+  const across = () => track.evaluate((el) => (el as HTMLElement).style.translate);
+  await touch('touchStart', [[cx + 40, cy]]);
+  for (let step = 1; step <= 6; step++) await touch('touchMove', [[cx + 40 - step * 10, cy + 1]]);
+  await expect.poll(across).toMatch(/^-\d/);
+  // The finger rests: a flick is measured over the last moments before the
+  // lift, and a finger that has stopped has no speed. Part of the gesture,
+  // not a wait for the app.
+  await page.waitForTimeout(150);
+  await touch('touchEnd', []);
+  await expect.poll(across).toBe('');
+  await expect(shot).toHaveAttribute('src', first!);
+
   // Two fingers apart: it grows about them.
   await touch('touchStart', [
     [cx - 20, cy],
