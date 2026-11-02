@@ -809,6 +809,19 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   conversation's photos from `room.messages`. Save tries the share sheet
   first; `AbortError` is not a failure. Black ground, `contain`. Video and
   voice are not in the viewer.
+- **The viewer has a phone's gestures** (`viewerGestures.ts`, pure; the stage
+  is `touch-action: none`): ten pixels decide the axis; sideways slides to the
+  next or the one before (a third of the width or a flick, rubber band at the
+  ends; the neighbours are on the track either side, keyed on the picture so
+  the one that slid in is the same element); down past 100px or a flick
+  closes (`onClose`), up is resistance. Two fingers zoom 1×–4× about their
+  midpoint, a double tap 2.5× where it lands; zoomed, one finger pans inside
+  the bounds and the swipes are off. Painted by hand (`translate`/`scale`,
+  never `transform`, never state per pixel); every spring is a CSS
+  transition, never a JS timer, so reduced motion covers it. The slide ends
+  on `transitionend`; the reset is a LAYOUT effect on `at`. A mouse keeps the
+  buttons and arrows (a double click zooms, a drag pans a zoomed one). The
+  header and foot sit outside the stage, above it.
 - **A man may only attach what he uploaded, and a picture belongs to ONE
   line** (sender compared on the way in).
 - **Two shelves**: forty pictures, thirty voice notes (ten until 2026-10-29), partitioned by stored

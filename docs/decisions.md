@@ -2769,3 +2769,56 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   the keyboard away" (iPhone context: field focused, tap the words, not
   focused; a second tap opens nothing and the name's tap after it reaches
   the profile).
+
+## The viewer swipes, closes downwards and zooms (2026-11-02)
+
+- Marc asked for the gestures every phone's photo viewer has. The viewer's
+  own comment promised "a swipe or an arrow away" and there was no swipe; on
+  a phone a picture was reached by a tap and left only by the X (or back on
+  Android).
+- `viewerGestures.ts` is the gesture with no DOM in it, the shape of
+  `swipe.ts`: the first ten pixels decide sideways or vertical, nothing
+  commits until the lift. Sideways past a third of the width, or a flick
+  (over 0.5px/ms and at least 30px, speed measured over 30ms windows and
+  nought if the finger had stopped 100ms before lifting), moves on; under
+  that it springs back; at the first or last picture the finger meets the
+  iOS-style rubber band. Down past 100px, or a flick, closes; the black,
+  the header and the foot fade with the distance (never all the way); up
+  is resistance and back.
+- Two fingers zoom about their midpoint, the point of the picture between
+  them staying between them, 1× to 4×; a pinch may go to 0.6× while the
+  fingers are on and snaps to 1× when they lift. Zoomed, one finger pans
+  inside bounds (an edge never comes inside the stage) and the two swipes
+  are off; the last finger of a pinch carries on as a pan and never counts
+  as the first half of a double tap. A double tap toggles 2.5× at the tap.
+- The stage (the middle row) is `touch-action: none`, so the page neither
+  scrolls nor pinch-zooms under it; the header and foot sit outside it and
+  above it, so their buttons never start a gesture. Pointer events with
+  capture. A mouse keeps the buttons and the arrows; it may double-click to
+  zoom and drag a zoomed picture, which there is no other way to see.
+- The neighbours are ON the track, a screen and a 1rem gap either side, so a
+  swipe pulls the next picture in rather than a gap. Each frame is keyed on
+  its media id: when the slide ends (`transitionend` on the track's
+  `translate`) `onMove` changes `at`, and the picture that slid in is the
+  same element now in the middle — nothing reloads. The track is put back
+  at nought in a LAYOUT effect on `at`, before the paint; a plain effect
+  showed the old picture for a frame. A finger down mid-slide finishes it.
+  `at`/`shots` stay the source of truth; the buttons and arrows move
+  without a slide.
+- Painted by hand on the one element (`translate` and `scale`, never
+  `transform`), as the reply swipe is; React state per pixel is a stutter.
+  Every spring is a CSS transition left to the stylesheet (inline
+  `transition: none` while the finger is on), never a JS timer, so the
+  reduced-motion rule shortens them all; a 1ms transition still ends.
+- Considered and not done: animating the old picture out on a key change
+  (the brief's fallback) — the track with neighbours is what a phone does and
+  needed no timers. Swiping down to close with an exit animation: it closes
+  on the lift, as the X does.
+- Tests: `test/viewerGestures.test.ts` (axis, commit thresholds and flicks,
+  rubber band at the ends, close and fade, pinch about the midpoint, zoom
+  clamp, pan bounds, the double tap, taps). E2E "on a phone, a photo swipes
+  to the next, zooms in two fingers, and swipes down to close" (iPhone
+  context, CDP touches: left is the next picture by `src`, right the one
+  before, a pinch grows `scale`, a drag down while zoomed pans and does not
+  close or move on, double taps 1× ↔ 2.5×, down at rest closes onto the
+  conversation). Two real icons, since a 1px picture has nowhere to pan.
