@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GLASSES, type RoomsOpen, type RosterEntry } from '../shared/protocol';
 import { deviceSummary, roomSummary } from '../shared/settingsSummary';
 import { setRooms } from './api';
+import { settleFlips, shownSwitches, withoutFlip, type Flips } from './flips';
 import { BuildLabel } from './BuildLabel';
 import { hashedColour } from './dadColour';
 import { Face } from './Face';
@@ -125,8 +126,11 @@ export function Settings({
   const { t, lang } = useT();
   const me = useMember(you.memberId);
   // Optimistic: the switch answers the finger, and the socket brings everyone
-  // else's copy along a moment later.
-  const [shown, setShown] = useState(rooms);
+  // else's copy along a moment later. Only his own flips are kept here, on top
+  // of `rooms`, so a switch flipped on another phone while this sheet is open
+  // shows here too (it was a copy taken once, on open). See flips.ts.
+  const [flips, setFlips] = useState<Flips>({});
+  const shown = shownSwitches(rooms, flips);
   const [busy, setBusy] = useState(false);
   /** The word and the handover, shown only once the creator asks. */
   const [owning, setOwning] = useState(false);
@@ -167,15 +171,18 @@ export function Settings({
     setLeaf(next);
   }
 
+  // A flip stands until the room says the same thing.
+  useEffect(() => setFlips((now) => settleFlips(rooms, now)), [rooms]);
+
   async function toggle(key: keyof RoomsOpen) {
     if (!mine) return;
-    const next = { ...shown, [key]: !shown[key] };
-    setShown(next);
+    const value = !shown[key];
+    setFlips((now) => ({ ...now, [key]: value }));
     setBusy(true);
     try {
-      await setRooms({ [key]: next[key] });
+      await setRooms({ [key]: value });
     } catch {
-      setShown(shown);
+      setFlips((now) => withoutFlip(now, key));
     } finally {
       setBusy(false);
     }

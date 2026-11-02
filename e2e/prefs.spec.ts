@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { device, home, menu, settings, talk, you } from './talk';
+import { device, home, menu, settings, talk, thisRoom, you } from './talk';
 import { E2E_PREFS_GROUP } from './global-setup';
 
 // One group, and each test brings its own dad.
@@ -619,6 +619,55 @@ test('a new device asks with a code and comes in as the same dad', async ({ brow
 
   await first.context().close();
   await second.context().close();
+});
+
+/**
+ * The room's switches follow the room while Settings is open (2026-11-02).
+ * They were a copy taken when the sheet opened, so the creator flipping one
+ * on his laptop left his phone's open Settings saying the old thing.
+ */
+test('a switch flipped on his other device shows on the Settings already open', async ({
+  browser,
+}) => {
+  // A room with a creator, so the switches are somebody's: his own, opened
+  // from an address of its own (three rooms a day per address).
+  const laptop = await (
+    await browser.newContext({ extraHTTPHeaders: { 'CF-Connecting-IP': '10.9.7.1' } })
+  ).newPage();
+  await laptop.goto('/');
+  await laptop.getByTestId('start-room').click();
+  await laptop.getByLabel('What to call it').fill('The Switch Room');
+  await laptop.getByLabel('The word to get in').fill(`switch room ${Date.now().toString(36)}`);
+  await laptop.getByLabel('Your name').fill('Sid Switch');
+  await laptop.getByTestId('open-room').click();
+  await expect(laptop.getByTestId('connection')).toHaveText(/here$/, { timeout: 20_000 });
+  const phone = await pairedDevice(browser, laptop);
+  await laptop.reload();
+
+  // The phone stands on the list, the laptop in the room's leaf.
+  await settings(phone);
+  const summary = phone.getByTestId('settings-room-summary');
+  await expect(summary).toHaveText('Questions · The week · The table');
+  await thisRoom(laptop);
+  await laptop.getByTestId('room-week').click();
+  await expect(laptop.getByTestId('room-week')).toHaveAttribute('aria-checked', 'false');
+  await expect(summary).toHaveText('Questions · The table');
+
+  // And the phone in the leaf itself, while the laptop turns the table off.
+  await phone.getByTestId('settings-room').click();
+  await expect(phone.getByTestId('room-week')).toHaveAttribute('aria-checked', 'false');
+  await laptop.getByTestId('room-table').click();
+  await expect(phone.getByTestId('room-table')).toHaveAttribute('aria-checked', 'false');
+
+  // His own flip on the phone still answers the finger, and the laptop's
+  // open leaf follows it the same way.
+  await phone.getByTestId('room-week').click();
+  await expect(phone.getByTestId('room-week')).toHaveAttribute('aria-checked', 'true');
+  await expect(laptop.getByTestId('room-week')).toHaveAttribute('aria-checked', 'true');
+  await expect(phone.getByTestId('room-table')).toHaveAttribute('aria-checked', 'false');
+
+  await laptop.context().close();
+  await phone.context().close();
 });
 
 /**
