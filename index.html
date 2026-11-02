@@ -81,6 +81,11 @@
         }
         var lang = localStorage.getItem('dads.lang');
         if (lang === 'en' || lang === 'fr') document.documentElement.lang = lang;
+        // The size of the words, so the first frame is already the size he
+        // asked for rather than the small one with a jump after it
+        // (src/web/textSizeValue.ts holds the same three values).
+        var text = localStorage.getItem('dads.text');
+        if (text === 'large' || text === 'larger') document.documentElement.dataset.text = text;
       } catch (e) {
         // Storage refused. The phone's own setting still applies.
       }

@@ -112,7 +112,10 @@ export function JoinScreen({
         </>
       ) : (
         <>
-          <div className="mb-2 flex items-center gap-4">
+          {/* Lower at a larger text size (2026-11-01): the language switch in
+              the corner grows with the words, and at the largest it came down
+              over the end of "dads" on a 390px phone. */}
+          <div className="mb-2 flex items-center gap-4 [[data-text]_&]:mt-6">
             <DoorMark />
             <h1 className="display m-0 text-5xl">dads</h1>
           </div>

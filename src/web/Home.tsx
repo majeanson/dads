@@ -501,7 +501,13 @@ export function Home({
                   data-done={done ? 'yes' : 'no'}
                 >
                   <Icon size={18} aria-hidden="true" className="shrink-0" />
-                  <span className="min-w-0 truncate text-[0.9375rem]">{t(`start.${step}`)}</span>
+                  {/* Two lines before an ellipsis (2026-11-01): a third of a
+                      390px row holds "Les journées" only just, and at the
+                      larger text sizes one line cut every step to a stub.
+                      The button's height is fixed, so home's budget is not. */}
+                  <span className="line-clamp-2 min-w-0 text-[0.9375rem] leading-tight whitespace-normal">
+                    {t(`start.${step}`)}
+                  </span>
                   {done ? <span className="sr-only">{t('start.done')}</span> : null}
                 </Button>
               );

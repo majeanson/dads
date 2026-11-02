@@ -191,6 +191,23 @@
 }
 
 /*
+ * A phone asked for more contrast (2026-11-01, with the text size): the quiet
+ * words move most of the way to ink and every divider becomes the line that
+ * already makes a control findable. One rule for both themes and both kinds
+ * of override, because it is made of the tokens above rather than new hexes:
+ * it can only move a pair further apart than the audited one, so
+ * `npm run audit:contrast` still holds for it. After the override blocks, so
+ * it beats them.
+ */
+@media (prefers-contrast: more) {
+  :root,
+  :root[data-theme] {
+    --muted: color-mix(in oklab, var(--text) 80%, var(--bg));
+    --border: var(--border-strong);
+  }
+}
+
+/*
  * The one typeface, and the one thing it is allowed to touch.
  *
  * Ink and Salt spends almost no colour, so the identity has to come from
@@ -253,6 +270,20 @@
     overflow: hidden;
   }
 
+  /* The size of the words, this device's (Settings, `textSize.ts`; stamped
+     before the first paint by index.html). Marc asked (2026-11-01): a dad with
+     older eyes can make the words bigger, and a home-screen web app ignores
+     the phone's own text size, so this is the only way he gets it. Everything
+     in `rem` follows the root — the conversation, the sheets, the composer,
+     the rows and the 44px controls, which grow with it. Home's sizes are
+     clamps on `dvh` and stay as they are, so home still never scrolls. */
+  :root[data-text='large'] {
+    font-size: 112.5%;
+  }
+  :root[data-text='larger'] {
+    font-size: 125%;
+  }
+
   body {
     margin: 0;
     min-height: 100dvh;
@@ -269,7 +300,8 @@
       Helvetica,
       Arial,
       sans-serif;
-    font-size: 16px;
+    /* In rem, not px, so the text size a dad picks reaches the body too. */
+    font-size: 1rem;
     line-height: 1.5;
   }
 
@@ -1325,6 +1357,16 @@
       outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
+  }
+
+  /* The field's hint is one line, cut short rather than wrapped. A textarea
+     wraps its placeholder like its text, and at the largest text size
+     (2026-11-01) "Dis quelque chose" broke onto a second line the one-line
+     field does not show, leaving half a word and a stray stroke under it. */
+  #say::placeholder {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* --- the table --- */
