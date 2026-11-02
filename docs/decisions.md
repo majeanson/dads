@@ -2943,3 +2943,64 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   (`home.spec.ts`) stubs the Badging API to a log: a line on home sets 1, going
   in clears, a cold open on home clears and sets nothing until the next line
   (the sentinel) sets 1.
+
+## The words can be bigger (2026-11-01)
+
+- Marc asked: a dad with older eyes can make the words bigger. A home-screen
+  web app ignores the phone's own text size setting, so a setting of our own
+  is the only way he gets it.
+- Three sizes, per device (`dads.text` in localStorage, like the theme):
+  normal, large (112.5%) and larger (125%), set on the ROOT
+  (`:root[data-text]` in tokens.css), so everything in `rem` grows — the
+  conversation, the sheets, the composer, the rows and the 44px controls,
+  which grow with it. The pre-paint script in `index.html` stamps it with the
+  theme and the language, so the first frame is already the size; `useTextSize`
+  (`textSize.ts`) keeps it in step; the pure parse is `textSizeValue.ts`
+  (anything unknown is normal). The body's `font-size: 16px` was the one
+  piece of text sized in px; it is `1rem` now.
+- The control is one segmented control under the theme (`text-size`): three
+  A's of rising size, each segment's word ("Normal / Large / Larger",
+  "Normale / Grande / Plus grande") sr-only and in its title. The words
+  themselves did not fit beside "Taille du texte" at 390px. The A's are in
+  px on purpose: they picture the step, and grown with the words they would
+  not.
+- **Settings still fits 667px at the normal size**, as a joined dad and as
+  the creator, in both languages. The new row cost 63px and Settings had
+  none: the device rows (`Row` in `Toggles.tsx`) lost their 6px padding top
+  and bottom (the 50px track already sets the row; the clamp still sets it on
+  a taller phone), and the invite and "another device" rows went from
+  `py-2.5` to `py-2`. Measured: 601 of 601px, both languages. At the larger
+  sizes Settings scrolls (665 and 738 of ~590px), which is a sheet doing its
+  job. Rejected: merging the theme and the text size into one row ("Display"),
+  which lost the visible label and did not fit in French; and putting the
+  language beside the section's heading, which took its label away.
+- **Home fits at `larger`** on 390×667 with nothing changed: its sizes are
+  clamps on `dvh` and the rem floors still fit. Its three-step row (a room of
+  one) cut every step to a stub there ("Les jo…"), so a step's words now take
+  two lines before an ellipsis, inside the button's fixed height.
+- **The door scrolls down at every size** — 110px at normal on 390×667,
+  304px at larger, measured — because it says what the app is before it asks.
+  The brief said it should not scroll at `larger`; it never fitted at normal,
+  so the test asserts what can hold: nothing sideways, and the corner's
+  language switch, which grows with the words, clear of "dads" (it came down
+  over the end of the name; the name's row drops 1.5rem when `data-text` is
+  set).
+- The room at 390px in French at `larger`: the line grid, a long name, the
+  header, a reply's quote and a link's card all stay inside the screen. The
+  composer's hint wrapped onto a second line the one-line field does not
+  show; `#say::placeholder` is one line now, cut short.
+- **`prefers-contrast: more`** was a one-rule win, so it is in: `--muted`
+  becomes 80% of the way to ink and `--border` becomes `--border-strong`, in
+  one rule for `:root` and `:root[data-theme]`, after the override blocks. It
+  is made of the audited tokens, so it can only move a pair further apart;
+  the contrast audit does not parse it and does not need to.
+- Tests: `test/textSize.test.ts` (the three values; anything else is normal;
+  nothing stamped at normal). e2e `prefs.spec` "a dad makes the words bigger,
+  and they stay bigger" (Larger stamps `data-text`, the root is 20px, a line
+  grows, it survives a reload, Normal takes it off and the root is 16px) and
+  "a phone that asks for more contrast gets firmer lines and quiet words"
+  (both themes and the explicit dark). `fit.spec` "the door fits the width of
+  the small phone at the largest text size", "home fits the small phone at
+  the largest text size" and "the room fits 390px in French at the largest
+  text size" (no sideways scroll, nothing past either edge). The existing
+  Settings fit tests hold at normal.

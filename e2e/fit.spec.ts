@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { E2E_FIT_GROUP } from './global-setup';
-import { home, menu } from './talk';
+import { home, menu, talk } from './talk';
 
 // One group, one night: the last test here clears it to reach the calendar,
 // and every other test in the file sets one.
@@ -490,5 +490,107 @@ test('home fits the small phone in French asking when the next one is', async ({
   expect(await past(page, '.home-card')).toEqual([]);
 
   for (const other of voters) await other.close();
+  await context.close();
+});
+
+/**
+ * The largest text size, stamped before anything loads, the way a dad who
+ * picked it arrives: the pre-paint script reads it from storage.
+ *
+ * Marc asked (2026-11-01) for bigger words. Everything in rem grows with them,
+ * and the floors of home's and the door's clamps are rem too — so these
+ * measure rather than trust that the screens still fit.
+ */
+async function atLarger(browser: Browser, viewport: { width: number; height: number }) {
+  const context = await browser.newContext({ viewport });
+  await context.addInitScript(() => localStorage.setItem('dads.text', 'larger'));
+  const page = await context.newPage();
+  return { context, page };
+}
+
+test('the door fits the width of the small phone at the largest text size', async ({ browser }) => {
+  // The door is a page that scrolls DOWN, and always did: 110px at the normal
+  // size on this phone, 304px at the largest (measured 2026-11-01), because it
+  // says what the app is before it asks for the word. What it may not do is
+  // spill sideways, or put its language switch over its own name.
+  const { context, page } = await atLarger(browser, SMALL);
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-text', 'larger');
+  await expect(page.getByLabel('The word')).toBeVisible();
+  await page.waitForTimeout(300);
+  const across = await page.evaluate(() => {
+    const doc = document.scrollingElement as HTMLElement;
+    return Math.max(0, doc.scrollWidth - window.innerWidth);
+  });
+  expect(across).toBe(0);
+  for (const sel of ['main', 'form', '[data-testid="door-peek"]']) {
+    expect(await past(page, sel)).toEqual([]);
+  }
+  const toggle = (await page.getByRole('group', { name: 'Language' }).boundingBox())!;
+  const name = (await page.getByRole('heading', { level: 1, name: 'dads' }).boundingBox())!;
+  const apart =
+    toggle.x >= name.x + name.width ||
+    name.y >= toggle.y + toggle.height ||
+    toggle.y >= name.y + name.height;
+  expect(apart, JSON.stringify({ toggle, name })).toBe(true);
+  await context.close();
+});
+
+test('home fits the small phone at the largest text size', async ({ browser }) => {
+  const { context, page } = await atLarger(browser, SMALL);
+  await comeIn(page, 'Fit Larger');
+  await expect(page.locator('html')).toHaveAttribute('data-text', 'larger');
+  await page.waitForTimeout(300);
+  expect(await overflow(page, '.home')).toBe(0);
+  expect(await sideways(page, '.home')).toBe(0);
+  expect(await sideways(page, 'main.room')).toBe(0);
+  await context.close();
+});
+
+test('the room fits 390px in French at the largest text size', async ({ browser, baseURL }) => {
+  // The line grid with a long name, the header, a reply's quote and a link's
+  // card, at the largest size in the longer language: nothing hangs off the
+  // side of the phone, and the page has nothing to scroll sideways.
+  const { context, page } = await atLarger(browser, SMALL);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await page.getByLabel('Le mot').fill(E2E_FIT_GROUP.code);
+  await page.getByLabel('Ton nom').fill('Barthélémy Plus Grand');
+  await page.getByRole('button', { name: 'Entre' }).click();
+  await expect(page.getByTestId('connection')).toBeVisible();
+  await talk(page);
+  const field = page.getByLabel('Dis quelque chose');
+  await field.fill(`Une ligne assez longue pour voir le bout de la rangée ${baseURL}/`);
+  await page.getByRole('button', { name: 'Envoie' }).click();
+  const first = page.getByTestId('line').filter({ hasText: 'Une ligne assez longue' });
+  await expect(first.getByTestId('link-card')).toBeVisible();
+  await first.click({ button: 'right' });
+  await page.getByTestId('line-reply').click();
+  await field.fill('La réponse, avec la citation au-dessus');
+  await page.getByRole('button', { name: 'Envoie' }).click();
+  const answer = page.getByTestId('line').filter({ hasText: 'La réponse, avec' });
+  await expect(answer.getByTestId('quote')).toBeVisible();
+  await page.waitForTimeout(300);
+
+  const across = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(across).toBe(0);
+  const off = await page.evaluate(() => {
+    const out: string[] = [];
+    const sels = ['main.room header', '[data-testid="line"]', '[data-testid="quote"]'];
+    for (const sel of [...sels, '[data-testid="link-card"]', '.who']) {
+      for (const el of document.querySelectorAll(sel)) {
+        const box = el.getBoundingClientRect();
+        if (box.width === 0) continue;
+        if (box.right > window.innerWidth + 1) {
+          out.push(`${sel}: ${Math.round(box.right - window.innerWidth)}px past the right`);
+        }
+        if (box.left < -1) out.push(`${sel}: ${Math.round(-box.left)}px past the left`);
+      }
+    }
+    return out;
+  });
+  expect(off).toEqual([]);
   await context.close();
 });

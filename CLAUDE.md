@@ -366,8 +366,14 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - The OS is the default; `[data-theme]` is an explicit override.
 - The override blocks repeat the palettes; **`npm run audit:contrast` fails
   if they drift.**
-- Theme and language are stamped on `<html>` by `index.html`'s pre-paint
-  script.
+- Theme, language and text size are stamped on `<html>` by `index.html`'s
+  pre-paint script. **Text size is per device** (`dads.text`, `textSize.ts`,
+  parsed in `textSizeValue.ts`; unknown → normal), a segmented control
+  (`text-size`) under the theme in Settings.
+- **`prefers-contrast: more` is one rule made of the tokens** (muted 80% to
+  ink, `--border` = `--border-strong`), after the override blocks. Never give
+  it hexes of its own: the audit does not read it, and only a mix of audited
+  tokens is safe unaudited.
 
 ## Look and feel
 
@@ -654,6 +660,14 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   (`prompt-add-open`) like what was asked before; the week puts past weeks on a tab; Settings folds the
   creator's controls behind `room-owning`. Settings is three sections (you; this room; this device): face and glasses sit behind `look-open`, the three switches behind `features-open` (`Fold`; children mount only when open), the device section ends with "Use on another device" (`settings-link`, also still in the Menu), then one quiet line: sign out beside the build label. Settings fills a 667px phone to
   the pixel — measure as a joined dad AND as the creator, in both languages.
+  The device section's rows (language, theme, text size) have no padding of
+  their own: the 50px track sets the row, and that is what paid for the text
+  size's row.
+- **The text size is three steps of the root** (`html[data-text]`, 112.5% and
+  125%), so everything in `rem` grows. The rule is "fits at NORMAL": Settings
+  may scroll at the larger sizes; home must not (`fit.spec` stamps `larger`
+  before load), and the door scrolls down at every size but never sideways.
+  Nothing a dad reads may be sized in `px` (the body was, until 2026-11-01).
 
 ## The conversation is what a dad typed
 

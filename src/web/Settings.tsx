@@ -132,7 +132,7 @@ export function Settings({
               may invite — it is not one of the creator's switches. */}
           <button
             type="button"
-            className="flex min-h-[clamp(2.75rem,6dvh,4rem)] w-full cursor-pointer items-center gap-3 border-b border-line py-2.5 text-left text-[1.125rem] text-ink"
+            className="flex min-h-[clamp(2.75rem,6dvh,4rem)] w-full cursor-pointer items-center gap-3 border-b border-line py-2 text-left text-[1.125rem] text-ink"
             onClick={onInvite}
             data-testid="settings-invite"
           >
@@ -166,8 +166,11 @@ export function Settings({
 
       <section>
         <h2 className="mb-1 text-[1.0625rem] font-semibold text-muted">{t('set.yours')}</h2>
-        {/* One list, one shape. Language, theme and the reminder are three
-            answers to three questions, and they look like it. */}
+        {/* One list, one shape. Language, theme, the size of the words and
+            the reminder are four answers to four questions, and they look
+            like it. The two rows with a link in them are 2px slimmer than
+            they were (2026-11-01), part of the room the text size's row
+            needed on a 667px phone. */}
         <div className="border-t border-line">
           <Toggles />
           <Remind />
@@ -177,7 +180,7 @@ export function Settings({
               phone, and still in the Menu where it always was. */}
           <button
             type="button"
-            className="flex min-h-[clamp(2.75rem,6dvh,4rem)] w-full cursor-pointer items-center gap-3 border-b border-line py-2.5 text-left text-[1.125rem] text-ink"
+            className="flex min-h-[clamp(2.75rem,6dvh,4rem)] w-full cursor-pointer items-center gap-3 border-b border-line py-2 text-left text-[1.125rem] text-ink"
             onClick={onLink}
             data-testid="settings-link"
           >

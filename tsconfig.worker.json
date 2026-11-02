@@ -22,6 +22,7 @@
     "src/web/voiceRate.ts",
     "src/web/viewMemory.ts",
     "src/web/drafts.ts",
+    "src/web/textSizeValue.ts",
     "src/shared/**/*.ts",
     "src/worker/**/*.ts",
     "test/**/*.ts",

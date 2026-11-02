@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useT, type Lang } from './i18n';
 import { cn } from './ui/cn';
 import { useTheme, type Theme } from './theme';
+import { useTextSize, type TextSize } from './textSize';
 
 const LANGS: { id: Lang; label: string }[] = [
   { id: 'en', label: 'EN' },
@@ -96,9 +97,13 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     // The same 64px and the same size of word as a Switch row: these sit in
     // one list with those, and a list that answers three questions in two
-    // sizes makes a dad work out which is which.
-    <div className="flex min-h-[clamp(2.75rem,6dvh,4rem)] items-center justify-between gap-3 border-b border-line py-1.5">
-      <span className="text-[1.125rem] text-muted">{label}</span>
+    // sizes makes a dad work out which is which. No padding of its own
+    // (2026-11-01): the track is already 50px, taller than the row's floor,
+    // and the 12px around it was what a third row (the text size) needed to
+    // keep Settings inside a 667px phone. The clamp still sets the height
+    // wherever the screen has room.
+    <div className="flex min-h-[clamp(2.75rem,6dvh,4rem)] items-center justify-between gap-3 border-b border-line">
+      <span className="min-w-0 truncate text-[1.125rem] text-muted">{label}</span>
       {children}
     </div>
   );
@@ -107,11 +112,17 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 export function Toggles() {
   const { t } = useT();
   const [theme, setTheme] = useTheme();
+  const [size, setSize] = useTextSize();
 
   const themes: { id: Theme; Icon: typeof Sun; label: string }[] = [
     { id: 'system', Icon: SunMoon, label: t('theme.system') },
     { id: 'light', Icon: Sun, label: t('theme.light') },
     { id: 'dark', Icon: Moon, label: t('theme.dark') },
+  ];
+  const sizes: { id: TextSize; glyph: string; label: string }[] = [
+    { id: 'normal', glyph: 'text-[15px]', label: t('text.normal') },
+    { id: 'large', glyph: 'text-[19px]', label: t('text.large') },
+    { id: 'larger', glyph: 'text-[23px]', label: t('text.larger') },
   ];
 
   return (
@@ -134,6 +145,36 @@ export function Toggles() {
             >
               <th.Icon size={20} aria-hidden="true" />
               <span className="sr-only">{th.label}</span>
+            </button>
+          ))}
+        </div>
+      </Row>
+      <Row label={t('menu.text_size')}>
+        {/* Marc asked (2026-11-01): bigger words for older eyes. The same
+            shape as the theme: a glyph per segment, its word for anything
+            reading aloud — three words in French ("Plus grande") did not fit
+            beside the label on a 390px phone. The three A's are in px on
+            purpose: they show the step between the sizes, and grown with the
+            words they would stop being a picture of it. */}
+        <div
+          className={TRACK}
+          role="group"
+          aria-label={t('menu.text_size')}
+          data-testid="text-size"
+        >
+          {sizes.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              aria-pressed={size === s.id}
+              onClick={() => setSize(s.id)}
+              title={s.label}
+              className={segment(size === s.id, 'font-semibold leading-none')}
+            >
+              <span aria-hidden="true" className={s.glyph}>
+                A
+              </span>
+              <span className="sr-only">{s.label}</span>
             </button>
           ))}
         </div>

@@ -1316,17 +1316,27 @@ test('a way back down from far up', async ({ browser }) => {
   // phone, so it is checked against the composer where it matters.
   const far = await comeInOnAPhone(browser, 'Far Up');
   const near = await comeIn(browser, 'Near Down');
-  for (let i = 0; i < 25; i++) {
-    await far.getByLabel('Say something').fill(`far ${String(i).padStart(2, '0')}`);
-    await far.getByRole('button', { name: 'Send', exact: true }).click();
-  }
-  await expect(far.getByTestId('line').filter({ hasText: 'far 24' })).toBeVisible();
-
   const gap = () =>
     far.evaluate(() => {
       const list = document.querySelector('ol.lines')!;
       return Math.round(list.scrollHeight - list.scrollTop - list.clientHeight);
     });
+  // "Far up" is more than a screen above the bottom, so the list has to be
+  // well over two screens tall. Said here, by this test, rather than left to
+  // what the tests before it put in the shared room: run on its own it had
+  // 25 lines and 763px of list on a 488px screen, and no arrow to find.
+  const tall = () =>
+    far.evaluate(() => {
+      const list = document.querySelector('ol.lines')!;
+      return list.scrollHeight > 2.5 * list.clientHeight;
+    });
+  for (let i = 0; i < 80 && !(await tall()); i++) {
+    const words = `far ${String(i).padStart(2, '0')}`;
+    await far.getByLabel('Say something').fill(words);
+    await far.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(far.getByTestId('line').filter({ hasText: words })).toBeVisible();
+  }
+  expect(await tall()).toBe(true);
   const scrollTo = (where: 'top' | 'near') =>
     far.evaluate((where) => {
       const list = document.querySelector('ol.lines')!;

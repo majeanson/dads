@@ -84,6 +84,78 @@ test('a dad asks for dark, and gets dark', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
 });
 
+test('a dad makes the words bigger, and they stay bigger', async ({ page }) => {
+  // Marc asked (2026-11-01): older eyes, and a home-screen app that ignores
+  // the phone's own text size. Nothing is stamped until he asks.
+  await comeIn(page, 'Ted Text');
+  const root = page.locator('html');
+  await expect(root).not.toHaveAttribute('data-text');
+  await page.getByLabel('Say something').fill('bigger words for old eyes, line 01');
+  await page.getByRole('button', { name: 'Send' }).click();
+  const line = page.getByTestId('line').filter({ hasText: 'bigger words for old eyes' });
+  await expect(line).toBeVisible();
+  const before = (await line.boundingBox())!.height;
+
+  await home(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const sizes = page.getByTestId('text-size');
+  await sizes.getByRole('button', { name: 'Larger', exact: true }).click();
+  await expect(sizes.getByRole('button', { name: 'Larger', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(root).toHaveAttribute('data-text', 'larger');
+  // The root's size is what every rem in the app is measured in.
+  const rootSize = () => page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
+  expect(await rootSize()).toBe('20px');
+
+  // The conversation grew with it.
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await talk(page);
+  await expect.poll(async () => (await line.boundingBox())!.height).toBeGreaterThan(before);
+
+  // Stamped before the first paint by the shell's own script, so the room
+  // never paints small and then jumps.
+  await page.reload();
+  expect(await page.evaluate(() => document.documentElement.dataset.text)).toBe('larger');
+  expect(await rootSize()).toBe('20px');
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+
+  // Back to normal takes the stamp off again.
+  await home(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await sizes.getByRole('button', { name: 'Normal', exact: true }).click();
+  await expect(root).not.toHaveAttribute('data-text');
+  expect(await rootSize()).toBe('16px');
+});
+
+test('a phone that asks for more contrast gets firmer lines and quiet words', async ({ page }) => {
+  await comeIn(page, 'Cy Contrast');
+  const tokens = () =>
+    page.evaluate(() => {
+      const css = getComputedStyle(document.documentElement);
+      const get = (name: string) => css.getPropertyValue(name).trim();
+      return { border: get('--border'), strong: get('--border-strong'), muted: get('--muted') };
+    });
+  const plain = await tokens();
+  expect(plain.border).not.toBe(plain.strong);
+
+  // In both themes, the explicit override included: the rule is made of the
+  // tokens, so it follows whichever palette is in force.
+  for (const theme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: theme, contrast: 'more' });
+    const more = await tokens();
+    expect(more.border).toBe(more.strong);
+    expect(more.muted).not.toBe(plain.muted);
+  }
+  await home(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Dark', exact: true }).click();
+  const forced = await tokens();
+  expect(forced.border).toBe(forced.strong);
+  await page.getByRole('button', { name: 'Follow the phone' }).click();
+});
+
 test('the app’s own words follow each dad, in the room they share', async ({ browser }) => {
   // The room writes no lines of its own any more, so there is no sentence in
   // the conversation left to translate. What is still two languages in one
