@@ -19,6 +19,7 @@ import { MembersProvider } from './members';
 import { Splash, wantsStill } from './Splash';
 import { nightShort } from './NightEditor';
 import { isImage } from './media';
+import { jumpLook } from './jump';
 import { toRows } from './messageGroups';
 import { useBackCloses } from './useBackCloses';
 import { useCall } from './useCall';
@@ -233,6 +234,7 @@ export function Room({
     bottom,
     lines,
   });
+  const jump = jumpLook(seen);
 
   useEffect(() => {
     fetchMyRooms()
@@ -536,7 +538,10 @@ export function Room({
               ))}
             </div>
 
-            {!seen.pinned && seen.unseen > 0 ? (
+            {/* One way down, two looks (Marc asked, 2026-11-02): the count
+                when something new is below, the bare arrow from far up when
+                nothing is. Within a screen of the bottom, nothing. */}
+            {jump === 'count' ? (
               <Button
                 look="primary"
                 size="sm"
@@ -546,6 +551,18 @@ export function Room({
               >
                 <ArrowDown size={14} aria-hidden="true" />
                 {t(`room.unseen_${plural(lang, seen.unseen)}`, { n: seen.unseen })}
+              </Button>
+            ) : jump === 'arrow' ? (
+              <Button
+                look="plain"
+                size="icon"
+                className="mx-auto rounded-full text-muted"
+                onClick={seen.toBottom}
+                aria-label={t('room.newest')}
+                data-testid="to-bottom"
+              >
+                <ArrowDown size={20} aria-hidden="true" />
+                <span className="sr-only">{t('room.newest')}</span>
               </Button>
             ) : null}
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { RoomMessage } from '../shared/protocol';
+import { isFarUp } from './jump';
 import { lastSeen, markSeen } from './seen';
 import { useVisualViewport } from './useVisualViewport';
 
@@ -16,6 +17,9 @@ export interface Seen {
   since: number | null;
   /** Reading the newest line, rather than back through the week. */
   pinned: boolean;
+  /** More than a screen above the newest line: far enough that a way back
+   * down is worth a button even with nothing new below (`jump.ts`). */
+  farUp: boolean;
   /** The list scrolled: work out whether he is still at the bottom. */
   onScroll: () => void;
   /** Down to the newest line, which is also reading everything above it. */
@@ -68,6 +72,18 @@ export function useSeen({
   lines: RefObject<HTMLOListElement | null>;
 }): Seen {
   const [pinned, setPinned] = useState(true);
+  const [farUp, setFarUp] = useState(false);
+  /** Where the list was at the last scroll, to tell down from up. */
+  const lastTop = useRef(0);
+  /**
+   * On the way down after a press of the button.
+   *
+   * A smooth scroll passes through every position between, and each of them
+   * reads as "he is up the list": the button came back for the length of the
+   * ride and the count flickered. While this is set, a scroll that went DOWN is
+   * the ride and changes nothing; one that went up is his thumb, and ends it.
+   */
+  const descending = useRef(false);
   /**
    * The newest line he has actually looked at, on this device.
    *
@@ -164,6 +180,10 @@ export function useSeen({
       const wasAtEnd = list.scrollTop >= before - NEAR_BOTTOM_PX;
       if (pinnedNow.current && wasAtEnd) list.scrollTop = list.scrollHeight;
       before = list.scrollHeight - list.clientHeight;
+      // A row growing or going (a line taken back, a picture loading) moves
+      // the bottom without a scroll; "far up" is re-read here rather than with
+      // an observer of its own.
+      setFarUp(isFarUp(list));
     };
     const sizes = new ResizeObserver(stick);
     const rows = (parent: ParentNode) => parent.querySelectorAll(':scope > li');
@@ -197,8 +217,11 @@ export function useSeen({
 
   // Reaching the newest line is reading everything down to it — but that is
   // the mark-advancing effect's job, which fires as soon as `pinned` flips.
+  // Smooth, unless he has asked the phone for no motion; then it is a jump.
   const toBottom = useCallback(() => {
-    bottom.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+    descending.current = !still;
+    bottom.current?.scrollIntoView({ block: 'end', behavior: still ? 'auto' : 'smooth' });
     setPinned(true);
   }, [bottom]);
 
@@ -210,18 +233,37 @@ export function useSeen({
    * echo follows when it lands.
    */
   const sent = useCallback(() => {
+    descending.current = false;
     bottom.current?.scrollIntoView({ block: 'end' });
     setPinned(true);
   }, [bottom]);
 
-  const onScroll = useCallback(() => setPinned(atBottom()), [atBottom]);
-  const unpin = useCallback(() => setPinned(false), []);
+  const onScroll = useCallback(() => {
+    const el = lines.current;
+    if (el === null) return;
+    const wentUp = el.scrollTop < lastTop.current;
+    lastTop.current = el.scrollTop;
+    setFarUp(isFarUp(el));
+    const end = atBottom();
+    if (descending.current) {
+      if (!end && !wentUp) return;
+      descending.current = false;
+    }
+    setPinned(end);
+  }, [atBottom, lines]);
+  const unpin = useCallback(() => {
+    descending.current = false;
+    setPinned(false);
+  }, []);
 
   // The keyboard coming up takes a third of the list. If he was reading the
-  // newest line, he still is.
+  // newest line, he still is. And the screen just changed height, which is
+  // what "far" is measured in, without the list necessarily scrolling.
   const keepBottom = useCallback(() => {
     if (pinned) bottom.current?.scrollIntoView({ block: 'end' });
-  }, [pinned, bottom]);
+    const el = lines.current;
+    if (el !== null) setFarUp(isFarUp(el));
+  }, [pinned, bottom, lines]);
   useVisualViewport(keepBottom);
 
   // Coming back to the tab is seeing it. Coming back after long enough is
@@ -277,5 +319,5 @@ export function useSeen({
     done?.catch(() => {});
   }, [unseen]);
 
-  return { unseen, since, pinned, onScroll, toBottom, sent, unpin };
+  return { unseen, since, pinned, farUp, onScroll, toBottom, sent, unpin };
 }
