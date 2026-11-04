@@ -125,6 +125,25 @@ describe('new since you were here', () => {
     expect(kinds(rows)).toEqual(['DAY', 'one', 'NEW', 'two', 'three']);
   });
 
+  it('passes over his own lines: what he said is not news to him', () => {
+    const mark = { ...since, me: 'mem_me' };
+    const a = msg({ createdAt: NOON, body: 'one' });
+    const mine = msg({ createdAt: NOON + 1000, body: 'mine', memberId: 'mem_me' });
+    const c = msg({ createdAt: NOON + 2000, body: 'three' });
+    expect(kinds(toRows([a, mine], NOON, undefined, { ...mark, seq: a.seq }))).toEqual([
+      'DAY',
+      'one',
+      'mine',
+    ]);
+    expect(kinds(toRows([a, mine, c], NOON, undefined, { ...mark, seq: a.seq }))).toEqual([
+      'DAY',
+      'one',
+      'mine',
+      'NEW',
+      'three',
+    ]);
+  });
+
   it('reintroduces the man he starts reading from', () => {
     const a = msg({ createdAt: NOON, body: 'one' });
     const b = msg({ createdAt: NOON + 1000, body: 'two' });

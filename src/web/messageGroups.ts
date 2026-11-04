@@ -104,10 +104,15 @@ function supersedes(a: RoomMessage, b: RoomMessage): boolean {
  * there is nothing after it, and nothing when there is nothing BEFORE it
  * either — a divider at the very top of the list tells him nothing a fresh
  * list does not.
+ *
+ * `me` is whoever is reading: his own line is never news. It used to count, so
+ * a dad back in a room with nothing new made the boundary himself with the
+ * first thing he said, and the list "landed" on it instead of showing his line.
  */
 export interface Since {
   seq: number;
   label: string;
+  me?: string;
 }
 
 export function toRows(
@@ -138,7 +143,7 @@ export function toRows(
       previous = null;
     }
 
-    if (!marked && since !== null && message.seq > since.seq) {
+    if (!marked && since !== null && message.seq > since.seq && message.memberId !== since.me) {
       rows.push({ kind: 'new', key: 'new', label: since.label });
       marked = true;
       // And so does the line he starts reading from.

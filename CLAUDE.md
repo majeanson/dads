@@ -845,7 +845,9 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   instant, pins) so his own line lands in sight.
 - "New since you were here" is ONE divider (`toRows` with `since`), never at
   the very top; its boundary is settled against the room's mark when the
-  room next speaks, so it means since he was here on ANY of his devices.
+  room next speaks, so it means since he was here on ANY of his devices. His
+  own line is never the boundary (`Since.me`): it would land him on the
+  divider and unpin him.
 - The tab title carries the unseen count.
 - **One way down, two looks** (`to-bottom`, `jumpLook` in `jump.ts`): not
   pinned with something unseen, the primary "N new" pill; more than a screen

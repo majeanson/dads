@@ -221,3 +221,26 @@ test('a new table clears it for everybody at once', async ({ browser }) => {
   await marc.context().close();
   await sam.context().close();
 });
+
+test('a line sent beside the table lands in sight', async ({ browser }) => {
+  // Wide, the conversation stays on the screen beside the frame, but it does
+  // not count as being watched, and the line that came back was left below.
+  const page = await comeIn(browser, 'Beside');
+  await open(page, 'Open the table');
+  await expect(page.getByTestId('table').locator('iframe')).toBeVisible();
+
+  const gap = () =>
+    page.evaluate(() => {
+      const list = document.querySelector('ol.lines')!;
+      return Math.round(list.scrollHeight - list.scrollTop - list.clientHeight);
+    });
+  for (let i = 0; i < 20; i++) {
+    const words = `beside ${String(i).padStart(2, '0')}`;
+    await page.getByLabel('Say something').fill(words);
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(page.getByTestId('line').filter({ hasText: words })).toBeVisible();
+  }
+  await expect.poll(gap).toBeLessThan(4);
+
+  await page.context().close();
+});

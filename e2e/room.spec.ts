@@ -1311,6 +1311,40 @@ test('a dad at the bottom stays at the bottom when the last line grows', async (
   await page.context().close();
 });
 
+test('his first line of a sitting lands in sight, however tall', async ({ browser }) => {
+  // Marc, 2026-11-04. A dad who has been here before has a boundary (`since`)
+  // that nothing has crossed yet, and his own line was what crossed it: the
+  // divider appeared above it and the list "landed" there, top of the screen,
+  // not pinned. A new dad has no boundary, which is why every test missed it.
+  // The phone's height is the one the keyboard leaves.
+  const page = await comeInOnAPhone(browser, 'Back Again');
+  await page.setViewportSize({ width: 390, height: 420 });
+  for (let i = 0; i < 6; i++) {
+    const words = `again ${String(i).padStart(2, '0')}`;
+    await page.getByLabel('Say something').fill(words);
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(page.getByTestId('line').filter({ hasText: words })).toBeVisible();
+  }
+  await page.reload();
+  await talk(page);
+  await expect(page.getByTestId('connection')).toHaveText(/here$/);
+  await expect(page.getByTestId('line').filter({ hasText: 'again 05' })).toBeVisible();
+
+  const gap = () =>
+    page.evaluate(() => {
+      const list = document.querySelector('ol.lines')!;
+      return Math.round(list.scrollHeight - list.scrollTop - list.clientHeight);
+    });
+  const tall = Array.from({ length: 14 }, (_, i) => `tall ${i}`).join('\n');
+  await page.getByLabel('Say something').fill(tall);
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(page.getByTestId('line').filter({ hasText: 'tall 13' })).toBeVisible();
+  await expect.poll(gap).toBeLessThan(4);
+  await expect(page.getByTestId('since')).toHaveCount(0);
+
+  await page.context().close();
+});
+
 test('a way back down from far up', async ({ browser }) => {
   // Marc asked (2026-11-02): far up the week with nothing new, he had to
   // thumb all the way back. One button, two looks: the count when something

@@ -364,7 +364,7 @@ export function Room({
       yesterday: t('day.yesterday'),
       locale: lang === 'fr' ? 'fr-CA' : 'en-CA',
     },
-    seen.since === null ? null : { seq: seen.since, label: t('room.since') },
+    seen.since === null ? null : { seq: seen.since, label: t('room.since'), me: session.member.id },
   );
   const hasNew = rows.some((r) => r.kind === 'new');
 

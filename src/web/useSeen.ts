@@ -127,8 +127,10 @@ export function useSeen({
     // a dad scrolling must never itself cause a scroll or count as an arrival.
     if (count === counted.current) return;
     counted.current = count;
-    if (watching && pinned) bottom.current?.scrollIntoView({ block: 'end' });
-  }, [messages.length, watching, pinned, bottom]);
+    // `view`, not `watching`: beside an open table the list is still on the
+    // screen, and the line he just sent has to land there too.
+    if (view === 'talk' && pinned) bottom.current?.scrollIntoView({ block: 'end' });
+  }, [messages.length, view, pinned, bottom]);
 
   /**
    * Going in is reading it, and so is scrolling to the newest line — with the

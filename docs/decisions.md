@@ -3336,3 +3336,21 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   and Enter sends it" checks before the field is focused, after the hello is
   in: focusing the field fires `select` and puts the caret right, which is
   why a first version of the test passed on the old code.
+
+## His own line is never "new" (2026-11-04)
+
+- Marc: after sending, the chat should end up where the down arrow takes it.
+  `sent()` already did that; what undid it was the divider. A dad back in a
+  room with nothing new holds a boundary nothing has crossed, and his own echo
+  crossed it: `toRows` drew "new since you were here" above his line, `hasNew`
+  flipped, and the landing effect scrolled to the divider and unpinned him.
+  With a short line the scroll clamps at the end and it looks fine; with the
+  keyboard up and a long line he was left 158px short.
+- The first-sitting dad has `since === null`, and every e2e dad was one, so no
+  test could see it. The new one reloads first.
+- Fixed where it was wrong: `Since.me`, own lines are passed over and the
+  divider goes before the first line by somebody else. The landing effect is
+  unchanged.
+- Beside an open table the follow-down was skipped because `watching` is false
+  there, though the list is on the screen. That effect now reads `view`;
+  `watching` still decides what counts as read.
