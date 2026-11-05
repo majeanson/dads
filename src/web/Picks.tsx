@@ -46,21 +46,27 @@ export function Picks({
   const [state, setState] = useState<State>({ status: 'looking' });
   const [again, setAgain] = useState(0);
   const [refused, setRefused] = useState(false);
-  const shown = useRef<PicksOnly | null>(null);
 
   useEffect(() => {
     const stop = new AbortController();
-    // Only a new filter blanks the list; a stir or a removal re-reads under it.
-    if (shown.current !== only) setState({ status: 'looking' });
-    shown.current = only;
     fetchPicks(only, stop.signal).then(
-      (picks) => setState({ status: 'ready', picks }),
+      (picks) => {
+        if (!stop.signal.aborted) setState({ status: 'ready', picks });
+      },
       () => {
         if (!stop.signal.aborted) setState({ status: 'failed' });
       },
     );
     return () => stop.abort();
   }, [only, pulse, again]);
+
+  // Blanked with the filter, in one render, so the old kind never shows under
+  // the new one. A stir or a removal re-reads under the list instead.
+  const choose = (id: PicksOnly) => {
+    if (id === only) return;
+    setState({ status: 'looking' });
+    setOnly(id);
+  };
 
   const take = (id: string) => {
     setRefused(false);
@@ -80,7 +86,7 @@ export function Picks({
             key={id}
             type="button"
             aria-pressed={only === id}
-            onClick={() => setOnly(id)}
+            onClick={() => choose(id)}
             className={segment(only === id, 'flex-1 text-base font-semibold')}
           >
             {t(`picks.only_${id}`)}

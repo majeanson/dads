@@ -662,7 +662,11 @@ export function Room({
           nightPulse={nightPulse}
           eventsPulse={room.eventsPulse}
           picksPulse={room.picksPulse}
-          onSend={room.send}
+          onSend={(...line) => {
+            room.send(...line);
+            // Sending is going to the bottom, from the sheet as from the composer.
+            seen.sent();
+          }}
           rooms={room.rooms}
           members={room.members}
           createdBy={room.createdBy}

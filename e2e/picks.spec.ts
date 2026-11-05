@@ -34,7 +34,7 @@ async function comeIn(page: Page, name: string): Promise<void> {
 
 async function say(page: Page, words: string): Promise<void> {
   await page.getByLabel('Say something').fill(words);
-  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
   // A link is shown shortened, so the line is found by the words before it.
   const needle = words.split(' https://')[0]!;
   await expect(page.getByTestId('line').filter({ hasText: needle })).toBeVisible();
@@ -245,4 +245,28 @@ test('the add box posts a line in the conversation and lists it', async ({ page,
   await page.getByTestId('line-retract').click();
   await expect(line).toHaveCount(0);
   await expect(theirs).toHaveCount(0);
+});
+
+test('a line sent from the sheet is in sight when the sheet closes', async ({ browser }) => {
+  // Sending takes him to the bottom from wherever he was (Marc, 2026-11-04),
+  // and the add box sends too.
+  const context = await browser.newContext({ viewport: { width: 390, height: 500 } });
+  const page = await context.newPage();
+  await comeIn(page, 'Sheet Sender');
+  for (let i = 0; i < 12; i++) await say(page, `filler ${String(i).padStart(2, '0')}`);
+  await page.evaluate(() => {
+    document.querySelector('ol.lines')!.scrollTop = 0;
+  });
+
+  await openPicks(page);
+  await page.getByTestId('picks-add-open').click();
+  await page.getByLabel('A title or a link').fill('Sent from the sheet');
+  await page.getByTestId('picks-add-send').click();
+  await expect(page.getByTestId('picks-added')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await expect(
+    page.getByTestId('line').filter({ hasText: 'Sent from the sheet' }),
+  ).toBeInViewport();
+  await context.close();
 });

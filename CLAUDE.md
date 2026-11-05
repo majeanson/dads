@@ -812,7 +812,7 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - **The line menu offers three plain items** under a label (`line-pick`,
   `line-pick-watch|listen|read`), never a submenu. Not optimistic: the status line
   above the composer says "On the list." or that it failed. Removal lives only on
-  the sheet. Add box: fold `picks-add-open`, field, segmented (`picks-add-<kind>`,
+  the sheet. Add box: fold `picks-add-open`, which sends through `seen.sent()` like the composer, field, segmented (`picks-add-<kind>`,
   Read by default), `picks-add-send`, `picks-added`.
 - **`useNear` needs `scrollMargin`** as well as `rootMargin`: the sheet scrolls in
   its own panel, and the root margin stops at that clip.
