@@ -106,6 +106,41 @@ design iterated as its own pass — this is that pass.
 Worker + D1 to production, `dads.marcportal.com` DNS + custom domain, secrets, seed the real
 group, invite the actual dads.
 
+## Not started: the list of recommendations
+
+Planned 2026-11-04, nothing built. Why it has this shape is in
+[docs/decisions.md](docs/decisions.md), under the same heading.
+
+**A recommendation is a line.** There is no hub with posts of its own: this is
+a view of what was already said, so it works on the archive from day one, and
+replies, marks, search, export and taking a line back already apply. A Menu row
+opens a sheet, like the album. Links get onto it by themselves; anything else is
+added by hand.
+
+**Phase 1: the list, no migration.** `GET /api/picks` reads `chat` and `prompt`
+lines holding a link from a known site, sorted by pure code in `shared/`:
+Watch (YouTube, IMDb, Letterboxd), Listen (Spotify, Apple Music/Podcasts), Read
+(Goodreads, Open Library, Amazon, Apple Books). Cards use the link previews,
+newest first, with who shared it, when, and the line's marks. One segmented
+control: All, Watch, Listen, Read. A tap opens the link in its own app.
+Spotify previews go through its oEmbed; first check that it answers a Worker.
+Cards load as they scroll into view, or a first look fetches every page at once.
+
+**Phase 2: by hand.** "Add to the list" in the line's long-press menu, with
+Watch, Listen or Read; a table `line_picks`, cascading from the message, removed
+only by the dad who added it. An add box in the sheet posts an ordinary line.
+Adding sends a `stir` and says nothing in the room.
+
+**Phase 3: only if it gets used.** Covers from Open Library; a per-dad "want to
+try" list.
+
+**Left out:** ratings, playlists, push, a Menu dot, anything on home, a player
+in the app, connecting anybody's account.
+
+**When it is built:** `line_picks` goes in `backupTables.ts`, cascades with the
+room and names `group_id`; both languages; a line in "What this is"; pick a name
+that is not "shelf" (the media code already uses it).
+
 ## Testing posture
 
 - Unit/integration on the Worker + DO with `vitest-plugin` (real DO, real D1 migrations).

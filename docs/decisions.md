@@ -3354,3 +3354,17 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
 - Beside an open table the follow-down was skipped because `watching` is false
   there, though the list is on the screen. That effect now reads `view`;
   `watching` still decides what counts as read.
+
+## The list of recommendations (2026-11-04, planned, not built)
+
+- Marc: the dads often talk about YouTube, Spotify and books, so could there
+  be a hub for them. The plan is in PLAN.md.
+- **A view of the lines, not a place to post.** A hub with posts of its own
+  would start empty and split the talk in two. Most recommendations are already
+  in the archive, and everything a line can do comes free.
+- **Automatic and by hand, Marc's choice.** Automatic alone never finds a book
+  named in passing, which has no link to detect; by hand alone starts empty and
+  depends on anybody bothering. The cost, accepted: a throwaway video lands on
+  the list too.
+- **Written up rather than built, also Marc's choice.** Phase 1 is the first
+  step when it comes back, and it needs no migration.
