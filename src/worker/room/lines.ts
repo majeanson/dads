@@ -8,6 +8,7 @@ import {
 } from '../../shared/protocol';
 import type { Said } from '../../shared/said';
 import { mentioned } from '../../shared/mentions';
+import { pickOf, type PickCategory } from '../../shared/picks';
 import { newId } from '../identity';
 import { forgetMedia, mediaFor } from '../media';
 import { todaysPrompt } from '../prompts';
@@ -34,7 +35,13 @@ const FRESH_BACKFILL = 80;
  */
 const CID_MEMORY_MS = 5 * 60_000;
 
-/** A line a dad typed, answering today's question or not. */
+/**
+ * A line a dad typed, answering today's question or not.
+ *
+ * `say` posts what a dad typed and nothing else. A `pick` on the frame is
+ * still his doing: the add box on the list of recommendations posts an
+ * ordinary line (recommending is saying) and asks for it to be listed too.
+ */
 export async function say(
   room: Room,
   ws: WebSocket,
@@ -116,7 +123,7 @@ export async function say(
   // he typed are the thing and the quote is the context.
   const reply = frame.replyTo === undefined ? null : await quoteOf(room, frame.replyTo);
 
-  await post(room, 'chat', who.memberId, who.name, body, null, media, null, cid, reply);
+  await post(room, 'chat', who.memberId, who.name, body, null, media, null, cid, reply, frame.pick);
   // Off the line's path: the push is nobody's echo, and the frame handler
   // should not hold the socket for a members read and a round of sends.
   room.ctx.waitUntil(tellTheNamed(room, who, body));
@@ -332,6 +339,10 @@ export async function retract(room: Room, id: string, memberId: string): Promise
   await unquote(room, id);
 
   room.broadcast({ t: 'gone', id, rev: noteChange(room, 'gone', id) });
+  // The list of recommendations is a view of the archive, and this line may
+  // have been on it (by its link, or by hand: the row went with the line, by
+  // the cascade). An open list looks again. Rare, and a re-read is cheap.
+  room.broadcast({ t: 'stir', what: 'picks' });
 }
 
 /**
@@ -467,6 +478,7 @@ async function post(
   said: Said | null = null,
   cid?: string,
   reply: ReplyTo | null = null,
+  pick?: PickCategory,
 ): Promise<void> {
   const id = newId('msg');
   const createdAt = Date.now();
@@ -510,11 +522,44 @@ async function post(
   // his own line appear.
   room.broadcast(cid === undefined ? { t: 'msg', message } : { t: 'msg', message, cid });
   await archive(room, message);
+  if (pick !== undefined && memberId !== null) await listed(room, id, memberId, body, pick);
   // An answer is the one line that changes what is waiting for somebody ("a
   // question for you"), and what is waiting is read from D1 — so it is said
   // after the archive write, never before, or the screen asks too early and
   // is told the question is still open.
   if (message.kind === 'prompt') room.broadcast({ t: 'stir', what: 'todo' });
+}
+
+/**
+ * Put the line just posted on the list of recommendations, if he asked.
+ *
+ * After the archive write: the row selects from `messages`, so a line whose
+ * archive write failed is simply not listed. A line the classifier already
+ * recognises needs no row. A repeated cid never gets here (it is answered
+ * with the line it already was), so nothing doubles.
+ */
+async function listed(
+  room: Room,
+  id: string,
+  memberId: string,
+  body: string,
+  pick: PickCategory,
+): Promise<void> {
+  const groupId = room.groupId();
+  if (groupId === undefined) return;
+  try {
+    if (pickOf(body) === null) {
+      await room.env.DB.prepare(
+        `INSERT OR IGNORE INTO line_picks (message_id, group_id, member_id, category, created_at)
+         SELECT ?1, ?2, ?3, ?4, ?5 FROM messages WHERE id = ?1 AND group_id = ?2`,
+      )
+        .bind(id, groupId, memberId, pick, Date.now())
+        .run();
+    }
+    room.broadcast({ t: 'stir', what: 'picks' });
+  } catch (err) {
+    console.error('pick failed', { id }, err);
+  }
 }
 
 async function archive(room: Room, message: RoomMessage): Promise<void> {

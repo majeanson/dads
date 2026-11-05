@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchMyRooms, fetchTodo, keepMedia, leavingRoom, type Session, type Todo } from './api';
+import {
+  addPick,
+  fetchMyRooms,
+  fetchTodo,
+  keepMedia,
+  leavingRoom,
+  type Session,
+  type Todo,
+} from './api';
+import type { PickCategory } from '../shared/pickCategories';
 import type { RoomMessage } from '../shared/protocol';
 import { ArrowDown } from 'lucide-react';
 import { CallBar } from './CallBar';
@@ -324,6 +333,14 @@ export function Room({
     [t],
   );
 
+  /** Not optimistic: the note says it is on the list when the room took it. */
+  const pick = useCallback(
+    (id: string, category: PickCategory) => {
+      void addPick(id, category).then((ok) => setNote(t(ok ? 'line.picked' : 'line.pick_failed')));
+    },
+    [t],
+  );
+
   const typingNames = [...room.typing.entries()]
     .filter(([id]) => id !== session.member.id)
     .map(([, name]) => name);
@@ -516,6 +533,7 @@ export function Room({
               // the line (`away` in LineMenu).
               onAway={() => composer.current?.focus()}
               onKeep={(media) => keep(media.id, !media.kept)}
+              onPick={pick}
               onOpenPhoto={setViewing}
               onOpenProfile={(memberId) => {
                 setProfileOf(memberId);
@@ -643,6 +661,8 @@ export function Room({
           pollPulse={room.pollPulse}
           nightPulse={nightPulse}
           eventsPulse={room.eventsPulse}
+          picksPulse={room.picksPulse}
+          onSend={room.send}
           rooms={room.rooms}
           members={room.members}
           createdBy={room.createdBy}

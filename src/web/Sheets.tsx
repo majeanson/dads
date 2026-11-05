@@ -19,6 +19,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import type { PickCategory } from '../shared/pickCategories';
 import type { CallMember, RoomMessage, RoomsOpen, RosterEntry } from '../shared/protocol';
 import type { DadNight } from '../shared/dadNight';
 import type { Todo } from './api';
@@ -169,6 +170,8 @@ export function Sheets({
   pollPulse,
   nightPulse,
   eventsPulse,
+  picksPulse,
+  onSend,
   rooms,
   members,
   createdBy,
@@ -215,6 +218,10 @@ export function Sheets({
   nightPulse: number;
   /** And when somebody puts up, moves, cancels or answers an event. */
   eventsPulse: number;
+  /** And when somebody adds to or takes off the list of recommendations. */
+  picksPulse: number;
+  /** The add box on that list posts an ordinary line, so it uses the room's. */
+  onSend: (body: string, mediaId?: string, replyTo?: string, pick?: PickCategory) => void;
   rooms: RoomsOpen;
   todo: Todo;
   tableOpen: boolean;
@@ -334,7 +341,7 @@ export function Sheets({
     return (
       <Sheet title={t('picks.title')} pose={ThumbsUp} onClose={close}>
         <Body>
-          <Picks />
+          <Picks you={you} send={onSend} pulse={picksPulse} />
         </Body>
       </Sheet>
     );

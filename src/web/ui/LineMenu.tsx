@@ -1,6 +1,7 @@
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { Copy, Pencil, Pin, PinOff, Reply, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { PICK_CATEGORIES, type PickCategory } from '../../shared/pickCategories';
 import { useT } from '../i18n';
 import { MarkRow } from '../Marks';
 import { cn } from './cn';
@@ -68,6 +69,7 @@ export function LineMenu({
   onReact,
   onReply,
   onEdit,
+  onPick,
   onAway,
   children,
 }: {
@@ -86,6 +88,11 @@ export function LineMenu({
   onReply: () => void;
   /** Change the words. His own only, like taking it back. */
   onEdit?: () => void;
+  /**
+   * Put this line on the list of recommendations. Absent when the line has
+   * no words or the list already recognises it by its link. Anybody's line.
+   */
+  onPick?: (category: PickCategory) => void;
   /** Where the focus goes once Reply or Edit has sent him away: the composer. */
   onAway?: () => void;
   children: ReactNode;
@@ -205,6 +212,35 @@ export function LineMenu({
               <Copy size={15} aria-hidden="true" className="text-muted" />
               {t('line.copy')}
             </ContextMenu.Item>
+          )}
+
+          {/* Three plain items under a label, side by side, and not a
+              submenu: a submenu opens on hover and is poor under a thumb.
+              They wrap with the menu's width (never wider than the room left
+              at the press), and each is a real target. The menu closes on
+              select and the focus goes back to the line, as it does for a
+              mark; nothing here sends him to the composer. */}
+          {onPick === undefined ? null : (
+            <ContextMenu.Group data-testid="line-pick" aria-label={t('line.pick')}>
+              <ContextMenu.Label className="px-2.5 pt-1.5 pb-0.5 text-sm text-muted">
+                {t('line.pick')}
+              </ContextMenu.Label>
+              <div className="flex flex-wrap gap-1 px-1 pb-1">
+                {PICK_CATEGORIES.map((c) => (
+                  <ContextMenu.Item
+                    key={c}
+                    className={cn(
+                      ITEM,
+                      'min-h-11 flex-1 justify-center rounded-app border border-line',
+                    )}
+                    data-testid={`line-pick-${c}`}
+                    onSelect={() => onPick(c)}
+                  >
+                    {t(`picks.only_${c}`)}
+                  </ContextMenu.Item>
+                ))}
+              </div>
+            </ContextMenu.Group>
           )}
 
           {/* No arming. Keeping is reversible and costs nothing, and letting

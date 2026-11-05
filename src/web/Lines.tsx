@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 
 import type { Attachment as MessageAttachment, RoomMessage } from '../shared/protocol';
 import { parts, shortLink } from '../shared/linkify';
 import { splitMentions } from '../shared/mentions';
+import type { PickCategory } from '../shared/pickCategories';
+import { pickOf } from '../shared/picks';
 import { describeSaid } from '../shared/said';
 import { Attachment } from './Attachment';
 import { Reply } from 'lucide-react';
@@ -76,6 +78,7 @@ export function Lines({
   onEdit,
   onAway,
   onKeep,
+  onPick,
   onOpenPhoto,
   onOpenProfile,
   onTapAway,
@@ -99,6 +102,8 @@ export function Lines({
   /** The composer takes the focus once the line menu has closed. */
   onAway: () => void;
   onKeep: (media: MessageAttachment) => void;
+  /** Put a line on the list of recommendations. */
+  onPick: (id: string, category: PickCategory) => void;
   onOpenPhoto: (mediaId: string) => void;
   /** A name or a face on a line: that dad's profile. */
   onOpenProfile: (memberId: string) => void;
@@ -376,6 +381,12 @@ export function Lines({
             onRetract={row.message.memberId === you ? () => onRetract(row.message.id) : undefined}
             onReply={() => onReply(row.message)}
             onEdit={row.message.memberId === you ? () => onEdit(row.message) : undefined}
+            // Not for a line the list already recognises by its link.
+            onPick={
+              row.message.body === '' || pickOf(row.message.body) !== null
+                ? undefined
+                : (category) => onPick(row.message.id, category)
+            }
             onAway={onAway}
           >
             <li

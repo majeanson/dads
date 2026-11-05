@@ -128,7 +128,9 @@ control: All, Watch, Listen, Read. A tap opens the link in its own app.
 Spotify previews go through its oEmbed; first check that it answers a Worker.
 Cards load as they scroll into view, or a first look fetches every page at once.
 
-**Phase 2: by hand.** "Add to the list" in the line's long-press menu, with
+**Phase 2: by hand. BUILT 2026-11-04** (branch `feat/picks-2`, migration 0033;
+the line menu's three items, `PUT/DELETE /api/picks`, the sheet's add box, the chat
+frame's `pick`). "Add to the list" in the line's long-press menu, with
 Watch, Listen or Read; a table `line_picks`, cascading from the message, removed
 only by the dad who added it. An add box in the sheet posts an ordinary line.
 Adding sends a `stir` and says nothing in the room.

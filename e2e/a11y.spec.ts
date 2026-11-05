@@ -183,6 +183,23 @@ for (const theme of ['light', 'dark'] as const) {
       await close();
     }
 
+    // The recommendations with the add box open, and the line menu that can
+    // put a line there.
+    await menu();
+    await page.getByRole('button', { name: /^Recommendations/ }).click();
+    await settled();
+    await page.getByTestId('picks-add-open').click();
+    await expect(page.getByTestId('picks-add-send')).toBeVisible();
+    found.push(...(await faults(page, 'the recommendations, add box open')));
+    await close();
+    await page
+      .getByTestId('line')
+      .filter({ hasText: `a ${theme} line` })
+      .click({ button: 'right' });
+    await expect(page.getByTestId('line-pick')).toBeVisible();
+    found.push(...(await faults(page, 'the line menu, with the list')));
+    await page.keyboard.press('Escape');
+
     // The calendar with something on it and the form open: the marks on the
     // grid, an event's answers, and the fields that make one.
     await page.evaluate(

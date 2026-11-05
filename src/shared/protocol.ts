@@ -1,5 +1,6 @@
 import type { DadNight } from './dadNight';
 import { parseTableEvent, type TableEvent } from './jaffre';
+import { PICK_CATEGORIES, type PickCategory } from './pickCategories';
 import type { Said } from './said';
 
 /**
@@ -279,7 +280,15 @@ export type ClientFrame =
    * same cid, and re-sends on reconnect if it never did. The room uses it to
    * ignore a second copy of one it already posted.
    */
-  | { t: 'chat'; body: string; mediaId?: string; cid?: string; replyTo?: string }
+  | {
+      t: 'chat';
+      body: string;
+      mediaId?: string;
+      cid?: string;
+      replyTo?: string;
+      /** Also put this line on the list of recommendations, under this. */
+      pick?: PickCategory;
+    }
   /** Sitting down at, getting up from, or muting yourself on the call. */
   | { t: 'call'; join: boolean; muted?: boolean }
   /** One leg of a WebRTC handshake, addressed to one other dad. The room
@@ -415,7 +424,7 @@ export type ServerFrame =
    * is the half that had to stay, or home would sit there showing who was
    * coming an hour ago.
    */
-  | { t: 'stir'; what: 'night' | 'todo' | 'table' | 'events' }
+  | { t: 'stir'; what: 'night' | 'todo' | 'table' | 'events' | 'picks' }
   /**
    * Somebody marked the calendar that picks the next night.
    *
@@ -481,10 +490,11 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
       : null;
   }
   if (frame.t === 'chat' && typeof frame.body === 'string') {
-    const { mediaId, cid, replyTo } = value as {
+    const { mediaId, cid, replyTo, pick } = value as {
       mediaId?: unknown;
       cid?: unknown;
       replyTo?: unknown;
+      pick?: unknown;
     };
     const chat: ClientFrame = { t: 'chat', body: frame.body };
     if (typeof mediaId === 'string' && mediaId !== '') chat.mediaId = mediaId;
@@ -493,6 +503,13 @@ export function parseClientFrame(raw: unknown): ClientFrame | null {
     // An id, resolved by the room: the client never supplies the quote.
     if (typeof replyTo === 'string' && replyTo !== '' && replyTo.length <= 64)
       chat.replyTo = replyTo;
+    // Absent from every bundle older than the list. Present and not one of
+    // the three is a bad frame, not a line that quietly loses its meaning.
+    if (pick !== undefined) {
+      if (typeof pick !== 'string' || !(PICK_CATEGORIES as readonly string[]).includes(pick))
+        return null;
+      chat.pick = pick as PickCategory;
+    }
     return chat;
   }
   if (frame.t === 'edit' && typeof frame.body === 'string') {

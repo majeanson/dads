@@ -11,12 +11,12 @@
  * are not YouTube; the whole address is never searched for a name.
  */
 import { parts } from './linkify';
+import { PICK_CATEGORIES, type PickCategory } from './pickCategories';
 import { youtubeVideo } from './unfurl';
 
-export const PICK_CATEGORIES = ['watch', 'listen', 'read'] as const;
-export type PickCategory = (typeof PICK_CATEGORIES)[number];
+export { PICK_CATEGORIES, type PickCategory };
 
-export interface Pick {
+export interface PickedLink {
   url: string;
   category: PickCategory;
 }
@@ -82,7 +82,7 @@ export function categoryOf(href: string): PickCategory | null {
 }
 
 /** The first link in a line that is one of ours, or null. */
-export function pickOf(body: string): Pick | null {
+export function pickOf(body: string): PickedLink | null {
   for (const part of parts(body)) {
     if (!part.link) continue;
     const category = categoryOf(part.href);
@@ -101,9 +101,20 @@ export interface PickItem {
   /** He has left the room. His line stays, as it does in the conversation. */
   gone: boolean;
   createdAt: number;
-  url: string;
+  /** The first address in the line, recognised or not; null for words alone. */
+  url: string | null;
   category: PickCategory;
+  /** What he typed. Sent for lines put on the list by hand, '' otherwise. */
+  body: string;
+  /** The dad who put it on the list by hand; null for a recognised line. */
+  addedBy: string | null;
   marks: { emoji: string; by: string[] }[];
+}
+
+/** The first address in a line, whatever site it is from. */
+export function firstLink(body: string): string | null {
+  for (const part of parts(body)) if (part.link) return part.href;
+  return null;
 }
 
 /** `?only=` narrows to a category; anything else is everybody's. */

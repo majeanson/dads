@@ -45,9 +45,15 @@ export async function internalRoute(
     // in protocol.ts for why it exists.
     case '/stir': {
       const { what } = (await request.json()) as {
-        what: 'night' | 'todo' | 'table' | 'events';
+        what: 'night' | 'todo' | 'table' | 'events' | 'picks';
       };
-      if (what !== 'night' && what !== 'todo' && what !== 'table' && what !== 'events') {
+      if (
+        what !== 'night' &&
+        what !== 'todo' &&
+        what !== 'table' &&
+        what !== 'events' &&
+        what !== 'picks'
+      ) {
         return new Response('bad stir', { status: 400 });
       }
       room.broadcast({ t: 'stir', what });

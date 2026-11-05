@@ -1,5 +1,6 @@
 import type { DadNight } from '../shared/dadNight';
 import type { EventInput, EventsState } from '../shared/events';
+import type { PickCategory } from '../shared/pickCategories';
 import type { PickItem } from '../shared/picks';
 import type { Found, GlassesFit, RoomsOpen } from '../shared/protocol';
 
@@ -611,6 +612,30 @@ export async function fetchPicks(only: PicksOnly, signal?: AbortSignal): Promise
   const res = await fetch(`/api/picks${narrow}`, { signal });
   if (!res.ok) throw new Error(`GET /api/picks ${res.status}`);
   return ((await res.json()) as { picks: PickItem[] }).picks;
+}
+
+/** Put a line on the list by hand. Not optimistic: true only if the room took it. */
+export async function addPick(id: string, category: PickCategory): Promise<boolean> {
+  try {
+    const res = await fetch('/api/picks', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, category }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Take his own line off the list. The line stays in the conversation. */
+export async function removePick(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/picks?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export interface PresenceEvent {

@@ -20,6 +20,7 @@ export const BACKUP_TABLES = [
   'night_items',
   'night_votes',
   'reactions',
+  'line_picks',
   'invites',
   'push_subscriptions',
   'oops',

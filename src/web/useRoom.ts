@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DadNight } from '../shared/dadNight';
+import type { PickCategory } from '../shared/pickCategories';
 import type { CallMember, RoomsOpen } from '../shared/protocol';
 import type { TableEvent } from '../shared/jaffre';
 import type { Champions, RoomMessage, RosterEntry, ServerFrame } from '../shared/protocol';
@@ -47,6 +48,8 @@ export interface RoomState {
   todoPulse: number;
   /** An event was made, moved, cancelled or answered. */
   eventsPulse: number;
+  /** Bumped when the list of recommendations changed. */
+  picksPulse: number;
   /** Somebody started a new table; the frame has to be pointed at it. */
   tablePulse: number;
   /**
@@ -135,6 +138,7 @@ export function useRoom(
     nightPulse: 0,
     todoPulse: 0,
     eventsPulse: 0,
+    picksPulse: 0,
     tablePulse: 0,
     seen: null,
     waiting: 0,
@@ -171,6 +175,7 @@ export function useRoom(
       body: string;
       mediaId?: string;
       replyTo?: string;
+      pick?: PickCategory;
       sentAt?: number;
       tries: number;
     }[]
@@ -499,7 +504,9 @@ export function useRoom(
                 ? { ...s, tablePulse: s.tablePulse + 1 }
                 : frame.what === 'events'
                   ? { ...s, eventsPulse: s.eventsPulse + 1 }
-                  : { ...s, todoPulse: s.todoPulse + 1 },
+                  : frame.what === 'picks'
+                    ? { ...s, picksPulse: s.picksPulse + 1 }
+                    : { ...s, todoPulse: s.todoPulse + 1 },
           );
           return;
         case 'rooms':
@@ -612,23 +619,27 @@ export function useRoom(
    * abandoned swallows sends silently, which is the whole failure this exists
    * to survive.
    */
-  const send = useCallback((body: string, mediaId?: string, replyTo?: string) => {
-    const cid = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    const line = {
-      cid,
-      body,
-      tries: 0,
-      ...(mediaId === undefined ? {} : { mediaId }),
-      ...(replyTo === undefined ? {} : { replyTo }),
-    };
-    // Past the cap the oldest goes, not the newest: what he just typed is the
-    // one he is still looking at.
-    outbox.current = [...outbox.current, line].slice(-OUTBOX_LIMIT);
-    setState((s) => ({ ...s, waiting: outbox.current.length }));
+  const send = useCallback(
+    (body: string, mediaId?: string, replyTo?: string, pick?: PickCategory) => {
+      const cid = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+      const line = {
+        cid,
+        body,
+        tries: 0,
+        ...(mediaId === undefined ? {} : { mediaId }),
+        ...(replyTo === undefined ? {} : { replyTo }),
+        ...(pick === undefined ? {} : { pick }),
+      };
+      // Past the cap the oldest goes, not the newest: what he just typed is the
+      // one he is still looking at.
+      outbox.current = [...outbox.current, line].slice(-OUTBOX_LIMIT);
+      setState((s) => ({ ...s, waiting: outbox.current.length }));
 
-    const ws = socket.current;
-    if (ws && ws.readyState === WebSocket.OPEN) sendLine(ws, line);
-  }, []);
+      const ws = socket.current;
+      if (ws && ws.readyState === WebSocket.OPEN) sendLine(ws, line);
+    },
+    [],
+  );
 
   const answerPrompt = useCallback((body: string) => {
     const ws = socket.current;
@@ -794,6 +805,7 @@ function sendLine(
     body: string;
     mediaId?: string;
     replyTo?: string;
+    pick?: PickCategory;
     sentAt?: number;
     tries: number;
   },
@@ -807,6 +819,7 @@ function sendLine(
       body: line.body,
       ...(line.mediaId === undefined ? {} : { mediaId: line.mediaId }),
       ...(line.replyTo === undefined ? {} : { replyTo: line.replyTo }),
+      ...(line.pick === undefined ? {} : { pick: line.pick }),
     }),
   );
 }

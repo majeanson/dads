@@ -769,7 +769,7 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - `src/shared/highlight.ts` splits, never substitutes.
 - A result goes nowhere; a photo on a result has no `onOpen`.
 
-## Recommendations (phase 1 built 2026-11-04)
+## Recommendations (phases 1 and 2 built 2026-11-04)
 
 - **A recommendation is a line.** `GET /api/picks` reads `chat` and `prompt`
   lines whose FIRST recognised link is Watch, Listen or Read; there is no table
@@ -790,6 +790,32 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
   a screen ahead): `Linked` is what calls `useLinkCard`, and mounts on approach.
   Before that a card is its plain address, still a link. A tap opens a new tab,
   `noopener noreferrer`; no player in the app.
+- **By hand (phase 2): `line_picks`, one row per line** (0033, `message_id`
+  PRIMARY KEY, cascades from the message and the group). The first dad to add it
+  keeps it (`INSERT OR IGNORE`). A line `pickOf` already recognises gets NO
+  row and is not offered in the menu. **A hand category beats the classifier**;
+  `GET` is the union (`LEFT JOIN`), and `?only=` is applied in the SQL on the
+  resulting category. `url` is the first address of ANY site (`null` for words
+  alone, shown as the words, `pick-words`, never translated, no fake link);
+  `body` and `addedBy` ride on hand-added items only.
+- **`PUT`/`DELETE /api/picks`**: any dad lists a typed line of HIS room (404
+  otherwise, 400 for a bad category); only the adder takes his own off (`member_id`
+  in the WHERE, a silent no-op otherwise, `pick-remove`, 44px). Each real change
+  `stir`s `picks` (`picksPulse`); a GET never does; nothing is said in the room.
+  **A line taken back stirs `picks` too** (the row went with it by the cascade).
+- **The add box posts an ordinary line** (recommending is saying): the chat frame
+  carries an optional `pick`, parsed in `parseClientFrame` (bad value = bad frame),
+  held in the outbox so a retry keeps it. The DO inserts the row AFTER the archive
+  write (it selects from `messages`), so a failed archive lists nothing; a repeated
+  cid is answered before `post` and never doubles. `pickCategories.ts` holds the
+  three names alone so the wire does not pull the classifier into the entry bundle.
+- **The line menu offers three plain items** under a label (`line-pick`,
+  `line-pick-watch|listen|read`), never a submenu. Not optimistic: the status line
+  above the composer says "On the list." or that it failed. Removal lives only on
+  the sheet. Add box: fold `picks-add-open`, field, segmented (`picks-add-<kind>`,
+  Read by default), `picks-add-send`, `picks-added`.
+- **`useNear` needs `scrollMargin`** as well as `rootMargin`: the sheet scrolls in
+  its own panel, and the root margin stops at that clip.
 - Testids: `menu-picks`, `picks`, `pick` (`data-category`), `pick-link`,
   `pick-mark`, `picks-empty`. In the Menu with no dot, nothing on home, no push.
   The word "shelf" belongs to the media; this is "picks" in code,

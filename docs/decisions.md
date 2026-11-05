@@ -3392,3 +3392,34 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
 - **Spotify oEmbed** answered from this laptop with title, cover and no author;
   whether Cloudflare's addresses are treated the same is unproved until the
   first deploy. A refusal falls back to the page's tags, then to the plain link.
+
+## Recommendations, by hand (2026-11-04, phase 2 built)
+
+- **One row per line, first adder keeps it.** Two dads adding the same line
+  under different kinds would be an argument the list has no way to show; the
+  first word stands and adding twice is harmless, so the menu never needs to
+  know what is already listed.
+- **No row for a recognised line.** The classifier already lists it, and a row
+  would let a hand category quietly override a YouTube link into "Read". A
+  hand category beats the classifier only where the classifier says nothing.
+- **Rows cascade from the message** (reactions' route), so taking a line back
+  needs no code in the retract path. Proved in `test/picks-write.test.ts`:
+  D1 enforces the foreign keys under the test setup. Retracting still stirs,
+  or an open list on another phone kept the card until it was reopened.
+- **The filter moved into the SQL** with the union: `p.category = ? OR (no
+row AND host fragment)`, so "Read" stays the newest books, hand-added and
+  linked alike, and a hand "Listen" on a YouTube link is not under Watch.
+- **The add box sends a chat frame with `pick`**, not a route that posts: the
+  line must go through the outbox (works with the socket down, keeps its cid,
+  is not doubled by a retry). The row is written after the archive write
+  because it selects from `messages`; a failed archive lists nothing rather
+  than a row with no line.
+- **`pickCategories.ts`** exists because `protocol.ts` is in the entry bundle
+  and `picks.ts` drags the classifier and the unfurler with it.
+- **Three items under a label, not a submenu.** A Radix submenu opens on hover
+  and is poor under a thumb; the items wrap with the menu's available width.
+  The acknowledgement is the composer's status line, the app's own pattern for
+  a small thing that is not worth a dialog.
+- **`useNear` and `scrollMargin`.** `rootMargin` on the implicit root does not
+  reach past an ancestor scroller's clip, so Phase 1's screen of lead was not
+  there. `scrollMargin` (Chrome 120+) does; elsewhere cards load on arrival.

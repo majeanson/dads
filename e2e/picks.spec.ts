@@ -1,12 +1,12 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import { E2E_PICKS_GROUP } from './global-setup';
 import { menu, talk } from './talk';
 
 /**
- * The list of picks: what the room has recommended, read off its own lines.
- * Nothing is posted from the sheet; a link from a known site in the
- * conversation is what puts a card there, and taking the line back is what
- * takes it away.
+ * The list of picks: what the room has recommended, mostly read off its own
+ * lines. A link from a known site in the conversation is what puts a card
+ * there, a line can be put there by hand (its menu, or the add box, which
+ * posts an ordinary line), and taking the line back is what takes it away.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -128,4 +128,121 @@ test('a room with nothing to show says so, for the room and for a filter', async
   await expect(sheet.getByTestId('picks-empty')).toContainText('Nothing yet');
   await sheet.getByRole('group', { name: 'Show' }).getByRole('button', { name: 'Read' }).click();
   await expect(sheet.getByTestId('picks-empty')).toHaveText('Nothing to read yet.');
+});
+
+/**
+ * Putting a line on the list by hand, and taking it off again.
+ *
+ * Two dads, two fresh contexts: a fresh browser context is a fresh dad.
+ */
+async function stub(page: Page): Promise<void> {
+  await page.route('**/api/unfurl?*', (route) =>
+    route.fulfill({
+      json: { url: 'x', title: 'A stubbed page', description: null, image: null, site: 'Stub' },
+    }),
+  );
+}
+
+async function second(browser: Browser, name: string): Promise<Page> {
+  const page = await (await browser.newContext()).newPage();
+  await comeIn(page, name);
+  await stub(page);
+  return page;
+}
+
+test('a plain line added from its menu is listed under Read with its words, for its adder to take off', async ({
+  page,
+  browser,
+}) => {
+  await comeIn(page, 'Ada Adds');
+  const sam = await second(browser, 'Sam Sees');
+
+  // Sam has the list open when Ada adds: it updates on its own.
+  const samSheet = await openPicks(sam);
+
+  await say(page, 'Dune by Herbert, the first one');
+  const line = page.getByTestId('line').filter({ hasText: 'Dune by Herbert' });
+  await line.click({ button: 'right' });
+  const group = page.getByTestId('line-pick');
+  await expect(group).toBeVisible();
+  // Three plain choices, all inside the screen.
+  const box = (await group.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await page.getByTestId('line-pick-read').click();
+  await expect(page.getByText('On the list.')).toBeVisible();
+
+  const theirs = samSheet.getByTestId('pick').filter({ hasText: 'Dune by Herbert' });
+  await expect(theirs).toHaveCount(1);
+  await expect(theirs).toHaveAttribute('data-category', 'read');
+  await expect(theirs.getByTestId('pick-words')).toHaveText('Dune by Herbert, the first one');
+  await expect(theirs.getByTestId('pick-link')).toHaveCount(0);
+  await expect(theirs.getByTestId('pick-remove')).toHaveCount(0);
+
+  const sheet = await openPicks(page);
+  await sheet.getByRole('group', { name: 'Show' }).getByRole('button', { name: 'Read' }).click();
+  const mine = sheet.getByTestId('pick').filter({ hasText: 'Dune by Herbert' });
+  await expect(mine).toHaveCount(1);
+  const remove = mine.getByTestId('pick-remove');
+  await expect(remove).toHaveAccessibleName(/Take off the list: Dune by Herbert/);
+  const target = (await remove.boundingBox())!;
+  expect(target.height).toBeGreaterThanOrEqual(44);
+  await remove.click();
+  await expect(mine).toHaveCount(0);
+  // The line itself stays in the conversation, and Sam's open list follows.
+  await expect(theirs).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('line').filter({ hasText: 'Dune by Herbert' })).toBeVisible();
+});
+
+test('the menu does not offer the list for a line the list already recognises', async ({
+  page,
+}) => {
+  await comeIn(page, 'Rex Recognised');
+  await say(page, 'already there https://youtu.be/recognised01');
+  await page.getByTestId('line').filter({ hasText: 'already there' }).click({ button: 'right' });
+  await expect(page.getByTestId('line-menu')).toBeVisible();
+  await expect(page.getByTestId('line-pick')).toHaveCount(0);
+});
+
+test('the add box posts a line in the conversation and lists it', async ({ page, browser }) => {
+  await comeIn(page, 'Bea Box');
+  const sam = await second(browser, 'Sam Sees Box');
+  const samSheet = await openPicks(sam);
+
+  const sheet = await openPicks(page);
+  const open = sheet.getByTestId('picks-add-open');
+  await expect(open).toHaveAttribute('aria-expanded', 'false');
+  await open.click();
+  await expect(open).toHaveAttribute('aria-expanded', 'true');
+
+  // Read is the kind a link cannot find, so it is the one he starts on.
+  await expect(sheet.getByTestId('picks-add-read')).toHaveAttribute('aria-pressed', 'true');
+  await sheet.getByTestId('picks-add-listen').click();
+  await expect(sheet.getByTestId('picks-add-listen')).toHaveAttribute('aria-pressed', 'true');
+
+  const field = sheet.getByLabel('A title or a link');
+  await field.fill('Kind of Blue, Miles Davis');
+  await sheet.getByTestId('picks-add-send').click();
+  await expect(field).toHaveValue('');
+  await expect(sheet.getByTestId('picks-added')).toBeVisible();
+
+  const card = sheet.getByTestId('pick').filter({ hasText: 'Kind of Blue' });
+  await expect(card).toHaveCount(1);
+  await expect(card).toHaveAttribute('data-category', 'listen');
+  await expect(card.getByTestId('pick-remove')).toBeVisible();
+  const theirs = samSheet.getByTestId('pick').filter({ hasText: 'Kind of Blue' });
+  await expect(theirs).toHaveAttribute('data-category', 'listen');
+  await expect(theirs.getByTestId('pick-remove')).toHaveCount(0);
+
+  await page.keyboard.press('Escape');
+  const line = page.getByTestId('line').filter({ hasText: 'Kind of Blue' });
+  await expect(line).toBeVisible();
+
+  // Taking the line back takes it off the list.
+  await line.click({ button: 'right' });
+  await page.getByTestId('line-retract').click();
+  await page.getByTestId('line-retract').click();
+  await expect(line).toHaveCount(0);
+  await expect(theirs).toHaveCount(0);
 });

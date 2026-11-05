@@ -39,7 +39,7 @@ import { listMine, switchRoom } from './routes/mine';
 import { postDelete, postLeave, postRemove, putOwner, putRooms, putWord } from './routes/rooms';
 import { getExport } from './routes/export';
 import { getQuiet, putQuiet } from './routes/quiet';
-import { getPicks } from './routes/picks';
+import { deletePick, getPicks, putPick } from './routes/picks';
 import { search } from './routes/search';
 import { getUnfurl, getUnfurlImage } from './routes/unfurl';
 import { getTable, postNewTable } from './routes/table';
@@ -297,6 +297,12 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
 
     case 'GET /api/picks':
       return getPicks(request, env, url, prod);
+
+    case 'PUT /api/picks':
+      return putPick(request, env, prod);
+
+    case 'DELETE /api/picks':
+      return deletePick(request, env, url, prod);
 
     case 'GET /api/search':
       return search(request, env, url, prod);
