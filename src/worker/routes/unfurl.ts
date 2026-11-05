@@ -3,6 +3,7 @@ import {
   previewFromOEmbed,
   previewOf,
   readTags,
+  spotifyItem,
   youtubeVideo,
   type LinkPreview,
 } from '../../shared/unfurl';
@@ -168,7 +169,10 @@ export async function getUnfurlImage(
  */
 export async function fetchPreview(href: string): Promise<LinkPreview | null> {
   if (youtubeVideo(href)) {
-    const card = await fromOEmbed(href);
+    const card = await fromOEmbed('https://www.youtube.com/oembed', href, '&format=json');
+    if (card !== null) return card;
+  } else if (spotifyItem(href)) {
+    const card = await fromOEmbed('https://open.spotify.com/oembed', href, '');
     if (card !== null) return card;
   }
   try {
@@ -195,15 +199,16 @@ export async function fetchPreview(href: string): Promise<LinkPreview | null> {
   }
 }
 
-async function fromOEmbed(href: string): Promise<LinkPreview | null> {
+async function fromOEmbed(
+  endpoint: string,
+  href: string,
+  extra: string,
+): Promise<LinkPreview | null> {
   try {
-    const res = await fetch(
-      `https://www.youtube.com/oembed?url=${encodeURIComponent(href)}&format=json`,
-      {
-        headers: { 'User-Agent': UA, Accept: 'application/json' },
-        signal: AbortSignal.timeout(FETCH_MS),
-      },
-    );
+    const res = await fetch(`${endpoint}?url=${encodeURIComponent(href)}${extra}`, {
+      headers: { 'User-Agent': UA, Accept: 'application/json' },
+      signal: AbortSignal.timeout(FETCH_MS),
+    });
     if (!res.ok) return null;
     return previewFromOEmbed((await res.json()) as Record<string, unknown>, href);
   } catch {

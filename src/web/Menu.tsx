@@ -8,6 +8,7 @@ import {
   Settings as SettingsIcon,
   Smartphone,
   Spade,
+  ThumbsUp,
 } from 'lucide-react';
 import type { RoomsOpen } from '../shared/protocol';
 import type { Todo } from './api';
@@ -24,6 +25,7 @@ export type SheetName =
   | 'events'
   | 'find'
   | 'album'
+  | 'picks'
   | 'invite'
   | 'link'
   | 'rooms'
@@ -169,6 +171,19 @@ export function Menu({
       >
         <Images size={22} aria-hidden="true" className="shrink-0 text-muted" />
         <span className="min-w-0 truncate">{t('menu.album')}</span>
+      </Button>
+
+      {/* The links the room has shared to watch, hear or read: a view of the
+          conversation, so it has no dot and nothing waiting. */}
+      <Button
+        block
+        look="quiet"
+        className={ROW}
+        onClick={() => onOpen('picks')}
+        data-testid="menu-picks"
+      >
+        <ThumbsUp size={22} aria-hidden="true" className="shrink-0 text-muted" />
+        <span className="min-w-0 truncate">{t('menu.picks')}</span>
       </Button>
 
       {/* Present with one room, because this is also the only way to get

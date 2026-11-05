@@ -66,6 +66,17 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByTestId('line').filter({ hasText: `a ${theme} line` })).toBeVisible();
     found.push(...(await faults(page, 'the room')));
 
+    // A recommendation, so the sheet that lists them has a card to read
+    // (the page is made up: the suite does not need the network).
+    await page.route('**/api/unfurl?*', (route) =>
+      route.fulfill({
+        json: { url: 'x', title: 'A video', description: 'Someone', image: null, site: 'Stub' },
+      }),
+    );
+    await page.getByLabel('Say something').fill(`a ${theme} video https://youtu.be/a11ypicks01`);
+    await page.getByRole('button', { name: 'Send' }).click();
+    await expect(page.getByTestId('line').filter({ hasText: `a ${theme} video` })).toBeVisible();
+
     // Far up a long conversation, the way back down is a bare arrow
     // (2026-11-02). Enough lines that the top is more than a screen away, on
     // a phone's screen, which is where it is for.
@@ -162,6 +173,7 @@ for (const theme of ['light', 'dark'] as const) {
       ['the questions', /^Questions/],
       ['the week, from the conversation', /^The week/],
       ['finding a line', /^Find something/],
+      ['the recommendations', /^Recommendations/],
     ];
     for (const [scene, name] of chat) {
       await menu();

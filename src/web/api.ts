@@ -1,5 +1,6 @@
 import type { DadNight } from '../shared/dadNight';
 import type { EventInput, EventsState } from '../shared/events';
+import type { PickItem } from '../shared/picks';
 import type { Found, GlassesFit, RoomsOpen } from '../shared/protocol';
 
 /** A night as the client sends it: the zone is omitted when the group already
@@ -600,6 +601,16 @@ export async function fetchAlbum(): Promise<Held[]> {
   if (!res.ok) throw new Error(`GET /api/media-list ${res.status}`);
   const { media } = (await res.json()) as { media: Held[] };
   return media.filter((m) => m.contentType.startsWith('image/'));
+}
+
+export type PicksOnly = 'all' | 'watch' | 'listen' | 'read';
+
+/** What the room has recommended: lines holding a link to watch, hear or read. */
+export async function fetchPicks(only: PicksOnly, signal?: AbortSignal): Promise<PickItem[]> {
+  const narrow = only === 'all' ? '' : `?only=${only}`;
+  const res = await fetch(`/api/picks${narrow}`, { signal });
+  if (!res.ok) throw new Error(`GET /api/picks ${res.status}`);
+  return ((await res.json()) as { picks: PickItem[] }).picks;
 }
 
 export interface PresenceEvent {

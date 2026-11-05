@@ -101,7 +101,13 @@ export const E2E_LINKS_GROUP = {
   name: 'The E2E Links',
   code: 'ember quartz willow fox',
 };
+export const E2E_PICKS_GROUP = {
+  slug: 'e2e-picks',
+  name: 'The E2E Picks',
+  code: 'cobalt wicker fennel ibis',
+};
 const GROUPS = [
+  E2E_PICKS_GROUP,
   E2E_LINKS_GROUP,
   E2E_EVENTS_GROUP,
   E2E_CALL_GROUP,

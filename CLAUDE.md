@@ -769,6 +769,32 @@ them were learned the hard way. New reasoning goes there, the rule goes here.
 - `src/shared/highlight.ts` splits, never substitutes.
 - A result goes nowhere; a photo on a result has no `onOpen`.
 
+## Recommendations (phase 1 built 2026-11-04)
+
+- **A recommendation is a line.** `GET /api/picks` reads `chat` and `prompt`
+  lines whose FIRST recognised link is Watch, Listen or Read; there is no table
+  of its own, so a line taken back is gone from it, a departed dad's stays, and
+  nothing is stored. `shared/picks.ts` (pure) decides: hosts are parsed and
+  matched, never found by substring of the address (`notyoutube.com` and
+  `?u=youtube.com` are nothing). The SQL only narrows by host fragment
+  (`PICK_FRAGMENTS`) and is bounded (`PICKS_LIMIT`, 200).
+- **Amazon is book-shaped only**: `/dp/` or `/gp/product/` with an ISBN-10. A
+  Kindle (B0…) address or an amzn.to link is not recognised. Do not widen it to
+  "any Amazon".
+- **The filter asks the Worker** (`?only=`, anything else is everybody's), one
+  segmented control (`picks`, `group` named "Show"). The archive has no `seq`;
+  the items carry the line's id.
+- **Spotify previews go through its oEmbed**, YouTube's way, falling back to the
+  page's tags (`spotifyItem`).
+- **Cards fetch only when near the screen** (`useNear`, an IntersectionObserver
+  a screen ahead): `Linked` is what calls `useLinkCard`, and mounts on approach.
+  Before that a card is its plain address, still a link. A tap opens a new tab,
+  `noopener noreferrer`; no player in the app.
+- Testids: `menu-picks`, `picks`, `pick` (`data-category`), `pick-link`,
+  `pick-mark`, `picks-empty`. In the Menu with no dot, nothing on home, no push.
+  The word "shelf" belongs to the media; this is "picks" in code,
+  "Recommendations" / "Recommandations" to a dad.
+
 ## Who's here
 
 - **Anyone in the room has a profile** (`GET /api/profile?member=`, `Profile.tsx`),

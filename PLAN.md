@@ -117,7 +117,9 @@ replies, marks, search, export and taking a line back already apply. A Menu row
 opens a sheet, like the album. Links get onto it by themselves; anything else is
 added by hand.
 
-**Phase 1: the list, no migration.** `GET /api/picks` reads `chat` and `prompt`
+**Phase 1: the list, no migration. BUILT 2026-11-04** (branch `feat/picks-1`;
+`shared/picks.ts`, `routes/picks.ts`, `Picks.tsx`, `menu-picks`; Spotify oEmbed
+answered from a laptop, not yet proved from a Worker). `GET /api/picks` reads `chat` and `prompt`
 lines holding a link from a known site, sorted by pure code in `shared/`:
 Watch (YouTube, IMDb, Letterboxd), Listen (Spotify, Apple Music/Podcasts), Read
 (Goodreads, Open Library, Amazon, Apple Books). Cards use the link previews,

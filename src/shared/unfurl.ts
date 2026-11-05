@@ -90,7 +90,23 @@ export function youtubeVideo(href: string): boolean {
   return /^\/(shorts|live|embed)\/[\w-]{6,}/.test(url.pathname);
 }
 
-/** What YouTube's oEmbed answers, made into the same card. */
+/**
+ * A Spotify address that is a thing to play, which answers oEmbed the same
+ * way: the title and the cover. Its page is a script-built shell with the
+ * tags in it only for crawlers, so oEmbed first and the tags as the fallback.
+ */
+export function spotifyItem(href: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return false;
+  }
+  if (url.hostname.toLowerCase() !== 'open.spotify.com') return false;
+  return /^\/(?:intl-[\w-]+\/)?(track|album|playlist|artist|episode|show)\/\w+/.test(url.pathname);
+}
+
+/** What an oEmbed answers (YouTube's, Spotify's), made into the same card. */
 export function previewFromOEmbed(
   data: {
     title?: unknown;

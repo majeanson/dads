@@ -15,6 +15,7 @@ import {
   Settings2,
   Smartphone,
   Spade,
+  ThumbsUp,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -49,10 +50,12 @@ const bodies = {
   LinkDevice: () => import('./LinkDevice'),
   MyRooms: () => import('./MyRooms'),
   Night: () => import('./Night'),
+  Picks: () => import('./Picks'),
   Questions: () => import('./Questions'),
   Settings: () => import('./Settings'),
 };
 const Album = lazy(() => bodies.Album().then((m) => ({ default: m.Album })));
+const Picks = lazy(() => bodies.Picks().then((m) => ({ default: m.Picks })));
 const Board = lazy(() => bodies.Board().then((m) => ({ default: m.Board })));
 const Events = lazy(() => bodies.Events().then((m) => ({ default: m.Events })));
 const Find = lazy(() => bodies.Find().then((m) => ({ default: m.Find })));
@@ -134,6 +137,7 @@ const ABOUT_FEATURES: { key: Key; icon: LucideIcon }[] = [
   { key: 'about.f_people', icon: Users },
   { key: 'about.f_find', icon: Search },
   { key: 'about.f_album', icon: Images },
+  { key: 'about.f_picks', icon: ThumbsUp },
   { key: 'about.f_remind', icon: Bell },
   { key: 'about.f_you', icon: Palette },
   { key: 'about.f_invite', icon: Send },
@@ -321,6 +325,16 @@ export function Sheets({
       <Sheet title={t('album.title')} pose={Images} onClose={close}>
         <Body>
           <Album />
+        </Body>
+      </Sheet>
+    );
+  }
+
+  if (open === 'picks') {
+    return (
+      <Sheet title={t('picks.title')} pose={ThumbsUp} onClose={close}>
+        <Body>
+          <Picks />
         </Body>
       </Sheet>
     );

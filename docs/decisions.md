@@ -3368,3 +3368,27 @@ A cold pass with a throwaway room (docs/stranger-review-2026-10-23.md) found:
   the list too.
 - **Written up rather than built, also Marc's choice.** Phase 1 is the first
   step when it comes back, and it needs no migration.
+
+## Recommendations (2026-11-04, phase 1 built)
+
+- **Host parsed, not searched.** The classifier takes `linkify`'s links and
+  matches the parsed hostname, so a line and its list agree on what an address
+  is and `?u=youtube.com` is nothing. The SQL's LIKE is only a net; `pickOf`
+  decides.
+- **Amazon is the honest hard case.** An address cannot say a thing is a book
+  unless its product number is an ISBN-10, so only those match. Kindle ASINs
+  (B0…) are missed on purpose; "any Amazon" would put a toaster on the list.
+- **First recognised link wins**, one card per line. A line with a plain link
+  and then a video is the video.
+- **The filter is the server's**, so "Read" is the newest books, not the
+  books among the newest 200 lines.
+- **A departed dad's pick stays** (the line stays in the conversation); the
+  item says `gone` so the card does not draw a face that links to nothing.
+- **No `seq`.** The archive has none (the room object owns it), so the items are
+  keyed by the line's id.
+- **Cards fetch near, not on mount.** `LinkCard`'s hook fetches on mount, which
+  on a long list is every page at once from the Worker. The card is a plain
+  link until an IntersectionObserver (a screen ahead) mounts the preview.
+- **Spotify oEmbed** answered from this laptop with title, cover and no author;
+  whether Cloudflare's addresses are treated the same is unproved until the
+  first deploy. A refusal falls back to the page's tags, then to the plain link.

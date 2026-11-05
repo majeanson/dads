@@ -282,6 +282,36 @@ describe('a link in the room gets a card', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('asks Spotify through oEmbed, and falls back to the page’s tags', async () => {
+    const track = 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC';
+    sites({
+      [`https://open.spotify.com/oembed?url=${encodeURIComponent(track)}`]: () =>
+        Response.json({
+          title: 'Never Gonna Give You Up',
+          thumbnail_url: 'https://image-cdn-ak.spotifycdn.com/image/x',
+          provider_name: 'Spotify',
+        }),
+    });
+    await said(group.id, `play ${track}`);
+    const card = (await (await unfurl(cookie, track)).json()) as LinkCard;
+    expect(card.title).toBe('Never Gonna Give You Up');
+    expect(card.site).toBe('Spotify');
+    expect(card.description).toBeNull();
+    expect(card.image).not.toBeNull();
+    expect(calls).toHaveLength(1);
+
+    // oEmbed down: the page's own tags, as for any other site.
+    const album = 'https://open.spotify.com/album/abc123';
+    sites({
+      [`https://open.spotify.com/oembed?url=${encodeURIComponent(album)}`]: () =>
+        new Response('nope', { status: 500 }),
+      [album]: () => html('<meta property="og:title" content="An Album">'),
+    });
+    await said(group.id, album);
+    const fallback = (await (await unfurl(cookie, album)).json()) as LinkCard;
+    expect(fallback.title).toBe('An Album');
+  });
+
   it('hands on only a raster picture a preview named, to a dad with a session', async () => {
     sites({
       'https://a.test/x': () =>
