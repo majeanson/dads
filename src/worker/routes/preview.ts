@@ -101,6 +101,11 @@ export async function invitePage(
     'Content-Security-Policy',
     "frame-ancestors 'self' https://marcportal.com https://*.marcportal.com",
   );
+  // HSTS too, so this Worker-built page is not the one door that answers over
+  // plain http once — public/_headers cannot reach it, the Worker hands it back
+  // itself. The narrower CSP is on purpose (a no-store token page); HSTS is not
+  // a page's own concern, it belongs on every response the host gives.
+  headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   headers.delete('X-Frame-Options');
   return new Response(page.body, { status: 200, headers });
 }

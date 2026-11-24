@@ -49,8 +49,16 @@ test('the shell carries the headers a page should carry', async ({ request }) =>
   expect(headers['x-content-type-options']).toBe('nosniff');
   // Only marcportal.com may frame dads (the door, in its portfolio).
   expect(headers['x-frame-options']).toBeUndefined();
-  expect(headers['content-security-policy']).toBe(
-    "frame-ancestors 'self' https://marcportal.com https://*.marcportal.com",
-  );
+  // The CSP is a long line; pin the load-bearing directives rather than the
+  // whole string, so adding an origin the client needs is not a test edit too.
+  const csp = headers['content-security-policy'];
+  expect(csp).toContain("default-src 'self'");
+  // Clickjacking is still only the portal's to do.
+  expect(csp).toContain("frame-ancestors 'self' https://marcportal.com https://*.marcportal.com");
+  // The table is jaffre, framed cross-origin; default-src 'self' alone blocks it.
+  expect(csp).toContain('https://jaffre.marcportal.com');
+  expect(csp).toContain("object-src 'none'");
   expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+  // HSTS: a page served over plain http once is a page an attacker can rewrite.
+  expect(headers['strict-transport-security']).toContain('max-age=31536000');
 });
