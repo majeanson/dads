@@ -33,7 +33,10 @@ jobs:
         github.event.workflow_run.event == 'push' &&
         github.event.workflow_run.head_repository.full_name == github.repository
       )
-    runs-on: ubuntu-latest
+    # Pinned to 24.04: GitHub's ubuntu-latest moved to 26.04, which the pinned
+    # Playwright (1.61.x) can't install Chromium/WebKit on ("does not support
+    # chromium on ubuntu26.04-x64"). Pin until Playwright is bumped past 26.04.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:

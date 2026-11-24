@@ -3,7 +3,30 @@
 # It has to be this file rather than code: `run_worker_first` deliberately
 # covers only /api and /ws, so for every other path the assets binding answers
 # before the Worker runs at all — a wrapper in the Worker would never fire.
+#
+# The CSP is default-src 'self' with holes cut only for what the client really
+# reaches, read off the code, not guessed:
+#   - script-src: the bundle ('self') plus the one inline pre-paint script in
+#     index.html, pinned by its sha256 so a script injected into the page body
+#     cannot run. The hash is the bytes between that <script> and </script>; if
+#     the pre-paint script changes, recompute it or the theme/lang/text flash
+#     comes back (the script fails closed, nothing else breaks). No
+#     'unsafe-inline' for script: it would be ignored next to a hash anyway.
+#   - style-src 'unsafe-inline': React writes inline style= (swipe translate,
+#     face sizing, the colour vars). There is no way to hash those; the sheet
+#     itself is an 'self' file.
+#   - connect-src: same-origin covers /api/* and the /ws socket (wss on 'self').
+#     The call's ICE servers are the extra hosts (stun always, turn a bonus);
+#     a browser that gates WebRTC on connect-src still reaches them, and one
+#     that does not is unaffected.
+#   - img-src / media-src: 'self' is the Worker's own media and face URLs and
+#     the proxied link-card images (/api/unfurl/image, never the far site);
+#     blob: is the local preview of a photo or voice note before it is sent.
+#   - frame-src: the table is jaffre, framed cross-origin. default-src 'self'
+#     would block it, so name it.
+#   - frame-ancestors is unchanged: only the portal may frame the room.
 /*
   X-Content-Type-Options: nosniff
-  Content-Security-Policy: frame-ancestors 'self' https://marcportal.com https://*.marcportal.com
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-bjiTYgam4gi+4kdpy/OAMFVwJbxiw/jlv5yLFAjL/Tc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; media-src 'self' blob:; connect-src 'self' stun.cloudflare.com stun.l.google.com turn.cloudflare.com; frame-src 'self' https://jaffre.marcportal.com; frame-ancestors 'self' https://marcportal.com https://*.marcportal.com; object-src 'none'; base-uri 'self'
   Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains

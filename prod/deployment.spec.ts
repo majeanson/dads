@@ -24,10 +24,15 @@ test('the headers are the ones public/_headers ships', async ({ request }) => {
   const headers = res.headers();
   expect(headers['x-content-type-options']).toBe('nosniff');
   expect(headers['x-frame-options']).toBeUndefined();
-  expect(headers['content-security-policy']).toBe(
-    "frame-ancestors 'self' https://marcportal.com https://*.marcportal.com",
-  );
+  // The whole CSP is long and grows with the client; pin the directives that
+  // carry the security, not the exact string.
+  const csp = headers['content-security-policy'];
+  expect(csp).toContain("default-src 'self'");
+  expect(csp).toContain("frame-ancestors 'self' https://marcportal.com https://*.marcportal.com");
+  expect(csp).toContain('https://jaffre.marcportal.com');
+  expect(csp).toContain("object-src 'none'");
   expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+  expect(headers['strict-transport-security']).toContain('max-age=31536000');
 });
 
 test('the SPA fallback does not swallow the API', async ({ request }) => {
