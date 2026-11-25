@@ -1,26 +1,32 @@
+# Weekly dependency nudge (DevHub kit/: edit there, sync from the Kit tab).
+# Minor + patch bumps are grouped into one PR a week; majors come one at a time.
+# At most 5 open at once. CI is the gate: a red Dependabot PR is not merged.
 version: 2
 updates:
-  # Monthly, grouped, so it is one PR to read rather than twenty. CI runs on
-  # each; a major that a plugin's peer range does not allow yet will fail
-  # there (vitest 5, TypeScript 7 at the time of writing) and waits.
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: America/Toronto
     open-pull-requests-limit: 5
-    ignore:
-      # The types follow the Node CI runs (22), not the newest Node.
-      - dependency-name: '@types/node'
-        update-types: ['version-update:semver-major']
     groups:
       minor-and-patch:
-        update-types: [minor, patch]
-      major:
-        update-types: [major]
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: 'chore(deps)'
+    labels:
+      - dependencies
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    groups:
-      actions:
-        patterns: ['*']
+      timezone: America/Toronto
+    commit-message:
+      prefix: 'chore(ci)'
+    labels:
+      - dependencies

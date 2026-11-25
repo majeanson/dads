@@ -19,11 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: ./.github/actions/setup
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          node-version: '22'
       - run: npm run format:check
       - run: npm run lint
       # The generated Env and runtime types match wrangler.toml and the
@@ -68,11 +66,9 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: ./.github/actions/setup
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          node-version: '22'
       - run: npm run migrate:remote
       # Tee'd for the workers.dev address: the custom domain's bot protection
       # answers a runner's plain fetch with 403, and that host is the same
