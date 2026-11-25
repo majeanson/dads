@@ -4,9 +4,9 @@ name: Scheduled red
 # mails the person who pushed (a cron has no pusher). So a red scheduled run opens an issue
 # (GitHub mails the repo's watchers), one per workflow, and a later red on the same workflow
 # comments on it instead of opening a second. The next green run of that workflow closes it.
-# Same file as Viens jouer and Babillard (kept in sync from DevHub's kit/). A new scheduled
-# workflow joins the list below. Every value from the triggering run reaches the shell
-# through `env:`, never `${{ }}` inside `run:`.
+# DevHub kit/: edit there, sync from the Kit tab. A new scheduled workflow joins the list in
+# devhub/kit/kit.json. Every value from the triggering run reaches the shell through `env:`,
+# never `${{ }}` inside `run:`.
 
 on:
   workflow_run:

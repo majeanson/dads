@@ -43,11 +43,11 @@ jobs:
           # For a workflow_run, check out the exact commit CI passed on rather
           # than whatever main has become since.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - uses: actions/setup-node@v7
+      # Playwright is installed below, not by the kit's action: this suite
+      # needs WebKit beside Chromium.
+      - uses: ./.github/actions/setup
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          node-version: '22'
       - run: npx playwright install --with-deps chromium webkit
       # Nothing here touches Cloudflare: wrangler dev serves the built worker
       # against a local D1 and a local Durable Object, and global-setup
