@@ -181,8 +181,11 @@ describe('RoomDO', () => {
     // But the SENDER hears it again, as the same line: his outbox holds a
     // line until its own id comes back, and the echo is the thing a dropped
     // socket cost him. Silence left him closing a good socket every eight
-    // seconds to try again.
-    const echoes = marc.frames.filter((f) => f.t === 'msg' && f.cid === 'c-abc');
+    // seconds to try again. The echo reads the archive, so the next line may
+    // overtake it; it is waited for, not assumed to be first.
+    const echoed = () => marc.frames.filter((f) => f.t === 'msg' && f.cid === 'c-abc');
+    await until(() => echoed().length >= 2);
+    const echoes = echoed();
     expect(echoes).toHaveLength(2);
     expect(echoes[1]).toMatchObject({ message: { id: first.message.id, seq: first.message.seq } });
   });

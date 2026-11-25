@@ -694,7 +694,9 @@ describe('keeping a photograph', () => {
       .first<{ id: string }>();
     await keep(cookie, letGo!.id, false);
     expect((await keep(cookie, one, true)).status).toBe(200);
-  });
+    // A hundred uploads and a hundred keeps, one after another: near the
+    // default five seconds alone, over it when the suite runs in parallel.
+  }, 20_000);
 
   it('is idempotent — two phones may both press it', async () => {
     const cookie = await cookieFor(group);
