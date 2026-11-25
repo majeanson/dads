@@ -1,0 +1,57 @@
+name: Scheduled red
+
+# A scheduled run that fails is invisible by default: nothing chains off it, and GitHub only
+# mails the person who pushed (a cron has no pusher). So a red scheduled run opens an issue
+# (GitHub mails the repo's watchers), one per workflow, and a later red on the same workflow
+# comments on it instead of opening a second. The next green run of that workflow closes it.
+# Same file as Viens jouer and Babillard (kept in sync from DevHub's kit/). A new scheduled
+# workflow joins the list below. Every value from the triggering run reaches the shell
+# through `env:`, never `${{ }}` inside `run:`.
+
+on:
+  workflow_run:
+    workflows: ['E2E']
+    types: [completed]
+
+permissions:
+  issues: write
+
+jobs:
+  red:
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.event == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open or update the issue for this workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          WF_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          gh label create scheduled-red --color B60205 --description 'A scheduled workflow is failing' --force >/dev/null
+          title="Scheduled red: $WF_NAME"
+          body="$(printf '**%s** failed on its schedule.\n\nRun: %s\nCommit: `%s`\n\nRead WHICH step failed — each workflow header says what a red means. A green run of the same workflow (dispatch it after the fix) closes this.' "$WF_NAME" "$RUN_URL" "${RUN_SHA:0:8}")"
+          existing="$(gh issue list --label scheduled-red --state open --search "in:title \"$title\"" --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -1)"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --label scheduled-red --body "$body"
+          fi
+
+  green:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close this workflow's open issue, if any
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          WF_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          gh label create scheduled-red --color B60205 --description 'A scheduled workflow is failing' --force >/dev/null
+          title="Scheduled red: $WF_NAME"
+          for n in $(gh issue list --label scheduled-red --state open --json number,title --jq ".[] | select(.title == \"$title\") | .number"); do
+            gh issue close "$n" --comment "Green again: $RUN_URL"
+          done
