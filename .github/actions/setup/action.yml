@@ -1,0 +1,33 @@
+name: Setup
+description: Node, the package cache and the dependencies, the same way in every repo (DevHub kit/). Optionally Playwright's Chromium.
+
+# Use it after actions/checkout:
+#   - uses: ./.github/actions/setup
+#     with: { playwright: 'true' }
+
+inputs:
+  node-version:
+    description: Node version for actions/setup-node
+    default: '26'
+  playwright:
+    description: Also install Playwright's Chromium with its system dependencies
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - if: hashFiles('pnpm-lock.yaml') != ''
+      uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ hashFiles('pnpm-lock.yaml') != '' && 'pnpm' || 'npm' }}
+    - if: hashFiles('pnpm-lock.yaml') != ''
+      shell: bash
+      run: pnpm install --frozen-lockfile
+    - if: hashFiles('pnpm-lock.yaml') == ''
+      shell: bash
+      run: npm ci
+    - if: inputs.playwright == 'true'
+      shell: bash
+      run: npx playwright install --with-deps chromium
