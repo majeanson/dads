@@ -15,6 +15,7 @@ if (!base || !expected) {
 
 const deadline = Date.now() + 5 * 60_000
 let last = 'no answer yet'
+let blocked = 0
 while (Date.now() < deadline) {
   try {
     const res = await fetch(new URL(`/version.json?t=${Date.now()}`, base), { headers: { 'cache-control': 'no-cache' } })
@@ -26,6 +27,15 @@ while (Date.now() < deadline) {
         process.exit(0)
       }
       last = `serves ${sha.slice(0, 7) || '?'}, expected ${expected.slice(0, 7)}`
+    } else if (res.status === 403 || (res.status === 503 && res.headers.get('cf-mitigated'))) {
+      // Cloudflare bot protection blocks datacenter IPs (GitHub's runners)
+      // on some sites. The deploy itself succeeded; this runner just can't
+      // look. DevHub checks the live sha from the PC instead.
+      if (++blocked >= 3) {
+        console.log(`⚠ ${base} blocks this runner (HTTP ${res.status}, bot protection); not verified from here. DevHub's "live" light checks it.`)
+        process.exit(0)
+      }
+      last = `GET /version.json → ${res.status} (bot protection?)`
     } else {
       last = `GET /version.json → ${res.status}${res.ok ? ' (not JSON: SPA fallback?)' : ''}`
     }
