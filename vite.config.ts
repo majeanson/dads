@@ -33,7 +33,11 @@ function versionJson(): Plugin {
             sha = 'unknown';
           }
         }
-        this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ sha, builtAt: new Date().toISOString() }) });
+        this.emitFile({
+          type: 'asset',
+          fileName: 'version.json',
+          source: JSON.stringify({ sha, builtAt: new Date().toISOString() }),
+        });
       },
     },
   };
