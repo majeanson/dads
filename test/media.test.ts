@@ -99,6 +99,32 @@ async function sayOne(cookie: string, name = 'voice.webm') {
   return (await res.json()) as { media: { id: string }; dropped: number };
 }
 
+/**
+ * A shelf already filled, written straight to D1 and R2 the way an upload
+ * writes it. What these tests prove is the upload that comes NEXT; forty
+ * before it through the Worker took the full suite past five seconds.
+ * Oldest first, one millisecond apart from `at`.
+ */
+async function shelve(
+  group: SeededGroup,
+  count: number,
+  { contentType = 'image/png', at = Date.now() - count - 1 } = {},
+): Promise<string[]> {
+  const ids = Array.from({ length: count }, () => `med_${crypto.randomUUID()}`);
+  await Promise.all(
+    ids.map((id) => env.MEDIA.put(`${group.id}/${id}`, PNG, { httpMetadata: { contentType } })),
+  );
+  await env.DB.batch(
+    ids.map((id, i) =>
+      env.DB.prepare(
+        `INSERT INTO media (id, group_id, r2_key, name, content_type, size, created_at)
+         VALUES (?, ?, ?, 'shelved.png', ?, ?, ?)`,
+      ).bind(id, group.id, `${group.id}/${id}`, contentType, PNG.byteLength, at + i),
+    ),
+  );
+  return ids;
+}
+
 describe('uploading', () => {
   let group: SeededGroup;
   beforeEach(async () => {
@@ -257,12 +283,7 @@ describe('the ten-photo cap', () => {
 
   it('keeps the newest ten and drops the oldest silently', async () => {
     const cookie = await cookieFor(group);
-    const ids: string[] = [];
-    for (let i = 0; i < MEDIA_PER_GROUP; i++) {
-      ids.push((await uploadOne(cookie, `photo-${i}.png`)).media.id);
-      // created_at is the ordering key and the clock is coarse.
-      await tick();
-    }
+    const ids = await shelve(group, MEDIA_PER_GROUP);
 
     const full = await env.DB.prepare('SELECT COUNT(*) AS n FROM media WHERE group_id = ?')
       .bind(group.id)
@@ -299,22 +320,19 @@ describe('the ten-photo cap', () => {
       headers: { Cookie: cookie },
     });
     expect(newest.status).toBe(200);
-  });
+    // A join, a socket and a full shelf in R2: under a second alone, near five
+    // seconds when the whole suite shares the machine.
+  }, 20_000);
 
   it('never lets a voice note push a photograph off the end', async () => {
     const cookie = await cookieFor(group);
-    const photos: string[] = [];
-    for (let i = 0; i < MEDIA_PER_GROUP; i++) {
-      photos.push((await uploadOne(cookie, `photo-${i}.png`)).media.id);
-      await tick();
-    }
+    const photos = await shelve(group, MEDIA_PER_GROUP);
 
     // Two shelves. A week of talking is not a reason to throw away pictures of
     // somebody's children, which is what one shelf would have meant.
     for (let i = 0; i < 12; i++) {
       const said = await sayOne(cookie, `voice-${i}.webm`);
       expect(said.dropped).toBe(0);
-      await tick();
     }
 
     const still = await worker.fetch(`https://dads.test/api/media?id=${photos[0]}`, {
@@ -329,7 +347,8 @@ describe('the ten-photo cap', () => {
       .bind(group.id)
       .first<{ n: number }>();
     expect(kept?.n).toBe(MEDIA_PER_GROUP);
-  });
+    // Twelve uploads on purpose: four seconds when the whole suite shares the machine.
+  }, 20_000);
 
   it('holds thirty voice notes and then lets the oldest go', async () => {
     const cookie = await cookieFor(group);
@@ -572,11 +591,10 @@ describe('a photo in the conversation', () => {
     marc.say('the first one', uploaded.media.id);
     await until(() => marc.frames.some((f) => f.t === 'msg' && f.message.body === 'the first one'));
 
-    // Push it off the end.
-    for (let i = 0; i < MEDIA_PER_GROUP; i++) {
-      await uploadOne(marc.cookie, `filler-${i}.png`);
-      await tick();
-    }
+    // Push it off the end: a shelf of newer ones, and the upload that overflows it.
+    await tick();
+    await shelve(group, MEDIA_PER_GROUP - 1, { at: Date.now() });
+    expect((await uploadOne(marc.cookie, 'filler.png')).dropped).toBe(1);
 
     const again = await enter(group, 'Marc');
     open.push(again);
@@ -586,7 +604,8 @@ describe('a photo in the conversation', () => {
     const line = hello.messages.find((m) => m.body === 'the first one');
     expect(line).toBeTruthy();
     expect(line?.media ?? null).toBeNull();
-  });
+    // Two sockets, two uploads and a shelf in R2: near four seconds under the whole suite.
+  }, 20_000);
 });
 
 /**
@@ -621,10 +640,8 @@ describe('keeping a photograph', () => {
     expect((await keep(cookie, first, true)).status).toBe(200);
 
     // A whole shelf on top of it, which without the keep would have taken it.
-    for (let i = 0; i < MEDIA_PER_GROUP + 2; i++) {
-      await uploadOne(cookie, `photo-${i}.png`);
-      await tick();
-    }
+    await shelve(group, MEDIA_PER_GROUP + 1, { at: Date.now() });
+    await uploadOne(cookie, 'photo.png');
 
     const still = await worker.fetch(`https://dads.test/api/media?id=${first}`, {
       headers: { Cookie: cookie },
@@ -648,16 +665,16 @@ describe('keeping a photograph', () => {
     await keep(cookie, one, true);
     expect((await keep(cookie, one, false)).status).toBe(200);
 
-    for (let i = 0; i < MEDIA_PER_GROUP; i++) {
-      await uploadOne(cookie, `photo-${i}.png`);
-      await tick();
-    }
+    await tick();
+    await shelve(group, MEDIA_PER_GROUP - 1, { at: Date.now() });
+    await uploadOne(cookie, 'photo.png');
 
     const gone = await worker.fetch(`https://dads.test/api/media?id=${one}`, {
       headers: { Cookie: cookie },
     });
     expect(gone.status).toBe(404);
-  });
+    // A shelf in R2 and two keeps: under a second alone, three under the whole suite.
+  }, 20_000);
 
   it('is any dad’s to do, on anybody’s picture', async () => {
     // Unlike taking a line back, which is his alone: what the room keeps
