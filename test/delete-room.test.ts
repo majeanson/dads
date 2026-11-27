@@ -108,7 +108,13 @@ describe('deleting a room', () => {
 
   it('empties more than one page of pictures', async () => {
     const { marc, groupId } = await roomOfMarcs('a word to delete');
-    for (let i = 0; i < 1100; i += 1) await env.MEDIA.put(`${groupId}/p${i}`, 'x');
+    // All at once: the runtime queues what it cannot run yet, and one by one
+    // this took over half a minute under the full suite.
+    await Promise.all(
+      Array.from({ length: 1100 }, (_, j) => env.MEDIA.put(`${groupId}/p${j}`, 'x')),
+    );
+    // More than R2's one page of 1000, or this stops testing the paging.
+    expect((await env.MEDIA.list({ prefix: `${groupId}/` })).truncated).toBe(true);
     expect((await del(marc, { name: 'Marc’s' })).status).toBe(204);
     expect((await env.MEDIA.list({ prefix: `${groupId}/` })).objects).toHaveLength(0);
   }, 60_000);
