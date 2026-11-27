@@ -8,25 +8,31 @@ Read [PLAN.md](PLAN.md) for the decisions this was built from, and
 
 ## What a dad can do
 
-|                     |                                                                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Get in**          | Follow a link, or type the code, and a name. Remembered on that device forever.                                                                  |
-| **Be invited**      | A link unfurls in a chat app with the room's name, its night and a picture, in the sender's language — and opens the door in it.                 |
-| **Open a room**     | Anybody at the door can start one and choose its word. Whoever opens it owns its switches and its word, can hand it on, and can take a dad out.  |
-| **Leave one**       | Any dad can walk out of a room from "Your rooms". What he said stays, under his name; the word brings him back.                                  |
-| **Be in several**   | One phone, several rooms, and a sheet to move between them without typing a word again.                                                          |
-| **See at a glance** | The app opens on home, which asks one question: are you coming on Thursday. The door, a speech bubble, sits under it; Settings is in the corner. |
-| **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers, marks, replies quoted in the dad's colour, edits, take-backs.             |
-| **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.                                                          |
-| **Be heard**        | Voice call in the room, camera optional. Full WebRTC mesh.                                                                                       |
-| **Show something**  | Photos, clips and voice notes inline, ten to a room, shrunk in the browser.                                                                      |
-| **Look at it**      | A photograph opens full-screen in the app, moves to the next one, and saves to the phone.                                                        |
-| **Keep it**         | Any dad can take a picture off the shelf so the next upload never reaches it.                                                                    |
-| **Answer**          | A curated question every day, answered in front of the others. What was asked before is one row away.                                            |
-| **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened. The weeks before are a tab.                                              |
-| **Play**            | Jaffre framed beside the conversation, name passed through, the table's state in its own panel head.                                             |
-| **Turn up**         | A standing dad night or one arranged evening: countdown, in / maybe / out with faces, what to get into, a nudge, an .ics.                        |
-| **Pick a date**     | With no evening to come, a shared month calendar; home shows the leading days one to a line, as calendar leaves. Anyone locks one in.            |
+|                     |                                                                                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Get in**          | Follow a link, or type the word, and a name. Remembered on that device forever. A second phone comes in by a link from the first, or, from a home-screen app, by an eight-character code typed on the first. |
+| **Be invited**      | A link unfurls in a chat app with the room's name, its night and a picture, in the sender's language — and opens the door in it.                                                                             |
+| **Open a room**     | Anybody at the door can start one and choose its word. Whoever opens it owns its switches and its word, can hand it on, and can take a dad out.                                                              |
+| **Leave one**       | Any dad can walk out of a room from "Your rooms". What he said stays, under his name; the word brings him back.                                                                                              |
+| **Be in several**   | One phone, several rooms, and a sheet to move between them without typing a word again.                                                                                                                      |
+| **See at a glance** | The app opens on home, which asks one question: are you coming on Thursday. The door, a speech bubble, sits under it; Settings is in the corner.                                                             |
+| **Talk**            | Live chat with presence, typing, reconnect-and-backfill, day dividers, marks, replies quoted in the dad's colour, edits, take-backs.                                                                         |
+| **Find it again**   | Any word he half remembers, searched across the whole archive rather than the backfill.                                                                                                                      |
+| **Be heard**        | Voice call in the room, camera optional. Full WebRTC mesh.                                                                                                                                                   |
+| **Show something**  | Photos, clips and voice notes inline, photos shrunk in the browser. Two shelves: forty pictures and thirty voice notes; the oldest of its kind goes.                                                         |
+| **Album**           | Every picture the room holds as a grid, the kept ones first; a tap opens the viewer.                                                                                                                         |
+| **Look at it**      | A photograph opens full-screen in the app, moves to the next one, and saves to the phone.                                                                                                                    |
+| **Keep it**         | Any dad can take a picture off the shelf so the next upload never reaches it.                                                                                                                                |
+| **Answer**          | A curated question that lasts a week, answered in front of the others. "Another question" while nobody has answered. What was asked before is one row away.                                                  |
+| **Be counted**      | Weekly 1–5, one honest line, one thing to try, and whether it happened. The weeks before are a tab.                                                                                                          |
+| **Play**            | Jaffre framed beside the conversation, name passed through, the table's state in its own panel head.                                                                                                         |
+| **Turn up**         | A standing dad night or one arranged evening: countdown, in / maybe / out with faces, what to get into, a nudge, an .ics.                                                                                    |
+| **Pick a date**     | With no evening to come, a shared month calendar; home shows the leading days one to a line, as calendar leaves. Anyone locks one in.                                                                        |
+| **Other nights**    | Any dad puts up a one-off evening beside dad night: in / maybe / out, only he edits or cancels it. Home gets one line for the nearest within ten days.                                                       |
+| **Recommend**       | A line with a Watch, Listen or Read link is on the list by itself; any other line goes on by hand from its menu, or from the list's own add box.                                                             |
+| **Name a dad**      | "@Sam" in a line is Sam, in his colour; if he has no screen open, his phone is pushed.                                                                                                                       |
+| **Be reminded**     | A push the day before and when the night opens, per phone, never on by default. Quiet hours and a pause of 1, 8 or 24 hours are his, across every phone.                                                     |
+| **Take his words**  | Download his own lines, answers, check-ins and commitments from his profile. Never anybody else's.                                                                                                           |
 
 The conversation is only what the dads typed. The room used to narrate itself
 (RSVPs, check-ins, seats at the table, the night being set, a closing summary);
@@ -48,9 +54,9 @@ open screens to re-read.
 ```bash
 npm run typecheck
 npm run lint
-npm test              # 402, in workerd against the real migrations
-npm run e2e           # 128, against the built stack (118 in Chromium, 10 on the iPhone)
-npm run audit:contrast  # 68 colour pairs, both themes
+npm test              # 725, in workerd against the real migrations
+npm run e2e           # 193, against the built stack (182 in Chromium, 11 on the iPhone)
+npm run audit:contrast  # 104 colour pairs, both themes
 npm run deploy        # build, then wrangler deploy
 npm run prove         # 32, against dads.marcportal.com itself, in its own room
 npm run backup        # every D1 table into backups/, gitignored
